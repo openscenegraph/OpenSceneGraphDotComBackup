@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] minor change: move assumeSizedInternallFormat from Texture to Image
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20minor%20change%3A%20move%20assumeSizedInternallFormat%20from%0A%20Texture%20to%20Image&In-Reply-To=%3C1534433312.m2f.74547%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008922.html">
+   <LINK REL="Next"  HREF="008927.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20minor%20change%3A%20move%20assumeSizedInternallFormat%20from%0A%20Texture%20to%20Image&In-Reply-To=%3C1534433312.m2f.74547%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Thu Aug 16 08:28:32 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008922.html">[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image
+</A></li>
+        <LI>Next message (by thread): <A HREF="008927.html">[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8925">[ date ]</a>
+              <a href="thread.html#8925">[ thread ]</a>
+              <a href="subject.html#8925">[ subject ]</a>
+              <a href="author.html#8925">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Ho I haven't realized the root of existence of this function was the previous contribution to the implementation of glTexStorage.
+So Now I can see where the contributor (sure it's Pawel Ksiezopolski) wanted to do.
+
+I don't know why there's so many comments and misses in sizedInternalFormats but it's same to add them at the end 
+
+So my proposal is a 2 way process:
+-add missing  sizedInternalFormats (ex:I found internalformat GL_RGBA16 never mentionned)
+-Fix the image less glTexStorage use case with
+
+
+Code:
+  if( useTexStorrage)
+        {
+            //ensure _internalFormat is sized
+            GLenum sized_internalFormat = _internalFormat;
+            if(!isSizedInternalFormat( sized_internalFormat))
+                    sized_internalFormat =  assumeSizedInternalFormat( sized_internalFormat, _sourceType ? _sourceType : GL_UNSIGNED_BYTE);
+            if(!sized_internalFormat)
+                OSG_FATAL&lt;&lt;&quot;Texture2D : can't generate TextureStorage setup fails: &quot;&lt;&lt;std::endl;
+            extensions-&gt;glTexStorage2D( GL_TEXTURE_2D, (_numMipmapLevels &gt;0)?_numMipmapLevels:1, sized_internalFormat, _textureWidth, _textureHeight);
+        }; 
+
+
+
+
+and
+
+
+robertosfield wrote:
+&gt;<i> Hi Julien,
+</I>&gt;<i> 
+</I>&gt;<i> On Wed, 15 Aug 2018 at 23:44, Julien Valentin
+</I>&gt;<i> &lt;&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i> &gt; if I read all that correctly it seams assumeSizedInternallFormat is only used to create Texture from Image...I think an improvment would be to move assumeSizedInternallFormat from Texture to Image and change its name (getSizedTexInternallFormat).. It would lever some confusion and improve readabitlity of the Texture.cpp code ....
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; What od you think about that?
+</I>&gt;<i> &gt; 
+</I>&gt;<i> 
+</I>&gt;<i> This is what I was roughly thinking of.  One can't move the function
+</I>&gt;<i> from Texture to Image as not all textures have images.  You could have
+</I>&gt;<i> it in both places, or just have a function in the osg namespace and
+</I>&gt;<i> provide all the input variables for it.
+</I>&gt;<i> 
+</I>&gt;<i> As a general guide, a Object::getMethod() typically gets a property
+</I>&gt;<i> from an object, but if a method computes the value on the fly from
+</I>&gt;<i> input variables I nornally opt for Object::computeMethod().   assume
+</I>&gt;<i> is a bit wishy washy so probably isn't ideal - this was used in the
+</I>&gt;<i> original glTexStorage PR but I probably should have suggested a
+</I>&gt;<i> change.
+</I>&gt;<i> 
+</I>&gt;<i> We have to think about both master and the 3.6 branch here.  The later
+</I>&gt;<i> the aim is to maintain binary compatibility so our options are more
+</I>&gt;<i> constrained.
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> 
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I>&gt;<i>  ------------------
+</I>&gt;<i> Post generated by Mail2Forum
+</I>
+
+------------------------
+Twirling twirling twirling toward freedom
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic141d.php?p=74547#74547">http://forum.openscenegraph.org/viewtopic.php?p=74547#74547</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008922.html">[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image
+</A></li>
+	<LI>Next message (by thread): <A HREF="008927.html">[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8925">[ date ]</a>
+              <a href="thread.html#8925">[ thread ]</a>
+              <a href="subject.html#8925">[ subject ]</a>
+              <a href="author.html#8925">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

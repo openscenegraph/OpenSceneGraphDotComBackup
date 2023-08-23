@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Removing objects with shared GL state from scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3CCAFN7Y%2BU3ONWGLpmFTTS8-SFthZTZqE822DNi1zwb0dnC9Lo9sw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010251.html">
+   <LINK REL="Next"  HREF="010247.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Removing objects with shared GL state from scene graph</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3CCAFN7Y%2BU3ONWGLpmFTTS8-SFthZTZqE822DNi1zwb0dnC9Lo9sw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Removing objects with shared GL state from scene graph">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Jul 26 04:44:26 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010251.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="010247.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10252">[ date ]</a>
+              <a href="thread.html#10252">[ thread ]</a>
+              <a href="subject.html#10252">[ subject ]</a>
+              <a href="author.html#10252">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Martin,
+
+On Fri, 26 Jul 2019 at 11:41, Martin Siggel &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">martinsiggel+osg at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> I had a custom camera manipulator, which was derived from orbitmanipulator.
+</I>&gt;<i>
+</I>&gt;<i> I experienced the issue in my Android app. I assigned this manipulator to
+</I>&gt;<i> the osgviewer and kept a reference outside of the viewer. My idea was to
+</I>&gt;<i> keep the current state of orbit animation and position when going back to
+</I>&gt;<i> the app.
+</I>&gt;<i>
+</I>&gt;<i> However, this prevented cleaning up all the GL objects from the current
+</I>&gt;<i> context, even though I deleted the viewer. After removing the reference to
+</I>&gt;<i> the manipulator, everything worked as expected.
+</I>&gt;<i>
+</I>
+Using an osg::observer_ptr&lt;&gt; might be the best solution for this type of
+usage.
+
+
+&gt;<i> Therefore, I suppose that there has to be some reference to the camera in
+</I>&gt;<i> the manipulator.
+</I>&gt;<i>
+</I>
+There isnt' any need to have an explict link to the Camera as the higher
+level functionality passes in the
+CameraManipulator::updateCamera(osg::Camera&amp; camera) method.  This means
+it's possible to use the same CameraManipulator with multiple Camera i.e.
+have multiple View's but each share the same CameraManipualator.
+
+
+&gt;<i> I could provide an example but it will be an Android example. Is there
+</I>&gt;<i> something you could use?
+</I>&gt;<i>
+</I>
+I don't have a Android setup yet so such an example won't help too much.
+In your case I think it's just more careful management of objects that is
+required rather than a bug in the core OSG that needs to be resolved.
+
+This whole issue stems from a limitation with OpenGL and how you can only
+do clean up from a graphics thread associated with graphics context, and
+once a window closes it's graphics context is no longer valid so any
+handles you have to the objects held in that context are now invalid.  This
+means you have to juggle who and when gets to clean up the gl objects and
+the handle to them.
+
+In the Vulkan/VSG the objects are mostly associate with a device context
+rather than a window so it's possible to have windows come and go and still
+manage the lifetime of the objects in a straight forward way.  Or at least
+I've been able to hide the lifetime issue in a far easier and more robust
+to different usage cases way.  On the OSG side it's usage cases on the
+edges of the usual way that the OSG does things is when problems arise.
+
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190726/1b72450e/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190726/1b72450e/attachment.html</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010251.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="010247.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10252">[ date ]</a>
+              <a href="thread.html#10252">[ thread ]</a>
+              <a href="subject.html#10252">[ subject ]</a>
+              <a href="author.html#10252">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

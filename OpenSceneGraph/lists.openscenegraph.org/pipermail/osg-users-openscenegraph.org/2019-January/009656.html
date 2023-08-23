@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Completely offscreen rendering using FBO?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Completely%20offscreen%20rendering%20using%20FBO%3F&In-Reply-To=%3C1548670024.m2f.75553%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009666.html">
+   <LINK REL="Next"  HREF="009660.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Completely offscreen rendering using FBO?</H1>
+<!--htdig_noindex-->
+    <B>Jad Killian</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Completely%20offscreen%20rendering%20using%20FBO%3F&In-Reply-To=%3C1548670024.m2f.75553%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Completely offscreen rendering using FBO?">m.hasani at outlook.com
+       </A><BR>
+    <I>Mon Jan 28 02:07:04 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009666.html">[osg-users] Two basic OSG use Questions.
+</A></li>
+        <LI>Next message (by thread): <A HREF="009660.html">[osg-users] OSG and Capabilities
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9656">[ date ]</a>
+              <a href="thread.html#9656">[ thread ]</a>
+              <a href="subject.html#9656">[ subject ]</a>
+              <a href="author.html#9656">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I would like to not have a window at all when rendering. I managed to get offscreen rendering to work fine with a pixel buffer like in the osgscreencapture example. Viewer setup code:
+
+
+Code:
+osgViewer::Viewer viewer;
+
+unsigned int width = 1;
+	unsigned int height = 1;
+	bool pbufferOnly = false;
+	osg::ref_ptr&lt;osg::GraphicsContext&gt; pbuffer;
+	{
+		osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+		traits-&gt;x = 0;
+		traits-&gt;y = 0;
+		traits-&gt;width = width;
+		traits-&gt;height = height;
+		traits-&gt;red = 8;
+		traits-&gt;green = 8;
+		traits-&gt;blue = 8;
+		traits-&gt;alpha = 8;
+		traits-&gt;windowDecoration = false;
+		traits-&gt;pbuffer = true;
+		traits-&gt;doubleBuffer = false;
+		traits-&gt;sharedContext = 0;
+		traits-&gt;readDISPLAY();
+		traits-&gt;setUndefinedScreenDetailsToDefaultScreen();
+
+		pbuffer = osg::GraphicsContext::createGraphicsContext(traits.get());
+		if (pbuffer.valid())
+		{
+			osg::notify(osg::NOTICE) &lt;&lt; &quot;Pixel buffer has been created successfully.&quot; &lt;&lt; std::endl;
+		}
+		else
+		{
+			osg::notify(osg::NOTICE) &lt;&lt; &quot;Pixel buffer has not been created successfully.&quot; &lt;&lt; std::endl;
+		}
+
+	}
+
+
+if (pbuffer.valid())
+	{
+		osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+		camera-&gt;setGraphicsContext(pbuffer.get());
+		camera-&gt;setViewport(new osg::Viewport(0, 0, width, height));
+		GLenum buffer = pbuffer-&gt;getTraits()-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+		camera-&gt;setDrawBuffer(buffer);
+		camera-&gt;setReadBuffer(buffer);
+		//camera-&gt;setFinalDrawCallback(new WindowCaptureCallback());
+
+		viewer.addSlave(camera.get(), osg::Matrixd(), osg::Matrixd());
+
+		viewer.realize();
+
+
+
+
+
+However, on some devices I get the following error:
+
+PixelBufferWin32::init(), Error: some wgl extensions not supported
+
+So I thought maybe I should &quot;upgrade&quot; to FBOs. But I'm not sure how to do it. I know how to use FBOs to do Render-To-Texture, but I can't figure out how to use them instead of a window.
+
+Cheers,
+Jad[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic0ba8.php?p=75553#75553">http://forum.openscenegraph.org/viewtopic.php?p=75553#75553</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009666.html">[osg-users] Two basic OSG use Questions.
+</A></li>
+	<LI>Next message (by thread): <A HREF="009660.html">[osg-users] OSG and Capabilities
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9656">[ date ]</a>
+              <a href="thread.html#9656">[ thread ]</a>
+              <a href="subject.html#9656">[ subject ]</a>
+              <a href="author.html#9656">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,154 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] LOD capabilities
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LOD%20capabilities&In-Reply-To=%3CCAMcxSMtLWRh%3DHv9UJ3kW5GCoyd6tgi_KWUVPu7066_PyqzPViQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002914.html">
+   <LINK REL="Next"  HREF="279142.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] LOD capabilities</H1>
+<!--htdig_noindex-->
+    <B>Jason Beverage</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LOD%20capabilities&In-Reply-To=%3CCAMcxSMtLWRh%3DHv9UJ3kW5GCoyd6tgi_KWUVPu7066_PyqzPViQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] LOD capabilities">jasonbeverage at gmail.com
+       </A><BR>
+    <I>Tue Apr 26 08:49:51 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002914.html">[osg-users] LOD capabilities
+</A></li>
+        <LI>Next message: <A HREF="279142.html">[osg-users] Using OSG in Native Client
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2915">[ date ]</a>
+              <a href="thread.html#2915">[ thread ]</a>
+              <a href="subject.html#2915">[ subject ]</a>
+              <a href="author.html#2915">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Bruno,
+
+We have a point cloud capability that we've developed here at Pelican
+Mapping that integrates nicely with osgEarth.  You can see a video of it in
+action here <A HREF="https://youtu.be/lUeF4Y8yGNI">https://youtu.be/lUeF4Y8yGNI</A> rendering around 5 billion
+points.  We can easily perform picking on individual points so you can get
+all the information about the point (location, RGB, intensity, etc) but we
+don't have any support for modifying the point cloud (although that is
+something we could add).  Editing a giant paged dataset would take some
+special consideration, but it's definitely doable.
+
+Let me know if you want anymore information, happy to chat sometime.
+
+Thanks!
+
+Jason
+
+On Tue, Apr 26, 2016 at 11:28 AM Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Bruno,
+</I>&gt;<i>
+</I>&gt;<i> On 26 April 2016 at 16:04, Bruno Oliveira &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">bruno.manata.oliveira at gmail.com</A>
+</I>&gt;<i> &gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> the tool I'm creating is designed to handle clouds from 100 million
+</I>&gt;&gt;<i> points to 1 billion, hence the out of core rendering.
+</I>&gt;&gt;<i> By &quot;with the already existing code&quot;, I mean code from OSG.
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> 100 million to 1 billion does qualify as &quot;huge&quot; point cloud.
+</I>&gt;<i>
+</I>&gt;<i> The issues aren't directly related to the OSG, but how to manage that
+</I>&gt;<i> amount of data on disk, in main memory and on the GPU.  The OSG itself can
+</I>&gt;<i> be used to start the data in main memory, on the GPU, and even provide
+</I>&gt;<i> mechanisms for paging data in out from disk (via PagedLOD/DatabasePager).
+</I>&gt;<i> You will be responsible for how you set up the scene graph, how you do this
+</I>&gt;<i> is the crux of the task, it's not trivial given the amount of data you are
+</I>&gt;<i> dealing with.
+</I>&gt;<i>
+</I>&gt;<i> When learning what can be done you need to start doing the maths on how
+</I>&gt;<i> much memory each point in your cloud requires. A single vec3 for each point
+</I>&gt;<i> for 100 million points requires 1.2 GB, 1 bilion requires 12GB.  When
+</I>&gt;<i> passing data to OpenGL you need to put the data into OpenGL FIFO which then
+</I>&gt;<i> gets passed in driver memory.  If you are using VBO's then you'll end
+</I>&gt;<i> potentially with one copy of data in application memory, one in driver
+</I>&gt;<i> memory, and then when it finally gets rendered a copy on the GPU too.  This
+</I>&gt;<i> means we'll need at least 2.4GB main memory and 1.2GB on the GPU just for
+</I>&gt;<i> 100 million vertices - this without anything else.
+</I>&gt;<i>
+</I>&gt;<i> This is without any colours, normals or textures.  You haven't mentioned
+</I>&gt;<i> anything about these, perhaps you should... as it makes a big difference to
+</I>&gt;<i> the memory footprint we are talking about.  I'm not expecting that you'll
+</I>&gt;<i> just have white points...
+</I>&gt;<i>
+</I>&gt;<i> So when you start asking can the OSG do it, you can get it to scale to
+</I>&gt;<i> handling multi-terrabyte databases thanks to the built in paging support,
+</I>&gt;<i> but only if you give it an appropriately built scene graph - point clouds
+</I>&gt;<i> are a niche that doesn't have open source tools that will build the
+</I>&gt;<i> database for you.  You need to be realistic about the memory management,
+</I>&gt;<i> handling really large amounts of data requires far more skills than just
+</I>&gt;<i> rendering a few pretty textured polygons.  I don't know what your
+</I>&gt;<i> background knowledge, what can we assume?
+</I>&gt;<i>
+</I>&gt;<i> If you don't have the skills right now then you'll need patiently develop
+</I>&gt;<i> them OR just pay a 3rd party engineer who has the skills to work with you
+</I>&gt;<i> on it.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160426/94f41898/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160426/94f41898/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002914.html">[osg-users] LOD capabilities
+</A></li>
+	<LI>Next message: <A HREF="279142.html">[osg-users] Using OSG in Native Client
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2915">[ date ]</a>
+              <a href="thread.html#2915">[ thread ]</a>
+              <a href="subject.html#2915">[ subject ]</a>
+              <a href="author.html#2915">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

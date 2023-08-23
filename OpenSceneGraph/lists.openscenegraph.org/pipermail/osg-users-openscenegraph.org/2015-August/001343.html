@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] &quot;LOS&quot; materail query
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%22LOS%22%20materail%20query&In-Reply-To=%3CCAFN7Y%2BVd8Cy5WMLbFONQ8k9nE07d8XaUGC88Nc1u%3DBrtVBQH2w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001337.html">
+   <LINK REL="Next"  HREF="001363.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] &quot;LOS&quot; materail query</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%22LOS%22%20materail%20query&In-Reply-To=%3CCAFN7Y%2BVd8Cy5WMLbFONQ8k9nE07d8XaUGC88Nc1u%3DBrtVBQH2w%40mail.gmail.com%3E"
+       TITLE="[osg-users] &quot;LOS&quot; materail query">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Aug 27 00:56:54 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001337.html">[osg-users] &quot;LOS&quot; materail query
+</A></li>
+        <LI>Next message: <A HREF="001363.html">[osg-users] &quot;LOS&quot; materail query
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1343">[ date ]</a>
+              <a href="thread.html#1343">[ thread ]</a>
+              <a href="subject.html#1343">[ subject ]</a>
+              <a href="author.html#1343">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Mike,
+
+OK, the next complication is probably that the osg::Texture has the
+probably unref'd the Image assigned to it after it's download to GL, the
+method that control it is in include/osg/Texture:
+
+        /** Sets whether or not the apply() function will unreference the
+image
+          * data. If enabled, and the image data is only referenced by this
+          * Texture, apply() will delete the image data. */
+        inline void setUnRefImageDataAfterApply(bool flag) {
+_unrefImageDataAfterApply = flag; }
+
+This is memory optimization, but... if you want to look at the image data
+after it's been rendered you obviously don't want to use this feature.  By
+default this feature is OFF, but if you run the osgUtil::Optimizer on the
+scene graph it can switch it on as a memory optimization.
+
+You can switch it back on using the osgUtil::Optimizer::TextureVisitor see
+the include/osgUtil/Optimizer header for the TextureVisitor.
+
+Robert.
+
+
+
+
+
+On 26 August 2015 at 20:34, Mike Greene &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">mgreene at hiwaay.net</A>&gt; wrote:
+
+&gt;<i> OK, fixed that - loaded an .ive file and was able to get correct looking
+</I>&gt;<i> texture coordinates. In a .ive file with embedded textures, is there a
+</I>&gt;<i> textureName? Probably not - not really important.
+</I>&gt;<i>
+</I>&gt;<i> But the code does say that there is one image in the texture. But doing
+</I>&gt;<i> the getImage(0) does not return a valid image and thus no color from the
+</I>&gt;<i> texture is returned.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>  osgUtil::LineSegmentIntersector::Intersections intersections;
+</I>&gt;<i>                 if (viewer-&gt;computeIntersections(ea, intersections))
+</I>&gt;<i>                 {
+</I>&gt;<i>                         const
+</I>&gt;<i> osgUtil::LineSegmentIntersector::Intersection&amp; hit = *intersections.begin();
+</I>&gt;<i>
+</I>&gt;<i>                         //MGREENE
+</I>&gt;<i>                         std::cout &lt;&lt; &quot;hit = &quot; &lt;&lt;
+</I>&gt;<i> hit.getLocalIntersectPoint().x() &lt;&lt; &quot;,&quot; &lt;&lt; hit.getLocalIntersectPoint().y()
+</I>&gt;<i> &lt;&lt; &quot;,&quot; &lt;&lt; hit.getLocalIntersectPoint().z() &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i>                         osg::Vec3 tc(0, 0, 0);
+</I>&gt;<i>                         osg::Texture* myTexture = hit.getTextureLookUp(tc);
+</I>&gt;<i>                         std::cout &lt;&lt; &quot;tc = &quot; &lt;&lt; tc.x() &lt;&lt; &quot;,&quot; &lt;&lt; tc.y() &lt;&lt;
+</I>&gt;<i> &quot;,&quot; &lt;&lt; tc.z() &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>                         if (myTexture){
+</I>&gt;<i>                                 std::string myString =
+</I>&gt;<i> myTexture-&gt;getName();
+</I>&gt;<i>                                 std::cout &lt;&lt; &quot;texturename = &quot; &lt;&lt; myString
+</I>&gt;<i> &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i>                                 int numImages = myTexture-&gt;getNumImages();
+</I>&gt;<i>                                 std::cout &lt;&lt; &quot;numImages = &quot; &lt;&lt; numImages
+</I>&gt;<i> &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i>                                 osg::Image *myImage =
+</I>&gt;<i> myTexture-&gt;getImage(0);
+</I>&gt;<i>                                 if (myImage) {
+</I>&gt;<i>                                         osg::Vec4 textureColor =
+</I>&gt;<i> myImage-&gt;getColor(tc);
+</I>&gt;<i>                                         std::cout &lt;&lt; &quot;textureColor = &quot; &lt;&lt;
+</I>&gt;<i> textureColor.r() &lt;&lt; &quot;,&quot; &lt;&lt; textureColor.b() &lt;&lt; &quot;,&quot; &lt;&lt; textureColor.g() &lt;&lt;
+</I>&gt;<i> &quot;,&quot; &lt;&lt; textureColor.a() &lt;&lt; std::endl;
+</I>&gt;<i>                                 }
+</I>&gt;<i>                     }
+</I>&gt;<i>                         //END MGREENE
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Mike
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic1c54.php?p=64908#64908">http://forum.openscenegraph.org/viewtopic.php?p=64908#64908</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150827/ecafe0fc/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150827/ecafe0fc/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001337.html">[osg-users] &quot;LOS&quot; materail query
+</A></li>
+	<LI>Next message: <A HREF="001363.html">[osg-users] &quot;LOS&quot; materail query
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1343">[ date ]</a>
+              <a href="thread.html#1343">[ thread ]</a>
+              <a href="subject.html#1343">[ subject ]</a>
+              <a href="author.html#1343">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

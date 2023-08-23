@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Heap corruption
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Heap%20corruption&In-Reply-To=%3C1441281967.m2f.65007%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001421.html">
+   <LINK REL="Next"  HREF="001426.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Heap corruption</H1>
+<!--htdig_noindex-->
+    <B>Julie Green</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Heap%20corruption&In-Reply-To=%3C1441281967.m2f.65007%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Heap corruption">laroux92 at mail.ru
+       </A><BR>
+    <I>Thu Sep  3 05:06:07 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001421.html">[osg-users] Bounding Box
+</A></li>
+        <LI>Next message: <A HREF="001426.html">[osg-users] Heap corruption
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277647">[ date ]</a>
+              <a href="thread.html#277647">[ thread ]</a>
+              <a href="subject.html#277647">[ subject ]</a>
+              <a href="author.html#277647">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I'm trying to draw a quadric surface, which is modifying each frame, and I'm getting a heap corruption error. I guess the problem is in calculating function, or in update callback, but can't find it in the debugger. 
+
+Code:
+
+void SurfaceCalculationThread::reCalculateSurface()
+{
+	mutex.lock();
+	float x, y, z;
+	int i = 0;
+	float t=time-&gt;elapsedTime();
+	for (x = -polygonLength; x &lt;= polygonLength; x += 1.0f)
+	{
+		for (y = -polygonLength; y &lt;= polygonLength; y += 1.0f)
+		{
+			(*oldVertexArray)[i].set((*newVertexArray)[i]);
+			z = computeZ(x, y, t);
+			(*newVertexArray)[i].set(osg::Vec3f(x, y, z));
+			i++;
+		}
+	}
+	geometry-&gt;setVertexArray(oldVertexArray);
+	geometry-&gt;setUpdateCallback(new UpdateSurfaceCallback(conditionVariable));
+
+	osgUtil::SmoothingVisitor *smoothingVisitor = new osgUtil::SmoothingVisitor();
+	smoothingVisitor-&gt;smooth(*geometry);
+	smoothingVisitor-&gt;setName(&quot;normal&quot;);
+
+	conditionVariable-&gt;wait(&amp;mutex);
+	mutex.unlock();
+	
+}
+
+void UpdateSurfaceCallback::operator()(osg::Node *node, osg::NodeVisitor *nv)
+{
+	traverse(node, nv);
+	conditionVariable-&gt;wakeAll();
+};
+
+
+
+
+Thanks for your help!
+
+Cheers,
+Julie
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicea73.php?p=65007#65007">http://forum.openscenegraph.org/viewtopic.php?p=65007#65007</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001421.html">[osg-users] Bounding Box
+</A></li>
+	<LI>Next message: <A HREF="001426.html">[osg-users] Heap corruption
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277647">[ date ]</a>
+              <a href="thread.html#277647">[ thread ]</a>
+              <a href="subject.html#277647">[ subject ]</a>
+              <a href="author.html#277647">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

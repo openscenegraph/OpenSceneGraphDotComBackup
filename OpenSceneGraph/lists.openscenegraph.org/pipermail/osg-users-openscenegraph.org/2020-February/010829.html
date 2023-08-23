@@ -1,0 +1,182 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Some issues with osgText / Signed Distance Field rendering
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Some%20issues%20with%20osgText%20/%20Signed%20Distance%20Field%0A%20rendering&In-Reply-To=%3Cmailman.68990.1581073219.7168.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010827.html">
+   <LINK REL="Next"  HREF="010830.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Some issues with osgText / Signed Distance Field rendering</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Some%20issues%20with%20osgText%20/%20Signed%20Distance%20Field%0A%20rendering&In-Reply-To=%3Cmailman.68990.1581073219.7168.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Some issues with osgText / Signed Distance Field rendering">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Fri Feb  7 02:45:36 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010827.html">[osg-users] LineSegmentIntersector and MatrixTransform nodes
+</A></li>
+        <LI>Next message (by thread): <A HREF="010830.html">[osg-users]  RTX Raytracing now past of VulkanSceneGraph master!
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10829">[ date ]</a>
+              <a href="thread.html#10829">[ thread ]</a>
+              <a href="subject.html#10829">[ subject ]</a>
+              <a href="author.html#10829">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE> 
+
+Hello Robert,
+
+ 
+
+I toyed around with SDF and discovered some problems in the fragment shader 
+that I managed to solve.
+
+ 
+
+There seems to be a bug in the multisampling/blending code. Affected are 
+semi-transparent texts. It&#8217;s most obvious for glyphs with a big fill area, 
+like e.g. for the bullet character. In the attached picture, the upper 
+bullet character was rendered with the original shader and an alpha value 
+of 0.2. It looks totally wrong. For comparison, the second line was 
+rendered with an alpha value of 1 and is fine.
+
+
+In order to find out what&#8217;s wrong I rewrote the code applying the basic 
+blending &#8220;trick&#8221; &#8211; doing linear combinations of colours with premultiplied 
+alpha only. (Let&#8217;s call them colours in pma format, the transform function 
+being pma[ (r,g,b,a) ] -&gt; (r*a,g*a,b*a,a).) This resolved the issue for me, 
+semi-transparent characters now render visually correct.
+
+
+So, what I did, is:
+
+   1. Apply pma transformation to the source colours (vertex colour, border 
+   colour) 
+   2. Do the multisampling. Simply calculate the mean of the sampled 
+   colours. Each sampled colour is a linear combination of the source colours, 
+   so too in pma format. 
+   3. Apply inverse pma transformation for to get the resulting fragment 
+   colour (to be blended with default blend mode (GL_SRC_ALPHA, 
+   GL_ONE_MINUS_SRC_ALPHA)). 
+
+This algorithm can be simplified. Obviously, the resulting fragment colour 
+too is just a linear combination of the source colours. So, I changed the 
+multisampling loop to only sample the coefficients for the source 
+colours.(It&#8217;s applying distributive law.) This in turn made me get rid of 
+the pma and inverse pma transformations.
+
+ 
+
+And it also helped resolving the second issue that I had with the shader: 
+Shadow backdrops were not rendered correctly. The problem was caused but 
+following lines of code:
+
+ 
+
+    total_color.rgb /= total_color.a;
+
+    total_color.a *= scale;
+
+    return total_color;
+
+ 
+
+I think the division could turn out to be 0.0 / 0.0 which may have produced 
+NaNs or unspecified results.
+
+ 
+
+A minor issue I encountered that prevented the shader to compile on my GLSL 
+ES 1.0 system. 
+
+The function texture2DLod is specified by the GLSL ES 1.0, GLSL 1.1, GLSL 
+1.2 specifications only for use in vertex shader. It may be available 
+though. In my case it wasn&#8217;t, but the extension texture2DLodEXT was.
+
+So I made an extra check to prefer that extension, if available, for GLSL 
+ES 1.0 only.
+
+ 
+
+I experienced another issue that I wasn&#8217;t able to solve so far.
+
+On my embedded ES 2.0 system, the GL_OES_standard_derivatives extension is 
+available but the functions dFdx / dFdy just seem to deliver bad results.
+
+I don&#8217;t know why. Could it be non-conforming usage? A driver or GPU bug? As 
+a workaround, I&#8217;ve switched to using a simpler shader for that system only, 
+which doesn&#8217;t do multisampling. The result seems still fine.
+
+ 
+
+Please check out my changes. I&#8217;ll do a pull request. I hope this is 
+helpful, SDF is really a cool feature.
+
+The shader could surely further be simplified when adapting it to blend 
+mode (GL_ONE, GL_ONE_MINUS_SRC_ALPHA), which would be a bit easier to deal 
+with.
+
+I also wondered if the extensive bounds checking for smoothstep when 
+sampling the colours/coefficients is still adequate for performance.
+
+ 
+
+Regards,
+
+Hannes
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/575dbd7a-cac9-418f-86da-a9f14ff1d9f3%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/575dbd7a-cac9-418f-86da-a9f14ff1d9f3%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200207/84bf1cf6/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200207/84bf1cf6/attachment.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: sdf bug.png
+Type: image/png
+Size: 10036 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200207/84bf1cf6/attachment.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200207/84bf1cf6/attachment.png</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010827.html">[osg-users] LineSegmentIntersector and MatrixTransform nodes
+</A></li>
+	<LI>Next message (by thread): <A HREF="010830.html">[osg-users]  RTX Raytracing now past of VulkanSceneGraph master!
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10829">[ date ]</a>
+              <a href="thread.html#10829">[ thread ]</a>
+              <a href="subject.html#10829">[ subject ]</a>
+              <a href="author.html#10829">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

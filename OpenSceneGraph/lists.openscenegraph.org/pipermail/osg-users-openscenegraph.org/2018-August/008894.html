@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How I build OpenSceneGraph manually for desktop, mobile, and web
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20I%20build%20OpenSceneGraph%20manually%20for%20desktop%2C%20mobile%2C%0A%20and%20web&In-Reply-To=%3CCAEt8o9g2x1Nd6NuNGwiOZHz9MuhC-JHfChd5GHMnTEsHi4RKwg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008893.html">
+   <LINK REL="Next"  HREF="008895.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How I build OpenSceneGraph manually for desktop, mobile, and web</H1>
+<!--htdig_noindex-->
+    <B>michael kapelko</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20I%20build%20OpenSceneGraph%20manually%20for%20desktop%2C%20mobile%2C%0A%20and%20web&In-Reply-To=%3CCAEt8o9g2x1Nd6NuNGwiOZHz9MuhC-JHfChd5GHMnTEsHi4RKwg%40mail.gmail.com%3E"
+       TITLE="[osg-users] How I build OpenSceneGraph manually for desktop, mobile, and web">kornerr at gmail.com
+       </A><BR>
+    <I>Tue Aug 14 04:50:03 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008893.html">[osg-users] [ANN] Cross-platform examples for Linux, macOS, Windows, Android, iOS, and Web
+</A></li>
+        <LI>Next message (by thread): <A HREF="008895.html">[osg-users] OpenSceneGraph BOF, Siggraph 2018 is tomorrow (Wed 15th August)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8894">[ date ]</a>
+              <a href="thread.html#8894">[ thread ]</a>
+              <a href="subject.html#8894">[ subject ]</a>
+              <a href="author.html#8894">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi.
+
+Recently I've started building OpenSceneGraph without using official
+CMakeLists.txt file. I've decided to describe why and how of this
+process.
+
+1. WHY.
+
+I use OpenSceneGraph to develop cross-platform applications. While
+desktop builds work mostly fine, anything else (Android, iOS, Web) is
+easy to break and hard to fix.
+
+Here's my list of top annoying things I had to deal with frequently:
+
+1.1. Inability to build Lua plugin out of the box on macOS
+
+My project's CMakeLists.txt uses `ADD_DEFINITIONS(&quot;-std=c++11&quot;)` to
+force C++11. This breaks Lua plugin building on macOS because Clang
+says C language does not have `C++11`, which makes sense. However,
+Linux's GCC simply warns about it.
+
+1.2. Hacking PNG plugin safety checks for Android
+
+To build OpenSceneGraph's PNG plugin for Android, I need to hack
+CMake's PNG plugin detection because OpenSceneGraph's CMakeLists.txt
+uses standard `FIND_PNG`. While this works fine on desktops, Android
+sucks at supporting STL, exceptions, and other standard stuff in old
+APIs. I personally target API 14.
+
+1.3. Maintaining two different builds for iOS - simulator and device
+
+You have to configure and work with two different versions of the same
+application for both simulator and device. Which means you can't
+switch between device and simulator in the single project. Not to
+mention how many hacks went into OpenSceneGraph's CMakeLists.txt to
+support iOS.
+
+1.4. Building OpenSceneGraph takes A LOT of time
+
+Even firing 10 parallel build processes with 'make -j10' is damn slow
+because OpenSceneGraph has a ton of files.
+
+2. HOW.
+
+2.1. Build OpenSceneGraph as part of the project into static library
+
+Here's CMakeLists.txt I currently use for all platforms except iOS:
+<A HREF="https://github.com/OGStudio/openscenegraph-cross-platform-examples/blob/c42fcbaaf4064b0853246e68837bc91d2b1842c9/libs/OpenSceneGraph/CMakeLists.txt">https://github.com/OGStudio/openscenegraph-cross-platform-examples/blob/c42fcbaaf4064b0853246e68837bc91d2b1842c9/libs/OpenSceneGraph/CMakeLists.txt</A>
+
+2.2. Build OpenSceneGraph libraries from custom source files
+
+Custom source files include OpenSceneGraph source files directly.
+Here's how osgGA.cpp looks like:
+<A HREF="https://github.com/OGStudio/openscenegraph-cross-platform-examples/blob/c42fcbaaf4064b0853246e68837bc91d2b1842c9/libs/OpenSceneGraph/src/osgGA.cpp">https://github.com/OGStudio/openscenegraph-cross-platform-examples/blob/c42fcbaaf4064b0853246e68837bc91d2b1842c9/libs/OpenSceneGraph/src/osgGA.cpp</A>
+
+This allows to build OpenSceneGraph multitudes time faster at the
+expense of using more RAM during building.
+As for plugins, I no longer need to hack my way through plugin
+dependencies' safety checks, I simply include necessary source files.
+
+2.3. Prepare OpenSceneGraph header files for each platform in advance
+
+OpenSceneGraph and OpenThreads require different headers (osg/GL,
+osg/Version, osg/Config, etc.) for different platforms and (probably)
+compilers. I simply generated those headers by configuring stub
+projects.
+
+2.4. Build OpenSceneGraph as part of iOS project without CMakeLists.txt
+
+Wrap all C++ files (.cpp extension) into Objective-C++ files (.mm
+extension) and include them into Xcode project. Now you can switch
+between simulator and device just like in other iOS projects.
+
+3. EXAMPLE
+
+OpenSceneGraph cross-platform examples now use described approach.
+Check out how easy it is to build them for desktop, mobile, and web
+platforms: <A HREF="https://github.com/OGStudio/openscenegraph-cross-platform-examples">https://github.com/OGStudio/openscenegraph-cross-platform-examples</A>
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008893.html">[osg-users] [ANN] Cross-platform examples for Linux, macOS, Windows, Android, iOS, and Web
+</A></li>
+	<LI>Next message (by thread): <A HREF="008895.html">[osg-users] OpenSceneGraph BOF, Siggraph 2018 is tomorrow (Wed 15th August)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8894">[ date ]</a>
+              <a href="thread.html#8894">[ thread ]</a>
+              <a href="subject.html#8894">[ subject ]</a>
+              <a href="author.html#8894">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

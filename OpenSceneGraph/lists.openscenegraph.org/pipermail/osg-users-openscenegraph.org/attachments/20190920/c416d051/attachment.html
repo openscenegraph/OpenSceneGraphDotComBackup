@@ -1,0 +1,72 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;Hi&nbsp;Hannes,&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Thanks&nbsp;for&nbsp;detailing&nbsp;the&nbsp;issue&nbsp;so&nbsp;clearly. &nbsp;On&nbsp;a&nbsp;first&nbsp;pass&nbsp;it&nbsp;would&nbsp;seem&nbsp;like&nbsp;your&nbsp;suggesting&nbsp;of&nbsp;changing&nbsp;to&nbsp;observer_ptr&lt;&gt;&nbsp;would&nbsp;be&nbsp;appropriate. &nbsp;I&#39;ll&nbsp;need&nbsp;to&nbsp;properly&nbsp;review&nbsp;it,&nbsp;though&nbsp;I&#39;m&nbsp;working&nbsp;flat&nbsp;out&nbsp;on&nbsp;the&nbsp;VSG&nbsp;right&nbsp;now&nbsp;so&nbsp;can&#39;t&nbsp;jump&nbsp;in&nbsp;right&nbsp;away. &nbsp;Could&nbsp;you&nbsp;make&nbsp;a&nbsp;PR&nbsp;for&nbsp;your&nbsp;fix,&nbsp;then&nbsp;once&nbsp;I&nbsp;get&nbsp;a&nbsp;breather&nbsp;from&nbsp;the&nbsp;VSG&nbsp;work&nbsp;can&nbsp;jump&nbsp;in&nbsp;a&nbsp;test&nbsp;out&nbsp;the&nbsp;issue&nbsp;and&nbsp;the&nbsp;solution.&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Cheers,&lt;br&gt;&lt;/div&gt;&lt;div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Thu,&nbsp;19&nbsp;Sep&nbsp;2019&nbsp;at&nbsp;22:29,&nbsp;Hannes&nbsp;Pabst&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:johannes.pabst@ocilion.com&quot;&gt;johannes.pabst@ocilion.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;Consider&nbsp;the&nbsp;following&nbsp;Lua&nbsp;script&amp;#058;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+function&nbsp;makeObjectWithCallback()&lt;br&gt;<br>
+ &nbsp; local&nbsp;object&nbsp;=&nbsp;new&nbsp;&quot;osg::Object&quot;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; function&nbsp;object:process()&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; print&nbsp;&quot;Hello&quot;&lt;br&gt;<br>
+ &nbsp; end&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; return&nbsp;object&lt;br&gt;<br>
+end&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;function&nbsp;makeObjectWithCallback&nbsp;will&nbsp;create&nbsp;an&nbsp;osg::Object&nbsp;which&nbsp;has&nbsp;a&nbsp;LuaCallbackObject&nbsp;named&nbsp;&quot;process&quot;,&nbsp;stored&nbsp;within&nbsp;its&nbsp;user&nbsp;data.&lt;br&gt;<br>
+The&nbsp;LuaCallbackObject&nbsp;itself&nbsp;stores&nbsp;an&nbsp;ref_ptr&nbsp;to&nbsp;the&nbsp;LuaScriptEngine&nbsp;for&nbsp;being&nbsp;able&nbsp;to&nbsp;call&nbsp;the&nbsp;function&nbsp;defined&nbsp;within&nbsp;Lua.&lt;br&gt;<br>
+Unfortunately&nbsp;the&nbsp;references&nbsp;now&nbsp;are&nbsp;circular:&nbsp;&lt;br&gt;<br>
+&lt;br&gt;<br>
+LuaScriptEngine&nbsp;-&gt;&nbsp;Lua&nbsp;-&gt;&nbsp;Object&nbsp;-&gt;&nbsp;LuaCallbackObject&nbsp;-&gt;&nbsp;LuaScriptEngine&lt;br&gt;<br>
+&lt;br&gt;<br>
+Once&nbsp;the&nbsp;script&nbsp;is&nbsp;executed&nbsp;it&nbsp;is&nbsp;hard&nbsp;to&nbsp;get&nbsp;rid&nbsp;of&nbsp;the&nbsp;LuaScriptEngine&nbsp;object.&lt;br&gt;<br>
+Simply&nbsp;deleting&nbsp;all&nbsp;references&nbsp;to&nbsp;the&nbsp;ScriptEngine&nbsp;and&nbsp;the&nbsp;returned&nbsp;Object&nbsp;on&nbsp;the&nbsp;cpp&nbsp;side&nbsp;will&nbsp;cause&nbsp;a&nbsp;leak,&nbsp;as&nbsp;the&nbsp;Lua&nbsp;state&nbsp;keeps&nbsp;them&nbsp;alive.&lt;br&gt;<br>
+Even&nbsp;if&nbsp;the&nbsp;variable&nbsp;&quot;object&quot;&nbsp;above&nbsp;is&nbsp;only&nbsp;temporarily&nbsp;used&nbsp;in&nbsp;Lua,&nbsp;a&nbsp;GC&nbsp;run&nbsp;is&nbsp;necessary&nbsp;to&nbsp;break&nbsp;the&nbsp;Lua&nbsp;-&gt;&nbsp;Object&nbsp;dependency.&lt;br&gt;<br>
+But&nbsp;who&nbsp;shall&nbsp;trigger&nbsp;that,&nbsp;if&nbsp;all&nbsp;references&nbsp;on&nbsp;the&nbsp;cpp&nbsp;side&nbsp;are&nbsp;gone&nbsp;and&nbsp;Lua&nbsp;cannot&nbsp;be&nbsp;called&nbsp;anymore?&lt;br&gt;<br>
+&lt;br&gt;<br>
+Here&nbsp;is&nbsp;the&nbsp;code&nbsp;to&nbsp;run&nbsp;the&nbsp;Lua&nbsp;script&nbsp;above,&nbsp;that&nbsp;will&nbsp;produce&nbsp;the&nbsp;leak:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;runScript()&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; osg::ref_ptr&lt;osg::ScriptEngine&gt;&nbsp;luaScriptEngine&nbsp;=&nbsp;osgDB::readFile&lt;osg::ScriptEngine&gt;(&quot;ScriptEngine.lua&quot;);&lt;br&gt;<br>
+ &nbsp; osg::ref_ptr&lt;osg::Script&gt;&nbsp;script&nbsp;=&nbsp;osgDB::readScriptFile(&quot;script.lua&quot;);&lt;br&gt;<br>
+ &nbsp; osg::Parameters&nbsp;inputParameters;&lt;br&gt;<br>
+ &nbsp; osg::Parameters&nbsp;outputParameters;&lt;br&gt;<br>
+ &nbsp; luaScriptEngine-&gt;run(script.get(),&nbsp;&quot;makeObjectWithCallback&quot;,&nbsp;inputParameters,&nbsp;outputParameters);&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+My&nbsp;intention&nbsp;is&nbsp;to&nbsp;use&nbsp;LuaCallbackObjects&nbsp;but&nbsp;also&nbsp;to&nbsp;have&nbsp;the&nbsp;possibility&nbsp;to&nbsp;clean&nbsp;up&nbsp;and&nbsp;reload&nbsp;the&nbsp;Lua&nbsp;script&nbsp;at&nbsp;any&nbsp;time&nbsp;by&nbsp;re-instantiating&nbsp;the&nbsp;LuaScriptEngine.&nbsp;&lt;br&gt;<br>
+Unfortunately&nbsp;there&nbsp;seems&nbsp;to&nbsp;be&nbsp;no&nbsp;general&nbsp;and&nbsp;easy&nbsp;way&nbsp;to&nbsp;destroy&nbsp;the&nbsp;shared&nbsp;LuaScriptEngine&nbsp;object.&nbsp;&lt;br&gt;<br>
+&lt;br&gt;<br>
+Wouldn&#39;t&nbsp;it&nbsp;be&nbsp;a&nbsp;more&nbsp;practical&nbsp;design&nbsp;to&nbsp;have&nbsp;the&nbsp;LuaCallbackObject&nbsp;only&nbsp;weakly&nbsp;reference&nbsp;the&nbsp;LuaScriptEngine?&lt;br&gt;<br>
+If&nbsp;the&nbsp;ScriptEngine&nbsp;object&nbsp;is&nbsp;gone,&nbsp;callbacks&nbsp;into&nbsp;Lua&nbsp;could&nbsp;simply&nbsp;do&nbsp;nothing&nbsp;–&nbsp;per&nbsp;definition.&lt;br&gt;<br>
+I&nbsp;understand&nbsp;such&nbsp;change&nbsp;would&nbsp;break&nbsp;existing&nbsp;code,&nbsp;in&nbsp;situations&nbsp;where&nbsp;one&nbsp;creates&nbsp;a&nbsp;LuaScriptEngine&nbsp;object&nbsp;on&nbsp;the&nbsp;fly&nbsp;running&nbsp;a&nbsp;script&nbsp;that&nbsp;hooks&nbsp;to&nbsp;the&nbsp;OSG&nbsp;runtime&nbsp;system.&lt;br&gt;<br>
+As&nbsp;far&nbsp;as&nbsp;I&nbsp;understand&nbsp;the&nbsp;Lua&nbsp;plugin&nbsp;code,&nbsp;the&nbsp;lua_close&nbsp;call&nbsp;in&nbsp;the&nbsp;destructor&nbsp;of&nbsp;LuaScriptEngine&nbsp;releases&nbsp;all&nbsp;references&nbsp;held&nbsp;by&nbsp;Lua&nbsp;and&nbsp;thus&nbsp;would&nbsp;be&nbsp;able&nbsp;break&nbsp;up&nbsp;all&nbsp;other&nbsp;eventually&nbsp;existing&nbsp;circular&nbsp;references&nbsp;-&nbsp;so&nbsp;the&nbsp;class&nbsp;would&nbsp;in&nbsp;principle&nbsp;be&nbsp;ready&nbsp;to&nbsp;act&nbsp;as&nbsp;a&nbsp;“master&nbsp;object”&nbsp;on&nbsp;the&nbsp;cpp&nbsp;side,&nbsp;that&nbsp;is&nbsp;able&nbsp;to&nbsp;control&nbsp;the&nbsp;lifetime&nbsp;of&nbsp;the&nbsp;whole&nbsp;Lua&nbsp;system.&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;have&nbsp;made&nbsp;this&nbsp;change&nbsp;to&nbsp;the&nbsp;Lua&nbsp;plugin&nbsp;code&nbsp;(simply&nbsp;by&nbsp;replacing&nbsp;the&nbsp;ref_ptr&nbsp;by&nbsp;an&nbsp;observer_ptr)&nbsp;and&nbsp;for&nbsp;my&nbsp;purposes&nbsp;it&nbsp;seems&nbsp;to&nbsp;work&nbsp;well,&nbsp;but&nbsp;wonder&nbsp;if&nbsp;this&nbsp;is&nbsp;an&nbsp;issue&nbsp;that&nbsp;should&nbsp;generally&nbsp;be&nbsp;addressed&nbsp;within&nbsp;OSG.&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=76703#76703&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=76703#76703&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;<br>
+
+</tt>

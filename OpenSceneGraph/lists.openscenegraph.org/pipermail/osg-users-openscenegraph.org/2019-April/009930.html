@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Changing minFilter/magFilter of texture in osgVolume::RayTracedTechnique
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changing%20minFilter/magFilter%20of%20texture%20in%0A%20osgVolume%3A%3ARayTracedTechnique&In-Reply-To=%3CBN6PR05MB29307B8C591746B32F17548ACA240%40BN6PR05MB2930.namprd05.prod.outlook.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009938.html">
+   <LINK REL="Next"  HREF="009935.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Changing minFilter/magFilter of texture in osgVolume::RayTracedTechnique</H1>
+<!--htdig_noindex-->
+    <B>Sailesh Sidhwani</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changing%20minFilter/magFilter%20of%20texture%20in%0A%20osgVolume%3A%3ARayTracedTechnique&In-Reply-To=%3CBN6PR05MB29307B8C591746B32F17548ACA240%40BN6PR05MB2930.namprd05.prod.outlook.com%3E"
+       TITLE="[osg-users] Changing minFilter/magFilter of texture in osgVolume::RayTracedTechnique">ssidhwan at mathworks.com
+       </A><BR>
+    <I>Tue Apr 16 12:10:28 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009938.html">[osg-users] Missing features with GL Core profile
+</A></li>
+        <LI>Next message (by thread): <A HREF="009935.html">[osg-users] Changing minFilter/magFilter of texture in osgVolume::RayTracedTechnique
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9930">[ date ]</a>
+              <a href="thread.html#9930">[ thread ]</a>
+              <a href="subject.html#9930">[ subject ]</a>
+              <a href="author.html#9930">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I have RayTracedTechnique putting graphics on the screen, but things aren't rendering correctly. The culprit is the 'osg::Texture3D::LINEAR' choice that is used by default as the min/mag filter for the Texture3D object created by RayTracedTechnique. I'd like to change to NEAREST as I'm working with segmented/ labeled volume.   The problem I'm seeing is that when I use the setMinFilter and setMaxFilter methods on the associated ImageLayer, things aren't getting updated for some reason. I know that's what's going on because if I actually edit the code in RayTracedTechnique.cpp to use NEAREST for the min/max filter on the Texture3D, I get the texture I want on the screen.
+
+
+Here is some code for context:
+
+            osg::ref_ptr&lt;osgVolume::Volume&gt; volume = new osgVolume::Volume;
+
+            osg::ref_ptr&lt;osgVolume::VolumeTile&gt; tile = new osgVolume::VolumeTile;
+            volume-&gt;addChild(tile.get());
+
+            osg::ref_ptr&lt;osg::Image&gt; image_3d = createTexture3D(data,xfer_table);
+
+            osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer = new osgVolume::ImageLayer(image_3d.get());
+
+            tile-&gt;setLayer(layer.get());
+
+            layer-&gt;addProperty(new osgVolume::AlphaFuncProperty(0.02f));
+
+            osg::ref_ptr&lt;osgVolume:: RayTracedTechnique &gt; technique = new osgVolume:: RayTracedTechnique ();
+            technique-&gt;setNumSlices(200);
+            tile-&gt;setVolumeTechnique(technique);
+
+            layer-&gt;setMagFilter(osg::Texture3D:: NEAREST);
+            layer-&gt;setMinFilter(osg::Texture3D:: NEAREST);
+
+
+Here is how the output looks when I edit RayTracedTechnique.cpp to use NEAREST minFilter/magFilter. This is how I expect it to look
+
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image001.png at 01D4F464.82427F50</A>]
+
+
+
+Default RayTracedTechnique.cpp (which uses LINEAR minFilter/magFilter): (Not expected)
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image003.png at 01D4F466.84604450</A>]
+
+
+How can I force the Texture3D object created by RayTracedTechnique to use NEAREST for minFilter/magFiltering?
+
+
+I'm using OSG 3.0. I know I need to upgrade, but I didn't see any way to do this even in OSG 3.6
+
+
+Thanks,
+-Sailesh
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190416/d66f79cb/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190416/d66f79cb/attachment-0001.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: image001.png
+Type: image/png
+Size: 3808 bytes
+Desc: image001.png
+URL: &lt;<A HREF="../attachments/20190416/d66f79cb/attachment-0002.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190416/d66f79cb/attachment-0002.png</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: image003.png
+Type: image/png
+Size: 50062 bytes
+Desc: image003.png
+URL: &lt;<A HREF="../attachments/20190416/d66f79cb/attachment-0003.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190416/d66f79cb/attachment-0003.png</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009938.html">[osg-users] Missing features with GL Core profile
+</A></li>
+	<LI>Next message (by thread): <A HREF="009935.html">[osg-users] Changing minFilter/magFilter of texture in osgVolume::RayTracedTechnique
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9930">[ date ]</a>
+              <a href="thread.html#9930">[ thread ]</a>
+              <a href="subject.html#9930">[ subject ]</a>
+              <a href="author.html#9930">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

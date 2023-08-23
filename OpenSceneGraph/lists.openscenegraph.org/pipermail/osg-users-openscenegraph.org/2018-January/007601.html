@@ -1,0 +1,161 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Shaders with multiple views, possible?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Shaders%20with%20multiple%20views%2C%20possible%3F&In-Reply-To=%3CCAFN7Y%2BV2v-dN9FrWfjK3VznShrzdLWFCB0uF%2B-SKhTsAoFsOvA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007599.html">
+   <LINK REL="Next"  HREF="007604.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Shaders with multiple views, possible?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Shaders%20with%20multiple%20views%2C%20possible%3F&In-Reply-To=%3CCAFN7Y%2BV2v-dN9FrWfjK3VznShrzdLWFCB0uF%2B-SKhTsAoFsOvA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Shaders with multiple views, possible?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Jan 20 03:41:15 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007599.html">[osg-users] Shaders with multiple views, possible?
+</A></li>
+        <LI>Next message (by thread): <A HREF="007604.html">[osg-users] Shaders with multiple views, possible?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7601">[ date ]</a>
+              <a href="thread.html#7601">[ thread ]</a>
+              <a href="subject.html#7601">[ subject ]</a>
+              <a href="author.html#7601">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Antoine,
+
+The OSG provides equivalents to the OpenGL built ins for you so you
+don't need to provide them yourself, so just ditch the callbacks and
+just use gl_ModelViewMatrix or osg_ModelViewMatrix.  The OSG has
+provision for doing automatic conversion from gl_ModelViewMatrix to
+osg_ModelViewMartrix, it's enabled by default for GL3 and GLES2
+builds, but if not then you can enable if you want to use it.  See the
+osgsimplegl3 example.
+
+These uniforms that the OSG provides for the projection and modelview
+matrices work seamlesly across multiple views. Just use them and it'll
+work out of the box.
+
+Robert.
+
+On 19 January 2018 at 22:54, Antoine Rennuit &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">antoinerennuit at hotmail.com</A>&gt; wrote:
+&gt;<i> Dear OSG forum,
+</I>&gt;<i>
+</I>&gt;<i> I am having trouble using shaders in the context of multiple views (either several Viewer objects or a CompositeViewer). When using shaders (either vertex or fragment), you most often need to let the shaders know about the camera configuration. In the case where a single view (i.e. single camera) is used, this can be done via a ModelViewProjectionMatrix uniform and setting up a callback camera callback such that when the camera is updated, the shader is informed about the update:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> struct ModelViewProjectionMatrixCallback: public osg::Uniform::Callback {
+</I>&gt;<i>         ModelViewProjectionMatrixCallback(osg::Camera* camera) :
+</I>&gt;<i>                         _camera(camera) {
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         virtual void operator()(osg::Uniform* uniform, osg::NodeVisitor* nv) {
+</I>&gt;<i>                 osg::Matrixd viewMatrix = _camera-&gt;getViewMatrix();
+</I>&gt;<i>                 osg::Matrixd modelMatrix = osg::computeLocalToWorld(nv-&gt;getNodePath());
+</I>&gt;<i>                 osg::Matrixd modelViewProjectionMatrix = modelMatrix * viewMatrix * _camera-&gt;getProjectionMatrix();
+</I>&gt;<i>                 uniform-&gt;set(modelViewProjectionMatrix);
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         osg::Camera* _camera;
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> osg::Uniform* modelViewProjectionMatrix = new osg::Uniform(osg::Uniform::FLOAT_MAT4, &quot;ModelViewProjectionMatrix&quot;);
+</I>&gt;<i> modelViewProjectionMatrix-&gt;setUpdateCallback(new ModelViewProjectionMatrixCallback(camera));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> But in the case where multiple views are used, there are multiple cameras and if we install callbacks on all cameras, then the shader may be informed about camera 2 being updated but being rendering the view of camera 0. And in this case view 0 will be drawn with the configuration of camera 2, no?
+</I>&gt;<i>
+</I>&gt;<i> I guess I am wrong somewhere? Or else what should I change in my code to get shaders in the context of multiple views?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Antoine
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicd97d.php?p=72810#72810">http://forum.openscenegraph.org/viewtopic.php?p=72810#72810</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007599.html">[osg-users] Shaders with multiple views, possible?
+</A></li>
+	<LI>Next message (by thread): <A HREF="007604.html">[osg-users] Shaders with multiple views, possible?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7601">[ date ]</a>
+              <a href="thread.html#7601">[ thread ]</a>
+              <a href="subject.html#7601">[ subject ]</a>
+              <a href="author.html#7601">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

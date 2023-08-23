@@ -1,0 +1,83 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Hi, &lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;I&nbsp;have&nbsp;just&nbsp;investigated&nbsp;the&nbsp;issue&nbsp;with&nbsp;OSG&nbsp;view&nbsp;set&nbsp;in&nbsp;QT&nbsp;window&nbsp;and&nbsp;osgEarth&nbsp;REX&nbsp;engine&nbsp;which&nbsp;resulted&nbsp;in&nbsp;completely&nbsp;black&nbsp;screen.&nbsp;This&nbsp;was&nbsp;probably&nbsp;different&nbsp;problem,&nbsp;but&nbsp;it&nbsp;sounds&nbsp;bit&nbsp;like&nbsp;yours&nbsp;so&nbsp;I&nbsp;decided&nbsp;I&nbsp;will&nbsp;share&nbsp;my&nbsp;observations.&nbsp;Maybe&nbsp;it&nbsp;will&nbsp;help&nbsp;someone.&nbsp;What&nbsp;I&nbsp;found&nbsp;to&nbsp;be&nbsp;an&nbsp;issue&nbsp;in&nbsp;our&nbsp;case&nbsp;was&nbsp;a&nbsp;missing&nbsp;call&nbsp;<br>
+<br>
+&lt;span&nbsp;style=&quot;font-size:small;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;float:none;display:inline&quot;&gt;when&nbsp;setting&nbsp;our&nbsp;main&nbsp;view&nbsp;camera&lt;/span&gt;<br>
+<br>
+:&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;main_camera-&gt;setDrawBuffer(&nbsp;GL_BACK&nbsp;) &lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;This&nbsp;call&nbsp;makes&nbsp;sure&nbsp;the&nbsp;glDrawBuffer&nbsp;is&nbsp;set&nbsp;to&nbsp;main&nbsp;window&nbsp;BACK&nbsp;buffer&nbsp;before&nbsp;drawing&nbsp;main&nbsp;view&nbsp;frames.&nbsp;In&nbsp;my&nbsp;case&nbsp;REX&nbsp;engine&nbsp;was&nbsp;setting&nbsp;up&nbsp;RTT&nbsp;camera&nbsp;(without&nbsp;Color&nbsp;attachment)&nbsp;which&nbsp;swtiched&nbsp;DrawBuffer&nbsp;to&nbsp;GL_NONE.&nbsp;And&nbsp;main&nbsp;window&nbsp;was&nbsp;not&nbsp;restoring&nbsp;it&nbsp;before&nbsp;drawing&nbsp;the&nbsp;frame.&nbsp;So&nbsp;the&nbsp;effect&nbsp;was&nbsp;a&nbsp;completely&nbsp;black&nbsp;screen.&nbsp;I&nbsp;suspect&nbsp;similar&nbsp;problem&nbsp;may&nbsp;happen&nbsp;not&nbsp;only&nbsp;with&nbsp;osgEearth&nbsp;REX&nbsp;but&nbsp;with&nbsp;any&nbsp;RTT&nbsp;camera&nbsp;(without&nbsp;color&nbsp;attachments&nbsp;like&nbsp;shadowmap&nbsp;cameras).&nbsp;When&nbsp;I&nbsp;added&nbsp;above&nbsp;line&nbsp;while&nbsp;setting&nbsp;main&nbsp;camera&nbsp;problem&nbsp;vanished.&nbsp;I&nbsp;hope&nbsp;this&nbsp;may&nbsp;help&nbsp;somebody.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;With&nbsp;classic&nbsp;OSG&nbsp;Viewer&nbsp;this&nbsp;call&nbsp;is&nbsp;made&nbsp;inside&nbsp;SceneView&nbsp;ctor&nbsp;when&nbsp;setting&nbsp;up&nbsp;the&nbsp;camera.&nbsp;I&nbsp;believe&nbsp;our&nbsp;app&nbsp;also&nbsp;set&nbsp;up&nbsp;SceneView&nbsp;with&nbsp;QT&nbsp;window&nbsp;at&nbsp;startup&nbsp;but&nbsp;somehow&nbsp;DrawBuffer&nbsp;setting&nbsp;was&nbsp;later&nbsp;reverted/discarded.&nbsp;You&nbsp;may&nbsp;check&nbsp;if&nbsp;this&nbsp;hints&nbsp;helps&nbsp;you.&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Cheers,&lt;/div&gt;&lt;div&gt;Wojtek&nbsp;Lewandowski&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;sob.,&nbsp;28&nbsp;lip&nbsp;2018&nbsp;o&nbsp;11:51 Robert&nbsp;Osfield&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&nbsp;napisał(a):&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;?!?!&nbsp;gmail&nbsp;just&nbsp;sent&nbsp;the&nbsp;email&nbsp;mid&nbsp;sentence....&lt;br&gt;<br>
+&lt;br&gt;<br>
+&gt;&nbsp;That&nbsp;exactly&nbsp;the&nbsp;same&nbsp;can&nbsp;be&nbsp;said&nbsp;for&nbsp;the&nbsp;OSG. &nbsp;Doesn&#39;t&nbsp;mean&lt;br&gt;<br>
+&lt;br&gt;<br>
+Mean&#39;t&nbsp;to&nbsp;say:&lt;br&gt;<br>
+&lt;br&gt;<br>
+On&nbsp;Sat,&nbsp;28&nbsp;Jul&nbsp;2018&nbsp;at&nbsp;10:20,&nbsp;Robert&nbsp;Osfield&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Now,&nbsp;there&nbsp;are&nbsp;huge&nbsp;firms&nbsp;that&nbsp;adopted&nbsp;Qt&nbsp;for&nbsp;decades&nbsp;and&nbsp;run&nbsp;multi&nbsp;billion&nbsp;dollars&nbsp;systems&nbsp;on&nbsp;it.&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;exactly&nbsp;the&nbsp;same&nbsp;can&nbsp;be&nbsp;said&nbsp;about&nbsp;the&nbsp;OSG. &nbsp;It&#39;s&nbsp;widely&nbsp;used&nbsp;for&lt;br&gt;<br>
+decades&nbsp;on&nbsp;serious&nbsp;extensive&nbsp;kit.&lt;br&gt;<br>
+&lt;br&gt;<br>
+However,&nbsp;this&nbsp;doesn&#39;t&nbsp;mean&nbsp;that&nbsp;OSG&nbsp;isn&#39;t&nbsp;flawless&nbsp;and&nbsp;can&#39;t&nbsp;be&nbsp;improved&nbsp;upon.&lt;br&gt;<br>
+&lt;br&gt;<br>
+With&nbsp;modern&nbsp;C++&nbsp;with&nbsp;have&nbsp;opportunities&nbsp;to&nbsp;do&nbsp;a&nbsp;number&nbsp;of&nbsp;things&nbsp;far&lt;br&gt;<br>
+more&nbsp;cleanly&nbsp;that&nbsp;previously&nbsp;possible. &nbsp;This&nbsp;applies&nbsp;to&nbsp;the&nbsp;scene&lt;br&gt;<br>
+graphs&nbsp;just&nbsp;as&nbsp;much&nbsp;UI&#39;s.&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;future&nbsp;of&nbsp;C++&nbsp;application&nbsp;development&nbsp;will&nbsp;be&nbsp;better&nbsp;served&nbsp;by&lt;br&gt;<br>
+successors&nbsp;to&nbsp;the&nbsp;OSG&nbsp;and&nbsp;Qt.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Right&nbsp;now&nbsp;such&nbsp;successors&nbsp;are&nbsp;just&nbsp;embryonic&nbsp;ideas,&nbsp;or&nbsp;nuggets&nbsp;of&lt;br&gt;<br>
+prototypes. &nbsp;For&nbsp;current&nbsp;application&nbsp;development&nbsp;which&nbsp;need&nbsp;cross&lt;br&gt;<br>
+platform&nbsp;widgets&nbsp;may&nbsp;be&nbsp;best&nbsp;served&nbsp;by&nbsp;Qt,&nbsp;same&nbsp;as&nbsp;the&nbsp;graphics&lt;br&gt;<br>
+application&nbsp;development&nbsp;may&nbsp;be&nbsp;bested&nbsp;served&nbsp;by&nbsp;the&nbsp;OSG. &nbsp;Current&lt;br&gt;<br>
+applications&nbsp;will&nbsp;be&nbsp;around&nbsp;for&nbsp;many&nbsp;years&nbsp;to&nbsp;come&nbsp;so&nbsp;Qt&nbsp;and&nbsp;OSG&nbsp;will&lt;br&gt;<br>
+need&nbsp;to&nbsp;be&nbsp;maintained.&lt;br&gt;<br>
+&lt;br&gt;<br>
+For&nbsp;my&nbsp;own&nbsp;part&nbsp;I&#39;m&nbsp;committed&nbsp;to&nbsp;maintaining&nbsp;the&nbsp;OSG. &nbsp;For&nbsp;3.6.x&nbsp;I&lt;br&gt;<br>
+moved&nbsp;osgQt&nbsp;out&nbsp;of&nbsp;the&nbsp;core&nbsp;to&nbsp;allow&nbsp;members&nbsp;of&nbsp;the&nbsp;OSG&nbsp;community&nbsp;who&lt;br&gt;<br>
+have&nbsp;the&nbsp;need&nbsp;for&nbsp;Qt&nbsp;support&nbsp;and&nbsp;the&nbsp;expertise&nbsp;to&nbsp;know&nbsp;how&nbsp;to&nbsp;maintain&lt;br&gt;<br>
+it&nbsp;the&nbsp;ability&nbsp;to&nbsp;make&nbsp;decisions,&nbsp;implementation&nbsp;solutions&nbsp;and&nbsp;provide&lt;br&gt;<br>
+proper&nbsp;maintenance&nbsp;for&nbsp;it&nbsp;-&nbsp;something&nbsp;I&nbsp;can&#39;t&nbsp;do&nbsp;personally&nbsp;as&nbsp;I&nbsp;don&#39;t&lt;br&gt;<br>
+have&nbsp;the&nbsp;Qt&nbsp;expertise,&nbsp;nor&nbsp;the&nbsp;time.&lt;br&gt;<br>
+&lt;br&gt;<br>
+This&nbsp;thread&nbsp;is&nbsp;a&nbsp;bit&nbsp;worrying&nbsp;as&nbsp;despite&nbsp;me&nbsp;handing&nbsp;the&nbsp;keys&nbsp;over&nbsp;to&lt;br&gt;<br>
+osgQt&nbsp;development&nbsp;to&nbsp;the&nbsp;community&nbsp;doesn&#39;t&nbsp;yet&nbsp;seem&nbsp;to&nbsp;be&nbsp;able&nbsp;to&lt;br&gt;<br>
+resolve&nbsp;all&nbsp;the&nbsp;problems&nbsp;by&nbsp;themselves. &nbsp;Yes&nbsp;the&nbsp;source&nbsp;code&nbsp;to&nbsp;both&lt;br&gt;<br>
+Qt,&nbsp;osgQt&nbsp;and&nbsp;the&nbsp;OSG&nbsp;are&nbsp;all&nbsp;available,&nbsp;but&nbsp;unless&nbsp;developers&nbsp;step&nbsp;up&lt;br&gt;<br>
+things&nbsp;don&#39;t&nbsp;happen. &nbsp;This&nbsp;suggest&nbsp;perhaps&nbsp;we&nbsp;need&nbsp;a&nbsp;bit&nbsp;more&lt;br&gt;<br>
+motivated&nbsp;manpower&nbsp;from&nbsp;the&nbsp;Qt/OSG&nbsp;community&nbsp;to&nbsp;help&nbsp;push&nbsp;osgQt&lt;br&gt;<br>
+forward. &nbsp;So&nbsp;if&nbsp;you&nbsp;feel&nbsp;passionate&nbsp;about&nbsp;Qt&nbsp;then&nbsp;please&nbsp;step&nbsp;forward&lt;br&gt;<br>
+and&nbsp;help&nbsp;out.&lt;br&gt;<br>
+&lt;br&gt;<br>
+--&lt;br&gt;<br>
+&lt;br&gt;<br>
+As&nbsp;a&nbsp;little&nbsp;prod&nbsp;for&nbsp;the&nbsp;long&nbsp;term&nbsp;future. &nbsp;With&nbsp;UI&#39;s&nbsp;and&nbsp;2D&nbsp;rendering&lt;br&gt;<br>
+API&nbsp;adopting&nbsp;scene&nbsp;graph&nbsp;internally&nbsp;(by&nbsp;this&nbsp;I&nbsp;don&#39;t&nbsp;mean&nbsp;Qt3D)&nbsp;and&lt;br&gt;<br>
+more&nbsp;UI/2D&nbsp;rendering&nbsp;being&nbsp;done&nbsp;down&nbsp;on&nbsp;the&nbsp;GPU&nbsp;there&nbsp;is&nbsp;a&nbsp;possible&lt;br&gt;<br>
+convergence. &nbsp;Could&nbsp;one&nbsp;have&nbsp;a&nbsp;scene&nbsp;graph&nbsp;that&nbsp;is&nbsp;general&nbsp;purpose&lt;br&gt;<br>
+enough&nbsp;to&nbsp;be&nbsp;used&nbsp;directly&nbsp;to&nbsp;do&nbsp;2D&nbsp;UI&#39;s&nbsp;as&nbsp;well&nbsp;as&nbsp;3D&nbsp;real-time&lt;br&gt;<br>
+graphics? &nbsp;Could&nbsp;one&nbsp;implement&nbsp;the&nbsp;UI&nbsp;as&nbsp;an&nbsp;add&nbsp;on&nbsp;to&nbsp;the&nbsp;core&nbsp;scene&lt;br&gt;<br>
+graph,&nbsp;just&nbsp;a&nbsp;you&#39;d&nbsp;made&nbsp;a&nbsp;game&nbsp;engine&nbsp;or&nbsp;image&nbsp;generator&nbsp;that&nbsp;builds&lt;br&gt;<br>
+ontop&nbsp;of&nbsp;a&nbsp;scene&nbsp;graph??&lt;br&gt;<br>
+&lt;br&gt;<br>
+So...&nbsp;I&#39;m&nbsp;writing&nbsp;a&nbsp;new&nbsp;scene&nbsp;graph,&nbsp;yes&nbsp;I&#39;m&nbsp;focused&nbsp;on&nbsp;it&nbsp;being&nbsp;used&lt;br&gt;<br>
+for&nbsp;3D,&nbsp;but&nbsp;I&#39;m&nbsp;aware&nbsp;that&nbsp;Vulkan&nbsp;does&nbsp;compute&nbsp;just&nbsp;as&nbsp;nicely&nbsp;as&nbsp;it&lt;br&gt;<br>
+does&nbsp;3D,&nbsp;and&nbsp;it&nbsp;also&nbsp;works&nbsp;just&nbsp;fine&nbsp;for&nbsp;2D&nbsp;too. &nbsp;If&nbsp;you&nbsp;can&nbsp;have&nbsp;a&lt;br&gt;<br>
+scene&nbsp;graph&nbsp;just&nbsp;work&nbsp;as&nbsp;a&nbsp;compute&nbsp;graph,&nbsp;as&nbsp;well&nbsp;as&nbsp;3D&nbsp;rendering&lt;br&gt;<br>
+graph&nbsp;then&nbsp;2D&nbsp;rendering&nbsp;is&nbsp;also&nbsp;just&nbsp;another&nbsp;subset. &nbsp;Could&nbsp;an&lt;br&gt;<br>
+enterprising&nbsp;engineer&nbsp;build&nbsp;a&nbsp;fully&nbsp;function&nbsp;UI&nbsp;ontop&nbsp;of&nbsp;it? &nbsp;Maybe.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Even&nbsp;if&nbsp;it&nbsp;doesn&#39;t&nbsp;come&nbsp;to&nbsp;pass&nbsp;for&nbsp;my&nbsp;VSG&nbsp;work,&nbsp;this&nbsp;is&nbsp;how&nbsp;I&nbsp;feel&nbsp;we&lt;br&gt;<br>
+should&nbsp;all&nbsp;be&nbsp;thinking&nbsp;about&nbsp;the&nbsp;future&nbsp;-&nbsp;we&nbsp;should&nbsp;be&nbsp;thinking&nbsp;out&nbsp;of&lt;br&gt;<br>
+the&nbsp;box,&nbsp;thinking&nbsp;about&nbsp;where&nbsp;we&nbsp;could&nbsp;get&nbsp;it&nbsp;if&nbsp;we&nbsp;strive&nbsp;for&nbsp;it,&lt;br&gt;<br>
+rather&nbsp;than&nbsp;settling&nbsp;for&nbsp;the&nbsp;status&nbsp;quo. &nbsp;Yes&nbsp;yes&nbsp;the&nbsp;OSG&nbsp;and&nbsp;Qt&nbsp;are&lt;br&gt;<br>
+impressive&nbsp;in&nbsp;a&nbsp;number&nbsp;of&nbsp;ways,&nbsp;but&nbsp;they&nbsp;have&nbsp;but&nbsp;of&nbsp;all&nbsp;encompassing&lt;br&gt;<br>
+monsters&nbsp;that&nbsp;are&nbsp;at&nbsp;there&nbsp;peak. &nbsp;Better&nbsp;solutions&nbsp;will&nbsp;follow&nbsp;on,&nbsp;if&lt;br&gt;<br>
+they&nbsp;don&#39;t&nbsp;the&nbsp;computer&nbsp;industry&nbsp;is&nbsp;failing&nbsp;to&nbsp;progress&nbsp;as&nbsp;it&nbsp;should.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Robert.&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;<br>
+
+</tt>

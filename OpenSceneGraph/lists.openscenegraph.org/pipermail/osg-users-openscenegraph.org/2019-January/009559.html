@@ -1,0 +1,434 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Deleting still referenced object
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3C08dd885f-1332-738a-8caa-fcafb642e792%40zaretto.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009602.html">
+   <LINK REL="Next"  HREF="009584.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Deleting still referenced object</H1>
+<!--htdig_noindex-->
+    <B>Richard Harrison</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3C08dd885f-1332-738a-8caa-fcafb642e792%40zaretto.com%3E"
+       TITLE="[osg-users] Deleting still referenced object">rjh at zaretto.com
+       </A><BR>
+    <I>Mon Jan  7 16:15:59 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009602.html">[osg-users] [3rdparty] Use PNG as texture for terrain in osgEarth
+</A></li>
+        <LI>Next message (by thread): <A HREF="009584.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9559">[ date ]</a>
+              <a href="thread.html#9559">[ thread ]</a>
+              <a href="subject.html#9559">[ subject ]</a>
+              <a href="author.html#9559">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Using osg master; self built; application FlightGear; Win32 x64; MSVC 2015.
+
+In FlightGear when OSG warning Warning: deleting still referenced object 
+... the final reference count was&quot; is detected in our NotifyHandler we 
+throw an exception (probably the only reliably thing to do, as this 
+message generally comes before some sort of segfault).
+
+I've been trying to figure out what's the root cause of this for a 
+months; I managed to reduce the incidence of these errors by changing 
+ObjectCache::removeExpiredObjectsInCache to use &lt; expiry time rather 
+than &lt;= expiry time, however this might be a specific instance of a more 
+general problem; as since I did this I think I've figured out what is 
+actually going on.
+
+The more general problem is that the ObjectCache is removing an expired 
+object however at the same time and inside the DatabasePager thread the 
+object becomes active again; i.e. after the check for expiry time where 
+_refCount == 1 passes and the deletion has started when at the same 
+point a ref_ptr to the newly loaded object is created.
+
+I think my analysis is right; I've had probably the longest debug 
+session ever (since 31/12/2018) whilst I investigate (it took over 
+40hours of flight before the problem happened).
+
+------------------------
+See <A HREF="../../../../i.imgur.com/DTPEpmh.png">https://i.imgur.com/DTPEpmh.png</A>
+
+So to unravel the two threads; firstly the stack dump of the main thread.
+1.&#160;&#160;&#160; fgfs.exe!NotifyLogger::notify(osg::NotifySeverity severity, const 
+char * message) Line 26&#160;&#160;&#160; C++
+2.&#160;&#160;&#160;&#160;&#160; osg160-osg.dll!osg::NotifyStreamBuffer::sync() Line 92 C++
+3.&#160;&#160;&#160;&#160;&#160; msvcp140.dll!00007ff8ed0927f2()&#160;&#160;&#160; Unknown
+4. osg160-osg.dll!std::endl&lt;char,std::char_traits&lt;char&gt; 
+ &gt;(std::basic_ostream&lt;char,std::char_traits&lt;char&gt; &gt; &amp; _Ostr) Line 994&#160;&#160;&#160; C++
+5.&#160;&#160;&#160;&#160;&#160; osg160-osg.dll!osg::Referenced::~Referenced() Line 216 C++
+6.&#160;&#160;&#160;&#160;&#160; osgdb_ac.dll!osg::Group::`scalar deleting destructor'(unsigned 
+int)&#160;&#160;&#160; C++
+7. osg160-osg.dll!osg::Referenced::signalObserversAndDelete(bool 
+signalDelete, bool doDelete) Line 306&#160;&#160;&#160; C++
+8.&#160;&#160;&#160;&#160;&#160; osg160-osg.dll!osg::Referenced::unref() Line 194&#160;&#160;&#160; C++
+9. 
+osg160-osgDB.dll!std::_Tree&lt;std::_Tmap_traits&lt;std::pair&lt;std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; 
+ &gt;,osg::ref_ptr&lt;osgDB::Options const &gt; 
+ &gt;,std::pair&lt;osg::ref_ptr&lt;osg::Object&gt;,double&gt;,osgDB::ObjectCache::ClassComp,std::allocator&lt;std::pair&lt;std::pair&lt;std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt;,osg::ref_ptr&lt;osgDB::Options const &gt; &gt; const ,std::pair&lt;osg::ref_ptr&lt;osg::Object&gt;,double&gt; &gt; &gt;,0&gt; &gt;::erase(std::_Tree_const_iterator&lt;std::_Tree_val&lt;std::_Tree_simple_types&lt;std::pair&lt;std::pair&lt;std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt;,osg::ref_ptr&lt;osgDB::Options const &gt; &gt; const ,std::pair&lt;osg::ref_ptr&lt;osg::Object&gt;,double&gt; &gt; &gt; &gt; &gt; _Where) Line 1431&#160;&#160;&#160; C++
+10. 
+osg160-osgDB.dll!osgDB::ObjectCache::removeExpiredObjectsInCache(double 
+expiryTime) Line 171&#160;&#160;&#160; C++
+11.&#160;&#160;&#160;&#160;&#160; osg160-osgViewer.dll!osgViewer::Viewer::updateTraversal() Line 
+1161&#160;&#160;&#160; C++
+12.&#160;&#160;&#160;&#160;&#160; osg160-osgViewer.dll!osgViewer::ViewerBase::frame(double 
+simulationTime) Line 748&#160;&#160;&#160; C++
+13.&#160;&#160;&#160;&#160;&#160; fgfs.exe!fgOSMainLoop() Line 339&#160;&#160;&#160; C++
+14.&#160;&#160;&#160;&#160;&#160; fgfs.exe!fgMainInit(int argc, char * * argv) Line 619 C++
+15.&#160;&#160;&#160;&#160;&#160; fgfs.exe!main(int argc, char * * argv) Line 339&#160;&#160;&#160; C++
+16.&#160;&#160;&#160;&#160;&#160; fgfs.exe!__scrt_common_main_seh() Line 253&#160;&#160;&#160; C++
+17.&#160;&#160;&#160;&#160;&#160; kernel32.dll!00007ff96a477e94()&#160;&#160;&#160; Unknown
+18.&#160;&#160;&#160;&#160;&#160; ntdll.dll!00007ff96c81a251()&#160;&#160;&#160; Unknown
+
+The problem starts in (10) above, referring to the code; it is calling 
+_objectCache.erase(oitr) which the reference count must be 1, following 
+this through it is Referenced::unref that decrements the count, and 
+finally this is checked in Referenced.cpp:213 (I've added extra code as 
+part of the diagnostic process).
+
+
+(10)
+155. void ObjectCache::removeExpiredObjectsInCache(double expiryTime)
+156. {
+157.&#160;&#160;&#160;&#160; OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; 
+lock(_objectCacheMutex);
+158.
+159.&#160;&#160;&#160;&#160; // Remove expired entries from object cache
+160.&#160;&#160;&#160;&#160; ObjectCacheMap::iterator oitr = _objectCache.begin();
+161.&#160;&#160;&#160;&#160; while (oitr != _objectCache.end())
+162.&#160;&#160;&#160;&#160; {
+163.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; if (oitr-&gt;second.second &lt;= expiryTime)
+164.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; {
+165.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; if (oitr-&gt;second.first-&gt;referenceCount() == 1) {
+166. #if __cplusplus &gt; 199711L
+167.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; oitr = _objectCache.erase(oitr);
+168. #else
+169.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; _objectCache.erase(oitr++);
+170. #endif
+171.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; continue;
+172.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; }
+173.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; else
+174.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; //RJHDO: consider whether or not _refCount&gt;0 prior 
+to removal
+175.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; // first is FileNameOptionsPair
+176.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; // second is ObjectTimeStampPair
+177.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; OSG_WARN &lt;&lt; 
+&quot;ObjectCache::removeExpiredObjectsInCache expired object has references: 
+&quot; &lt;&lt; oitr-&gt;first.first &lt;&lt; &quot; refcount != 1 &quot; &lt;&lt; 
+oitr-&gt;second.first-&gt;referenceCount() &lt;&lt; std::endl;
+178.
+179.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; }
+180.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; ++oitr;
+181.&#160;&#160;&#160;&#160; }
+182. }
+183.
+
+(8)
+
+169. inline int Referenced::unref() const
+170. {
+171.&#160;&#160;&#160;&#160; int newRef;
+172. #if defined(_OSG_REFERENCED_USE_ATOMIC_OPERATIONS)
+173.&#160;&#160;&#160;&#160; newRef = --_refCount;
+174.&#160;&#160;&#160;&#160; bool needDelete = (newRef == 0);
+175. #else
+176.&#160;&#160;&#160;&#160; bool needDelete = false;
+177.&#160;&#160;&#160;&#160; if (_refMutex)
+178.&#160;&#160;&#160;&#160; {
+179.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(*_refMutex);
+180.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; newRef = --_refCount;
+181.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; needDelete = newRef==0;
+182.&#160;&#160;&#160;&#160; }
+183.&#160;&#160;&#160;&#160; else
+184.&#160;&#160;&#160;&#160; {
+185.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; newRef = --_refCount;
+186.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; needDelete = newRef==0;
+187.&#160;&#160;&#160;&#160; }
+188. #endif
+189.
+190.&#160;&#160;&#160;&#160; if (needDelete)
+191.&#160;&#160;&#160;&#160; {
+192.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; signalObserversAndDelete(true,true);
+193.&#160;&#160;&#160;&#160; }
+194.&#160;&#160;&#160;&#160; return newRef;
+195. }
+196.
+
+
+(5)
+
+193. Referenced::~Referenced()
+194. {
+195. #ifdef DEBUG_OBJECT_ALLOCATION_DESTRUCTION
+196.&#160;&#160;&#160;&#160; {
+197.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; 
+lock(getNumObjectMutex());
+198.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; --s_numObjects;
+199.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; printf(&quot;Object created, total num=%d\n&quot;,s_numObjects);
+200.&#160;&#160;&#160;&#160; }
+201. #endif
+202.
+203.&#160;&#160;&#160;&#160; if (_refCount &gt; 0)
+204.&#160;&#160;&#160;&#160; {
+205.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; int retry_count = 100;
+206.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; while (_refCount &gt; 0 &amp;&amp; retry_count &gt; 0)
+207.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; {
+208.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; OSG_WARN &lt;&lt; &quot;Wait for object references to be deleted 
+(&quot; &lt;&lt; _refCount &lt;&lt; &quot;) &quot; &lt;&lt; this &lt;&lt; &quot; of type '&quot; &lt;&lt; typeid(this).name() 
+&lt;&lt; &quot;'&quot; &lt;&lt; std::endl;
+209.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; OpenThreads::Thread::microSleep(100000); // 100ms wait 
+for other threads
+210.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; retry_count--;
+211.
+212.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; }
+213.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; if (_refCount &gt; 0)
+214.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; {
+215.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; OSG_WARN &lt;&lt; &quot;Warning: deleting still referenced object 
+&quot; &lt;&lt; this &lt;&lt; &quot; of type '&quot; &lt;&lt; typeid(this).name() &lt;&lt; &quot;'&quot; &lt;&lt; std::endl;
+216.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; OSG_WARN &lt;&lt; &quot;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; the final reference count was &quot; 
+&lt;&lt; _refCount &lt;&lt; &quot;, memory corruption possible.&quot; &lt;&lt; std::endl;
+217.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; }
+218.&#160;&#160;&#160;&#160; }
+219.
+220.&#160;&#160;&#160;&#160; // signal observers that we are being deleted.
+221.&#160;&#160;&#160;&#160; signalObserversAndDelete(true, false);
+222.
+223.&#160;&#160;&#160;&#160; // delete the ObserverSet
+224. #if defined(_OSG_REFERENCED_USE_ATOMIC_OPERATIONS)
+225.&#160;&#160;&#160;&#160; if (_observerSet.get()) 
+static_cast&lt;ObserverSet*&gt;(_observerSet.get())-&gt;unref();
+226. #else
+227.&#160;&#160;&#160;&#160; if (_observerSet) static_cast&lt;ObserverSet*&gt;(_observerSet)-&gt;unref();
+228. #endif
+229.
+230. #if !defined(_OSG_REFERENCED_USE_ATOMIC_OPERATIONS)
+231.&#160;&#160;&#160;&#160; if (_refMutex) delete _refMutex;
+232. #endif
+233. }
+
+
+---------------------------------
+
+At the same time as the main thread (above) the DatabasePager thread is 
+busily we have a tile being loaded.
+
+After much analysis I think I've figured out what's happening and it's 
+going to be tricky to fix; but as always finding out what's going wrong 
+inside is the first step to fixing it.
+
+Reference the stack trace from the pager thread (below).
+
+There is a mutex to control access to the object cache. This locks the 
+object cache for the duration of the getFromObjectCache method; however 
+once this mutex lock was released by the DatabasePager thread it can 
+then be taken almost immediately by a waiting 
+removeExpiredObjectsInCache in the main thread.
+
+As the mutex is only kept inside (2) in the stack trace 
+(getFromObjectCache) once this method returns a valid pointer that 
+pointer is then referenced in (4) and thus the reference count will be 
+incremented at some point after object cache expiry check begins, ref 
+ObjectCache::getFromObjectCache:99 and ModelRegistryCallback..hxx:79 
+(where it calls _cachePolicy.find).
+
+So the locking isn't sufficient to cover the case where an object that 
+has expired and is about to be deleted then becomes active in the 
+database pager thread
+
+Stack trace of database pager thread.
+1.&#160;&#160;&#160;&#160;&#160; ot21-OpenThreads.dll!OpenThreads::Mutex::lock() Line 115&#160;&#160;&#160; C++
+2. osg160-osgDB.dll!osgDB::ObjectCache::getFromObjectCache(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * options) Line 99 C++
+3.&#160;&#160;&#160;&#160;&#160; fgfs.exe!simgear::DefaultCachePolicy::find(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * opt) Line 724&#160;&#160;&#160; C++
+4. 
+fgfs.exe!simgear::ModelRegistryCallback&lt;ACProcessPolicy,simgear::DefaultCachePolicy,ACOptimizePolicy,simgear::OSGSubstitutePolicy,simgear::BuildLeafBVHPolicy&gt;::readNode(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * opt) Line 79&#160;&#160;&#160; C++
+5.&#160;&#160;&#160;&#160;&#160; fgfs.exe!simgear::ModelRegistry::readNode(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * opt) Line 842&#160;&#160;&#160; C++
+6.&#160;&#160;&#160;&#160;&#160; osg160-osgDB.dll!osgDB::Registry::readNode(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * options, bool buildKdTreeIfRequired) 
+Line 238&#160;&#160;&#160; C++
+7.&#160;&#160;&#160;&#160;&#160; osg160-osgDB.dll!osgDB::readNodeFile(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+filename, const osgDB::Options * options) Line 70 C++
+8.&#160;&#160;&#160;&#160;&#160; fgfs.exe!sgLoad3DModel_internal(const SGPath &amp; path, const 
+osgDB::Options * dbOptions, SGPropertyNode * overlay) Line 338&#160;&#160;&#160; C++
+9.&#160;&#160;&#160;&#160;&#160; fgfs.exe!simgear::SGReaderWriterXML::readNode(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+name, const osgDB::Options * options) Line 92&#160;&#160;&#160; C++
+10. 
+fgfs.exe!simgear::ModelRegistryCallback&lt;simgear::DefaultProcessPolicy,simgear::NoCachePolicy,simgear::NoOptimizePolicy,simgear::NoSubstitutePolicy,simgear::BuildLeafBVHPolicy&gt;::loadUsingReaderWriter(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * opt) Line 114&#160;&#160;&#160; C++
+11. 
+fgfs.exe!simgear::ModelRegistryCallback&lt;simgear::DefaultProcessPolicy,simgear::NoCachePolicy,simgear::NoOptimizePolicy,simgear::NoSubstitutePolicy,simgear::BuildLeafBVHPolicy&gt;::readNode(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * opt) Line 90&#160;&#160;&#160; C++
+12.&#160;&#160;&#160;&#160;&#160; fgfs.exe!simgear::ModelRegistry::readNode(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * opt) Line 842&#160;&#160;&#160; C++
+13.&#160;&#160;&#160;&#160;&#160; osg160-osgDB.dll!osgDB::Registry::readNode(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * options, bool buildKdTreeIfRequired) 
+Line 238&#160;&#160;&#160; C++
+14.&#160;&#160;&#160;&#160;&#160; osg160-osgDB.dll!osgDB::readRefNodeFile(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+filename, const osgDB::Options * options) Line 130 C++
+15. 
+fgfs.exe!simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback::AddModelLOD::operator()(osg::LOD 
+* leaf, simgear::ReaderWriterSTG::_ModelBin::_ObjectStatic o) Line 
+159&#160;&#160;&#160; C++
+16.&#160;&#160;&#160;&#160;&#160; fgfs.exe!simgear::QuadTreeBuilder&lt;osg::LOD * 
+__ptr64,simgear::ReaderWriterSTG::_ModelBin::_ObjectStatic,simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback::MakeQuadLeaf,simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback::AddModelLOD,simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback::GetModelLODCoord&gt;::addNode(simgear::ReaderWriterSTG::_ModelBin::_ObjectStatic 
+&amp; obj) Line 96&#160;&#160;&#160; C++
+17.&#160;&#160;&#160;&#160;&#160; fgfs.exe!simgear::QuadTreeBuilder&lt;osg::LOD * 
+__ptr64,simgear::ReaderWriterSTG::_ModelBin::_ObjectStatic,simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback::MakeQuadLeaf,simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback::AddModelLOD,simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback::GetModelLODCoord&gt;::buildQuadTree&lt;std::_List_iterator&lt;std::_List_val&lt;std::_List_simple_types&lt;simgear::ReaderWriterSTG::_ModelBin::_ObjectStatic&gt; 
+ &gt; &gt; &gt;(const 
+std::_List_iterator&lt;std::_List_val&lt;std::_List_simple_types&lt;simgear::ReaderWriterSTG::_ModelBin::_ObjectStatic&gt; 
+ &gt; &gt; &amp; begin, const 
+std::_List_iterator&lt;std::_List_val&lt;std::_List_simple_types&lt;simgear::ReaderWriterSTG::_ModelBin::_ObjectStatic&gt; 
+ &gt; &gt; &amp; end) Line 118&#160;&#160;&#160; C++
+18. 
+fgfs.exe!simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback::readNode(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+__formal, const osgDB::Options * __formal) Line 203 C++
+19.&#160;&#160;&#160;&#160;&#160; osg160-osgDB.dll!osgDB::Registry::readNode(const 
+std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; 
+fileName, const osgDB::Options * options, bool buildKdTreeIfRequired) 
+Line 237&#160;&#160;&#160; C++
+20. osg160-osgDB.dll!osgDB::DatabasePager::DatabaseThread::run() Line 
+909&#160;&#160;&#160; C++
+21. 
+ot21-OpenThreads.dll!OpenThreads::ThreadPrivateActions::StartThread(void 
+* data) Line 112&#160;&#160;&#160; C++
+
+(3)
+
+97. osg::Object* ObjectCache::getFromObjectCache(const std::string&amp; 
+fileName, const Options *options)
+98. {
+99.&#160;&#160;&#160;&#160; OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_objectCacheMutex);
+100.&#160;&#160;&#160;&#160; ObjectCacheMap::iterator itr = find(fileName, options);
+101.&#160;&#160;&#160;&#160; if (itr!=_objectCache.end())
+102.&#160;&#160;&#160;&#160; {
+103.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; osg::ref_ptr&lt;const osgDB::Options&gt; o = itr-&gt;first.second;
+104.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; if (o.valid())
+105.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; {
+106.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; OSG_DEBUG&lt;&lt;&quot;Found &quot;&lt;&lt;fileName&lt;&lt;&quot; with options '&quot;&lt;&lt; 
+o-&gt;getOptionString()&lt;&lt; &quot;' in ObjectCache &quot;&lt;&lt;this&lt;&lt;std::endl;
+107.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; }
+108.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; else
+109.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; {
+110.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; OSG_DEBUG&lt;&lt;&quot;Found &quot;&lt;&lt;fileName&lt;&lt;&quot; in ObjectCache 
+&quot;&lt;&lt;this&lt;&lt;std::endl;
+111.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; }
+112.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; return itr-&gt;second.first.get();
+113.&#160;&#160;&#160;&#160; }
+114.&#160;&#160;&#160;&#160; else return 0;
+115. }
+
+(4)
+
+63. class ModelRegistryCallback : public osgDB::Registry::ReadFileCallback {
+64. public:
+65.&#160;&#160;&#160;&#160; ModelRegistryCallback(const std::string&amp; extension) :
+66.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; _processPolicy(extension), _cachePolicy(extension),
+67.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; _optimizePolicy(extension),
+68.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; _substitutePolicy(extension), _bvhPolicy(extension)
+69.&#160;&#160;&#160;&#160; {
+70.&#160;&#160;&#160;&#160; }
+71.&#160;&#160;&#160;&#160; virtual osgDB::ReaderWriter::ReadResult
+72.&#160;&#160;&#160;&#160; readNode(const std::string&amp; fileName,
+73.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; const osgDB::Options* opt)
+74.&#160;&#160;&#160;&#160; {
+75.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; using namespace osg;
+76.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; using namespace osgDB;
+77.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; using osgDB::ReaderWriter;
+78. //&#160;&#160;&#160;&#160;&#160;&#160;&#160; Registry* registry = Registry::instance();
+79.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; ref_ptr&lt;osg::Node&gt; optimizedNode = 
+_cachePolicy.find(fileName, opt);
+80.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; if (!optimizedNode.valid()) {
+
+
+----------------------------------------------------
+
+After much thinking I believe that a possibly fix is to use a 
+ReadWriteMutex in the registry instance; and to readLock this in the 
+DatabasePager and to tryWriteLock in 
+ObjectCache::removeExpiredObjectsInCache (tryWriteLock is a new method 
+that I added as I don't think we want to wait for the readers to finish 
+inside the rendering loop). If the object cache can't get the write lock 
+it'll do no expiry until it does get the write lock. This could possibly 
+be never; but that remains to be seen.
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009602.html">[osg-users] [3rdparty] Use PNG as texture for terrain in osgEarth
+</A></li>
+	<LI>Next message (by thread): <A HREF="009584.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9559">[ date ]</a>
+              <a href="thread.html#9559">[ thread ]</a>
+              <a href="subject.html#9559">[ subject ]</a>
+              <a href="author.html#9559">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,138 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;You&nbsp;are&nbsp;doing&nbsp;two&nbsp;PushMatrix&nbsp;operations&nbsp;per&nbsp;draw&nbsp;call,&nbsp;but&nbsp;you&nbsp;never&nbsp;PopMatrix,&nbsp;so&nbsp;the&nbsp;OpenGL&nbsp;matrix&nbsp;stack&nbsp;gets&nbsp;more&nbsp;and&nbsp;more&nbsp;full&nbsp;and&nbsp;eventually&nbsp;overflows.&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;At&nbsp;this&nbsp;point,&nbsp;functionally,&nbsp;you&nbsp;can&nbsp;either&nbsp;add&nbsp;two&nbsp;PopMatrix&nbsp;calls&nbsp;somewhere&nbsp;at&nbsp;the&nbsp;end&nbsp;of&nbsp;the&nbsp;draw&nbsp;function,&nbsp;or&nbsp;if&nbsp;you&nbsp;don&#39;t&nbsp;need&nbsp;the&nbsp;matrix&nbsp;stack&nbsp;(your&nbsp;current&nbsp;code&nbsp;isn&#39;t&nbsp;using&nbsp;the&nbsp;data&nbsp;you&nbsp;pushed,&nbsp;so&nbsp;it&nbsp;won&#39;t&nbsp;change&nbsp;functionality)&nbsp;just&nbsp;remove&nbsp;the&nbsp;two&nbsp;pushmatrix&nbsp;calls.&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;On&nbsp;Sun,&nbsp;Dec&nbsp;23,&nbsp;2018&nbsp;at&nbsp;11:44&nbsp;PM&nbsp;Nebi&nbsp;Sarikaya&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:nebsar@gmail.com&quot;&gt;nebsar@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;am&nbsp;trying&nbsp;to&nbsp;draw&nbsp;lines&nbsp;on&nbsp;the&nbsp;screen.&nbsp;And&nbsp;I&nbsp;am&nbsp;trying&nbsp;to&nbsp;use&nbsp;pure&nbsp;openGL&nbsp;to&nbsp;draw&nbsp;lines.The&nbsp;lines&nbsp;can&nbsp;be&nbsp;drawn&nbsp;on&nbsp;the&nbsp;screen.&nbsp;But&nbsp;I&nbsp;get&nbsp;openGL&nbsp;error&nbsp;&#39;stack&nbsp;overflow&#39;&nbsp;at&nbsp;after&nbsp;RenderBin::draw(..)&nbsp;message.&nbsp;My&nbsp;code&nbsp;is&nbsp;below:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;draw::drawImplementation(osg::RenderInfo&amp;&nbsp;renderInfo)&nbsp;const&lt;br&gt;<br>
+{ &nbsp; &lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Viewport*&nbsp;viewPort&nbsp;=&nbsp;renderInfo.getCurrentCamera()-&gt;getViewport();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;double&nbsp;width&nbsp;=&nbsp;viewPort-&gt;width();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;double&nbsp;height&nbsp;=&nbsp;viewPort-&gt;height();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;double&nbsp;orgX&nbsp;=&nbsp;width&nbsp;/&nbsp;2;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;double&nbsp;orgY&nbsp;=&nbsp;height&nbsp;/&nbsp;2;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Quat&nbsp;matrix&nbsp;=&nbsp;renderInfo.getCurrentCamera()-&gt;getViewMatrix().getRotate();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glEnable(GL_LINE_SMOOTH);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glHint(GL_LINE_SMOOTH_HINT,&nbsp;GL_NICEST);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glEnable(GL_BLEND);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glBlendFunc(GL_SRC_ALPHA,&nbsp;GL_ONE_MINUS_SRC_ALPHA);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glMatrixMode(GL_PROJECTION);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glPushMatrix();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glLoadIdentity();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glOrtho(0.0,&nbsp;width,&nbsp;0.0,&nbsp;height,&nbsp;-1,&nbsp;1);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glMatrixMode(GL_MODELVIEW);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glPushMatrix();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glLoadIdentity();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glTranslated(orgX,&nbsp;orgY,&nbsp;0);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glRotated(rotate,&nbsp;0,&nbsp;0,&nbsp;1);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glTranslated(-orgX,&nbsp;-orgY,&nbsp;0);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glLineWidth(2.0f);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glColor4d(0,&nbsp;255,&nbsp;0,&nbsp;255);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glBegin(GL_LINES);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(orgY&nbsp;&lt;&nbsp;height&nbsp;&amp;&amp;&nbsp;orgY&nbsp;&gt;&nbsp;0)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;25,&nbsp;orgY);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;260,&nbsp;orgY);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;25,&nbsp;orgY);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;260,&nbsp;orgY);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glEnd();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glLineWidth(5.0f);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glColor4d(0,&nbsp;0,&nbsp;0,&nbsp;255);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glBegin(GL_LINES);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(orgY&nbsp;&lt;&nbsp;height&nbsp;&amp;&amp;&nbsp;orgY&nbsp;&gt;&nbsp;0)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;23,&nbsp;orgY);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;262,&nbsp;orgY);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;23,&nbsp;orgY);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;262,&nbsp;orgY);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glEnd();&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glLineWidth(2.0f);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glColor4d(0,&nbsp;255,&nbsp;0,&nbsp;255);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glBegin(GL_LINES);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;int&nbsp;yLoc&nbsp;=&nbsp;orgY&nbsp;+&nbsp;250;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;for&nbsp;(int&nbsp;i&nbsp;=&nbsp;0;&nbsp;i&nbsp;&lt;&nbsp;17;&nbsp;i++)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(yLoc&nbsp;&lt;&nbsp;height&nbsp;&amp;&amp;&nbsp;yLoc&nbsp;&gt;&nbsp;0)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;25,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;165,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;25,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;165,&nbsp;yLoc);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;165,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;165,&nbsp;yLoc&nbsp;-&nbsp;20);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;165,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;165,&nbsp;yLoc&nbsp;-&nbsp;20);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;yLoc&nbsp;=&nbsp;yLoc&nbsp;+&nbsp;250;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glEnd();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glLineWidth(5.0f);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glColor4d(0,&nbsp;0,&nbsp;0,&nbsp;255);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glBegin(GL_LINES);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;yLoc&nbsp;=&nbsp;(int)orgY&nbsp;+&nbsp;250;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;for&nbsp;(int&nbsp;i&nbsp;=&nbsp;0;&nbsp;i&nbsp;&lt;&nbsp;17;&nbsp;i++)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(yLoc&nbsp;&lt;&nbsp;height&nbsp;&amp;&amp;&nbsp;yLoc&nbsp;&gt;&nbsp;0)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;23,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;165,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;23,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;165,&nbsp;yLoc);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;165,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;-&nbsp;165,&nbsp;yLoc&nbsp;-&nbsp;22);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;165,&nbsp;yLoc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glVertex2d(orgX&nbsp;+&nbsp;165,&nbsp;yLoc&nbsp;-&nbsp;22);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;yLoc&nbsp;=&nbsp;yLoc&nbsp;+&nbsp;250;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glEnd();&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Nebi[/code]&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=75339#75339&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=75339#75339&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Chris&nbsp;&#39;Xenon&#39;&nbsp;Hanson,&nbsp;omo&nbsp;sanza&nbsp;lettere.&nbsp;Xenon@AlphaPixel.com&nbsp;&lt;a&nbsp;href=&quot;http://www.alphapixel.com/&quot;&nbsp;target=&quot;_blank&quot;&gt;http://www.alphapixel.com/&lt;/a&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Training&nbsp;•&nbsp;Consulting&nbsp;•&nbsp;Contracting&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;3D&nbsp;•&nbsp;Scene&nbsp;Graphs&nbsp;(Open&nbsp;Scene&nbsp;Graph/OSG)&nbsp;•&nbsp;OpenGL&nbsp;2&nbsp;•&nbsp;OpenGL&nbsp;3&nbsp;•&nbsp;OpenGL&nbsp;4&nbsp;•&nbsp;GLSL&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;1&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;2&nbsp;•&nbsp;OpenCL&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;Legal/IP&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;Forensics&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;Imaging &lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;UAVs &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&nbsp;GIS&nbsp;•&nbsp;GPS&nbsp;•&nbsp;osgEarth • Terrain • Telemetry&nbsp;•&nbsp;Cryptography&nbsp;•&nbsp;LIDAR&nbsp;•&nbsp;Embedded&nbsp;•&nbsp;Mobile&nbsp;•&nbsp;iPhone/iPad/iOS&nbsp;•&nbsp;Android&lt;/span&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;a&nbsp;href=&quot;https://twitter.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;@alphapixel&lt;/a&gt;&nbsp;&lt;a&nbsp;href=&quot;http://facebook.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;facebook.com/alphapixel&lt;/a&gt; (775)&nbsp;623-PIXL&nbsp;[7495]&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;<br>
+
+</tt>

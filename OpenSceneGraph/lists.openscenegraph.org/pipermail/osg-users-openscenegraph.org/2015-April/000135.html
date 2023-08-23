@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Enabling Vsync gives dramatic increase in latency
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Enabling%20Vsync%20gives%20dramatic%20increase%20in%20latency&In-Reply-To=%3CCAFN7Y%2BVk0uArFQk1M%2BXTKke99xHa%3DkweBMUYtinXWTOC35WJ2A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="276354.html">
+   <LINK REL="Next"  HREF="000136.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Enabling Vsync gives dramatic increase in latency</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Enabling%20Vsync%20gives%20dramatic%20increase%20in%20latency&In-Reply-To=%3CCAFN7Y%2BVk0uArFQk1M%2BXTKke99xHa%3DkweBMUYtinXWTOC35WJ2A%40mail.gmail.com%3E"
+       TITLE="[osg-users] Enabling Vsync gives dramatic increase in latency">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Apr 16 07:22:01 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="276354.html">[osg-users] Enabling Vsync gives dramatic increase in latency
+</A></li>
+        <LI>Next message: <A HREF="000136.html">[osg-users] Enabling Vsync gives dramatic increase in latency
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#135">[ date ]</a>
+              <a href="thread.html#135">[ thread ]</a>
+              <a href="subject.html#135">[ subject ]</a>
+              <a href="author.html#135">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Bj&#246;rn,
+
+The driver will be queuing up multiple frames in the FIFO, something it
+does to help improve the framerate, but increases frame latency.
+
+We aren't powerless in this though, modern drivers and hardware support
+putting fences into the pipeline and waiting on these to be completed on
+the GPU.  In the svn/trunk vesion of the OSG you'll find a swap buffers
+SyncSwapBuffersCallback implementation that does this for you.  You can
+enable this via the env var OSG_SYNC_SWAP_BUFFERS=ON, or --sync on the
+command line for examples like osgviewer.
+
+Robert.
+
+
+
+On 16 April 2015 at 13:59, Bj&#246;rn Blissing &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">bjorn.blissing at vti.se</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I have made some experiments in regards to rendering latency in
+</I>&gt;<i> OpenSceneGraph. I have written a small test program which just shows one
+</I>&gt;<i> quad. During program execution the quad changes color from black to white
+</I>&gt;<i> 20 times. To my computer I have connected a light-to-voltage sensor which
+</I>&gt;<i> is attached to my monitor, the monitor is an Eizo LCD running in 60Hz.
+</I>&gt;<i>
+</I>&gt;<i> The setup allows me to log the time it takes for me to send a frame with
+</I>&gt;<i> the new quad color to when the light sensor picks up this change.
+</I>&gt;<i>
+</I>&gt;<i> The results surprised me a bit:
+</I>&gt;<i>
+</I>&gt;<i> Running with VSync OFF: min = 6ms, max = 21ms, mean = 14ms
+</I>&gt;<i> Running with VSync ON: min = 81ms, max = 96 ms, mean = 91ms
+</I>&gt;<i>
+</I>&gt;<i> So enabling VSync on my Nvidia card gave a increased latency of 75 ms,
+</I>&gt;<i> almost 5 full screen refreshes.
+</I>&gt;<i>
+</I>&gt;<i> Then I remembered that Robert said something about running OSG single
+</I>&gt;<i> threaded would give the lowest latency.
+</I>&gt;<i>
+</I>&gt;<i> So I set my application to run as single threaded:
+</I>&gt;<i>
+</I>&gt;<i> VSync ON, OSG single threaded mode: min = 43ms, max =  64ms, mean =  57ms
+</I>&gt;<i>
+</I>&gt;<i> Still a bit high, almost 3 full screen refreshes.
+</I>&gt;<i>
+</I>&gt;<i> So I poked around the NVidia settings with help of the Nvidia Inspector,
+</I>&gt;<i> which gives detailed control. The lowest latency I have been able to reach
+</I>&gt;<i> is with VSync enabled is the following setting combination:
+</I>&gt;<i>
+</I>&gt;<i> VSync = ON
+</I>&gt;<i> Maximum prerendered frames = 1
+</I>&gt;<i> Frame rate limiter = 60fps
+</I>&gt;<i> Threaded optimization = Off
+</I>&gt;<i>
+</I>&gt;<i> With these settings I have recorded the following latencies:
+</I>&gt;<i>
+</I>&gt;<i> Custom settings: min = 17ms, max =  42ms, mean =  30ms
+</I>&gt;<i>
+</I>&gt;<i> The mean difference between VSync OFF and this custom setting is 16 ms,
+</I>&gt;<i> i.e. about 1 screen refresh.
+</I>&gt;<i>
+</I>&gt;<i> I guess it is hard to push the latency any lower. Or is there any other
+</I>&gt;<i> setting which could reduce the latency even further?
+</I>&gt;<i>
+</I>&gt;<i> Test have been run on a computer with: Windows 7 64bit + Nvidia GTX570
+</I>&gt;<i> with driver 347.52 + OSG 3.2.1
+</I>&gt;<i>
+</I>&gt;<i> Best regards
+</I>&gt;<i> Bj&#246;rn
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopice237.php?p=63433#63433">http://forum.openscenegraph.org/viewtopic.php?p=63433#63433</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150416/e3f25c0e/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150416/e3f25c0e/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="276354.html">[osg-users] Enabling Vsync gives dramatic increase in latency
+</A></li>
+	<LI>Next message: <A HREF="000136.html">[osg-users] Enabling Vsync gives dramatic increase in latency
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#135">[ date ]</a>
+              <a href="thread.html#135">[ thread ]</a>
+              <a href="subject.html#135">[ subject ]</a>
+              <a href="author.html#135">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,221 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] draw callbacks
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20draw%20callbacks&In-Reply-To=%3C1459350104.m2f.66674%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002649.html">
+   <LINK REL="Next"  HREF="278875.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] draw callbacks</H1>
+<!--htdig_noindex-->
+    <B>Peter Bako</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20draw%20callbacks&In-Reply-To=%3C1459350104.m2f.66674%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] draw callbacks">osgforum at tevs.eu
+       </A><BR>
+    <I>Wed Mar 30 08:01:44 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002649.html">[osg-users] VR headset integration
+</A></li>
+        <LI>Next message: <A HREF="278875.html">[osg-users] Creating fixed size X11 window.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278870">[ date ]</a>
+              <a href="thread.html#278870">[ thread ]</a>
+              <a href="subject.html#278870">[ subject ]</a>
+              <a href="author.html#278870">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I tried Javier's example, but I don't know how to modify the code, so that the 
+stencil plane covers the &quot;holes&quot; on the clipped geometry.
+In this case the plane is renedered over the whole scene. 
+I tried to remove the transformation and projection, then the plane was rendered on the correct position but it was still a square.
+
+I know, how should it work, but I cannot find a solution..
+How should I change it? can you help me?
+Thank you!
+
+
+Code:
+
+
+#include &lt;osgFX/Effect&gt;
+#include &lt;osg/Geometry&gt;
+#include &lt;osg/Stencil&gt;
+#include &lt;osg/Depth&gt;
+
+class CappingTechnique : public osgFX::Technique {
+
+private:
+	osg::ref_ptr&lt;osg::Node&gt; _capPlane;
+
+public:
+	virtual bool validate(osg::State&amp;) const
+	{ return true; }
+
+	META_Technique(&quot;CappingTechnique&quot;,&quot;Pimpel capping technique&quot;);
+	/// Constructor
+	CappingTechnique()
+	{
+		// Build the plane to draw with the stencil mask
+		osg::Geometry *geometry = new osg::Geometry();
+		osg::Vec3Array *vertices = new osg::Vec3Array();
+		osg::Vec4Array *colors = new osg::Vec4Array();
+
+		vertices-&gt;push_back(osg::Vec3(-1.0, -1.0, 0.0));
+		vertices-&gt;push_back(osg::Vec3(-1.0, 1.0, 0.0));
+		vertices-&gt;push_back(osg::Vec3(1.0, 1.0, 0.0));
+		vertices-&gt;push_back(osg::Vec3(1.0, -1.0, 0.0));
+		geometry-&gt;setVertexArray(vertices);
+		colors-&gt;push_back(osg::Vec4(1.0, 0.0, 1.0, 1.0));
+		geometry-&gt;setColorArray(colors);
+		geometry-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+		geometry-&gt;addPrimitiveSet(new
+			osg::DrawArrays(osg::PrimitiveSet::QUADS, 0, 4));
+
+		osg::Geode *geode = new osg::Geode();
+		geode-&gt;addDrawable(geometry);
+
+		osg::Transform *trans = new osg::Transform();
+		trans-&gt;setReferenceFrame( osg::Transform::ABSOLUTE_RF );
+		trans-&gt;addChild( geode );
+
+		osg::Projection *proj = new
+			osg::Projection(osg::Matrix::ortho2D(-1,1,-1,1));
+		proj-&gt;addChild( trans );
+
+		_capPlane = proj;
+
+	}
+protected:
+	virtual void define_passes()
+	{
+		// pass #0
+		{
+			osg::ref_ptr&lt;osg::StateSet&gt; ss = new osg::StateSet;
+			osg::Stencil *stencil = new osg::Stencil;
+			stencil-&gt;setFunction(osg::Stencil::ALWAYS, 0x0, ~0);
+			stencil-&gt;setOperation(osg::Stencil::INVERT,	osg::Stencil::INVERT, osg::Stencil::INVERT);
+			ss-&gt;setAttributeAndModes(stencil, osg::StateAttribute::ON |
+				osg::StateAttribute::OVERRIDE);
+			ss-&gt;setMode(GL_CULL_FACE,osg::StateAttribute::OFF);
+			addPass(ss.get());
+		}
+		// pass #1
+		{
+			osg::ref_ptr&lt;osg::StateSet&gt; ss = new osg::StateSet;
+			osg::Stencil *stencil = new osg::Stencil;
+			stencil-&gt;setFunction(osg::Stencil::NOTEQUAL, 0x0, ~0);
+			stencil-&gt;setOperation(osg::Stencil::ZERO, osg::Stencil::ZERO,osg::Stencil::ZERO);
+			ss-&gt;setAttributeAndModes(stencil, osg::StateAttribute::ON |
+				osg::StateAttribute::OVERRIDE);
+			osg::Depth *depth = new osg::Depth();
+			depth-&gt;setWriteMask(false);
+			ss-&gt;setAttributeAndModes( depth, osg::StateAttribute::ON );
+			addPass(ss.get());
+		}    
+	}
+
+	virtual osg::Node *getOverrideChild(int pass){
+		switch(pass) {
+		case 1:    // Second pass (pass #1) draws the cap plane
+			return _capPlane;
+			break;
+		default:
+			return NULL;
+			break;
+		}
+	}
+};
+
+class CappingEffect : public osgFX::Effect {
+public:
+	CappingEffect() : osgFX::Effect() {}
+	CappingEffect( const CappingEffect&amp; copy, const osg::CopyOp op=osg::CopyOp::SHALLOW_COPY )
+		:   osgFX::Effect(copy, op) {}
+
+	META_Effect( osgFX, CappingEffect, &quot;CappingEffect&quot;, &quot;&quot;, &quot;&quot; );
+protected:
+	virtual bool define_techniques(){
+		CappingTechnique* technique = new CappingTechnique();
+		addTechnique(technique);
+		return true;
+	}
+};
+
+int main( int argc, char** argv )
+{
+//load any node
+	osg::ref_ptr&lt;osg::Geode&gt; scene = new osg::Geode;
+	scene-&gt;addDrawable( new TeapotDrawable(1.0f) );
+
+	osg::ClipNode* clipnode = new osg::ClipNode; 
+	osg::ref_ptr&lt;osg::ClipPlane&gt; clipplane = new osg::ClipPlane(); 
+	clipplane-&gt;setClipPlane(0, 0, -1, 0); 
+
+	clipnode-&gt;addClipPlane(clipplane); 
+	clipnode-&gt;addChild(scene.get()); 
+
+	CappingEffect* capping_effect = new CappingEffect(); 
+	capping_effect-&gt;addChild(clipnode); 
+
+	osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+	root-&gt;addChild(capping_effect);
+        osgViewer::Viewer viewer;
+        viewer.setSceneData( root.get() );
+	
+    return viewer.run();
+}
+
+
+
+Cheers,
+Peter
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicfc17.php?p=66674#66674">http://forum.openscenegraph.org/viewtopic.php?p=66674#66674</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002649.html">[osg-users] VR headset integration
+</A></li>
+	<LI>Next message: <A HREF="278875.html">[osg-users] Creating fixed size X11 window.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278870">[ date ]</a>
+              <a href="thread.html#278870">[ thread ]</a>
+              <a href="subject.html#278870">[ subject ]</a>
+              <a href="author.html#278870">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Rendering in-scene camera from different cameras
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Rendering%20in-scene%20camera%20from%20different%20cameras&In-Reply-To=%3C1470412218.m2f.68295%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280048.html">
+   <LINK REL="Next"  HREF="003834.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Rendering in-scene camera from different cameras</H1>
+<!--htdig_noindex-->
+    <B>Jannik Heller</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Rendering%20in-scene%20camera%20from%20different%20cameras&In-Reply-To=%3C1470412218.m2f.68295%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Rendering in-scene camera from different cameras">scrawl at baseoftrash.de
+       </A><BR>
+    <I>Fri Aug  5 08:50:18 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280048.html">[osg-users] Rendering in-scene camera from different cameras
+</A></li>
+        <LI>Next message: <A HREF="003834.html">[osg-users] Rendering in-scene camera from different cameras
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3833">[ date ]</a>
+              <a href="thread.html#3833">[ thread ]</a>
+              <a href="subject.html#3833">[ subject ]</a>
+              <a href="author.html#3833">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+A Camera does not inherit the render target implementation, it will simply use what is specified (default FRAMEBUFFER).
+
+You bring up a valid use case, perhaps adding an &quot;inherit render target&quot; mode for Cameras would be a nice feature for the osg core to have.
+
+For the time being what I would suggest is that you don't really need a Camera, you just need a way to set the modelView and projection matrices to identity before drawing your GUI (i.e. work in screen relative coordinates). You can do that with a cull callback:
+
+
+Code:
+
+class ScreenRelativeCallback : public osg::NodeCallback
+{
+   virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+   {
+       osgUtil::CullVisitor* cv = dynamic_cast&lt;osgUtil::CullVisitor*&gt;(nv);
+       if (cv)
+       {
+           cv-&gt;pushModelViewMatrix(new osg::RefMatrix(), osg::Transform::ABSOLUTE_RF);
+           cv-&gt;pushProjectionMatrix(new osg::RefMatrix());
+           
+           traverse(node, nv);
+
+           cv-&gt;popModelViewMatrix();
+           cv-&gt;popProjectionMatrix();
+       }
+       else
+          traverse(node, nv);
+   }
+
+
+
+Then instead of decorating your GUI with a Camera, you decorate it with a Group and add the cull callback: group-&gt;addCullCallback(new ScreenRelativeCallback);
+
+In addition you may need to set a RenderBin so that the GUI is drawn after the scene.
+
+I haven't tested this out but I believe it will work.
+
+Cheers,
+Jannik
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic5ad3.php?p=68295#68295">http://forum.openscenegraph.org/viewtopic.php?p=68295#68295</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280048.html">[osg-users] Rendering in-scene camera from different cameras
+</A></li>
+	<LI>Next message: <A HREF="003834.html">[osg-users] Rendering in-scene camera from different cameras
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3833">[ date ]</a>
+              <a href="thread.html#3833">[ thread ]</a>
+              <a href="subject.html#3833">[ subject ]</a>
+              <a href="author.html#3833">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

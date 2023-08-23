@@ -1,0 +1,105 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Vanishing letters in osg::Text
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vanishing%20letters%20in%20osg%3A%3AText&In-Reply-To=%3C1493115517.m2f.70829%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006150.html">
+   <LINK REL="Next"  HREF="006146.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Vanishing letters in osg::Text</H1>
+<!--htdig_noindex-->
+    <B>Daniel Emminizer</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vanishing%20letters%20in%20osg%3A%3AText&In-Reply-To=%3C1493115517.m2f.70829%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Vanishing letters in osg::Text">emminizer at hotmail.com
+       </A><BR>
+    <I>Tue Apr 25 03:18:37 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006150.html">[osg-users] Vanishing letters in osg::Text
+</A></li>
+        <LI>Next message: <A HREF="006146.html">[osg-users] Vanishing letters in osg::Text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6145">[ date ]</a>
+              <a href="thread.html#6145">[ thread ]</a>
+              <a href="subject.html#6145">[ subject ]</a>
+              <a href="author.html#6145">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+We used to see this problem a lot.  The OSG_TEXT_INCREMENTAL_SUBLOADING advice did not help.  What did help was explicitly setting the GL_TEXTURE_MIN_FILTER at a slightly different place in osgText/Glyph.cpp.
+
+Around line 373 you'll see a call to glPixelStorei() before the glTexSubImage2D() near the bottom of GlyphTexture::apply().  I add the following:
+
+Code:
+
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, getFilter(osg::Texture::MIN_FILTER));
+
+
+
+
+Then around line 517 you'll see another call to glPixelStorei() before glTexSubImage2D() in Glyph::subload().  I add:
+
+
+Code:
+
+if (_texture)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, _texture-&gt;getFilter(osg::Texture::MIN_FILTER));
+else
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+
+
+
+This worked on the Intel cards.  I expect it's some sort of driver bug, but I'm not sure.
+
+I hope this helps.
+
+ - Dan
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2ae3.php?p=70829#70829">http://forum.openscenegraph.org/viewtopic.php?p=70829#70829</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006150.html">[osg-users] Vanishing letters in osg::Text
+</A></li>
+	<LI>Next message: <A HREF="006146.html">[osg-users] Vanishing letters in osg::Text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6145">[ date ]</a>
+              <a href="thread.html#6145">[ thread ]</a>
+              <a href="subject.html#6145">[ subject ]</a>
+              <a href="author.html#6145">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

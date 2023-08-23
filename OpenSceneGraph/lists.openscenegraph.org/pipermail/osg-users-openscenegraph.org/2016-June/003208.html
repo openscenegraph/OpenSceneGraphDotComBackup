@@ -1,0 +1,513 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Preparing to make 3.5.3 dev release, please test
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Preparing%20to%20make%203.5.3%20dev%20release%2C%20please%20test&In-Reply-To=%3C5751ACC5.4010402%40imag.fr%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003200.html">
+   <LINK REL="Next"  HREF="003214.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Preparing to make 3.5.3 dev release, please test</H1>
+<!--htdig_noindex-->
+    <B>Fran&#231;ois B&#233;rard</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Preparing%20to%20make%203.5.3%20dev%20release%2C%20please%20test&In-Reply-To=%3C5751ACC5.4010402%40imag.fr%3E"
+       TITLE="[osg-users] Preparing to make 3.5.3 dev release, please test">francois.berard at imag.fr
+       </A><BR>
+    <I>Fri Jun  3 09:13:57 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003200.html">[osg-users] Preparing to make 3.5.3 dev release, please test
+</A></li>
+        <LI>Next message: <A HREF="003214.html">[osg-users] Preparing to make 3.5.3 dev release, please test
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3208">[ date ]</a>
+              <a href="thread.html#3208">[ thread ]</a>
+              <a href="subject.html#3208">[ subject ]</a>
+              <a href="author.html#3208">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+On 03/06/16 12:43, Robert Osfield wrote:
+&gt;<i> Hi Fran&#231;ois,
+</I>&gt;<i>
+</I>&gt;<i> I have installed Clang 3.8 on my Linux dev machine and got it to
+</I>&gt;<i> reproduce the same typeid error.  As far as I can tell this warning is
+</I>&gt;<i> pretty bogus, effectively enforcing a personal preference of the
+</I>&gt;<i> compiler developers rather than highlighting anything that is
+</I>&gt;<i> ambiguous or unsupported.  Lots of other projects seem to be affected
+</I>&gt;<i> by the same error, what the OSG is doing with typeid is pretty
+</I>&gt;<i> standard.  The workaround seems to be to just create a local variable
+</I>&gt;<i> which does the dereferences and then passes this on to the typeid,
+</I>&gt;<i> I've applied this and it fixes the Clang error.  Having to write extra
+</I>&gt;<i> code to quieten a stupid warning is pretty bad programming practice as
+</I>&gt;<i> it can risks introducing bugs so I'm not happy doing this type of
+</I>&gt;<i> stuff.
+</I>
+I agree. But it did silence the warnings on my setup too.
+
+&gt;<i> Despite using Clang 3.8 I don't see the second set of warnings:
+</I>&gt;<i>
+</I>&gt;<i> [ 85%] Building CXX object
+</I>&gt;<i> applications/osgviewer/CMakeFiles/application_osgviewer.dir/osgviewer.cpp.o
+</I>&gt;<i> ConfigLexer.cpp:827:2: warning: 'register' storage class specifier is
+</I>&gt;<i> deprecated [-Wdeprecated-register]
+</I>&gt;<i>          register yy_state_type yy_current_state;
+</I>&gt;<i>
+</I>&gt;<i> I can seen anywhere where the OSG Cmake build system is adding
+</I>&gt;<i> -Wdeprecated-register.  Are you adding this manually?
+</I>
+nope. unzip, cmake, make. This must be a new default on my Clang (Apple 
+LLVM version 7.3.0 (clang-703.0.29))
+
+I silenced the warnings by adding:
+
+	add_compile_options(-Wno-deprecated-register)
+
+...at line 9 of the main CMakeLists.txt file, i.e. within the first 
+IF(APPLE) block.
+
+Doing so, the only warnings that remain are calls to deprecated OSX 
+functions on 2 modules:
+
+
+[ 62%] Building CXX object 
+src/osgViewer/CMakeFiles/osgViewer.dir/PixelBufferCocoa.mm.o
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/GraphicsWindowCocoa.mm:1715:14: 
+warning: 'GetCurrentProcess' is deprecated: first deprecated in OS X 
+10.9 [-Wdeprecated-declarations]
+         if (!GetCurrentProcess(&amp;psn)) {
+              ^
+/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/Processes.h:415:1: 
+note: 'GetCurrentProcess' has been explicitly marked deprecated here
+MacGetCurrentProcess(ProcessSerialNumber * PSN) 
+AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER_BUT_DEPRECATED_IN_MAC_OS_X_VERSION_10_9;
+^
+/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/Processes.h:412:34: 
+note: expanded from macro 'MacGetCurrentProcess'
+     #define MacGetCurrentProcess GetCurrentProcess
+                                  ^
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/GraphicsWindowCocoa.mm:1717:13: 
+warning: 'SetFrontProcess' is deprecated: first deprecated in OS X 10.9 
+[-Wdeprecated-declarations]
+             SetFrontProcess(&amp;psn);
+             ^
+/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/Processes.h:603:1: 
+note: 'SetFrontProcess' has been explicitly marked deprecated here
+SetFrontProcess(const ProcessSerialNumber * PSN) 
+AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER_BUT_DEPRECATED_IN_MAC_OS_X_VERSION_10_9;
+^
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/GraphicsWindowCocoa.mm:1726:29: 
+warning: incompatible pointer types sending 'CocoaAppDelegate *' to 
+parameter of type 'id&lt;NSFileManagerDelegate&gt; _Nullable'
+       [-Wincompatible-pointer-types]
+         [NSApp setDelegate: [[CocoaAppDelegate alloc] init] ];
+                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/objc/NSObject.h:60:1: note: instance method 'init' is 
+assumed to return an instance of its receiver type ('CocoaAppDelegate *')
+- (instancetype)init
+^
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/DarwinUtils.mm:111:26: 
+warning: 'CGDisplayModeCopyPixelEncoding' is deprecated: first 
+deprecated in OS X 10.11 [-Wdeprecated-declarations]
+     CFStringRef pixEnc = CGDisplayModeCopyPixelEncoding(mode);
+                          ^
+/System/Library/Frameworks/CoreGraphics.framework/Headers/CGDirectDisplay.h:174:34: 
+note: 'CGDisplayModeCopyPixelEncoding' has been explicitly marked 
+deprecated here
+CG_EXTERN CFStringRef __nullable CGDisplayModeCopyPixelEncoding(
+                                  ^
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/DarwinUtils.mm:421:5: 
+warning: 'SetFrontProcess' is deprecated: first deprecated in OS X 10.9 
+[-Wdeprecated-declarations]
+     SetFrontProcess(&amp;sn);
+     ^
+/System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/Processes.h:603:1: 
+note: 'SetFrontProcess' has been explicitly marked deprecated here
+SetFrontProcess(const ProcessSerialNumber * PSN) 
+AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER_BUT_DEPRECATED_IN_MAC_OS_X_VERSION_10_9;
+^
+
+
+
+
+[ 62%] Building CXX object 
+src/osgWrappers/deprecated-dotosg/osgParticle/CMakeFiles/osgdb_deprecated_osgparticle.dir/IO_DomainOperator.cpp.o
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/PixelBufferCocoa.mm:59:17: 
+warning: 'NSOpenGLPFAPixelBuffer' is deprecated: first deprecated in OS 
+X 10.7 [-Wdeprecated-declarations]
+     attr[i++] = NSOpenGLPFAPixelBuffer; // for pbuffer usage
+                 ^
+/System/Library/Frameworks/AppKit.framework/Headers/NSOpenGL.h:88:2: 
+note: 'NSOpenGLPFAPixelBuffer' has been explicitly marked deprecated here
+         NSOpenGLPFAPixelBuffer NS_ENUM_DEPRECATED_MAC(10_3, 10_7) 
+=  90,
+         ^
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/PixelBufferCocoa.mm:75:5: 
+warning: 'NSOpenGLPixelBuffer' is deprecated: first deprecated in OS X 
+10.7 - Use GL_EXT_framebuffer_object instead [-Wdeprecated-declarations]
+     NSOpenGLPixelBuffer* pbuffer = [[NSOpenGLPixelBuffer alloc] 
+initWithTextureTarget: _traits-&gt;target textureInternalFormat: 
+_traits-&gt;format textureMaxMipMapLevel: _traits-&gt;level pixelsWide: 
+_traits-&gt;width pixelsHigh: _trai...
+     ^
+/System/Library/Frameworks/AppKit.framework/Headers/NSOpenGL.h:139:12: 
+note: 'NSOpenGLPixelBuffer' has been explicitly marked deprecated here
+@interface NSOpenGLPixelBuffer : NSObject
+            ^
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/PixelBufferCocoa.mm:75:38: 
+warning: 'NSOpenGLPixelBuffer' is deprecated: first deprecated in OS X 
+10.7 - Use GL_EXT_framebuffer_object instead [-Wdeprecated-declarations]
+     NSOpenGLPixelBuffer* pbuffer = [[NSOpenGLPixelBuffer alloc] 
+initWithTextureTarget: _traits-&gt;target textureInternalFormat: 
+_traits-&gt;format textureMaxMipMapLevel: _traits-&gt;level pixelsWide: 
+_traits-&gt;width pixelsHigh: _trai...
+                                      ^
+/System/Library/Frameworks/AppKit.framework/Headers/NSOpenGL.h:139:12: 
+note: 'NSOpenGLPixelBuffer' has been explicitly marked deprecated here
+@interface NSOpenGLPixelBuffer : NSObject
+            ^
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/PixelBufferCocoa.mm:75:65: 
+warning: 
+'initWithTextureTarget:textureInternalFormat:textureMaxMipMapLevel:pixelsWide:pixelsHigh:' 
+is deprecated: first deprecated in OS X 10.7
+       [-Wdeprecated-declarations]
+     NSOpenGLPixelBuffer* pbuffer = [[NSOpenGLPixelBuffer alloc] 
+initWithTextureTarget: _traits-&gt;target textureInternalFormat: 
+_traits-&gt;format textureMaxMipMapLevel: _traits-&gt;level pixelsWide: 
+_traits-&gt;width pixelsHigh: _trai...
+                                                                 ^
+/System/Library/Frameworks/AppKit.framework/Headers/NSOpenGL.h:155:1: 
+note: 
+'initWithTextureTarget:textureInternalFormat:textureMaxMipMapLevel:pixelsWide:pixelsHigh:' 
+has been explicitly marked deprecated here
+- (nullable instancetype)initWithTextureTarget:(GLenum)target 
+textureInternalFormat:(GLenum)format 
+textureMaxMipMapLevel:(GLint)maxLevel pixelsWide:(GLsizei)pixelsWide 
+pixelsHigh:(GLsizei)pixelsHigh NS_DEPRECATED_MAC(10_2, 1...
+^
+/Users/fberard/Downloads/osg_git/distrib/src/osgViewer/PixelBufferCocoa.mm:77:15: 
+warning: 'setPixelBuffer:cubeMapFace:mipMapLevel:currentVirtualScreen:' 
+is deprecated: first deprecated in OS X 10.7 [-Wdeprecated-declarations]
+     [_context setPixelBuffer: pbuffer cubeMapFace: _traits-&gt;face 
+mipMapLevel:_traits-&gt;level currentVirtualScreen: 0];
+               ^
+/System/Library/Frameworks/AppKit.framework/Headers/NSOpenGL.h:259:1: 
+note: 'setPixelBuffer:cubeMapFace:mipMapLevel:currentVirtualScreen:' has 
+been explicitly marked deprecated here
+- (void)setPixelBuffer:(NSOpenGLPixelBuffer *)pixelBuffer 
+cubeMapFace:(GLenum)face mipMapLevel:(GLint)level 
+currentVirtualScreen:(GLint)screen NS_DEPRECATED_MAC(10_3, 10_7); /* Use 
+IOSurface instead of NSOpenGLPixelBuffer o...
+^
+
+
+
+
+
+
+
+&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 3 June 2016 at 06:01, Fran&#231;ois B&#233;rard&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">francois.berard at imag.fr</A>&gt;  wrote:
+</I>&gt;&gt;<i> Yup, compiles and executes fine now. But:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> There are tons of warnings such as:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> In file included from
+</I>&gt;&gt;<i> /Users/fberard/Downloads/osg_git/OpenSceneGraph-master/include/osg/NodeVisitor:21:
+</I>&gt;&gt;<i> /Users/fberard/Downloads/osg_git/OpenSceneGraph-master/include/osg/ValueMap:53:51:
+</I>&gt;&gt;<i> warning: expression with side effects will be evaluated despite being used
+</I>&gt;&gt;<i> as an operand to 'typeid'
+</I>&gt;&gt;<i>        [-Wpotentially-evaluated-expression]
+</I>&gt;&gt;<i>              if (itr!=_keyValueMap.end()&amp;&amp;
+</I>&gt;&gt;<i> typeid(*(itr-&gt;second))==typeid(UserValueObject))
+</I>&gt;&gt;<i>                                                    ^
+</I>&gt;&gt;<i> (I guess this is due to NodeVisitor being used everywhere).
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> And also a bit of:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> [ 85%] Building CXX object
+</I>&gt;&gt;<i> applications/osgviewer/CMakeFiles/application_osgviewer.dir/osgviewer.cpp.o
+</I>&gt;&gt;<i> ConfigLexer.cpp:827:2: warning: 'register' storage class specifier is
+</I>&gt;&gt;<i> deprecated [-Wdeprecated-register]
+</I>&gt;&gt;<i>          register yy_state_type yy_current_state;
+</I>&gt;&gt;<i>          ^~~~~~~~~
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Also, I did a build in a temporary location (CMAKE_INSTALL_PREFIX to some
+</I>&gt;&gt;<i> place), but the build did not put the path or some relative paths in the
+</I>&gt;&gt;<i> binaries:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> [Downloads/osg_git] % otool -L ./bin/osgviewer
+</I>&gt;&gt;<i> ./bin/osgviewer:
+</I>&gt;&gt;<i>          libosgViewer.144.dylib (compatibility version 144.0.0, current
+</I>&gt;&gt;<i> version 3.5.3)
+</I>&gt;&gt;<i>          libosgText.144.dylib (compatibility version 144.0.0, current version
+</I>&gt;&gt;<i> 3.5.3)
+</I>&gt;&gt;<i>          libosgGA.144.dylib (compatibility version 144.0.0, current version
+</I>&gt;&gt;<i> 3.5.3)
+</I>&gt;&gt;<i>          libosgDB.144.dylib (compatibility version 144.0.0, current version
+</I>&gt;&gt;<i> 3.5.3)
+</I>&gt;&gt;<i>          /System/Library/Frameworks/Carbon.framework/Versions/A/Carbon
+</I>&gt;&gt;<i> (compatibility version 2.0.0, current version 157.0.0)
+</I>&gt;&gt;<i>          /opt/local/lib/libz.1.dylib (compatibility version 1.0.0, current
+</I>&gt;&gt;<i> version 1.2.8)
+</I>&gt;&gt;<i>          libosgUtil.144.dylib (compatibility version 144.0.0, current version
+</I>&gt;&gt;<i> 3.5.3)
+</I>&gt;&gt;<i>          libosg.144.dylib (compatibility version 144.0.0, current version
+</I>&gt;&gt;<i> 3.5.3)
+</I>&gt;&gt;<i>          libOpenThreads.20.dylib (compatibility version 20.0.0, current
+</I>&gt;&gt;<i> version 3.3.0)
+</I>&gt;&gt;<i>          /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current
+</I>&gt;&gt;<i> version 1226.10.1)
+</I>&gt;&gt;<i>          /System/Library/Frameworks/Cocoa.framework/Versions/A/Cocoa
+</I>&gt;&gt;<i> (compatibility version 1.0.0, current version 22.0.0)
+</I>&gt;&gt;<i>          /System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL
+</I>&gt;&gt;<i> (compatibility version 1.0.0, current version 1.0.0)
+</I>&gt;&gt;<i>          /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current
+</I>&gt;&gt;<i> version 120.1.0)
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> So, &quot;./osgviewer&quot; did not work out of the box, I had to set
+</I>&gt;&gt;<i> DYLD_LIBRARY_PATH to point to the libraries.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> ccmake did warn about something that is probably related:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> CMake Warning (dev):
+</I>&gt;&gt;<i>     Policy CMP0042 is not set: MACOSX_RPATH is enabled by default.  Run
+</I>&gt;&gt;<i> &quot;cmake
+</I>&gt;&gt;<i>     --help-policy CMP0042&quot; for policy details.  Use the cmake_policy command
+</I>&gt;&gt;<i> to
+</I>&gt;&gt;<i>     set the policy and suppress this warning.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     MACOSX_RPATH is not specified for the following targets:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>      OpenThreads
+</I>&gt;&gt;<i>      osg
+</I>&gt;&gt;<i>      osgAnimation
+</I>&gt;&gt;<i>      osgDB
+</I>&gt;&gt;<i>      osgFX
+</I>&gt;&gt;<i>      osgGA
+</I>&gt;&gt;<i>      osgManipulator
+</I>&gt;&gt;<i>      osgParticle
+</I>&gt;&gt;<i>      osgPresentation
+</I>&gt;&gt;<i>      osgShadow
+</I>&gt;&gt;<i>      osgSim
+</I>&gt;&gt;<i>      osgTerrain
+</I>&gt;&gt;<i>      osgText
+</I>&gt;&gt;<i>      osgUI
+</I>&gt;&gt;<i>      osgUtil
+</I>&gt;&gt;<i>      osgViewer
+</I>&gt;&gt;<i>      osgVolume
+</I>&gt;&gt;<i>      osgWidget
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   This warning is for project developers.  Use -Wno-dev to suppress it.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 2/6/16 18:53, Robert Osfield wrote:
+</I>&gt;&gt;&gt;<i> Hi Fran&#231;ois,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I suspect the build error is down to the osgViewer:: in the
+</I>&gt;&gt;&gt;<i> REGISTER_WINDOWINGSYSTEMINTERFACE line that is affecting the macro
+</I>&gt;&gt;&gt;<i> expansion.  I have just checked in removal of the osgViewer:: so the
+</I>&gt;&gt;&gt;<i> line now looks like:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> REGISTER_WINDOWINGSYSTEMINTERFACE(IOS,
+</I>&gt;&gt;&gt;<i> ConcreteIOSWindowingSystemInterface)
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> This is now checked into git master. Could you try this out?
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Robert.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> On 2 June 2016 at 17:11, Fran&#231;ois B&#233;rard&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">francois.berard at imag.fr</A>&gt;   wrote:
+</I>&gt;&gt;&gt;&gt;<i> Hello,
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>     I just downloaded a zip from the git web site, expanded, cmake, make,
+</I>&gt;&gt;&gt;&gt;<i> and
+</I>&gt;&gt;&gt;&gt;<i> stopped on an error (see below).
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>     This is on OSX 10.11.5, using XCode command line tools v7.3 (Apple
+</I>&gt;&gt;&gt;&gt;<i> LLVM
+</I>&gt;&gt;&gt;&gt;<i> version 7.3.0 (clang-703.0.29))
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>     Hope this helps.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> [ 19%] Building CXX object
+</I>&gt;&gt;&gt;&gt;<i> src/osgViewer/CMakeFiles/osgViewer.dir/GraphicsWindowCocoa.mm.o
+</I>&gt;&gt;&gt;&gt;<i> In file included from
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> /Users/fberard/Downloads/OpenSceneGraph-master/src/osgViewer/GraphicsWindowCocoa.mm:16:
+</I>&gt;&gt;&gt;&gt;<i> In file included from
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> /Users/fberard/Downloads/OpenSceneGraph-master/include/osgViewer/api/Cocoa/GraphicsWindowCocoa:40:
+</I>&gt;&gt;&gt;&gt;<i> In file included from
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> /Users/fberard/Downloads/OpenSceneGraph-master/include/osgViewer/GraphicsWindow:21:
+</I>&gt;&gt;&gt;&gt;<i> In file included from
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> /Users/fberard/Downloads/OpenSceneGraph-master/include/osgGA/GUIActionAdapter:18:
+</I>&gt;&gt;&gt;&gt;<i> In file included from
+</I>&gt;&gt;&gt;&gt;<i> /Users/fberard/Downloads/OpenSceneGraph-master/include/osg/View:17:
+</I>&gt;&gt;&gt;&gt;<i> In file included from
+</I>&gt;&gt;&gt;&gt;<i> /Users/fberard/Downloads/OpenSceneGraph-master/include/osg/Camera:17:
+</I>&gt;&gt;&gt;&gt;<i> In file included from
+</I>&gt;&gt;&gt;&gt;<i> /Users/fberard/Downloads/OpenSceneGraph-master/include/osg/Transform:17:
+</I>&gt;&gt;&gt;&gt;<i> In file included from
+</I>&gt;&gt;&gt;&gt;<i> /Users/fberard/Downloads/OpenSceneGraph-master/include/osg/Group:18:
+</I>&gt;&gt;&gt;&gt;<i> In file included from
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> /Users/fberard/Downloads/OpenSceneGraph-master/include/osg/NodeVisitor:21:
+</I>&gt;&gt;&gt;&gt;<i> Downloads/OpenSceneGraph-master/include/osg/ValueMap:53:51: warning:
+</I>&gt;&gt;&gt;&gt;<i> expression with side effects will be evaluated despite being used as an
+</I>&gt;&gt;&gt;&gt;<i> operand to 'typeid'
+</I>&gt;&gt;&gt;&gt;<i>         [-Wpotentially-evaluated-expression]
+</I>&gt;&gt;&gt;&gt;<i>               if (itr!=_keyValueMap.end()&amp;&amp;
+</I>&gt;&gt;&gt;&gt;<i> typeid(*(itr-&gt;second))==typeid(UserValueObject))
+</I>&gt;&gt;&gt;&gt;<i>                                                     ^
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Downloads/OpenSceneGraph-master/src/osgViewer/GraphicsWindowCocoa.mm:1715:14:
+</I>&gt;&gt;&gt;&gt;<i> warning: 'GetCurrentProcess' is deprecated: first deprecated in OS X 10.9
+</I>&gt;&gt;&gt;&gt;<i>         [-Wdeprecated-declarations]
+</I>&gt;&gt;&gt;&gt;<i>           if (!GetCurrentProcess(&amp;psn)) {
+</I>&gt;&gt;&gt;&gt;<i>                ^
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> /System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/Processes.h:415:1:
+</I>&gt;&gt;&gt;&gt;<i> note: 'GetCurrentProcess' has been explicitly marked deprecated here
+</I>&gt;&gt;&gt;&gt;<i> MacGetCurrentProcess(ProcessSerialNumber * PSN)
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER_BUT_DEPRECATED_IN_MAC_OS_X_VERSION_10_9;
+</I>&gt;&gt;&gt;&gt;<i> ^
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> /System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/Processes.h:412:34:
+</I>&gt;&gt;&gt;&gt;<i> note: expanded from macro 'MacGetCurrentProcess'
+</I>&gt;&gt;&gt;&gt;<i>       #define MacGetCurrentProcess GetCurrentProcess
+</I>&gt;&gt;&gt;&gt;<i>                                    ^
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Downloads/OpenSceneGraph-master/src/osgViewer/GraphicsWindowCocoa.mm:1717:13:
+</I>&gt;&gt;&gt;&gt;<i> warning: 'SetFrontProcess' is deprecated: first deprecated in OS X 10.9
+</I>&gt;&gt;&gt;&gt;<i> [-Wdeprecated-declarations]
+</I>&gt;&gt;&gt;&gt;<i>               SetFrontProcess(&amp;psn);
+</I>&gt;&gt;&gt;&gt;<i>               ^
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> /System/Library/Frameworks/ApplicationServices.framework/Frameworks/HIServices.framework/Headers/Processes.h:603:1:
+</I>&gt;&gt;&gt;&gt;<i> note: 'SetFrontProcess' has been explicitly marked deprecated here
+</I>&gt;&gt;&gt;&gt;<i> SetFrontProcess(const ProcessSerialNumber * PSN)
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> AVAILABLE_MAC_OS_X_VERSION_10_0_AND_LATER_BUT_DEPRECATED_IN_MAC_OS_X_VERSION_10_9;
+</I>&gt;&gt;&gt;&gt;<i> ^
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Downloads/OpenSceneGraph-master/src/osgViewer/GraphicsWindowCocoa.mm:1726:29:
+</I>&gt;&gt;&gt;&gt;<i> warning: incompatible pointer types sending 'CocoaAppDelegate *' to
+</I>&gt;&gt;&gt;&gt;<i> parameter of type
+</I>&gt;&gt;&gt;&gt;<i>         'id&lt;NSFileManagerDelegate&gt;   _Nullable'
+</I>&gt;&gt;&gt;&gt;<i> [-Wincompatible-pointer-types]
+</I>&gt;&gt;&gt;&gt;<i>           [NSApp setDelegate: [[CocoaAppDelegate alloc] init] ];
+</I>&gt;&gt;&gt;&gt;<i>                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+</I>&gt;&gt;&gt;&gt;<i> /usr/include/objc/NSObject.h:60:1: note: instance method 'init' is
+</I>&gt;&gt;&gt;&gt;<i> assumed
+</I>&gt;&gt;&gt;&gt;<i> to return an instance of its receiver type ('CocoaAppDelegate *')
+</I>&gt;&gt;&gt;&gt;<i> - (instancetype)init
+</I>&gt;&gt;&gt;&gt;<i> ^
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Downloads/OpenSceneGraph-master/src/osgViewer/GraphicsWindowCocoa.mm:1833:1:
+</I>&gt;&gt;&gt;&gt;<i> error: use of undeclared identifier 's_proxy_osgViewer'
+</I>&gt;&gt;&gt;&gt;<i> REGISTER_WINDOWINGSYSTEMINTERFACE(Cocoa,
+</I>&gt;&gt;&gt;&gt;<i> osgViewer::CocoaWindowingSystemInterface)
+</I>&gt;&gt;&gt;&gt;<i> ^
+</I>&gt;&gt;&gt;&gt;<i> Downloads/OpenSceneGraph-master/include/osg/GraphicsContext:599:58: note:
+</I>&gt;&gt;&gt;&gt;<i> expanded from macro 'REGISTER_WINDOWINGSYSTEMINTERFACE'
+</I>&gt;&gt;&gt;&gt;<i>       static osg::WindowingSystemInterfaceProxy&lt;classname&gt;
+</I>&gt;&gt;&gt;&gt;<i> s_proxy_##classname(#ext);
+</I>&gt;&gt;&gt;&gt;<i>                                                            ^
+</I>&gt;&gt;&gt;&gt;<i> &lt;scratch space&gt;:80:1: note: expanded from here
+</I>&gt;&gt;&gt;&gt;<i> s_proxy_osgViewer
+</I>&gt;&gt;&gt;&gt;<i> ^
+</I>&gt;&gt;&gt;&gt;<i> 4 warnings and 1 error generated.
+</I>&gt;&gt;&gt;&gt;<i> make[2]: ***
+</I>&gt;&gt;&gt;&gt;<i> [src/osgViewer/CMakeFiles/osgViewer.dir/GraphicsWindowCocoa.mm.o] Error 1
+</I>&gt;&gt;&gt;&gt;<i> make[1]: *** [src/osgViewer/CMakeFiles/osgViewer.dir/all] Error 2
+</I>&gt;&gt;&gt;&gt;<i> make: *** [all] Error 2
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> On 02/06/16 17:10, Robert Osfield wrote:
+</I>&gt;&gt;&gt;&gt;&gt;<i> Hi All,
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> I spent the majority of May catching up with submissions and bug fixes
+</I>&gt;&gt;&gt;&gt;&gt;<i> and now in June I'd like to start moving towards getting a stable
+</I>&gt;&gt;&gt;&gt;&gt;<i> release out the door - this will 3.6.0.
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> The first step along this way is the 3.5.3 dev release which wraps up
+</I>&gt;&gt;&gt;&gt;&gt;<i> all the recent work that been checked into git master.  Before I tag
+</I>&gt;&gt;&gt;&gt;&gt;<i> this I would appreciate build and runtime testing by members of the
+</I>&gt;&gt;&gt;&gt;&gt;<i> community on as wide range of platforms as you can lay your hands on
+</I>&gt;&gt;&gt;&gt;&gt;<i> so I we resolve these issues prior to tagging the 3.5.3 release.
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> If things work or fail please report here on this thread so I know how
+</I>&gt;&gt;&gt;&gt;&gt;<i> things are converging.
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> Thanks for your help,
+</I>&gt;&gt;&gt;&gt;&gt;<i> Robert.
+</I>&gt;&gt;&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003200.html">[osg-users] Preparing to make 3.5.3 dev release, please test
+</A></li>
+	<LI>Next message: <A HREF="003214.html">[osg-users] Preparing to make 3.5.3 dev release, please test
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3208">[ date ]</a>
+              <a href="thread.html#3208">[ thread ]</a>
+              <a href="subject.html#3208">[ subject ]</a>
+              <a href="author.html#3208">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

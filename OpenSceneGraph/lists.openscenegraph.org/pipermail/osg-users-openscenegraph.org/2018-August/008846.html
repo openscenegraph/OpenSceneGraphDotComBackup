@@ -1,0 +1,243 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problem with output - OSG/Shader
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20with%20output%20-%20OSG/Shader&In-Reply-To=%3C1533407838.m2f.74467%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008862.html">
+   <LINK REL="Next"  HREF="008848.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problem with output - OSG/Shader</H1>
+<!--htdig_noindex-->
+    <B>R&#244;mulo Cerqueira</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20with%20output%20-%20OSG/Shader&In-Reply-To=%3C1533407838.m2f.74467%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Problem with output - OSG/Shader">romulogcerqueira at gmail.com
+       </A><BR>
+    <I>Sat Aug  4 11:37:18 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008862.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+        <LI>Next message (by thread): <A HREF="008848.html">[osg-users] Problem with output - OSG/Shader
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8846">[ date ]</a>
+              <a href="thread.html#8846">[ thread ]</a>
+              <a href="subject.html#8846">[ subject ]</a>
+              <a href="author.html#8846">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I would like to write the output/buffer of fragment shader to texture (RTT) as I wish (e.g. all red), however this result is depending of the model's shapes visible in the scene. How can I proceed with this correctly?
+
+Follow below my minimal source code and the results.
+
+Thanks in advance!
+
+Expected: 
+[Image: <A HREF="../../../../forum.openscenegraph.org/files/expected_964.jpg">http://forum.openscenegraph.org/files/expected_964.jpg</A> ] 
+
+Current: 
+[Image: <A HREF="../../../../forum.openscenegraph.org/files/current_875.jpg">http://forum.openscenegraph.org/files/current_875.jpg</A> ] 
+
+
+Code:
+#include &lt;osg/TextureRectangle&gt;
+#include &lt;osg/Group&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osg/PolygonMode&gt;
+#include &lt;osg/Texture&gt;
+#include &lt;osg/Camera&gt;
+#include &lt;osgText/Text&gt;
+
+static const char *mrtVertSource = {
+    &quot;#version 130\n&quot;
+    &quot;out vec3 worldNormal;\n&quot;
+    &quot;void main(void)\n&quot;
+    &quot;{\n&quot;
+    &quot;   gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n&quot;
+    &quot;   worldNormal = normalize(gl_NormalMatrix * gl_Normal);\n&quot;
+    &quot;   gl_TexCoord[0] = gl_MultiTexCoord0;\n&quot;
+    &quot;}\n&quot;};
+
+static const char *mrtFragSource = {
+    &quot;#version 130\n&quot;
+    &quot;in vec3 worldNormal;\n&quot;
+    &quot;void main(void)\n&quot;
+    &quot;{\n&quot;
+    &quot;   gl_FragData[0] = vec4(worldNormal, 0.0);\n&quot;
+    &quot;}\n&quot;};
+
+osg::Geode *createScreenQuad(float width, float height, float scale = 1.0f)
+{
+    osg::Geometry *geom = osg::createTexturedQuadGeometry(
+        osg::Vec3(), osg::Vec3(width, 0.0f, 0.0f), osg::Vec3(0.0f, height, 0.0f),
+        0.0f, 0.0f, width * scale, height * scale);
+    osg::ref_ptr&lt;osg::Geode&gt; quad = new osg::Geode;
+    quad-&gt;addDrawable(geom);
+
+    int values = osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED;
+    quad-&gt;getOrCreateStateSet()-&gt;setAttribute(
+        new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL), values);
+    quad-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, values);
+    return quad.release();
+}
+
+osg::Camera *createRTTCamera(osg::Camera::BufferComponent buffer, osg::Texture *tex)
+{
+    osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+    camera-&gt;setClearColor(osg::Vec4());
+    camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+    camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+    camera-&gt;setViewport(0, 0, tex-&gt;getTextureWidth(), tex-&gt;getTextureHeight());
+    camera-&gt;attach(buffer, tex);
+
+    return camera.release();
+}
+
+osg::Camera *createHUDCamera(double left, double right, double bottom, double top)
+{
+    osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+    camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    camera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+    camera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+    camera-&gt;setAllowEventFocus(false);
+    camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(left, right, bottom, top));
+    camera-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    return camera.release();
+}
+
+osg::TextureRectangle *createFloatTexture(uint w, uint h)
+{
+    osg::ref_ptr&lt;osg::TextureRectangle&gt; tex2D = new osg::TextureRectangle;
+    tex2D-&gt;setTextureSize(w, h);
+    tex2D-&gt;setInternalFormat(GL_RGB32F_ARB);
+    tex2D-&gt;setSourceFormat(GL_RGBA);
+    tex2D-&gt;setSourceType(GL_FLOAT);
+    tex2D-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+    tex2D-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+    return tex2D.release();
+}
+
+int main(int argc, char **argv)
+{
+    osg::ref_ptr&lt;osg::Node&gt; scene = osgDB::readNodeFile(&quot;/home/romulo/Tools/OpenSceneGraph-Data/cow.osg&quot;);
+
+    unsigned int w = 800, h = 800;
+    osg::Texture *normalTex = createFloatTexture(w, h);
+
+    osg::ref_ptr&lt;osg::Camera&gt; rttCamera = createRTTCamera(osg::Camera::COLOR_BUFFER0, normalTex);
+    rttCamera-&gt;addChild(scene.get());
+
+    osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+    program-&gt;addShader(new osg::Shader(osg::Shader::VERTEX, mrtVertSource));
+    program-&gt;addShader(new osg::Shader(osg::Shader::FRAGMENT, mrtFragSource));
+    rttCamera-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(program.get(), osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+    rttCamera-&gt;getOrCreateStateSet()-&gt;addUniform(new osg::Uniform(&quot;defaultTex&quot;, 0));
+
+    osg::ref_ptr&lt;osg::Camera&gt; hudCamera = createHUDCamera(0.0, 1.0, 0.0, 1.0);
+    hudCamera-&gt;addChild(createScreenQuad(1.f, 1.0f, w));
+    hudCamera-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, normalTex);
+
+    osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+    root-&gt;addChild(rttCamera.get());
+    root-&gt;addChild(hudCamera.get());
+    root-&gt;addChild(scene.get());
+
+    osgViewer::Viewer viewer;
+    viewer.setUpViewInWindow(0, 0, w, h);
+    viewer.setSceneData(root.get());
+    return viewer.run();
+}
+
+
+
+
+R&#244;mulo
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicd985.php?p=74467#74467">http://forum.openscenegraph.org/viewtopic.php?p=74467#74467</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: current.jpg
+Type: image/jpeg
+Size: 17495 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180804/7be024a2/attachment.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180804/7be024a2/attachment.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: expected.jpg
+Type: image/jpeg
+Size: 1986 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180804/7be024a2/attachment-0001.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180804/7be024a2/attachment-0001.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008862.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+	<LI>Next message (by thread): <A HREF="008848.html">[osg-users] Problem with output - OSG/Shader
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8846">[ date ]</a>
+              <a href="thread.html#8846">[ thread ]</a>
+              <a href="subject.html#8846">[ subject ]</a>
+              <a href="author.html#8846">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

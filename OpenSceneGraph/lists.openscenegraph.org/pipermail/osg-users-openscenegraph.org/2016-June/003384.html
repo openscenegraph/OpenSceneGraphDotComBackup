@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Cannot stop rendering slave camera
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Cannot%20stop%20rendering%20slave%20camera&In-Reply-To=%3CCAFN7Y%2BXndpJRQaNFQeLWkw_jg_ru_boh9nVSCq4zsQjHzXWejg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279605.html">
+   <LINK REL="Next"  HREF="003386.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Cannot stop rendering slave camera</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Cannot%20stop%20rendering%20slave%20camera&In-Reply-To=%3CCAFN7Y%2BXndpJRQaNFQeLWkw_jg_ru_boh9nVSCq4zsQjHzXWejg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Cannot stop rendering slave camera">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Jun 15 02:33:35 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279605.html">[osg-users] Cannot stop rendering slave camera
+</A></li>
+        <LI>Next message: <A HREF="003386.html">[osg-users] Cannot stop rendering slave camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3384">[ date ]</a>
+              <a href="thread.html#3384">[ thread ]</a>
+              <a href="subject.html#3384">[ subject ]</a>
+              <a href="author.html#3384">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Etienne,
+
+To toggle on/off a Camera the most efficient way to do it is to toggle
+it's NodeMask i.e
+
+  // switch off
+  slave_camera-&gt;setNodeMask(0x0);
+
+ // switch on
+ slave_camera-&gt;setNodeMask(0xffffffff);
+
+Robert.
+
+On 15 June 2016 at 10:07, Etienne de Sarrieu
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">etienne.desarrieu at altran.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> Due to performance consumption, I am trying to disable rendering of a slave camera, but it seems impossible. The camera is _pov_camera, and is defined as below :
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> void MySensor::initialize()
+</I>&gt;<i> {
+</I>&gt;<i>    Sensor::initialize();
+</I>&gt;<i>
+</I>&gt;<i>    // Master camera depth texture
+</I>&gt;<i>    _input_depth = new osg::Texture2D();
+</I>&gt;<i>    _input_depth-&gt;setTextureSize(_w, _h);
+</I>&gt;<i>    _input_depth-&gt;setInternalFormat(GL_DEPTH_COMPONENT24);
+</I>&gt;<i>    _input_depth-&gt;setSourceFormat(GL_DEPTH_COMPONENT);
+</I>&gt;<i>    _input_depth-&gt;setSourceType(GL_FLOAT);
+</I>&gt;<i>    _input_depth-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
+</I>&gt;<i>    _input_depth-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
+</I>&gt;<i>    _view-&gt;getCamera()-&gt;attach(osg::Camera::DEPTH_BUFFER, _input_depth);
+</I>&gt;<i>
+</I>&gt;<i>    // Point of view depth texture
+</I>&gt;<i>    _pov_depth = new osg::Texture2D();
+</I>&gt;<i>    _pov_depth-&gt;setTextureSize(_w, _h);
+</I>&gt;<i>    _pov_depth-&gt;setInternalFormat(GL_DEPTH_COMPONENT24);
+</I>&gt;<i>    _pov_depth-&gt;setSourceFormat(GL_DEPTH_COMPONENT);
+</I>&gt;<i>    _pov_depth-&gt;setSourceType(GL_FLOAT);
+</I>&gt;<i>    _pov_depth-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+</I>&gt;<i>    _pov_depth-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+</I>&gt;<i>
+</I>&gt;<i>    // Point of view camera
+</I>&gt;<i>    _pov_camera = new osg::Camera();
+</I>&gt;<i>    _pov_camera-&gt;setViewport(0., 0., _w, _h);
+</I>&gt;<i>    _pov_camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+</I>&gt;<i>    _pov_camera-&gt;setClearColor(Color(1., 0., 0., 1.));
+</I>&gt;<i>    _pov_camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+</I>&gt;<i>    _pov_camera-&gt;setCullMask(Sensor::EXT);
+</I>&gt;<i>    _pov_camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+</I>&gt;<i>    _pov_camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+</I>&gt;<i>    _pov_camera-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+</I>&gt;<i>    _pov_camera-&gt;attach(osg::Camera::DEPTH_BUFFER, _pov_depth);
+</I>&gt;<i>    _pov_camera-&gt;setGraphicsContext(_view-&gt;getCamera()-&gt;getGraphicsContext());
+</I>&gt;<i>    //_was_on = false;_autor=false;
+</I>&gt;<i>    _view-&gt;addSlave(_pov_camera, true);
+</I>&gt;<i>
+</I>&gt;<i>    _pov_camera-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(new osg::CullFace(osg::CullFace::FRONT));
+</I>&gt;<i>
+</I>&gt;<i> (...)
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The _pov_camera is used to compute shadows on a map. But it consumes much resources from CPU whereas I only compute shadows from time to time.
+</I>&gt;<i>
+</I>&gt;<i> I tried to remove slave camera after using it :
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>                    int result = _view-&gt;findSlaveIndexForCamera(_pov_camera);
+</I>&gt;<i>                    if (result &lt; _view-&gt;getNumSlaves())
+</I>&gt;<i>                    {
+</I>&gt;<i>                            _view-&gt;removeSlave(result);
+</I>&gt;<i>                    }
+</I>&gt;<i>                    static_cast&lt;osgViewer::Renderer*&gt;(_pov_camera-&gt;getRenderer())-&gt;setDone(true);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> After using it but it does not change anything (whereas if I do not add the slave camera at the beginning performances are OK...). Why removing slave camera does not permit to roll back completely on adding it?
+</I>&gt;<i> Do you know a way to disable my _pov_camera?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Etienne
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicb9c3.php?p=67631#67631">http://forum.openscenegraph.org/viewtopic.php?p=67631#67631</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279605.html">[osg-users] Cannot stop rendering slave camera
+</A></li>
+	<LI>Next message: <A HREF="003386.html">[osg-users] Cannot stop rendering slave camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3384">[ date ]</a>
+              <a href="thread.html#3384">[ thread ]</a>
+              <a href="subject.html#3384">[ subject ]</a>
+              <a href="author.html#3384">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

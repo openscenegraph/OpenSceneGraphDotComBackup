@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] RayIntersector with KdTree causes a crash
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RayIntersector%20with%20KdTree%20causes%20a%20crash&In-Reply-To=%3CCAFN7Y%2BXjeWHU6eywW-WOQJhMfXACioRBO-LRQhv2eJs%3DGkqLOQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009007.html">
+   <LINK REL="Next"  HREF="009023.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] RayIntersector with KdTree causes a crash</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RayIntersector%20with%20KdTree%20causes%20a%20crash&In-Reply-To=%3CCAFN7Y%2BXjeWHU6eywW-WOQJhMfXACioRBO-LRQhv2eJs%3DGkqLOQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] RayIntersector with KdTree causes a crash">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Sep  4 07:38:35 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009007.html">[osg-users] RayIntersector with KdTree causes a crash
+</A></li>
+        <LI>Next message (by thread): <A HREF="009023.html">[osg-users] RayIntersector with KdTree causes a crash
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9008">[ date ]</a>
+              <a href="thread.html#9008">[ thread ]</a>
+              <a href="subject.html#9008">[ subject ]</a>
+              <a href="author.html#9008">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Ale,
+
+I have invested the issue further, focusing on why the sphere appears
+fine when the KdTree isn't build, but disappears when it is.  I
+tracked this issue down to the ShapeDrawable::setShape() being invoked
+by the KdTreeBuilder that creates a KdTree for a ShapeDrawable then
+assigns this KdTree to the ShapeDrawable via the Drawable::setShape()
+method which in turn invokes the ShapeDrawable::build() method that
+attempts to build a geometry from the KdTree.  It's a bit of circular
+reference - KdTree wasn't ever meant to work with ShapeDrawable, it's
+only now working because of the change of ShapeDrawable from
+subclassing from Drawable to subclassing from Geometry.
+
+To prevent the unintended rebuild I have disable the
+ShapeDrawable::build() from doing anything when the shape assigned is
+a KdTree.
+
+    <A HREF="https://github.com/openscenegraph/OpenSceneGraph/commit/5f9c6a01704e26e6760cc023e09ab1dcf0da1a15">https://github.com/openscenegraph/OpenSceneGraph/commit/5f9c6a01704e26e6760cc023e09ab1dcf0da1a15</A>
+
+There is still a bit of mismatch in that KdTree is a special case of a
+Shape, but still a valid use.  Shape's were always intended to be used
+for intersection testing and physics, but never originally intended to
+support a ShapeDrawable.  The ShapeDrawable was a quick and easy thing
+to add to help visualize primitive shapes but in hindsight I should
+never have implemented it as it's misused too much by the community as
+a serious means for drawing objects.  It's not possible to remove
+ShapeDrawable without breaking lots of user applications so it's still
+part of the OSG.  Please consider it just there for backwards
+compatibility.
+
+The above change is now checked into master and the OpenSceneGraph-3.6
+branch. so it will be part of the 3.6.3 release I'll make this month.
+
+Testing of these changes would be appreciated.
+
+Robert.
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009007.html">[osg-users] RayIntersector with KdTree causes a crash
+</A></li>
+	<LI>Next message (by thread): <A HREF="009023.html">[osg-users] RayIntersector with KdTree causes a crash
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9008">[ date ]</a>
+              <a href="thread.html#9008">[ thread ]</a>
+              <a href="subject.html#9008">[ subject ]</a>
+              <a href="author.html#9008">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

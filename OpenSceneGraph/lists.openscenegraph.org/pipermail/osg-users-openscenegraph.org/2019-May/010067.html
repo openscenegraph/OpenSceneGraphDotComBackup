@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Running multiple (independent) viewers in differentthreads
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Running%20multiple%20%28independent%29%20viewers%20in%0A%20differentthreads&In-Reply-To=%3Ctencent_A1E238F5D84870BB3B9A3123AD54CE644407%40qq.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010065.html">
+   <LINK REL="Next"  HREF="010068.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Running multiple (independent) viewers in differentthreads</H1>
+<!--htdig_noindex-->
+    <B>Garfield Pig  </B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Running%20multiple%20%28independent%29%20viewers%20in%0A%20differentthreads&In-Reply-To=%3Ctencent_A1E238F5D84870BB3B9A3123AD54CE644407%40qq.com%3E"
+       TITLE="[osg-users] Running multiple (independent) viewers in differentthreads">yuqicxy at foxmail.com
+       </A><BR>
+    <I>Fri May 24 03:39:50 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010065.html">[osg-users] Running multiple (independent) viewers in different threads
+</A></li>
+        <LI>Next message (by thread): <A HREF="010068.html">[osg-users] Running multiple (independent) viewers in different threads
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10067">[ date ]</a>
+              <a href="thread.html#10067">[ thread ]</a>
+              <a href="subject.html#10067">[ subject ]</a>
+              <a href="author.html#10067">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Cully,
+    It seems like the problem that split window or frame buffer to different part.
+    There are two way to do this in osg.
+    1.add slave camera to osgViewer::view,each camera has different graphiccontext.
+    2.add osgViewer::view to osgViewer::compositeViewer,and one osgViewer::view correspond one camera,and has the same graphiccontext.
+
+
+method 1 prefer the situation that each camera has different view or proj matrix but has same node tree.like Virtual Reality rendering,or cad design.
+method 2 prefer each view(camera) has independent node tree.Like multi-doc edit in Word.
+
+
+And the thread problem,I think you'd better do update in osg update thread,like add updateCallback to node.By this way,your thread will not have sync problem with osg render thread.
+
+
+To be honest,I don't pretty understand your problem.
+you'd better simplify your code to a problem example.
+
+
+Qi Yu.
+------------------ Original ------------------
+From: &quot;Antoine Cully&quot;&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">antoinecully at hotmail.com</A>&gt;;
+Date: Thu, May 23, 2019 00:49 AM
+To: &quot;osg-users&quot;&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;;
+
+Subject: [osg-users] Running multiple (independent) viewers in differentthreads
+
+
+
+Dear OSG Community, 
+
+I searched quite a lot through the source code and the beginner guide, but I was unable to find a way to make this work, so I am posting here hoping that you could help me. 
+
+I am developing a tool to run physical simulations (of robots) in parallel. This tool is used to run stochastic optimisation (like deep reinforcement learning) algorithms, and for this I need to be able to run several, but fully independent, simulations in parallel thanks to multithreading. This enables to collect data faster and for instance with a 32-core multithreaded CPU the speed-up factor is quite significant. 
+
+In each simulation, I have one camera that observes the environment, and which can be used to change the behaviour of the robot running in this simulation. The camera is currently implemented as a pbuffer following closely the osgscreencapture example. The actual code of the camera can be found on github, but apprently I am not allowed to post URLs at the moment. 
+The multithreading is managed by TBB (an Intel library that I have been using for 6 years now). 
+
+If I run my code in a &quot;sequential mode&quot;, i.e., all the simulations running one after the other, everything is going well.  However, if I run it in parallel, then I have some unstable behaviours. For instance, I can have a segmentation fault happening after a random number of simulations or suddenly after again a random number of simulations, the pbuffer cannot be created anymore (OSG displays &quot;Error: Unable to create pbuffer.&quot;). It seems to me that &quot;::osg::ref_ptr&lt;::osg::GraphicsContext&gt; pbuffer =  ::osg::GraphicsContext::createGraphicsContext(traits.get()); &quot;
+does not work in this setup. 
+
+If I remove the cameras (and all OSG components) from my code, it is working well in parallel, but of course I would like to have cameras in my simulations. 
+
+Ideally, I would like to run OSG in a single-thread mode and let TBB distribute the different instances of the simulator and OSG in different threads, but even with &quot;setThreadingModel(osgViewer::ViewerBase::ThreadingModel::SingleThreaded);&quot; it does not work. 
+I tried different threading modes, with the same result.
+
+So here is my question: 
+What would be the most appropriate way to run several independent viewers and pbuffers, each in a different thread? 
+The rendered scenes are really simple (no texture, just several primitive shapes) and I am only rendering a couple of frames in each simulation, so I don't need a complex threading model for OSG. 
+
+
+Some information about my system:
+- Ubuntu 18.04
+- OSG 3.6.4
+
+Thank you in advance for your help. 
+
+Best regards, 
+
+Antoine
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic98b7.php?p=76134#76134">http://forum.openscenegraph.org/viewtopic.php?p=76134#76134</A>
+
+
+
+
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190524/52aa3981/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190524/52aa3981/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010065.html">[osg-users] Running multiple (independent) viewers in different threads
+</A></li>
+	<LI>Next message (by thread): <A HREF="010068.html">[osg-users] Running multiple (independent) viewers in different threads
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10067">[ date ]</a>
+              <a href="thread.html#10067">[ thread ]</a>
+              <a href="subject.html#10067">[ subject ]</a>
+              <a href="author.html#10067">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

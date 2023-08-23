@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Core%20Profile%3A%20glEnable/glDisable%20GL_POINT_SPRITE&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827F6C6C5%40tewdmx.enews.nrl.navy.mil%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="008948.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE</H1>
+<!--htdig_noindex-->
+    <B>Daniel Emminizer, Code 5773</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Core%20Profile%3A%20glEnable/glDisable%20GL_POINT_SPRITE&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827F6C6C5%40tewdmx.enews.nrl.navy.mil%3E"
+       TITLE="[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE">dan.emminizer at nrl.navy.mil
+       </A><BR>
+    <I>Wed Aug  1 04:25:23 PDT 2018</I>
+    <P><UL>
+        
+        <LI>Next message (by thread): <A HREF="008948.html">[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8829">[ date ]</a>
+              <a href="thread.html#8829">[ thread ]</a>
+              <a href="subject.html#8829">[ subject ]</a>
+              <a href="author.html#8829">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+I just started seeing something similar at the end of the day yesterday.  I am using osg::PointSprite, not using GL_POINT_SPRITE directly.  I have some more background too and I think I see the cause, but not the solution.
+
+PointSprite::checkValidityOfAssociatedModes() is great, and it works great and is right when called.  But I found an edge case where it's not being called although PointSprite is in the scene.
+
+I have a scene that is generated dynamically on user input.  When the Viewer starts, there are no points, and there is no PointSprite.  This is when the GLObjectsVisitor is called, who is responsible for (among other things) calling checkValidityOfAssociatedModes(), due to the Renderer::_compileOnNextDraw flag being set.
+
+Later on in some GUIEventHandler, a GL_POINTS drawable is added with PointSprite in its stateset.  checkValidityOfAssociatedModes() is never called because the Renderer already did its compile pass.  Because it's never called, we never get to state.setModeValidity(GL_POINT_SPRITE_ARB, modeValid [false]).
+
+Because of this, the associated mode of PointSprite ends up applying, causing a GL error.  Basically, checkValidityOfAssociatedModes() never gets called if that mode is not present under the scene, when the scene is first compiled.
+
+
+Things I tried:
+
+* Adding PointSprite to the osg::View::getCamera() on start-up.  Did not work because GLObjectVisitor only visits scene data.  checkValidityOfAssociatedModes() never called.
+
+* Adding PointSprite to osgViewer::View's root node near setSceneData() call.  This did work.
+
+
+I can work around this because I do control my View/Viewer and I can add this PointSprite.  But this bug might have other side effects.   Though I'm seeing this in GL3/GLCORE, it is not a bug exclusive to GL core nor to Point Sprite. (I think)
+
+Attached is a small example that demonstrates the bad behavior.  I know you're not currently working on OSG, for me at least this issue can sit for a while.  But I wanted to provide you with all the info I had while it was fresh in my mind.
+
+ - Dan
+
+
+&gt;<i> -----Original Message-----
+</I>&gt;<i> From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On
+</I>&gt;<i> Behalf Of Robert Osfield
+</I>&gt;<i> Sent: Sunday, July 29, 2018 10:28 AM
+</I>&gt;<i> To: OpenSceneGraph Users
+</I>&gt;<i> Subject: Re: [osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</I>&gt;<i> 
+</I>&gt;<i> Hi Damian,
+</I>&gt;<i> 
+</I>&gt;<i> The glEnable/glDisable will be done directed by your scene graph via
+</I>&gt;<i> the StateSet::setMode(GLenum,..), so simply remove the
+</I>&gt;<i> setMode(GL_POINT_SPRITE).
+</I>&gt;<i> 
+</I>&gt;<i> Robert.
+</I>
+-------------- next part --------------
+An embedded and charset-unspecified text was scrubbed...
+Name: main.cpp
+URL: &lt;<A HREF="../attachments/20180801/ee1498a2/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180801/ee1498a2/attachment.ksh</A>&gt;
+-------------- next part --------------
+An embedded and charset-unspecified text was scrubbed...
+Name: CMakeLists.txt
+URL: &lt;<A HREF="../attachments/20180801/ee1498a2/attachment.txt">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180801/ee1498a2/attachment.txt</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message (by thread): <A HREF="008948.html">[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8829">[ date ]</a>
+              <a href="thread.html#8829">[ thread ]</a>
+              <a href="subject.html#8829">[ subject ]</a>
+              <a href="author.html#8829">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

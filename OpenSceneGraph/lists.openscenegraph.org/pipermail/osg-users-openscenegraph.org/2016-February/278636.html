@@ -1,0 +1,296 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Direct OpenGL Callback RTT Not Rendering Correctly
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Direct%20OpenGL%20Callback%20RTT%20Not%20Rendering%20Correctly&In-Reply-To=%3C1456178133.m2f.66389%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002419.html">
+   <LINK REL="Next"  HREF="278637.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Direct OpenGL Callback RTT Not Rendering Correctly</H1>
+<!--htdig_noindex-->
+    <B>Kevin Pitstick</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Direct%20OpenGL%20Callback%20RTT%20Not%20Rendering%20Correctly&In-Reply-To=%3C1456178133.m2f.66389%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Direct OpenGL Callback RTT Not Rendering Correctly">kevin.pitstick at gmail.com
+       </A><BR>
+    <I>Mon Feb 22 13:55:33 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002419.html">[osg-users] Lightpoint behavior with DirectionalSector
+</A></li>
+        <LI>Next message: <A HREF="278637.html">[osg-users] PFFLT_GSTATE_TABLES equivalence.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278636">[ date ]</a>
+              <a href="thread.html#278636">[ thread ]</a>
+              <a href="subject.html#278636">[ subject ]</a>
+              <a href="author.html#278636">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+I am running into issues using direct OpenGL calls inside a camera's pre-draw (or post-draw) callback while having the camera render into a framebuffer object. The texture is bound to a geode which is displayed in the default framebuffer on screen. The OpenGL calls should render an animated scene, but the texture is only updated once at the start. When using a post-draw callback, the texture is not updated at all.
+
+For simplicity's sake, I'll describe and post the code of a simple example that demonstrates my issue. Here's the setup:
+- A CompositeViewer with two Views sharing the same context.
+- One View's camera is set up to render into a framebuffer object and is attached to a color texture and a packed depth-stencil texture. Its render order is set to NESTED-1. It has a pre-draw callback on it that performs OpenGL calls, but it does not do any rendering itself (no scene data, clear mask set to 0).
+- The other View's camera renders to a single screen (default framebuffer). Its scene data is a square geode that is attached to the texture as its scene data. Its render order is set to NESTED-2 to occur after the render-to-texture.
+- The OpenGL callback is pretty simple. It pushes the OpenGL state, sets up the viewport/scissor, clears the buffer, sets the frustum, draws a rotated square, and pops the OpenGL state. The rotation changes with each call with the intent of drawing a rotating square to the screen.
+
+This direct OpenGL pre-draw callback works great if it is attached to a camera that is rendering to the default framebuffer (no render-to-texture). With render-to-texture, the square is shown in its initial rotation state but does not spin. If I use a post-draw callback instead, nothing is drawn at all.
+
+A few more notes:
+- I am using OpenSceneGraph 3.4.0 and have seen this behavior on both on a Macbook Pro (OS X 10.11) as well as on an Nvidia TX1 running Ubuntu 14.04.
+- I have verified that the callback is being executed every frame.
+- I have tried setting dirty on the Image as well as dirtyBound on the texture geode's geometry with no success.
+- When using a pre-draw callback, calling dirtyAttachmentMap on the RTT camera has the desired effect; however, it appears to reconstruct the FBO which I do not want to do every frame. Also, using this method does not fix the behavior of the post-draw callback.
+
+My guess is that I'm missing a flag or a setting that will cause the scene graph to update appropriately.
+
+Here is the full code for my example:
+
+
+Code:
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/CompositeViewer&gt;
+
+#include &lt;osg/Texture2D&gt;
+
+#include &lt;osg/Geode&gt;
+#include &lt;osg/PolygonMode&gt;
+#include &lt;osg/Matrixd&gt;
+
+void pushState() {
+  glPushAttrib(GL_ALL_ATTRIB_BITS); 
+  glMatrixMode(GL_MODELVIEW); 
+  glPushMatrix(); 
+  glMatrixMode(GL_PROJECTION); 
+  glPushMatrix(); 
+  glMatrixMode(GL_TEXTURE); 
+  glPushMatrix(); 
+}
+
+void popState() 
+{ 
+  glMatrixMode(GL_TEXTURE); 
+  glPopMatrix(); 
+  glMatrixMode(GL_PROJECTION); 
+  glPopMatrix(); 
+  glMatrixMode(GL_MODELVIEW); 
+  glPopMatrix(); 
+  glPopAttrib(); 
+} 
+
+class OpenGlCallback : public osg::Camera::DrawCallback {
+public:
+  OpenGlCallback(int width, int height) :
+    width(width), height(height) {}
+  
+  virtual void operator()(osg::RenderInfo&amp; renderInfo) const override {
+    static double xRotate = 0.0;
+    static double yRotate = 0.0;
+    static double zRotate = 0.0;
+    pushState();
+
+    glEnable(GL_SCISSOR_TEST);
+    glViewport(0, 0, width, height);
+    glScissor(0, 0, width, height);
+
+    glClearColor(0.3, 0.3, 0.3, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glMatrixMode(GL_PROJECTION);
+
+    GLfloat zNear = 0.5f;
+    GLfloat zFar = 20.0f;
+    GLfloat fov = 40.0;
+    GLfloat aspect = float(width)/float(height);
+    GLfloat fH = tan(float(fov/360.0f * osg::PI)) * zNear;
+    GLfloat fW = fH * aspect;
+    glFrustum(-fW, fW, -fH, fH, zNear, zFar);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glTranslatef(0.0, 0.0, -4.5);
+    glColor3f(0.7, 0.1, 0.1);
+    glRotatef(xRotate, 1.0, 0.0, 0.0);
+    glRotatef(yRotate, 0.0, 1.0, 0.0);
+    glRotatef(zRotate, 0.0, 0.0, 1.0);
+
+    glScalef(1.0, 1.0, 1.0);
+    glBegin(GL_POLYGON);
+      glVertex3f(-0.5, -0.5, -0.5);
+      glVertex3f(-0.5, 0.5, -0.5);
+      glVertex3f(0.5, 0.5, -0.5);
+      glVertex3f(0.5, -0.5, -0.5);
+    glEnd();
+
+    popState();
+
+    renderInfo.getCurrentCamera()-&gt;dirtyAttachmentMap();
+
+    xRotate += 1.0;
+    yRotate += 1.0;
+    zRotate += 1.0;
+  }
+private:
+  int width;
+  int height;
+};
+
+osg::ref_ptr&lt;osg::Texture2D&gt; createColorTexture(int width, int height);
+osg::ref_ptr&lt;osg::Texture2D&gt; createDepthStencilTexture(int width, int height);
+osg::ref_ptr&lt;osg::Geode&gt; createTextureGeode(int x, int y, int width, int height);
+
+int main(int argc, char** argv) {
+  osg::ref_ptr&lt;osgViewer::CompositeViewer&gt; viewer = new osgViewer::CompositeViewer();
+  viewer-&gt;setThreadingModel(osgViewer::CompositeViewer::SingleThreaded);
+
+  osg::ref_ptr&lt;osgViewer::View&gt; drawView = new osgViewer::View();
+  osg::ref_ptr&lt;osgViewer::View&gt; oglView = new osgViewer::View();
+  drawView-&gt;setUpViewOnSingleScreen(0);
+  viewer-&gt;addView(drawView);
+  viewer-&gt;addView(oglView);
+
+  osgViewer::CompositeViewer::Windows windows;
+  viewer-&gt;getWindows(windows);
+
+  int width = windows[0]-&gt;getTraits()-&gt;width;
+  int height = windows[0]-&gt;getTraits()-&gt;height;
+
+  int textureX = 100;
+  int textureY = 100;
+  int textureWidth = width-200;
+  int textureHeight = height-200;
+
+  osg::ref_ptr&lt;osg::Camera&gt; oglCamera = oglView-&gt;getCamera();
+  oglCamera-&gt;setGraphicsContext(windows[0]);
+  oglCamera-&gt;setPreDrawCallback(new OpenGlCallback(textureWidth, textureHeight));
+  oglCamera-&gt;setClearMask(0);
+  oglCamera-&gt;setClearColor(osg::Vec4(1.0, 0.3, 0.3, 1.0));
+  oglCamera-&gt;setViewport(0, 0, textureWidth, textureHeight);
+  oglCamera-&gt;setRenderOrder(osg::Camera::RenderOrder::NESTED_RENDER, 1);
+  oglCamera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+
+  drawView-&gt;getCamera()-&gt;setProjectionMatrixAsOrtho2D(0, width, 0, height);
+  drawView-&gt;getCamera()-&gt;setRenderOrder(osg::Camera::NESTED_RENDER, 2);
+
+  osg::ref_ptr&lt;osg::Texture2D&gt; colorTexture = createColorTexture(textureWidth, textureHeight);
+  osg::ref_ptr&lt;osg::Texture2D&gt; depthStencilTexture = createDepthStencilTexture(textureWidth, textureHeight);
+  oglCamera-&gt;attach(osg::Camera::COLOR_BUFFER, colorTexture.get());
+  oglCamera-&gt;attach(osg::Camera::PACKED_DEPTH_STENCIL_BUFFER, depthStencilTexture.get());
+
+  osg::ref_ptr&lt;osg::Geode&gt; textureGeode = createTextureGeode(textureX, textureY, textureWidth, textureHeight);
+  textureGeode-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, colorTexture, osg::StateAttribute::ON);
+  drawView-&gt;setSceneData(textureGeode);
+
+  viewer-&gt;realize();
+  while(!viewer-&gt;done()) {
+    viewer-&gt;frame();
+  }
+}
+
+osg::ref_ptr&lt;osg::Texture2D&gt; createColorTexture(int width, int height) {
+  osg::ref_ptr&lt;osg::Image&gt; image = new osg::Image();
+  image-&gt;allocateImage(width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE);
+  image-&gt;setInternalTextureFormat(GL_RGBA);
+
+  osg::ref_ptr&lt;osg::Texture2D&gt; colorTexture = new osg::Texture2D();
+  colorTexture-&gt;setImage(image);
+  colorTexture-&gt;setResizeNonPowerOfTwoHint(false);
+
+  return colorTexture;
+}
+
+osg::ref_ptr&lt;osg::Texture2D&gt; createDepthStencilTexture(int width, int height) {
+  osg::ref_ptr&lt;osg::Texture2D&gt; depthStencilTexture = new osg::Texture2D();
+  depthStencilTexture-&gt;setTextureSize(width, height);
+  depthStencilTexture-&gt;setInternalFormat(GL_DEPTH24_STENCIL8_EXT);
+  depthStencilTexture-&gt;setSourceFormat(GL_DEPTH_STENCIL_EXT);
+  depthStencilTexture-&gt;setSourceType(GL_UNSIGNED_INT_24_8_EXT);
+  depthStencilTexture-&gt;setResizeNonPowerOfTwoHint(false);
+  return depthStencilTexture;
+}
+
+osg::ref_ptr&lt;osg::Geode&gt; createTextureGeode(int x, int y, int width, int height) {
+  osg::ref_ptr&lt;osg::Geometry&gt; geometry = new osg::Geometry();
+
+  osg::ref_ptr&lt;osg::Vec3Array&gt; vertexArray = new osg::Vec3Array();
+  vertexArray-&gt;push_back(osg::Vec3(x, y, 0));
+  vertexArray-&gt;push_back(osg::Vec3(x+width, y, 0));
+  vertexArray-&gt;push_back(osg::Vec3(x+width, y+height, 0));
+  vertexArray-&gt;push_back(osg::Vec3(x, y+height, 0));
+  geometry-&gt;setVertexArray(vertexArray);
+
+  osg::ref_ptr&lt;osg::Vec4Array&gt; colorArray = new osg::Vec4Array();
+  colorArray-&gt;push_back(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+  geometry-&gt;setColorArray(colorArray);
+  geometry-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+
+  osg::ref_ptr&lt;osg::Vec2Array&gt; texCoordArray = new osg::Vec2Array();
+  texCoordArray-&gt;push_back(osg::Vec2(0.0f, 0.0f));
+  texCoordArray-&gt;push_back(osg::Vec2(1.0f, 0.0f));
+  texCoordArray-&gt;push_back(osg::Vec2(1.0f, 1.0f));
+  texCoordArray-&gt;push_back(osg::Vec2(0.0f, 1.0f));
+  geometry-&gt;setTexCoordArray(0, texCoordArray);
+
+  geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLE_FAN, 0, 4));
+
+  osg::ref_ptr&lt;osg::Geode&gt; textureGeode = new osg::Geode();
+  textureGeode-&gt;addDrawable(geometry);
+
+  return textureGeode;
+}
+
+
+
+I appreciate any help or suggestions on this.
+
+Thank you,
+Kevin[/quote]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2234.php?p=66389#66389">http://forum.openscenegraph.org/viewtopic.php?p=66389#66389</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002419.html">[osg-users] Lightpoint behavior with DirectionalSector
+</A></li>
+	<LI>Next message: <A HREF="278637.html">[osg-users] PFFLT_GSTATE_TABLES equivalence.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278636">[ date ]</a>
+              <a href="thread.html#278636">[ thread ]</a>
+              <a href="subject.html#278636">[ subject ]</a>
+              <a href="author.html#278636">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

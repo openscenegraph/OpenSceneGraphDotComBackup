@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Modern GLSL and OSG
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Modern%20GLSL%20and%20OSG&In-Reply-To=%3C56036382.5000608%40entropicsoftware.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001590.html">
+   <LINK REL="Next"  HREF="277805.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Modern GLSL and OSG</H1>
+<!--htdig_noindex-->
+    <B>Garth D</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Modern%20GLSL%20and%20OSG&In-Reply-To=%3C56036382.5000608%40entropicsoftware.com%3E"
+       TITLE="[osg-users] Modern GLSL and OSG">garthy_gso at entropicsoftware.com
+       </A><BR>
+    <I>Wed Sep 23 19:44:18 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001590.html">[osg-users] Modern GLSL and OSG
+</A></li>
+        <LI>Next message: <A HREF="277805.html">[osg-users] INVALID_OPERATION with compressed textures with mipmaps in OSG 3.4.0.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1588">[ date ]</a>
+              <a href="thread.html#1588">[ thread ]</a>
+              <a href="subject.html#1588">[ subject ]</a>
+              <a href="author.html#1588">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+Replying to myself with what I have managed to figure out so far to 
+provide some information in case it comes up in a search. I can't vouch 
+for the accuracy as this is still new to me. Anyway:
+
+- Compile messages end up being sent through the osg::NotifyHandler 
+mechanism.
+
+- Shaders don't appear to be compiled immediately, but if you use them 
+(by attaching an osg::Program to a osg::StateSet with 
+setAttributeAndModes()), they end up being compiled and used at a later 
+point.
+
+- osg::StateSet::addUniform() with a osg::Uniform argument seems to be 
+the way to specify uniforms.
+
+- osg::Program::addBindAttribLocation() is a means of binding variables 
+to a specific attribute index (output location), which you need for 
+other calls. I believe location layout qualifiers in the shaders 
+themselves can be used as well.
+
+- osg::Program::getAttribBindingList() seems to only return the 
+variables set with addBindAttribLocation(), and not ones specified in 
+the shader itself. This might be a timing issue, perhaps the results 
+change after the shaders are actually compiled and linked?
+
+- osg::State::setUseModelViewAndProjectUniforms(true) can be used to 
+automatically hook up variables such as &quot;osg_ModelViewProjectionMatrix&quot;, 
+which seems to be an OSG analogue to  &quot;gl_ModelViewProjectionMatrix&quot;. 
+This seems to be a useful bridge while trying to figure things out.
+
+- The compile messages can be used to confirm the actual attribute 
+indexes used.
+
+- Variables that aren't used may be optimised out, which makes them 
+unavailable.
+
+- Using Geometry::setVertexAttribArray with the last argument set 
+correctly (eg. BIND_PER_VERTEX) seems to be the way that you can pass 
+texture coordinates to shaders. I'm guessing other information such as 
+vertices and normals are handled similarly.
+
+Hopefully this helps someone in a similar situation to the one I was in.
+
+On 23/09/15 22:14, Garth D wrote:
+&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> I was wondering if anyone can make some suggestions as to resources that
+</I>&gt;<i> are useful for learning GLSL in modern OpenGL (say, 3.0+) with a
+</I>&gt;<i> specific focus on use with OSG.
+</I>&gt;<i>
+</I>&gt;<i> My existing GLSL knowledge is weak compared to my general 3D knowledge,
+</I>&gt;<i> and mostly dates back to the early days of shaders. A lot of what I have
+</I>&gt;<i> personally done with OpenGL and OSG has involved the fixed-function
+</I>&gt;<i> pipeline, or things that map to it fairly closely.
+</I>&gt;<i>
+</I>&gt;<i> Thus far I've been digging around online for GLSL resources, but tend to
+</I>&gt;<i> frequently find myself doing it the wrong way as I'm using features that
+</I>&gt;<i> have since become deprecated. On the OSG side I tend to dig around in
+</I>&gt;<i> the OSG examples and search the source to try to find the OSG
+</I>&gt;<i> equivalents to OpenGL calls I see mentioned in the GLSL resources. I
+</I>&gt;<i> then put these together and if I'm lucky something useful comes out. :)
+</I>&gt;<i>
+</I>&gt;<i> I think I'll figure things out eventually if I continue to crash around
+</I>&gt;<i> blindly as I have been, but if anyone can suggest some better starting
+</I>&gt;<i> points for GLSL use in OSG specifically, it would be much appreciated. :)
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Garth
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001590.html">[osg-users] Modern GLSL and OSG
+</A></li>
+	<LI>Next message: <A HREF="277805.html">[osg-users] INVALID_OPERATION with compressed textures with mipmaps in OSG 3.4.0.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1588">[ date ]</a>
+              <a href="thread.html#1588">[ thread ]</a>
+              <a href="subject.html#1588">[ subject ]</a>
+              <a href="author.html#1588">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

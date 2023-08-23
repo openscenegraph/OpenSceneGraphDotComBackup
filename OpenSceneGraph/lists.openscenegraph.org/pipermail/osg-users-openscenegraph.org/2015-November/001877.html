@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] High event times
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20High%20event%20times&In-Reply-To=%3CCAFN7Y%2BULd17CVxMtwoSJMLptiNNmwVihf%3DDmTpBJs16mV%2Bcgpg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001871.html">
+   <LINK REL="Next"  HREF="001879.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] High event times</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20High%20event%20times&In-Reply-To=%3CCAFN7Y%2BULd17CVxMtwoSJMLptiNNmwVihf%3DDmTpBJs16mV%2Bcgpg%40mail.gmail.com%3E"
+       TITLE="[osg-users] High event times">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Nov  3 01:34:36 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001871.html">[osg-users] High event times
+</A></li>
+        <LI>Next message: <A HREF="001879.html">[osg-users] High event times
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1877">[ date ]</a>
+              <a href="thread.html#1877">[ thread ]</a>
+              <a href="subject.html#1877">[ subject ]</a>
+              <a href="author.html#1877">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Matthias,
+
+It might be sufficient for us to just toggle on the resize check when the
+configure event arrives.  If you've added this already then just send the
+changes to me and I'll do review and have a bash at retracing my steps back
+in the Spring when I was resolving the original bug.
+
+Robert.
+
+On 2 November 2015 at 18:44, Mathias Fr&#246;hlich &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Mathias.Froehlich at gmx.net</A>&gt;
+wrote:
+
+&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Saturday, October 31, 2015 18:02:24 Robert Osfield wrote:
+</I>&gt;<i>
+</I>&gt;<i> &gt; I have had a look at the revision and vaguely remember hunting double a
+</I>&gt;<i>
+</I>&gt;<i> &gt; long time troublesome bug, but can't recall the details of the recreating
+</I>&gt;<i>
+</I>&gt;<i> &gt; the bug off hand. I'd have to look up what stuff I was doing around March
+</I>&gt;<i>
+</I>&gt;<i> &gt; this year. The r14805 commit message was &quot;Fixed resize dimensions of X11
+</I>&gt;<i>
+</I>&gt;<i> &gt; window&quot;.
+</I>&gt;<i>
+</I>&gt;<i> &gt;
+</I>&gt;<i>
+</I>&gt;<i> &gt; At a guess, perhaps we can just do this check when we suspect a resize.
+</I>&gt;<i>
+</I>&gt;<i> That is what I expect too. If this is required at all. Sadly I do not know
+</I>&gt;<i> exactly what
+</I>&gt;<i>
+</I>&gt;<i> type of event is guaranteed to arrive.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> &gt; What are the event times you are seeing? What platform are you testing
+</I>&gt;<i> on?
+</I>&gt;<i>
+</I>&gt;<i> Fedora 22 x86_64. I now looked up the implementation in libX11 and it
+</I>&gt;<i> seems to
+</I>&gt;<i>
+</I>&gt;<i> introduce 3 round trips in total to the X server. That results in
+</I>&gt;<i> 0.6ms-0.8ms
+</I>&gt;<i>
+</I>&gt;<i> down to &lt;= 0.2ms using the event visitor that just gets switched off
+</I>&gt;<i> completely
+</I>&gt;<i>
+</I>&gt;<i> by setting it to no traversal mode. That does not sound too much time, but
+</I>&gt;<i> if you
+</I>&gt;<i>
+</I>&gt;<i> want to squeeze the last out of your application you do not want to have a
+</I>&gt;<i>
+</I>&gt;<i> single round trip if it is not needed.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Also, if you think about the 80Hz frame rate with an oculus for example,
+</I>&gt;<i> this
+</I>&gt;<i>
+</I>&gt;<i> round trip time difference of about 0.5ms turns already in
+</I>&gt;<i> 0.0005/(1/80)=0.04
+</I>&gt;<i>
+</I>&gt;<i> that is 4% reduced available cull time (or draw time) to hit the target
+</I>&gt;<i> frame
+</I>&gt;<i>
+</I>&gt;<i> rate - without having drawn a single pixel. And having a round trip here
+</I>&gt;<i> makes
+</I>&gt;<i>
+</I>&gt;<i> you much more prone to scheduling decisions in the system as the X server
+</I>&gt;<i> needs
+</I>&gt;<i>
+</I>&gt;<i> to be started up to to answer your request which makes these times much
+</I>&gt;<i> more
+</I>&gt;<i>
+</I>&gt;<i> jittery and increases the probability of a missed frame.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Greetings
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Mathias
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151103/8e013604/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151103/8e013604/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001871.html">[osg-users] High event times
+</A></li>
+	<LI>Next message: <A HREF="001879.html">[osg-users] High event times
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1877">[ date ]</a>
+              <a href="thread.html#1877">[ thread ]</a>
+              <a href="subject.html#1877">[ subject ]</a>
+              <a href="author.html#1877">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] _intersectionLimit doesn't seem to be working...
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20_intersectionLimit%20doesn%27t%20seem%20to%20be%20working...&In-Reply-To=%3CCAFN7Y%2BU6ZTOCHgSo-HjxBP_CMoDWLuYV3bUzNrfGJ%2Bo%3DZ-DWmA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001193.html">
+   <LINK REL="Next"  HREF="001198.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] _intersectionLimit doesn't seem to be working...</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20_intersectionLimit%20doesn%27t%20seem%20to%20be%20working...&In-Reply-To=%3CCAFN7Y%2BU6ZTOCHgSo-HjxBP_CMoDWLuYV3bUzNrfGJ%2Bo%3DZ-DWmA%40mail.gmail.com%3E"
+       TITLE="[osg-users] _intersectionLimit doesn't seem to be working...">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Aug 13 10:57:07 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001193.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+        <LI>Next message: <A HREF="001198.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1196">[ date ]</a>
+              <a href="thread.html#1196">[ thread ]</a>
+              <a href="subject.html#1196">[ subject ]</a>
+              <a href="author.html#1196">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Shayne,
+
+The bottlenneck won't be the scene graph nodes but the osg::Geometry
+leaves.  When you do intersection tests on geometry you need to test all
+triangles in them to find the closest/furthest intersection.  The hints to
+just return one hint only help if you know the rest of the geometry is
+further away than the present intersection - you can do this at the scene
+graph level as you have the bounding volumes you can test but not at the
+triangle level.
+
+In the case KdTree, these attached to osg::Geometry and the intersection
+routine can use the KdTree for intersections which can speed up
+intersections substantially as it provides a fine grained level of tree
+based subdivision than the osg::Geometry.  Potentially one could come up
+with a more sophisticated intersection algorithm that does the
+nearest/furthest test more efficiently as you have the bounding volume
+hierarchy - feel free to spend you time and implement one.
+
+What we have the OSG's intersection routines are tools that are general
+purpose.  They do a pretty job at making getting the task done efficiently
+for a general case, but since they are designed for general usage and
+general scene graph structure they can't make the assumptions that one can
+make if you have a very specific usage model in mind and very specific type
+of pre-prepared data in mind.
+
+It sounds like you are after something this is tailored specific to your
+needs, it may be that general purpose techniques available in the OSG
+simply aren't going to solve your particular task how you want.
+
+You don't really too much guidance on what your requirements are w.r.t
+number of intersections per second, the amount of geometry involved.
+Things like geocentric vs flat earth modes make a big difference.  The
+later you can use potentially use height fields for testing.  VPB generates
+osgTerrain::TerrainTile based terrains by default so provide height fields
+for you, so a custom technique utilizing this might be appropriate.
+
+Robert
+
+
+On 13 August 2015 at 15:07, Shayne Tueller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">shayne.tueller at hill.af.mil</A>&gt;
+wrote:
+
+&gt;<i> So...I figured out why I was not getting just one intersection returned
+</I>&gt;<i> for my LOS tests. Apparently when KdTrees are enabled, intersectionLimit is
+</I>&gt;<i> ignored in the LineSegmentIntersector. When I turned off KdTrees, I got
+</I>&gt;<i> just one intersection returned but it is still abysmally slow compared with
+</I>&gt;<i> using KdTrees. This suggests that time spent traversing the scenegraph is
+</I>&gt;<i> the bottleneck vs. traversing KdTrees.
+</I>&gt;<i>
+</I>&gt;<i> That being said, KdTrees is still unacceptably slow when doing lots of
+</I>&gt;<i> visibility LOS tests on terrain.
+</I>&gt;<i>
+</I>&gt;<i> My next question is, is there a way to limit the number of intersections
+</I>&gt;<i> returned when using KdTrees like there is for the conventional case?
+</I>&gt;<i> Optimally, I would like to get the nearest intersection (or even just one
+</I>&gt;<i> intersection) from the start point and then have the intersector bail out
+</I>&gt;<i> to save time.
+</I>&gt;<i>
+</I>&gt;<i> Any help or input would be appreciated...
+</I>&gt;<i>
+</I>&gt;<i> -Shayne
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicf5d5.php?p=64754#64754">http://forum.openscenegraph.org/viewtopic.php?p=64754#64754</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150813/f57a861f/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150813/f57a861f/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001193.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+	<LI>Next message: <A HREF="001198.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1196">[ date ]</a>
+              <a href="thread.html#1196">[ thread ]</a>
+              <a href="subject.html#1196">[ subject ]</a>
+              <a href="author.html#1196">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

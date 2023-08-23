@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] CullVisitor object not getting properly deleted
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CullVisitor%20object%20not%20getting%20properly%20deleted&In-Reply-To=%3C1464023249.m2f.67211%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279344.html">
+   <LINK REL="Next"  HREF="003123.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] CullVisitor object not getting properly deleted</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CullVisitor%20object%20not%20getting%20properly%20deleted&In-Reply-To=%3C1464023249.m2f.67211%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] CullVisitor object not getting properly deleted">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Mon May 23 10:07:29 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279344.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+        <LI>Next message: <A HREF="003123.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3122">[ date ]</a>
+              <a href="thread.html#3122">[ thread ]</a>
+              <a href="subject.html#3122">[ subject ]</a>
+              <a href="author.html#3122">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi
+Your problem is weird, further I don't understand why you would have to create yourself a cullvisitor...
+Give us the minimum code to reproduce the error please
+(and use code section to keep indentation)
+
+
+Rick Irons wrote:
+&gt;<i> Hi all, 
+</I>&gt;<i> 
+</I>&gt;<i> I am encountering an issue with a CullVisitor object not being properly deleted in version 3.4.0. I am encountering this issue when updating from version 3.0.1. 
+</I>&gt;<i> 
+</I>&gt;<i> The source of the problem is a failed Referenced to CullVisitor dynamic cast that occurs in the code below&#8230; 
+</I>&gt;<i> 
+</I>&gt;<i> virtual void objectDeleted(void* object) 
+</I>&gt;<i> { 
+</I>&gt;<i> osg::Referenced* ref = reinterpret_cast&lt;osg::Referenced*&gt;(object); 
+</I>&gt;<i> osgUtil::CullVisitor* cv = dynamic_cast&lt;osgUtil::CullVisitor*&gt;(ref); 
+</I>&gt;<i> OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_mutex); 
+</I>&gt;<i> RenderStageMap::iterator itr = _renderStageMap.find(cv); 
+</I>&gt;<i> if (itr!=_renderStageMap.end()) 
+</I>&gt;<i> { 
+</I>&gt;<i> _renderStageMap.erase(cv); 
+</I>&gt;<i> } 
+</I>&gt;<i> } 
+</I>&gt;<i> 
+</I>&gt;<i> The call stack at the time of the failed cast is the following&#8230; 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> The cv pointer is NULL following the cast. My suspicion is that the dynamic cast is failing because we are in the destructor of our own object that inherits the OSG CullVisitor object. I tested this suspicion by confirming that the same dynamic cast will succeed in application code if done immediately before invoking the destructor of our version of the CullVisitor. This issue is blocking our update to 3.4.0 since it causes numerous unit test failures. 
+</I>&gt;<i> 
+</I>&gt;<i> Any suggestions on how to address this issue?  
+</I>&gt;<i> 
+</I>&gt;<i> I created the hack below to temporary bypass the problem&#8230; 
+</I>&gt;<i> 
+</I>&gt;<i> virtual void objectDeleted(void* object) 
+</I>&gt;<i> { 
+</I>&gt;<i> osg::Referenced* ref = reinterpret_cast&lt;osg::Referenced*&gt;(object); 
+</I>&gt;<i> osgUtil::CullVisitor* cv = dynamic_cast&lt;osgUtil::CullVisitor*&gt;(ref); 
+</I>&gt;<i> OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_mutex); 
+</I>&gt;<i> if (cv != NULL) 
+</I>&gt;<i> { 
+</I>&gt;<i> RenderStageMap::iterator itr = _renderStageMap.find(cv); 
+</I>&gt;<i> if (itr!=_renderStageMap.end()) 
+</I>&gt;<i> { 
+</I>&gt;<i> _renderStageMap.erase(cv); 
+</I>&gt;<i> } 
+</I>&gt;<i> } 
+</I>&gt;<i> else 
+</I>&gt;<i> { 
+</I>&gt;<i> for(RenderStageMap::iterator itr = _renderStageMap.begin(); 
+</I>&gt;<i> itr != _renderStageMap.end(); 
+</I>&gt;<i> ++itr) 
+</I>&gt;<i> { 
+</I>&gt;<i> osg::Referenced* tmpRef = dynamic_cast&lt;osg::Referenced*&gt;(itr-&gt;first); 
+</I>&gt;<i> if (ref==tmpRef) 
+</I>&gt;<i> { 
+</I>&gt;<i> cv = itr-&gt;first; 
+</I>&gt;<i> _renderStageMap.erase(cv); 
+</I>&gt;<i> break; 
+</I>&gt;<i> } 
+</I>&gt;<i> } 
+</I>&gt;<i> } 
+</I>&gt;<i> } 
+</I>&gt;<i> 
+</I>&gt;<i> Thanks, 
+</I>&gt;<i> Rick
+</I>&gt;<i> 
+</I>&gt;<i>  ------------------
+</I>&gt;<i> Post generated by Mail2Forum
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic5e17.php?p=67211#67211">http://forum.openscenegraph.org/viewtopic.php?p=67211#67211</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279344.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+	<LI>Next message: <A HREF="003123.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3122">[ date ]</a>
+              <a href="thread.html#3122">[ thread ]</a>
+              <a href="subject.html#3122">[ subject ]</a>
+              <a href="author.html#3122">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

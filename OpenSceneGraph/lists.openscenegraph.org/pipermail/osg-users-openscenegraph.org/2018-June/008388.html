@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG in Gtk3 GLArea
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20in%20Gtk3%20GLArea&In-Reply-To=%3CCAFN7Y%2BVnbZc9XGhMicRi%2BxsvK5r%3Dz-tTFVicSn3zRWLeZrCM7w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008387.html">
+   <LINK REL="Next"  HREF="008390.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG in Gtk3 GLArea</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20in%20Gtk3%20GLArea&In-Reply-To=%3CCAFN7Y%2BVnbZc9XGhMicRi%2BxsvK5r%3Dz-tTFVicSn3zRWLeZrCM7w%40mail.gmail.com%3E"
+       TITLE="[osg-users] OSG in Gtk3 GLArea">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Jun  6 00:51:54 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008387.html">[osg-users] OSG in Gtk3 GLArea
+</A></li>
+        <LI>Next message (by thread): <A HREF="008390.html">[osg-users] OSG in Gtk3 GLArea
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8388">[ date ]</a>
+              <a href="thread.html#8388">[ thread ]</a>
+              <a href="subject.html#8388">[ subject ]</a>
+              <a href="author.html#8388">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Steve,
+
+On 6 June 2018 at 03:42, Steve Hardy &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osgforum at tevs.eu</A>&gt; wrote:
+&gt;<i> Problems remaining:
+</I>&gt;<i>
+</I>&gt;<i> 1. the aspect ratio does not adjust properly on window size changes, so that the scene just stretches like rubber.
+</I>&gt;<i> ....
+</I>&gt;<i> For (1), I was assuming that
+</I>&gt;<i>
+</I>&gt;<i>     camera-&gt;setViewport(new osg::Viewport(0,0,width,height));
+</I>&gt;<i>     camera-&gt;setProjectionMatrixAsPerspective(30.0f, 1.*width/height, 1.0f, 10000.0f);
+</I>&gt;<i>
+</I>&gt;<i> on the slave and main (?) cameras would fix that up, but no.  Maybe there's something cached somewhere, even though I am completely reconstructing the slave camera on each resize.
+</I>&gt;<i>
+</I>&gt;<i> Any suggestions where to look?
+</I>&gt;<i>
+</I>
+In osg::Camera there is support for adjusting the projection matrix to
+track changes in he viewport:
+
+        enum ProjectionResizePolicy
+        {
+            FIXED, /**&lt; Keep the projection matrix fixed, despite
+window resizes.*/
+            HORIZONTAL, /**&lt; Adjust the HORIZONTAL field of view on
+window resizes.*/
+            VERTICAL /**&lt; Adjust the VERTICAL field of view on window resizes.*/
+        };
+
+        /** Set the policy used to determine if and how the projection
+matrix should be adjusted on window resizes. */
+        inline void setProjectionResizePolicy(ProjectionResizePolicy
+policy) { _projectionResizePolicy = policy; }
+
+        /** Get the policy used to determine if and how the projection
+matrix should be adjusted on window resizes. */
+        inline ProjectionResizePolicy getProjectionResizePolicy()
+const { return _projectionResizePolicy; }
+
+
+&gt;<i> 2. there is a truly horrendous amount of copying data.
+</I>&gt;<i> ....
+</I>&gt;<i> For (2), after the hardware renders the scene, and the PBO is mapped back into userspace RAM, the following copies occur:
+</I>&gt;<i>
+</I>&gt;<i> - memcpy to the osg::Image data
+</I>&gt;<i> - image-&gt;flipVertical()  since 2D library has Y inverted w.r.t GL.
+</I>&gt;<i> - copy to a new Python string object
+</I>&gt;<i> - copy to a new GdkPixbuf object
+</I>&gt;<i> - copy to the cairo context (that's the Gtk 2D graphics engine).
+</I>
+To avoid the flip you could flip the projection matrices y axis so
+that the it renders upside down,
+
+&gt;<i> I think a lot of this could be eliminated by creating the GdkPixbuf directly from the PBO map, flipping the row order in this copy.  Although it performs OK, we have to run on low-end systems.
+</I>
+Another approach might be to look at trying to use a GL context for
+the actual window and see if you can keep the data resident in
+graphics memory and copy it across without doing the round trip to the
+CPU.
+
+Robert.
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008387.html">[osg-users] OSG in Gtk3 GLArea
+</A></li>
+	<LI>Next message (by thread): <A HREF="008390.html">[osg-users] OSG in Gtk3 GLArea
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8388">[ date ]</a>
+              <a href="thread.html#8388">[ thread ]</a>
+              <a href="subject.html#8388">[ subject ]</a>
+              <a href="author.html#8388">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

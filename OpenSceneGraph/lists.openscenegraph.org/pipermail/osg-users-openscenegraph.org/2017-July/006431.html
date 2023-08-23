@@ -1,0 +1,274 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] RTT + shaders example
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RTT%20%2B%20shaders%20example&In-Reply-To=%3Cb577f16b-e063-bb52-52fc-6eb6e2a14a1f%40web.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006430.html">
+   <LINK REL="Next"  HREF="006434.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] RTT + shaders example</H1>
+<!--htdig_noindex-->
+    <B>Michael Maurus</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RTT%20%2B%20shaders%20example&In-Reply-To=%3Cb577f16b-e063-bb52-52fc-6eb6e2a14a1f%40web.de%3E"
+       TITLE="[osg-users] RTT + shaders example">michael.maurus at web.de
+       </A><BR>
+    <I>Wed Jul 12 04:27:31 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006430.html">[osg-users] problem with osgearth_pick.exe
+</A></li>
+        <LI>Next message: <A HREF="006434.html">[osg-users] RTT + shaders example
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6431">[ date ]</a>
+              <a href="thread.html#6431">[ thread ]</a>
+              <a href="subject.html#6431">[ subject ]</a>
+              <a href="author.html#6431">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+I am trying to figure out RTT in combination with shaders for 
+implementing a gbuffer but I can't get the different examples to work 
+together.
+This is a working example for using my shaders, but without RTT and also 
+for setting the StateSet for the model and not the camera.
+
+const char* vertSource =
+
+&quot;#version 400\n&quot;
+
+&quot;uniform mat4 MV;\n&quot;
+
+&quot;uniform mat4 N;\n&quot;
+
+&quot;uniform mat4 P;\n&quot;
+
+&quot;layout(location = 0) in vec4 Vertex;\n&quot;
+
+&quot;layout(location = 1) in vec3 Normal;\n&quot;
+
+&quot;smooth out vec3 p;\n&quot;
+
+&quot;smooth out vec3 n;\n&quot;
+
+&quot;void main(void) {\n&quot;
+
+&quot;p = (MV * Vertex).xyz;\n&quot;
+
+&quot;n = normalize(N * vec4(Normal, 0)).xyz;\n&quot;
+
+&quot;gl_Position = P * vec4(p, 1);\n&quot;
+
+&quot;}\n&quot;;
+
+const char* fragSource =
+
+&quot;#version 400\n&quot;
+
+&quot;in vec3 p;\n&quot;
+
+&quot;in vec3 n;\n&quot;
+
+&quot;layout(location = 0) out vec4 position;\n&quot;
+
+&quot;layout(location = 1) out vec4 normal;\n&quot;
+
+&quot;layout(location = 2) out float depth;\n&quot;
+
+&quot;void main(void) {\n&quot;
+
+&quot;position = vec4(p,1);\n&quot;
+
+&quot;normal = vec4(n,0);\n&quot;
+
+&quot;depth = gl_FragCoord.z;\n&quot;
+
+//&quot;gl_FragColor = vec4(n,1);\n&quot;
+
+&quot;}\n&quot;;
+
+#define Test1
+
+struct ProjectionMatrixCallback: public osg::Uniform::Callback {
+
+ProjectionMatrixCallback(osg::Camera* camera) :
+
+_camera(camera) {
+
+}
+
+virtual void operator()(osg::Uniform* uniform, osg::NodeVisitor* nv) {
+
+uniform-&gt;set(_camera-&gt;getProjectionMatrix());
+
+}
+
+osg::Camera* _camera;
+
+};
+
+struct NormalMatrixCallback: public osg::Uniform::Callback {
+
+NormalMatrixCallback(osg::Camera* camera) :
+
+_camera(camera) {
+
+}
+
+virtual void operator()(osg::Uniform* uniform, osg::NodeVisitor* nv) {
+
+osg::Matrixd viewMatrix = _camera-&gt;getViewMatrix();
+
+osg::Matrixd normalMatrix = osg::Matrix::inverse(viewMatrix);
+
+uniform-&gt;set(normalMatrix);
+
+}
+
+osg::Camera* _camera;
+
+};
+
+struct ModelViewMatrixCallback: public osg::Uniform::Callback {
+
+ModelViewMatrixCallback(osg::Camera* camera) :
+
+_camera(camera) {
+
+}
+
+virtual void operator()(osg::Uniform* uniform, osg::NodeVisitor* nv) {
+
+osg::Matrixd viewMatrix = _camera-&gt;getViewMatrix();
+
+osg::Matrixd modelMatrix = osg::computeLocalToWorld(nv-&gt;getNodePath());
+
+osg::Matrixd modelViewMatrix = modelMatrix * viewMatrix;
+
+uniform-&gt;set(modelViewMatrix);
+
+}
+
+osg::Camera* _camera;
+
+};
+
+int main(int, char**){
+
+osgViewer::Viewer viewer;
+
+osg::Node* model = osgDB::readNodeFile(&quot;cow.osgt&quot;);
+
+osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group();
+
+//create camera
+
+osg::Camera* camera = viewer.getCamera();
+
+// create shader
+
+osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+
+program-&gt;setName(&quot;shader&quot;);
+
+program-&gt;addShader(new osg::Shader(osg::Shader::VERTEX, vertSource));
+
+program-&gt;addShader(new osg::Shader(osg::Shader::FRAGMENT, fragSource));
+
+osg::StateSet* state = model-&gt;getOrCreateStateSet();
+
+state-&gt;setAttributeAndModes(program.get(), osg::StateAttribute::ON);
+
+// add uniforms
+
+osg::Uniform* modelViewMatrix = new 
+osg::Uniform(osg::Uniform::FLOAT_MAT4, &quot;MV&quot;);
+
+modelViewMatrix-&gt;setUpdateCallback(new ModelViewMatrixCallback(camera));
+
+state-&gt;addUniform(modelViewMatrix);
+
+osg::Uniform* normalMatrix = new osg::Uniform(osg::Uniform::FLOAT_MAT4, 
+&quot;N&quot;);
+
+normalMatrix-&gt;setUpdateCallback(new NormalMatrixCallback(camera));
+
+state-&gt;addUniform(normalMatrix);
+
+osg::Uniform* projectionMatrix = new 
+osg::Uniform(osg::Uniform::FLOAT_MAT4, &quot;P&quot;);
+
+projectionMatrix-&gt;setUpdateCallback(new ProjectionMatrixCallback(camera));
+
+state-&gt;addUniform(projectionMatrix);
+
+// turn lights off
+
+state-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+// scene state run
+
+root-&gt;addChild(model);
+
+viewer.setSceneData(root.get());
+
+viewer.setUpViewOnSingleScreen(0);
+
+return viewer.run();
+
+} Another working example with RTT camera but without shaders can be 
+found here: 
+<A HREF="https://github.com/xarray/osgRecipes/blob/master/cookbook/chapter6/ch06_04/read_depth.cpp">https://github.com/xarray/osgRecipes/blob/master/cookbook/chapter6/ch06_04/read_depth.cpp</A> 
+Can somebody help me combine these two or give me a minimal working 
+example (which is documented :) ). Thanks, Michael
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170712/56689f2f/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170712/56689f2f/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006430.html">[osg-users] problem with osgearth_pick.exe
+</A></li>
+	<LI>Next message: <A HREF="006434.html">[osg-users] RTT + shaders example
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6431">[ date ]</a>
+              <a href="thread.html#6431">[ thread ]</a>
+              <a href="subject.html#6431">[ subject ]</a>
+              <a href="author.html#6431">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

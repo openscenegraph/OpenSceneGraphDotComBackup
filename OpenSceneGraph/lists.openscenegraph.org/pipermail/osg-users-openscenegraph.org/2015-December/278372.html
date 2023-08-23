@@ -1,0 +1,234 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Using RayTracedTechnique
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20RayTracedTechnique&In-Reply-To=%3CCAHKmQh9eoC5qeTcn5EsUSGTJGFo9oTQP11HgfMNTB6zBit2mzg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002150.html">
+   <LINK REL="Next"  HREF="002152.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Using RayTracedTechnique</H1>
+<!--htdig_noindex-->
+    <B>Alex Taylor</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20RayTracedTechnique&In-Reply-To=%3CCAHKmQh9eoC5qeTcn5EsUSGTJGFo9oTQP11HgfMNTB6zBit2mzg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Using RayTracedTechnique">alextaylor at gmail.com
+       </A><BR>
+    <I>Mon Dec 14 13:47:37 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002150.html">[osg-users] Contemporary multipass non-OsgPPU glow example?
+</A></li>
+        <LI>Next message: <A HREF="002152.html">[osg-users] Using RayTracedTechnique
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278372">[ date ]</a>
+              <a href="thread.html#278372">[ thread ]</a>
+              <a href="subject.html#278372">[ subject ]</a>
+              <a href="author.html#278372">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>For context, I come from an image processing and signal processing
+background, so computer graphics and OSG are both new to me.
+
+I'm trying to use osgVolume for volume rendering some data. The only real
+example code I can find out there is the osgvolume example that ships with
+OSG. I'm a bit confused about the usage model with the various
+VolumeTechnique classes.
+
+I'm working with GL_RGBA uint8 data. In my code, I define a function
+createTexture3D that creates an osg::Image object. The image is defined as:
+
+*        osg::ref_ptr&lt;osg::Image&gt; image_3d = new osg::Image;*
+*        image_3d-&gt;allocateImage(nmSAFE_CAST(int, s_nearestPowerOfTwo),*
+*                nmSAFE_CAST(int, t_nearestPowerOfTwo),*
+*                nmSAFE_CAST(int, r_nearestPowerOfTwo),*
+*                desiredPixelFormat, GL_UNSIGNED_BYTE);&#8203;*
+
+When I started with a simple example, FixedFunctionTechnique rendered my
+data as I expected. See fixedFunctionTechnique.png attached.
+
+*osg::ref_ptr&lt;osgVolume::VolumeTile&gt; tile = new osgVolume::VolumeTile;*
+*            volume-&gt;addChild(tile.get());*
+
+*            osg::ref_ptr&lt;osg::Image&gt; image_3d =
+createTexture3D(data,xfer_table);*
+
+*            osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer = new
+osgVolume::ImageLayer(image_3d.get());*
+
+*            tile-&gt;setLayer(layer.get());*
+
+*            tile-&gt;setVolumeTechnique(new
+osgVolume::FixedFunctionTechnique());*
+
+*            // FixedFunctionTechnique turns on GL_LIGHTING, which breaks
+the color rendering.*
+*            osg::StateSet* stateset = volume-&gt;getOrCreateStateSet();*
+*            stateset-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF |
+osg::StateAttribute::OVERRIDE);*
+
+*            // Our original implementation positioned the bbox [-0.5,0.5]
+in each dimension.*
+*            // FixedFunctionTechnique applies the locator matrix to the a
+unit cube [0 1] in each dimension.*
+*            // To get the equivalent spatial referencing, apply a
+translation of -0.5 to each dimension.            *
+*            osg::ref_ptr&lt;osg::RefMatrix&gt; matrix = new osg::RefMatrix();*
+*            matrix-&gt;makeTranslate(-0.5,-0.5,-0.5);*
+
+I attempted to modify this simple example to use RayTracedTechnique next.
+When I do that, both the color and the opacity of my volume data is off. In
+some cases, I see something on the screen (see attached screenshot, in
+other cases, I don't see anything). I almost feel like somehow my data is
+outside of an expected colormap/alphamap range, but I can't figure out
+what's off. In this particular example with an engine block CT dataset and
+a specific colormap/alphamap, I see what is shown in the attached
+rayTracedTechnique.png. Here is a partial code listing based on the OSG
+example:
+
+
+* osg::ref_ptr&lt;osg::Image&gt; image_3d = createTexture3D(data,xfer_table);*
+
+*            osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer = new
+osgVolume::ImageLayer(image_3d.get());*
+
+*            tile-&gt;setLayer(layer.get());*
+
+*            osgVolume::SwitchProperty* sp = new osgVolume::SwitchProperty;*
+*            sp-&gt;setActiveProperty(0);*
+
+*            osg::TransferFunction1D::ColorMap colorMap;*
+*            for (size_t r = 0; r &lt; 256; ++r){*
+*                size_t rowOffset = r*4;*
+*                float red =
+static_cast&lt;float&gt;(xfer_table[rowOffset])/255.0;*
+*                float green =
+static_cast&lt;float&gt;(xfer_table[rowOffset+1])/255.0;*
+*                float blue =
+static_cast&lt;float&gt;(xfer_table[rowOffset+2])/255.0;*
+*                float alpha =
+static_cast&lt;float&gt;(xfer_table[rowOffset+3])/255.0;*
+*                colorMap[r] = osg::Vec4(red,green,blue,alpha);*
+*            }*
+
+*            osg::ref_ptr&lt;osg::TransferFunction1D&gt; transferFunction = new
+osg::TransferFunction1D;*
+*            transferFunction-&gt;assign(colorMap);*
+
+*            float alphaFunc=0.02f;*
+*            float sampleDensityWhenMoving = 0.02;*
+*            osgVolume::AlphaFuncProperty* ap = new
+osgVolume::AlphaFuncProperty(alphaFunc);*
+*            osgVolume::SampleDensityProperty* sd = new
+osgVolume::SampleDensityProperty(0.005);*
+*            osgVolume::SampleDensityWhenMovingProperty* sdwm =
+sampleDensityWhenMoving!=0.0 ? new
+osgVolume::SampleDensityWhenMovingProperty(sampleDensityWhenMoving) : 0;*
+*            osgVolume::TransparencyProperty* tp = new
+osgVolume::TransparencyProperty(1.0);*
+*            osgVolume::TransferFunctionProperty* tfp =
+transferFunction.valid() ? new
+osgVolume::TransferFunctionProperty(transferFunction.get()) : 0;*
+
+*            // Standard config from osgVolume example*
+*            osgVolume::CompositeProperty* cp = new
+osgVolume::CompositeProperty;*
+*            cp-&gt;addProperty(ap);*
+*            cp-&gt;addProperty(sd);*
+*            cp-&gt;addProperty(tp);*
+*            if (sdwm) cp-&gt;addProperty(sdwm);*
+*            // if (tfp) cp-&gt;addProperty(tfp);*
+
+*            sp-&gt;addProperty(cp);*
+*            sp-&gt;setActiveProperty(0); // For now, always use &quot;Standard&quot;
+config*
+*            layer-&gt;addProperty(sp);*
+
+*            tile-&gt;setVolumeTechnique(new osgVolume::RayTracedTechnique());*
+
+*            // FixedFunctionTechnique turns on GL_LIGHTING, which breaks
+the color rendering.*
+*            osg::StateSet* stateset = volume-&gt;getOrCreateStateSet();*
+*            // stateset-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF |
+osg::StateAttribute::OVERRIDE);*
+
+*            // Our original implementation positioned the bbox [-0.5,0.5]
+in each dimension.*
+*            // FixedFunctionTechnique applies the locator matrix to the a
+unit cube [0 1] in each dimension.*
+*            // To get the equivalent spatial referencing, apply a
+translation of -0.5 to each dimension.*
+*            osg::ref_ptr&lt;osg::RefMatrix&gt; matrix = new osg::RefMatrix();*
+*            matrix-&gt;makeTranslate(-0.5,-0.5,-0.5);*
+
+*            tile-&gt;setLocator(new osgVolume::Locator(*matrix));*
+
+I've spent the last few hours toggling settings on/off. I thought I'd see
+if anyone here has ideas, or how I would go about debugging why things
+aren't rendering correctly.
+
+I also have a specific question. When working with RGBA data, should I be
+specifying a *osgVolume::TransferFunctionProperty*&#8203;, and should this
+property be in the float [0,1] normalized range as shown in the OSG
+example, or should it be in a range that matches my data? I'm a bit
+confused about whether/why I need to specify the transfer function when my
+RGBA texture already knows the color and opacity for each voxel sample.
+
+Sorry for the very long email. I'd appreciate any help or pointers anyone
+can provide.
+
+Best,
+
+Alex Taylor
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151214/2f84c7e3/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151214/2f84c7e3/attachment-0002.htm</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: rayTracedTechniqueSmall.jpg
+Type: image/jpeg
+Size: 78838 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20151214/2f84c7e3/attachment-0004.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151214/2f84c7e3/attachment-0004.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: fixedFunctionTechniqueSmall.jpg
+Type: image/jpeg
+Size: 64824 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20151214/2f84c7e3/attachment-0005.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151214/2f84c7e3/attachment-0005.jpg</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002150.html">[osg-users] Contemporary multipass non-OsgPPU glow example?
+</A></li>
+	<LI>Next message: <A HREF="002152.html">[osg-users] Using RayTracedTechnique
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278372">[ date ]</a>
+              <a href="thread.html#278372">[ thread ]</a>
+              <a href="subject.html#278372">[ subject ]</a>
+              <a href="author.html#278372">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

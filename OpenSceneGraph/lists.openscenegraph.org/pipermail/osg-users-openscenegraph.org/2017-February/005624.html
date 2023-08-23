@@ -1,0 +1,143 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osg::Image::setImage problem
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%3A%3AImage%3A%3AsetImage%20problem&In-Reply-To=%3C1487435907.m2f.70254%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005620.html">
+   <LINK REL="Next"  HREF="005625.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osg::Image::setImage problem</H1>
+<!--htdig_noindex-->
+    <B>Evan Tsai</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%3A%3AImage%3A%3AsetImage%20problem&In-Reply-To=%3C1487435907.m2f.70254%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osg::Image::setImage problem">evanyftsai at gmail.com
+       </A><BR>
+    <I>Sat Feb 18 08:38:27 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005620.html">[osg-users] osg::Image::setImage problem
+</A></li>
+        <LI>Next message: <A HREF="005625.html">[osg-users] osg::Image::setImage problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5624">[ date ]</a>
+              <a href="thread.html#5624">[ thread ]</a>
+              <a href="subject.html#5624">[ subject ]</a>
+              <a href="author.html#5624">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thank you very much for helping.  Below is how we make the call.
+
+This has been working fine until very recently we received scan data from some CBCT scanners that we haven't encountered before.  However those scans could be viewed correctly in all popular DICOM viewers in the market.  As mentioned, I also took the pixel data and dumped it into a .bmp file, which looks correct.  So the only possibility seems to be that we are missing some setting here......
+
+I did try changing the texture coordinates around but that doesn't change the twisted nature of the display.
+
+I also tried changing `packing' from 1 to 0 but that crashes the software.
+
+Is there anything in particular that one needs to set for `rowLength'?
+
+
+
+	osg::Geode* pGeode = new osg::Geode;
+
+	osg::Vec3 v1(pBottomLeft[0], pBottomLeft[1], pBottomLeft[2]);
+	osg::Vec3 v2(pBottomRight[0], pBottomRight[1], pBottomRight[2]);
+	osg::Vec3 v3(pTopRight[0], pTopRight[1], pTopRight[2]);
+	osg::Vec3 v4(pTopLeft[0], pTopLeft[1], pTopLeft[2]);
+
+	osg::Geometry* geom = new osg::Geometry;
+	geom-&gt;setDataVariance(osg::Object::DYNAMIC);
+	osg::Vec3Array* vertices = new osg::Vec3Array(4);
+	(*vertices)[0] = v1;
+	(*vertices)[1] = v2;
+	(*vertices)[2] = v3;
+	(*vertices)[3] = v4;
+	geom-&gt;setVertexArray(vertices);
+
+	osg::Vec2Array* texcoords = new osg::Vec2Array(4);
+	(*texcoords)[0].set(0.0f, 0.0f);
+	(*texcoords)[1].set(1, 0.0f);
+	(*texcoords)[2].set(1, 1);
+	(*texcoords)[3].set(0.0f, 1);
+
+	geom-&gt;setTexCoordArray(0, texcoords);
+
+	osg::ref_ptr&lt;osg::Vec3Array&gt; normals = new osg::Vec3Array(1);
+	(*normals)[0].set(0.0f, -1.0f, 0.0f);
+	geom-&gt;setNormalArray(normals, osg::Array::BIND_OVERALL);
+	osg::Vec4Array* colors = new osg::Vec4Array(1);
+	(*colors)[0].set(1.0f, 1.0f, 1.0f, 1.0f);
+	geom-&gt;setColorArray(colors, osg::Array::BIND_OVERALL);
+
+	geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4));
+	geom-&gt;setUseDisplayList(false);
+	osg::ref_ptr&lt;osg::Image&gt; img = new osg::Image;
+
+	img-&gt;setImage(image.GetWidth(), image.GetHeight(), 1,
+		GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, image.GetPixelData(),
+		osg::Image::USE_NEW_DELETE);
+
+	//osg::ref_ptr&lt;osg::Image&gt; img = osgDB::readRefImageFile(&quot;C:\\Users\\rupeshb\\Pictures\\error.bmp&quot;);
+
+	//osg::ref_ptr&lt;osg::Image&gt; img = osgDB::readRefImageFile(filename);
+
+	osg::ref_ptr&lt;osg::Texture2D&gt; texture = new osg::Texture2D(img);
+	texture-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+	texture-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+	osg::ref_ptr&lt;osg::TexMat&gt; texmat = new osg::TexMat;
+	texmat-&gt;setScaleByTextureRectangleSize(true);
+	// setup state
+	osg::ref_ptr&lt;osg::StateSet&gt; state = geom-&gt;getOrCreateStateSet();
+	state-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+	state-&gt;setTextureAttributeAndModes(0, texmat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+	
+	state-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF); 
+
+        pGeode-&gt;addDrawable(geom);
+        addChild(pGeode);
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopiccec8.php?p=70254#70254">http://forum.openscenegraph.org/viewtopic.php?p=70254#70254</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005620.html">[osg-users] osg::Image::setImage problem
+</A></li>
+	<LI>Next message: <A HREF="005625.html">[osg-users] osg::Image::setImage problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5624">[ date ]</a>
+              <a href="thread.html#5624">[ thread ]</a>
+              <a href="subject.html#5624">[ subject ]</a>
+              <a href="author.html#5624">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

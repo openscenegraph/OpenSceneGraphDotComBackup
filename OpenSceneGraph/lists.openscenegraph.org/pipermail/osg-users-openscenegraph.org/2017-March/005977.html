@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Drawing large number of labels
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Drawing%20large%20number%20of%20labels&In-Reply-To=%3CCAFN7Y%2BXg_OL-%2BZw%3DDH4qr82zXjPq2%3DFSVWoGmx5NCQqF71TRQg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005976.html">
+   <LINK REL="Next"  HREF="005981.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Drawing large number of labels</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Drawing%20large%20number%20of%20labels&In-Reply-To=%3CCAFN7Y%2BXg_OL-%2BZw%3DDH4qr82zXjPq2%3DFSVWoGmx5NCQqF71TRQg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Drawing large number of labels">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Mar 31 00:58:51 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005976.html">[osg-users] Drawing large number of labels
+</A></li>
+        <LI>Next message: <A HREF="005981.html">[osg-users] Drawing large number of labels
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5977">[ date ]</a>
+              <a href="thread.html#5977">[ thread ]</a>
+              <a href="subject.html#5977">[ subject ]</a>
+              <a href="author.html#5977">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Andrew,
+
+On 31 March 2017 at 01:12, Andrew Cunningham &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andrewC at mac.com</A>&gt; wrote:
+&gt;<i> Hi,  I am looking for suggestion on how to efficiently draw 'large' ( aka many thousands) numbers of 'labels' or 'string markers'
+</I>&gt;<i> Typically these are short numeric strings. Instancing a osgText object for each label is likely to be very inefficient
+</I>
+The osgPairo project that Chris mentioned is a merge of
+osgPango/osgCairo that I made to make it simpler to build and easier
+to adapt the internal subgraphs it creates for rendering, osgPairo and
+osgPango in their native form run much slower than osgText so on it's
+own would be a step back performance/scalability-wise, the approach
+take is to trade visual quality and flexibility with performance so I
+wouldn't recommend using it as is.
+
+I haven't benchmarked it for thousands of labels but over the last
+month I did a rewrite of the internals of osgText to facilitate usage
+with vertex array objects that are required under some recent GL
+variants.  The new osgText classes are now utilise vertex arrays
+properly and push significantly less state changes than before so
+should be more efficient.
+
+What it may be worth doing is performance test using osgText as is,
+then osgText in OSG master just to see if ether work well enough in
+your usage case.  If they do then job done.
+
+If they don't then the most efficient way to do thousands of labels is
+to use create osg::Geometry that geographically batch quads from
+multiple labels.  I have used this approach to take the osgPairo text
+and build it into a form that is most efficient for rendering and it
+allowed us to massively cut the CPU and GPU overhead associated with
+osgPairo text - it was several orders of magnitude faster, ten's of
+thousands of labels on screen at 60Hz isn't a problem.
+
+However, the batching code was for a client and not open source so
+it's not something one can leverage beyond the knowledge that the
+approach works well. There a number of other approaches you could take
+creative use of shaders, they are unlikely to perform better than the
+batching approach and require greater investment in
+design/development/testing.  If you need to dynamically update the
+text labels on a per frame basis then coming up with a shader approach
+that generates the labels from within
+vertex/tessellation/geometry/fragment shader combination will likely
+be worth it.
+
+All the alternative approaches to just osgText are progressively more
+expensive to write so I'd suggest just benchmarking what things are
+like using osgText both older and the OSG master versions, let us know
+how things scale and if things need to improve we can guide you in the
+right direction.  When bencharking, try to create a representative
+test for your usage case, benchmark with a release build, vsync off,
+look at overall frame rate, but in particular the views that cause the
+most performance issues.  For problem areas create a specific
+benchmark.  For instance one can use an osg::CameraPath written out to
+disk and then reloaded and replayed by the
+osgGA::CameraPathManipulator, different paths can test different view
+combinations.  You can then use the same set of paths for testing as
+try various approach to check progress.
+
+When looking at benchmarking the overall framerate is coarse indicator
+of problem, it doesn't tell you the cause, for the cause you'll need
+to look at full on-screen stats provided by the OSG's StatsHandler,
+the update, event, cull, draw dispatch and draw GPU are elements that
+may be bottlenecks, the larges of these will be the area you'll want
+to concentrate on first.
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005976.html">[osg-users] Drawing large number of labels
+</A></li>
+	<LI>Next message: <A HREF="005981.html">[osg-users] Drawing large number of labels
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5977">[ date ]</a>
+              <a href="thread.html#5977">[ thread ]</a>
+              <a href="subject.html#5977">[ subject ]</a>
+              <a href="author.html#5977">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

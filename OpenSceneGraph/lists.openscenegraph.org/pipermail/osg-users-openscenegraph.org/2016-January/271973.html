@@ -1,0 +1,203 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to setup multi channel
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20setup%20multi%20channel&In-Reply-To=%3Ctencent_1745DC4B34AC2E89052FFB71%40qq.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271966.html">
+   <LINK REL="Next"  HREF="271964.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to setup multi channel</H1>
+<!--htdig_noindex-->
+    <B>Dan Liu</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20setup%20multi%20channel&In-Reply-To=%3Ctencent_1745DC4B34AC2E89052FFB71%40qq.com%3E"
+       TITLE="[osg-users] How to setup multi channel">139250065 at qq.com
+       </A><BR>
+    <I>Thu Jan 14 02:18:27 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271966.html">[osg-users] How to setup multi channel
+</A></li>
+        <LI>Next message: <A HREF="271964.html">[osg-users] How to setup multi channel
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271973">[ date ]</a>
+              <a href="thread.html#271973">[ thread ]</a>
+              <a href="subject.html#271973">[ subject ]</a>
+              <a href="author.html#271973">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, Robert:
+   Thanks for your remind and support. Yes, one display card can support multiple monitors. 
+   I want to split the master viewer screen which in the same plane into M rows and N columns equally. For example, M=5 and N=10. addSlave is the good way as you recommend. But I don't know how to setup the value of projectionOffsetMatrix. Is there a formula to calculate projectionOffsetMatrix for one sub-node(row=i, column=j)? 
+
+
+With best regards
+Daniel
+
+
+------------------ Original ------------------
+From:  &quot;Robert Osfield&quot;;&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;;
+Date:  Thu, Jan 14, 2016 03:43 AM
+To:  &quot;OpenSceneGraph Users&quot;&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;; 
+
+Subject:  Re: [osg-users] How to setup multi channel
+
+
+
+Hi Daniel,
+
+These days most decent graphics cards can push multiple displays at a
+solid 60Hz so rather than 20 computers for 5x4 display wall you could
+have 5 computers pushing 4 displays each or a similar arrangement.
+You could look to mix and matching osgcluster style approach with a
+viewer with multiple slave Camera's to achieve this.
+
+When using slave Camera's you provide a matrix to multiple the view
+and projection matrices via the View::addSlave(camera,
+projectionOffsetMatrix, viewOffsetMatrix), you'll find this defined in
+include/osg/View.
+
+Using addSlave when implementing a cluster rather than just setting
+the master Camera is generally better as it means that the master can
+dispatch the same updates to the master Camera to all slaves and the
+individual slaves that apply this to their Viewer.getCamera() while
+the individual Slave camera offsets at set up once at start up.
+
+The settings to use with addSlave will depend on the master Camera's
+projection matrix set up - is it set to have a field of view of a
+single display or for the whole display region?  Also on whether the
+display are all in the same plane or not - in the same plane you
+simply need to modify the projection matrix offset, but if you have a
+cylindrical display then you just modify the view matrix.
+
+Robert.
+
+
+
+
+On 13 January 2016 at 17:01, Dan Liu &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">139250065 at qq.com</A>&gt; wrote:
+&gt;<i>  Dear Robert:
+</I>&gt;<i>     Thank you very much!
+</I>&gt;<i>     I have studied osgwindow. If I have 20 computer, each computer has 1
+</I>&gt;<i> monitor. And my screen wall is 4 rows, 5 columns. Should I setup
+</I>&gt;<i> osg::GraphicsContext::Traits if I run viewer in full screen mode? For
+</I>&gt;<i> example, a screen's row_no=2 and column_no=2(index begin from 0), it should
+</I>&gt;<i> display x range from 50% to 75% and y range from 40% to 60%, and scale
+</I>&gt;<i> aspect ratio to 5/4=1.2.
+</I>&gt;<i>     I don't know how to change matrix in below line:
+</I>&gt;<i> viewer.addSlave(camera.get(), osg::Matrixd::translate(1.0,0.0,0.0),
+</I>&gt;<i> osg::Matrixd());
+</I>&gt;<i>
+</I>&gt;<i>     And scale function does not work:
+</I>&gt;<i> viewer.getCamera()-&gt;getProjectionMatrix() *= osg::Matrix::scale(1.2, 1.0,
+</I>&gt;<i> 1.0) has no effect, x scale is not changed. But
+</I>&gt;<i> viewer.getCamera()-&gt;getProjectionMatrix() *= osg::Matrix::scale(1.2, 1.2,
+</I>&gt;<i> 1.2) can works, the earth becomes bigger in both x, y, z dimension.
+</I>&gt;<i>
+</I>&gt;<i> With best regards
+</I>&gt;<i> Daniel
+</I>&gt;<i> ------------------ Original ------------------
+</I>&gt;<i> From:  &quot;Robert Osfield&quot;;&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;;
+</I>&gt;<i> Date:  Wed, Jan 13, 2016 05:29 PM
+</I>&gt;<i> To:  &quot;OpenSceneGraph Users&quot;&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;;
+</I>&gt;<i> Subject:  Re: [osg-users] How to setup multi channel
+</I>&gt;<i>
+</I>&gt;<i> Hi Daniel,
+</I>&gt;<i>
+</I>&gt;<i> The OSG is designed for handling multi-channel system and provides the
+</I>&gt;<i> support via the osgVIewer support for master + slave Camera.
+</I>&gt;<i>
+</I>&gt;<i> The osgwindow example is probably the most straight forward
+</I>&gt;<i> implementation to look at - this creates two windows and assign these
+</I>&gt;<i> to two slave osg::Camera, which are both assigned to a single
+</I>&gt;<i> osgViewer::Viewer (subclass from osgViewer::View which subclasses from
+</I>&gt;<i> osg::View) which provides the master Camera.
+</I>&gt;<i>
+</I>&gt;<i> The overall view is controlled by the master Camera attached to the
+</I>&gt;<i> View(er) which provides the main view and projection matrices.  The
+</I>&gt;<i> slave Camera's that are assigned to the View(er) have offset matrices
+</I>&gt;<i> that multiplied by the master's view and projection matrices to give
+</I>&gt;<i> the final view and projection matrices that the Slave camera will use.
+</I>&gt;<i>
+</I>&gt;<i> Other examples of the slave camera in action can be seen in the
+</I>&gt;<i> osgViewer::ViewConfig implementations found in the
+</I>&gt;<i> src/osgViewer/config directory.  The neatest way to implement what you
+</I>&gt;<i> need would be to implement your own custom osgViewer::ViewConfig that
+</I>&gt;<i> sets up the appropriate Slave Camera you need, then when you want to
+</I>&gt;<i> set up your viewer for this display system you simply pass in this
+</I>&gt;<i> ViewConfig and have it configure the View(er) as required.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 13 January 2016 at 03:50, Dan Liu &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">139250065 at qq.com</A>&gt; wrote:
+</I>&gt;&gt;<i> Dear all:
+</I>&gt;&gt;<i>     Hello! I'm using OSG to develop an application which run as screen
+</I>&gt;&gt;<i> wall(M rows, N columns). I studied the osgcluster example. But still don't
+</I>&gt;&gt;<i> know how to split master screen into MXN sub screens, and scale the screen
+</I>&gt;&gt;<i> according to the screen wall's real resolution.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> With best regards
+</I>&gt;&gt;<i> Daniel
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160114/3ec2373c/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160114/3ec2373c/attachment.htm</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271966.html">[osg-users] How to setup multi channel
+</A></li>
+	<LI>Next message: <A HREF="271964.html">[osg-users] How to setup multi channel
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271973">[ date ]</a>
+              <a href="thread.html#271973">[ thread ]</a>
+              <a href="subject.html#271973">[ subject ]</a>
+              <a href="author.html#271973">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

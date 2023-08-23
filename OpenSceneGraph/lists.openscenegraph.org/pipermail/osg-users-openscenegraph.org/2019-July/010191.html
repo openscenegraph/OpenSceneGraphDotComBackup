@@ -1,0 +1,161 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Removing objects with shared GL state from scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3CCAFN7Y%2BU06MOAFOkcnwtN4%2BhkfMcLptuAS%3DPc%3DWfGKn5cvv%2BqmQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010181.html">
+   <LINK REL="Next"  HREF="010222.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Removing objects with shared GL state from scene graph</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3CCAFN7Y%2BU06MOAFOkcnwtN4%2BhkfMcLptuAS%3DPc%3DWfGKn5cvv%2BqmQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Removing objects with shared GL state from scene graph">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sun Jul  7 04:59:41 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010181.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="010222.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10191">[ date ]</a>
+              <a href="thread.html#10191">[ thread ]</a>
+              <a href="subject.html#10191">[ subject ]</a>
+              <a href="author.html#10191">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chris,
+
+I'll have a look at the leads you've detailed on my return next week,
+
+Cheers,
+Robert.
+
+On Thu, 4 Jul 2019 at 10:42, Chris Djali &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">krizdjali at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> Turns out that it's not a font in the object cache that's causing me grief
+</I>&gt;<i> after all, but instead the static default font here:
+</I>&gt;<i> <A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/OpenSceneGraph-3.6/src/osgText/Font.cpp#L40.">https://github.com/openscenegraph/OpenSceneGraph/blob/OpenSceneGraph-3.6/src/osgText/Font.cpp#L40.</A>
+</I>&gt;<i> This is initialised from a GLubyte array instead of a file, so never ends
+</I>&gt;<i> up in the object cache.
+</I>&gt;<i>
+</I>&gt;<i> I can manually call releaseGLObjects on it when a graphics context is
+</I>&gt;<i> destroyed, which solves the problem for my application, but I can provide
+</I>&gt;<i> an example of an OSG application that CodeXL says leaks stuff to prove that
+</I>&gt;<i> there's still a footgun.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> int main()
+</I>&gt;<i> {
+</I>&gt;<i>     osgViewer::Viewer viewer;
+</I>&gt;<i>
+</I>&gt;<i>     // Use an auto transform so the text actually faces the screen
+</I>&gt;<i>     osg::ref_ptr&lt;osg::AutoTransform&gt; scene = new osg::AutoTransform();
+</I>&gt;<i>     scene-&gt;setAutoRotateMode(osg::AutoTransform::ROTATE_TO_SCREEN);
+</I>&gt;<i>     viewer.setSceneData(scene);
+</I>&gt;<i>
+</I>&gt;<i>     osg::ref_ptr&lt;osgText::Text&gt; text1 = new osgText::Text();
+</I>&gt;<i>     text1-&gt;setText(&quot;text1&quot;);
+</I>&gt;<i>     scene-&gt;addChild(text1);
+</I>&gt;<i>
+</I>&gt;<i>     // Display one or more frames
+</I>&gt;<i>     viewer.setCameraManipulator(new osgGA::TrackballManipulator());
+</I>&gt;<i>     for (int i = 0; i &lt; 100; ++i)
+</I>&gt;<i>         viewer.frame();
+</I>&gt;<i>
+</I>&gt;<i>     // Remove a text node
+</I>&gt;<i>     scene-&gt;removeChild(text1);
+</I>&gt;<i>
+</I>&gt;<i>     // Pick which path depending on whether or not we trust all references
+</I>&gt;<i> to things to go away
+</I>&gt;<i>     if (false)
+</I>&gt;<i>     {
+</I>&gt;<i>         text1-&gt;releaseGLObjects();
+</I>&gt;<i>     }
+</I>&gt;<i>     else
+</I>&gt;<i>     {
+</I>&gt;<i>
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     text1 = nullptr;
+</I>&gt;<i>
+</I>&gt;<i>     // osgText::Font::getDefaultFont::s_defaultFont still exists, so the
+</I>&gt;<i> default font isn't released
+</I>&gt;<i>
+</I>&gt;<i>     return viewer.run();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> As before, CodeXL is still reporting the following error:
+</I>&gt;<i>
+</I>&gt;<i> [Image:
+</I>&gt;<i> <A HREF="../../../../cdn.discordapp.com/attachments/502999428798480387/596112745104146487/unknown.png">https://cdn.discordapp.com/attachments/502999428798480387/596112745104146487/unknown.png</A>
+</I>&gt;<i> ]
+</I>&gt;<i>
+</I>&gt;<i> Maybe it would be a good idea for static OSG objects to all be held
+</I>&gt;<i> together in a global vector somewhere so that their GL objects can be
+</I>&gt;<i> released whenever a context is destroyed. Maybe something like that exists
+</I>&gt;<i> already and the default font just got forgotten.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Chris
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic609a.php?p=76365#76365">http://forum.openscenegraph.org/viewtopic.php?p=76365#76365</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190707/de2c643a/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190707/de2c643a/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010181.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="010222.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10191">[ date ]</a>
+              <a href="thread.html#10191">[ thread ]</a>
+              <a href="subject.html#10191">[ subject ]</a>
+              <a href="author.html#10191">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

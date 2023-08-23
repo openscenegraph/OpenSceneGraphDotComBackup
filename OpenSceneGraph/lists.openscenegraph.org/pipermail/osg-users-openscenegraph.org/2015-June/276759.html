@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Possible improvement for	CullThreadPerCameraDrawThreadPerContext threading model
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Possible%20improvement%20for%0A%09CullThreadPerCameraDrawThreadPerContext%20threading%20model&In-Reply-To=%3C1433558627.m2f.63964%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000535.html">
+   <LINK REL="Next"  HREF="000573.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Possible improvement for	CullThreadPerCameraDrawThreadPerContext threading model</H1>
+<!--htdig_noindex-->
+    <B>Jannik Heller</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Possible%20improvement%20for%0A%09CullThreadPerCameraDrawThreadPerContext%20threading%20model&In-Reply-To=%3C1433558627.m2f.63964%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Possible improvement for	CullThreadPerCameraDrawThreadPerContext threading model">scrawl at baseoftrash.de
+       </A><BR>
+    <I>Fri Jun  5 19:43:47 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000535.html">[osg-users] [osgPlugins] osgDB::readImageFile() chooses ffmpeg	over libpng
+</A></li>
+        <LI>Next message: <A HREF="000573.html">[osg-users] Possible improvement for	CullThreadPerCameraDrawThreadPerContext threading model
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276759">[ date ]</a>
+              <a href="thread.html#276759">[ thread ]</a>
+              <a href="subject.html#276759">[ subject ]</a>
+              <a href="author.html#276759">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I was playing around with threading models today and found something odd.
+
+For the sake of experiment, I used a osgViewer with a master camera, a slave camera using the same graphics context as the master camera, and the CullThreadPerCameraDrawThreadPerContext threading model.
+
+I found that the osgViewer does not commence the next frame until the last camera's draw dispatch has started. That is strange. My scene has 0 dynamic objects in it, so logically speaking the next frame could commence as soon as all the cull threads are done and the first camera's draw dispatch starts.
+
+I attached some pictures to illustrate what I mean. The first picture is what I am seeing, the second picture is what I would have expected to see.
+
+I fired up the debugger and found OSG was blocking in the _endDynamicDrawBlock. The block gets released in Renderer::draw, but each camera needs to get there first, i.e. start drawing.
+
+The idea for a fix would be simple: if there are no dynamic objects in the scene, we release the block in GraphicsContext::runOperations, for each camera, before the cameras start drawing.
+
+i.e., we move this piece of code from Renderer::draw to GraphicsContext::runOperations:
+
+        state-&gt;setDynamicObjectCount(sceneView-&gt;getDynamicObjectCount());
+
+        if (sceneView-&gt;getDynamicObjectCount()==0 &amp;&amp; state-&gt;getDynamicObjectRenderingCompletedCallback())
+        {
+            // OSG_NOTICE&lt;&lt;&quot;Completed in cull&quot;&lt;&lt;std::endl;
+            state-&gt;getDynamicObjectRenderingCompletedCallback()-&gt;completed(state);
+        }
+
+In practice it may not be simple, for starters the GraphicsContext would need access to the SceneView, which is a no go as the core osg can't depend on osgViewer. Some refactoring would be needed to work around this issue, so before I dive in head first, I want to ask if anyone has an alternative suggestion, or done this kind of optimization before.
+
+Thanks,
+Jannik
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic3119.php?p=63964#63964">http://forum.openscenegraph.org/viewtopic.php?p=63964#63964</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: threading_2.png
+Type: image/png
+Size: 8911 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20150606/b6a56a67/attachment-0004.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150606/b6a56a67/attachment-0004.png</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: threading_1.png
+Type: image/png
+Size: 8175 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20150606/b6a56a67/attachment-0005.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150606/b6a56a67/attachment-0005.png</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000535.html">[osg-users] [osgPlugins] osgDB::readImageFile() chooses ffmpeg	over libpng
+</A></li>
+	<LI>Next message: <A HREF="000573.html">[osg-users] Possible improvement for	CullThreadPerCameraDrawThreadPerContext threading model
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276759">[ date ]</a>
+              <a href="thread.html#276759">[ thread ]</a>
+              <a href="subject.html#276759">[ subject ]</a>
+              <a href="author.html#276759">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

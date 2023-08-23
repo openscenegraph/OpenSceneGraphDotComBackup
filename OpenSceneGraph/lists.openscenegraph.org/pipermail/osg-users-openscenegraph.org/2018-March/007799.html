@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Synchronizing with textures uploads.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Synchronizing%20with%20textures%20uploads.&In-Reply-To=%3CCAFN7Y%2BV58xZwzvXmc6cyZGBMpsirqhg98NWoCAwMh-ncXDekEg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007798.html">
+   <LINK REL="Next"  HREF="007800.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Synchronizing with textures uploads.</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Synchronizing%20with%20textures%20uploads.&In-Reply-To=%3CCAFN7Y%2BV58xZwzvXmc6cyZGBMpsirqhg98NWoCAwMh-ncXDekEg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Synchronizing with textures uploads.">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Mar  8 07:49:35 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007798.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+        <LI>Next message (by thread): <A HREF="007800.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7799">[ date ]</a>
+              <a href="thread.html#7799">[ thread ]</a>
+              <a href="subject.html#7799">[ subject ]</a>
+              <a href="author.html#7799">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Altin,
+
+On 8 March 2018 at 15:19, Altin Gjata &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">altingjataj at gmail.com</A>&gt; wrote:
+&gt;<i> Just an update. Calling setDataVariance(osg::Object::DYNAMIC), either (or both) in quad's StateSet or in the texture itself doesn't seem to have any affect.
+</I>&gt;<i>
+</I>&gt;<i> In SingleThreaded mode it works OK.
+</I>
+Good to hear that this works.  This is important for understanding
+what might be going amiss.
+
+My best guess is that previously it was your view matrix that is one
+frame behind rather than your texture update, as when you a call set
+set the Camera's view matrix affects the current frame's traversal,
+but in DrawThreadPerContext the current frame event, update and cull
+traversals all can happen in parallel with the previous frames Draw
+traversals, so if you update the view matrix it affects the current
+frame, but if you also update the Image this is being read by the
+previous frames draw traversal.  This will result in the video image
+and view direction being out of sync.
+
+SingleThreaded or CullDrawThreadPerContext both prevent the next frame
+from starting before the draw dispatch is complete so will avoid this
+issue.  I would also would have expected setting the DataVariance to
+DYNAMIC on the StateSet that you attach your texture to would have
+also prevented the next frame from starting before the texture was
+dispatched, I can only guess that the something wasn't quite right
+with the setting in your code.
+
+
+&gt;<i> If the driver uses triple buffering, can I do anything to disable it?
+</I>
+I don't have any knowledge of Intel drivers under Windows so can't
+help with this.
+
+&gt;<i>
+</I>&gt;<i> I'm using OSG 3.5.6. I understand that it's neither the stable release nor the most updated development release, but it's the version that vcpkg installs.
+</I>&gt;<i> Maybe this is all irrelevant.
+</I>&gt;<i>
+</I>&gt;<i> The content of the entire source file is below, including the commented out hacks.
+</I>
+A quick can through it mostly looks OK, but it's kinda hard reading in
+a browser, if possible in future could you post large segments of code
+like this an attachment, this will make it easier to read with a the
+readers preferred editor.
+
+--
+
+Personally, now you have it working with SingleThreded to stick with
+this.  Unless you have really large models that have heavy cull and
+draw traversals I would expect DrawThreadPerContext to make that much
+difference.  If you do see performance issues with SIngleThreaded then
+I'd recommend working on what the bottlenecks are rather than just
+selecting the multi-threaded solution that in your case introduces
+issues.
+
+W.r.t performance issues, I would recommend starting a separate thread
+to discuss these, thread as in mailing list/forum thread rather than
+CPU one :-)
+
+Robert.
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007798.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+	<LI>Next message (by thread): <A HREF="007800.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7799">[ date ]</a>
+              <a href="thread.html#7799">[ thread ]</a>
+              <a href="subject.html#7799">[ subject ]</a>
+              <a href="author.html#7799">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

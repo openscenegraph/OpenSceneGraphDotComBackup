@@ -1,0 +1,73 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Hi&nbsp;Chris,&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;I&#39;ll&nbsp;have&nbsp;a&nbsp;look&nbsp;at&nbsp;the&nbsp;leads&nbsp;you&#39;ve&nbsp;detailed&nbsp;on&nbsp;my&nbsp;return&nbsp;next&nbsp;week, &nbsp; &lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Cheers,&lt;/div&gt;&lt;div&gt;Robert.&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Thu,&nbsp;4&nbsp;Jul&nbsp;2019&nbsp;at&nbsp;10:42,&nbsp;Chris&nbsp;Djali&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:krizdjali@gmail.com&quot;&gt;krizdjali@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+Turns&nbsp;out&nbsp;that&nbsp;it&#39;s&nbsp;not&nbsp;a&nbsp;font&nbsp;in&nbsp;the&nbsp;object&nbsp;cache&nbsp;that&#39;s&nbsp;causing&nbsp;me&nbsp;grief&nbsp;after&nbsp;all,&nbsp;but&nbsp;instead&nbsp;the&nbsp;static&nbsp;default&nbsp;font&nbsp;here:&nbsp;&lt;a&nbsp;href=&quot;https://github.com/openscenegraph/OpenSceneGraph/blob/OpenSceneGraph-3.6/src/osgText/Font.cpp#L40&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;https://github.com/openscenegraph/OpenSceneGraph/blob/OpenSceneGraph-3.6/src/osgText/Font.cpp#L40&lt;/a&gt;.&nbsp;This&nbsp;is&nbsp;initialised&nbsp;from&nbsp;a&nbsp;GLubyte&nbsp;array&nbsp;instead&nbsp;of&nbsp;a&nbsp;file,&nbsp;so&nbsp;never&nbsp;ends&nbsp;up&nbsp;in&nbsp;the&nbsp;object&nbsp;cache.&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;can&nbsp;manually&nbsp;call&nbsp;releaseGLObjects&nbsp;on&nbsp;it&nbsp;when&nbsp;a&nbsp;graphics&nbsp;context&nbsp;is&nbsp;destroyed,&nbsp;which&nbsp;solves&nbsp;the&nbsp;problem&nbsp;for&nbsp;my&nbsp;application,&nbsp;but&nbsp;I&nbsp;can&nbsp;provide&nbsp;an&nbsp;example&nbsp;of&nbsp;an&nbsp;OSG&nbsp;application&nbsp;that&nbsp;CodeXL&nbsp;says&nbsp;leaks&nbsp;stuff&nbsp;to&nbsp;prove&nbsp;that&nbsp;there&#39;s&nbsp;still&nbsp;a&nbsp;footgun.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+int&nbsp;main()&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;osgViewer::Viewer&nbsp;viewer;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Use&nbsp;an&nbsp;auto&nbsp;transform&nbsp;so&nbsp;the&nbsp;text&nbsp;actually&nbsp;faces&nbsp;the&nbsp;screen&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osg::AutoTransform&gt;&nbsp;scene&nbsp;=&nbsp;new&nbsp;osg::AutoTransform();&lt;br&gt;<br>
+ &nbsp; &nbsp;scene-&gt;setAutoRotateMode(osg::AutoTransform::ROTATE_TO_SCREEN);&lt;br&gt;<br>
+ &nbsp; &nbsp;viewer.setSceneData(scene);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osgText::Text&gt;&nbsp;text1&nbsp;=&nbsp;new&nbsp;osgText::Text();&lt;br&gt;<br>
+ &nbsp; &nbsp;text1-&gt;setText(&quot;text1&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp;scene-&gt;addChild(text1);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Display&nbsp;one&nbsp;or&nbsp;more&nbsp;frames&lt;br&gt;<br>
+ &nbsp; &nbsp;viewer.setCameraManipulator(new&nbsp;osgGA::TrackballManipulator());&lt;br&gt;<br>
+ &nbsp; &nbsp;for&nbsp;(int&nbsp;i&nbsp;=&nbsp;0;&nbsp;i&nbsp;&lt;&nbsp;100;&nbsp;++i)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;viewer.frame();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Remove&nbsp;a&nbsp;text&nbsp;node&lt;br&gt;<br>
+ &nbsp; &nbsp;scene-&gt;removeChild(text1);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Pick&nbsp;which&nbsp;path&nbsp;depending&nbsp;on&nbsp;whether&nbsp;or&nbsp;not&nbsp;we&nbsp;trust&nbsp;all&nbsp;references&nbsp;to&nbsp;things&nbsp;to&nbsp;go&nbsp;away&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(false)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;text1-&gt;releaseGLObjects();&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;else&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;text1&nbsp;=&nbsp;nullptr;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;osgText::Font::getDefaultFont::s_defaultFont&nbsp;still&nbsp;exists,&nbsp;so&nbsp;the&nbsp;default&nbsp;font&nbsp;isn&#39;t&nbsp;released&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;return&nbsp;viewer.run();&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+As&nbsp;before,&nbsp;CodeXL&nbsp;is&nbsp;still&nbsp;reporting&nbsp;the&nbsp;following&nbsp;error:&lt;br&gt;<br>
+&lt;br&gt;<br>
+[Image:&nbsp;&lt;a&nbsp;href=&quot;https://cdn.discordapp.com/attachments/502999428798480387/596112745104146487/unknown.png&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;https://cdn.discordapp.com/attachments/502999428798480387/596112745104146487/unknown.png&lt;/a&gt;&nbsp;]&lt;br&gt;<br>
+&lt;br&gt;<br>
+Maybe&nbsp;it&nbsp;would&nbsp;be&nbsp;a&nbsp;good&nbsp;idea&nbsp;for&nbsp;static&nbsp;OSG&nbsp;objects&nbsp;to&nbsp;all&nbsp;be&nbsp;held&nbsp;together&nbsp;in&nbsp;a&nbsp;global&nbsp;vector&nbsp;somewhere&nbsp;so&nbsp;that&nbsp;their&nbsp;GL&nbsp;objects&nbsp;can&nbsp;be&nbsp;released&nbsp;whenever&nbsp;a&nbsp;context&nbsp;is&nbsp;destroyed.&nbsp;Maybe&nbsp;something&nbsp;like&nbsp;that&nbsp;exists&nbsp;already&nbsp;and&nbsp;the&nbsp;default&nbsp;font&nbsp;just&nbsp;got&nbsp;forgotten.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Chris&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=76365#76365&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=76365#76365&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;<br>
+
+</tt>

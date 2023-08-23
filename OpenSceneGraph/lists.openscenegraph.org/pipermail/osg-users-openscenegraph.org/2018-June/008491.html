@@ -1,0 +1,147 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Announcement%3A%20VulkanSceneGraph%20and%0A%20SceneGraphTestBed%21&In-Reply-To=%3CCAPK_1fwuadBtn6XiBUo%3DujehFbZarKjvTdDDP9LZWSUauwHjPQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008487.html">
+   <LINK REL="Next"  HREF="008496.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!</H1>
+<!--htdig_noindex-->
+    <B>Tim Moore</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Announcement%3A%20VulkanSceneGraph%20and%0A%20SceneGraphTestBed%21&In-Reply-To=%3CCAPK_1fwuadBtn6XiBUo%3DujehFbZarKjvTdDDP9LZWSUauwHjPQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!">timoore33 at gmail.com
+       </A><BR>
+    <I>Thu Jun 21 04:10:53 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008487.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+        <LI>Next message (by thread): <A HREF="008496.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8491">[ date ]</a>
+              <a href="thread.html#8491">[ thread ]</a>
+              <a href="subject.html#8491">[ subject ]</a>
+              <a href="author.html#8491">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+On Thu, Jun 21, 2018 at 9:35 AM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Tim,
+</I>&gt;<i>
+</I>&gt;<i> On Thu, 21 Jun 2018 at 08:25, Tim Moore &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">timoore33 at gmail.com</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Before you move on, the big advantage of std::shared_ptr over intrusive
+</I>&gt;&gt;<i> reference counting is that support for weak pointers is rock solid. In the
+</I>&gt;&gt;<i> intrusive model, you can't implement thread-safe weak pointers without an
+</I>&gt;&gt;<i> auxiliary data structure, which complicates the implementation a lot. I
+</I>&gt;&gt;<i> know that one historic OSG performance win for  osg::ref_ptr  was the
+</I>&gt;&gt;<i> ability to not do the reference counting if it isn't needed, but with
+</I>&gt;&gt;<i> atomic increment / decrement implemented everywhere, do you think there is
+</I>&gt;&gt;<i> really much performance advantage for intrusive counting? Also,
+</I>&gt;&gt;<i> std::make_shared&lt;&gt;() allocates the shared_ptr control block in the same
+</I>&gt;&gt;<i> memory allocation as the shared object, so there need not be a memory
+</I>&gt;&gt;<i> fragmentation hit for using shared_ptr.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;<i> The big advantage of intrusive reference counting is that the ref_ptr&lt;&gt;
+</I>&gt;<i> holds a pointer to the actual object that you want to access, it's a single
+</I>&gt;<i> jump. shared_ptr&lt;&gt; is literary a pointer to a shared pointer (which is a
+</I>&gt;<i> reference counted object) to a the actual object that you want to access,
+</I>&gt;<i> it's two pointers, two objects vs one pointer and one object.  Scene graphs
+</I>&gt;<i> are predominately memory bandwidth limited so this extra level of
+</I>&gt;<i> indirection is not even close to as efficient as intrusive reference
+</I>&gt;<i> counting.  The only advantage that shared_ptr&lt;&gt; has is that it works with
+</I>&gt;<i> any type, but with a scene graph the types are mostly all under our control
+</I>&gt;<i> there is no cost in complexity of having intrusive reference counting, just
+</I>&gt;<i> stick it into the base class that most classes use anyway and your job is
+</I>&gt;<i> done.
+</I>&gt;<i>
+</I>&gt;<i> This is not the way shared_ptr is implemented, at least in gcc. The shared
+</I>pointer contains a pointer to the object as well as to the control block.
+You could argue that this makes a shared_ptr twice the size of an
+osg::ref_ptr, but I really can't speculate on the overall effect on memory
+usage.
+
+&gt;<i> So... as my aim where possible is to make the VulkanSceneGraph more
+</I>&gt;<i> efficient than the OpenSceneGraph I can't just put chains around my ankles
+</I>&gt;<i> by adopting shared_ptr&lt;&gt;, instead I will acknowledge where the
+</I>&gt;<i> OpenSceneGraph already does something well and following this approach,
+</I>&gt;<i> albeit in a modern C++ way.
+</I>&gt;<i>
+</I>&gt;<i> For the thread safe observer_ptr&lt;&gt; you do need a separate auxiliary
+</I>&gt;<i> object, just like the OSG, so in my prototyping this is already what I have
+</I>&gt;<i> done.  I already have an vsg::Auxiliary object that is created when
+</I>&gt;<i> required, this Auxiliary object is for more than just supporting
+</I>&gt;<i> observer_ptr&lt;&gt; though, it also stores optional extra user data.  Doing this
+</I>&gt;<i> shrinks the base vsg::Object/Node classes and improves memory utilization,
+</I>&gt;<i> providing a measurable gain in construction, destruction and traversal of
+</I>&gt;<i> the scene graph over what can be done with the OSG.
+</I>&gt;<i>
+</I>What's the measured gain?
+
+&gt;<i>
+</I>&gt;<i> When adopting new features of C++ you have to understand what is happening
+</I>&gt;<i> under the hood, for software that is performance critical like a scene
+</I>&gt;<i> graph you have to take the time to make sure
+</I>&gt;<i>
+</I>Agreed :)
+
+&gt;<i> there aren't hidden performance costs are, if there is a cost then you
+</I>&gt;<i> have to be really sure that this cost is worth the value it provides.
+</I>&gt;<i> shared_ptr&lt;&gt;/weak_ptr&lt;&gt; don't cut it for the core scene graph.  There are
+</I>&gt;<i> plenty of other modern C++ features that are really neat and just make life
+</I>&gt;<i> easier without a cost, you'll see this sprinkled everywhere in the
+</I>&gt;<i> VulkanSceneGraph.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Of course I trust your judgement, but I struggled mightily with weak
+</I>pointer thread safety back in the day and am happy to be able to make it
+someone else's problem now. I am very happy that VulkanSceneGraph is coming
+on the scene!
+
+Tim
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180621/54aa4055/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180621/54aa4055/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008487.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+	<LI>Next message (by thread): <A HREF="008496.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8491">[ date ]</a>
+              <a href="thread.html#8491">[ thread ]</a>
+              <a href="subject.html#8491">[ subject ]</a>
+              <a href="author.html#8491">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

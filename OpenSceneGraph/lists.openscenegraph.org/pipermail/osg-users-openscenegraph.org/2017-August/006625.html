@@ -1,0 +1,226 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Specifying the GL context version to request
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Specifying%20the%20GL%20context%20version%20to%20request&In-Reply-To=%3Cb586c89b-5558-ae3f-12d5-8c48a12b16fa%40gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006624.html">
+   <LINK REL="Next"  HREF="006626.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Specifying the GL context version to request</H1>
+<!--htdig_noindex-->
+    <B>Sandro Mani</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Specifying%20the%20GL%20context%20version%20to%20request&In-Reply-To=%3Cb586c89b-5558-ae3f-12d5-8c48a12b16fa%40gmail.com%3E"
+       TITLE="[osg-users] Specifying the GL context version to request">manisandro at gmail.com
+       </A><BR>
+    <I>Mon Aug 21 09:21:58 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006624.html">[osg-users] Specifying the GL context version to request
+</A></li>
+        <LI>Next message: <A HREF="006626.html">[osg-users] Specifying the GL context version to request
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6625">[ date ]</a>
+              <a href="thread.html#6625">[ thread ]</a>
+              <a href="subject.html#6625">[ subject ]</a>
+              <a href="author.html#6625">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert
+
+
+On 21.08.2017 17:43, Robert Osfield wrote:
+&gt;<i> What GL version is osgEarth now depending upon?
+</I>A quick grep through the codebase shows shaders depending on GLSL up to 430.
+
+&gt;<i> From an end users perspectives lack of compatibility profile is a 
+</I>&gt;<i> constraint, if it weren't you wouldn't have had any problems.  From 
+</I>&gt;<i> what you describe it may well be a temporary constraint.
+</I>I can't speak for the mesa developers, though search a bit one can read 
+various statements here and there, including &quot;A long time ago, a 
+decision was made for Mesa not to increase the advertised compatibility 
+profile version.&quot; 
+(<A HREF="https://bugs.freedesktop.org/show_bug.cgi?id=96449#c5">https://bugs.freedesktop.org/show_bug.cgi?id=96449#c5</A>), so does not 
+sound too temporary.
+
+&gt;<i> Are you building the OSG with defaults?  Or are you building the OSG 
+</I>&gt;<i> for just GL3?
+</I>%cmake -DBUILD_OSG_EXAMPLES=ON -DBUILD_DOCUMENTATION=ON 
+-DOSG_GL1_AVAILABLE=ON -DOSG_GL2_AVAILABLE=ON -DOPENGL_PROFILE=GLCORE 
+-DOPENGL_HEADER1=&quot;#include &lt;GL/gl.h&gt;&quot;
+
+&gt;<i> What viewer are using with osgEarth?  osgEarth itself is typically 
+</I>&gt;<i> used as NodeKit with end user application creating their own viewer 
+</I>&gt;<i> and with it graphics contexts. This means even if osgEarth's own 
+</I>&gt;<i> example programs changed the way they create graphics context you'd 
+</I>&gt;<i> end up with issues.
+</I>Running with osgearth_viewer, I get two calls to 
+osgViewer::GraphicsWindowX11::init. The first one where, I assume, it 
+tries to determine the capabilities of hardware/driver in use, and this 
+calls Traits without a DisplaySettings instance:
+
+#0  osgViewer::GraphicsWindowX11::init (this=<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">this at entry</A>=0x1004ad330)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osgViewer/GraphicsWindowX11.cpp:915
+#1  0x00007f3e23ae4b50 in 
+osgViewer::GraphicsWindowX11::GraphicsWindowX11 (traits=0x1003760d0, 
+this=&lt;optimized out&gt;)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/include/osgViewer/api/X11/GraphicsWindowX11:56
+#2  X11WindowingSystemInterface::createGraphicsContext (this=&lt;optimized 
+out&gt;, traits=0x1003760d0)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osgViewer/GraphicsWindowX11.cpp:2269
+#3  0x00007f3e241e81b7 in osg::GraphicsContext::createGraphicsContext 
+(traits=<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">traits at entry</A>=0x1003760d0)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osg/GraphicsContext.cpp:128
+#4  0x00007f3e2350c256 in MyGraphicsContext::MyGraphicsContext 
+(this=&lt;synthetic pointer&gt;)
+     at 
+/usr/src/debug/osgearth-2.9-0.2.git43d4ba5.fc27.x86_64/src/osgEarth/Capabilities.cpp:76
+#5  osgEarth::Capabilities::Capabilities (this=0x100390f30)
+     at 
+/usr/src/debug/osgearth-2.9-0.2.git43d4ba5.fc27.x86_64/src/osgEarth/Capabilities.cpp:162
+#6  0x00007f3e236897a5 in osgEarth::Registry::initCapabilities 
+(this=0x1002a7af0)
+     at 
+/usr/src/debug/osgearth-2.9-0.2.git43d4ba5.fc27.x86_64/src/osgEarth/Registry.cpp:484
+#7  0x00007f3e23689829 in osgEarth::Registry::getCapabilities 
+(this=0x1002a7af0)
+     at 
+/usr/src/debug/osgearth-2.9-0.2.git43d4ba5.fc27.x86_64/src/osgEarth/Registry.cpp:468
+#8  0x00007f3dfa209486 in osgEarth::Registry::capabilities ()
+     at 
+/usr/src/debug/osgearth-2.9-0.2.git43d4ba5.fc27.x86_64/src/osgEarth/Registry:149
+#9 
+osgEarth::Drivers::MPTerrainEngine::MPTerrainEngineNode::MPTerrainEngineNode 
+(this=0x100a1ac60)
+     at 
+/usr/src/debug/osgearth-2.9-0.2.git43d4ba5.fc27.x86_64/src/osgEarthDrivers/engine_mp/MPTerrainEngineNode.cpp:202
+[...]
+
+Then, a second time here:
+
+#0  osgViewer::GraphicsWindowX11::init (this=<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">this at entry</A>=0x100676840)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osgViewer/GraphicsWindowX11.cpp:915
+#1  0x00007f3e23ae4b50 in 
+osgViewer::GraphicsWindowX11::GraphicsWindowX11 (traits=0x10052c100, 
+this=&lt;optimized out&gt;)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/include/osgViewer/api/X11/GraphicsWindowX11:56
+#2  X11WindowingSystemInterface::createGraphicsContext (this=&lt;optimized 
+out&gt;, traits=0x10052c100)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osgViewer/GraphicsWindowX11.cpp:2269
+#3  0x00007f3e241e81b7 in osg::GraphicsContext::createGraphicsContext 
+(traits=<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">traits at entry</A>=0x10052c100)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osg/GraphicsContext.cpp:128
+#4  0x00007f3e23a7ab62 in osgViewer::SingleWindow::configure 
+(this=0x100a2a370, view=...)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osgViewer/config/SingleWindow.cpp:72
+#5  0x00007f3e23a7a80a in osgViewer::SingleScreen::configure 
+(this=&lt;optimized out&gt;, view=...)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osgViewer/config/SingleScreen.cpp:29
+#6  0x00007f3e23a75207 in osgViewer::AcrossAllScreens::configure 
+(this=&lt;optimized out&gt;, view=...)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osgViewer/config/AcrossAllScreens.cpp:48
+#7  0x00007f3e23ab79c2 in osgViewer::View::apply (this=0x7fffffffdb00, 
+config=0x1002a3770)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osgViewer/View.cpp:456
+#8  0x00007f3e23ab7b00 in osgViewer::View::setUpViewAcrossAllScreens 
+(this=&lt;optimized out&gt;)
+     at 
+/usr/src/debug/OpenSceneGraph-3.5.7-0.2.gitbfbaeca.fc27.x86_64/src/osgViewer/View.cpp:463
+[...]
+
+using ViewAcrossAllScreens as you anticipated and hence the default 
+DisplaySettings. Since by default a &quot;1.0&quot; context is created, the result is:
+
+FRAGMENT glCompileShader &quot;main(fragment)&quot; FAILED
+FRAGMENT Shader &quot;main(fragment)&quot; infolog:
+0:1(10): error: GLSL 3.30 is not supported. Supported versions are: 
+1.10, 1.20, 1.30, 1.00 ES, 3.00 ES, 3.10 ES, and 3.20 ES
+
+etc.
+
+If I add
+
+osg::DisplaySettings::instance()-&gt;setGLContextVersion( &quot;4.0&quot; );
+osg::DisplaySettings::instance()-&gt;setGLContextProfileMask( 0x1 );
+
+at the beginning of a tweaked <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osgearth_viewer.cpp at main</A>, things work 
+(though possibly osgEarth::Capabilities::Capabilities will have 
+incorrectly determined some things since a &quot;1.0&quot; context was created 
+there). The same effect can indeed be achieved by using the environment 
+variables you mention.
+
+
+If I use osgearth_qt_simple, the GL context created by Qt is used, which 
+I can set up to use the desired version and profile mask, at which point 
+things will also work with that viewer.
+
+Best
+Sandro
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170821/b449e1be/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170821/b449e1be/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006624.html">[osg-users] Specifying the GL context version to request
+</A></li>
+	<LI>Next message: <A HREF="006626.html">[osg-users] Specifying the GL context version to request
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6625">[ date ]</a>
+              <a href="thread.html#6625">[ thread ]</a>
+              <a href="subject.html#6625">[ subject ]</a>
+              <a href="author.html#6625">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

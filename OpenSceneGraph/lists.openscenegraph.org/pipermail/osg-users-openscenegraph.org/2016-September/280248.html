@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problems with assumeSizedInternalFormat
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20with%20assumeSizedInternalFormat&In-Reply-To=%3C1472851313.m2f.68506%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004021.html">
+   <LINK REL="Next"  HREF="004069.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problems with assumeSizedInternalFormat</H1>
+<!--htdig_noindex-->
+    <B>Paul Zimmons</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20with%20assumeSizedInternalFormat&In-Reply-To=%3C1472851313.m2f.68506%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Problems with assumeSizedInternalFormat">pzimmons at mak.com
+       </A><BR>
+    <I>Fri Sep  2 14:21:53 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004021.html">[osg-users] Creating mesh on runtime
+</A></li>
+        <LI>Next message: <A HREF="004069.html">[osg-users] Problems with assumeSizedInternalFormat
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280248">[ date ]</a>
+              <a href="thread.html#280248">[ thread ]</a>
+              <a href="subject.html#280248">[ subject ]</a>
+              <a href="author.html#280248">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello everybody,
+
+    When using a terrapage terrain with RGB textures for low LOD tiles, I noticed that low LOD tiles looked darker than the other tiles on the terrain. Why?
+
+    The RGB textures from terrapage includes mipmap data which is manually added to the image in the function txp::getTemplateTexture. The mip map data offsets are set with setMipmapLevels. Then setImage is used to put it on an osg::Texture2D.
+
+     In Texture.cpp, the mip map data is conveyed to OpenGL with applyTexImage2D_load which, before calling glTexSubImage2D, calls a function: assumeSizedInternalFormat.
+
+     assumeSizedInternalFormat iterates over sizedInternalFormats looking for sizedInternalFormats which match the internalFormat (GL_RGB) and type (GL_UNSIGNED_BYTE). And returns the FIRST match. This is a problem because multiple sizedInternalFormats match. In particular in this case, GL_SRGB8, GL_RGB8, GL_RGB565 all match the search criteria.
+
+     In the version of OSG I was using, the RGB texture was GL_RGB8 format but the format returned byassumeSizedInternalFormat for the mipmaps was GL_SRGB8 making everything darker. 
+
+     I noticed in the latest OSG, the orders have changed. However, this also does not solve the problem since if I want GL_SRGB8, I would get GL_RGB8 and the texture mip maps would appear too bright.
+
+     Other formats will have this issue as well (ex. GL_RGBA4 and GL_RGBA8, GL_RGB16F_ARG and GL_RGB32F_ARB).
+
+     I believe the approach in this function is not quite adequate, so I am interested in thoughts about how to fix this issue.
+    
+
+Thank you!
+
+Cheers,
+Paul
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic7640.php?p=68506#68506">http://forum.openscenegraph.org/viewtopic.php?p=68506#68506</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004021.html">[osg-users] Creating mesh on runtime
+</A></li>
+	<LI>Next message: <A HREF="004069.html">[osg-users] Problems with assumeSizedInternalFormat
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280248">[ date ]</a>
+              <a href="thread.html#280248">[ thread ]</a>
+              <a href="subject.html#280248">[ subject ]</a>
+              <a href="author.html#280248">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

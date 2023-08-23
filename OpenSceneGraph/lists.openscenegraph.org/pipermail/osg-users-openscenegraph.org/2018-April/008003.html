@@ -1,0 +1,280 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20render%20to%20a%20texure%20bound%20to%20an%20FBO%20and%20re-generate%0A%20mipmaps%20every%20frame&In-Reply-To=%3Ce88aaa1f-0d95-cd95-c530-6fb41cdaca55%40atlatec.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008002.html">
+   <LINK REL="Next"  HREF="007996.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame</H1>
+<!--htdig_noindex-->
+    <B>Julius Ziegler</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20render%20to%20a%20texure%20bound%20to%20an%20FBO%20and%20re-generate%0A%20mipmaps%20every%20frame&In-Reply-To=%3Ce88aaa1f-0d95-cd95-c530-6fb41cdaca55%40atlatec.de%3E"
+       TITLE="[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame">ziegler at atlatec.de
+       </A><BR>
+    <I>Wed Apr 11 01:24:19 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008002.html">[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame
+</A></li>
+        <LI>Next message (by thread): <A HREF="007996.html">[osg-users] What coordinate system does OSG use?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8003">[ date ]</a>
+              <a href="thread.html#8003">[ thread ]</a>
+              <a href="subject.html#8003">[ subject ]</a>
+              <a href="author.html#8003">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Ok, I have solved it. It was my poor understanding of the OpenGL 
+extension mechanism. I discovered the osg way to handle extensions and 
+now I call glGenerateMipmap like this:
+
+...
+osg::GLExtensions* ext = renderInfo.getState()-&gt;get&lt;osg::GLExtensions&gt;();
+ext-&gt;glGenerateMipmap(GL_TEXTURE_2D);
+...
+
+With this, mipmapping in the osgprerender example works!
+
+I now will try this in my more contorted development code...
+
+On 04/11/2018 10:00 AM, Julius Ziegler wrote:
+&gt;<i> Hello Robert,
+</I>&gt;<i> 
+</I>&gt;<i> the first issue that I mentioned, and the sefault of the attempted fix, 
+</I>&gt;<i> can be reproduced by slightly adapting the osgprerender.cpp example 
+</I>&gt;<i> (attached). I set the texture filtering to something mipmap-ish:
+</I>&gt;<i> 
+</I>&gt;<i> ...
+</I>&gt;<i> texture2D-&gt;setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR_MIPMAP_NEAREST 
+</I>&gt;<i> );
+</I>&gt;<i> texture2D-&gt;setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
+</I>&gt;<i> ...
+</I>&gt;<i> 
+</I>&gt;<i> When zooming out, one of the lower mipmap layers becomes active and the 
+</I>&gt;<i> content of the flag becomes static.
+</I>&gt;<i> 
+</I>&gt;<i> As I said, I do not consider this a bug. I know that, on the OpenGL 
+</I>&gt;<i> side, an extra call to glGenerateMipmap is required.
+</I>&gt;<i> 
+</I>&gt;<i> My first clumsy approach to inject this glGenerateMipmap call was to 
+</I>&gt;<i> attach a callback to the flag-drawable:
+</I>&gt;<i> 
+</I>&gt;<i> struct CreateMipmapCallback : osg::Drawable::DrawCallback
+</I>&gt;<i> {
+</I>&gt;<i>  &#160; void drawImplementation( osg::RenderInfo&amp; renderInfo, const 
+</I>&gt;<i> osg::Drawable* dwbl ) const override
+</I>&gt;<i>  &#160; {
+</I>&gt;<i>  &#160;&#160;&#160; // these three clears I made to be able to spot
+</I>&gt;<i>  &#160;&#160;&#160; // them in a trace of the GL calls
+</I>&gt;<i>  &#160;&#160;&#160; glClear( GL_DEPTH_BUFFER_BIT );
+</I>&gt;<i>  &#160;&#160;&#160; glClear( GL_DEPTH_BUFFER_BIT );
+</I>&gt;<i>  &#160;&#160;&#160; glClear( GL_DEPTH_BUFFER_BIT );
+</I>&gt;<i> 
+</I>&gt;<i>  &#160;&#160;&#160; // this crashes
+</I>&gt;<i>  &#160;&#160;&#160; // glGenerateMipmap(GL_TEXTURE_2D);
+</I>&gt;<i> 
+</I>&gt;<i>  &#160;&#160;&#160; // just decorate the existing draw function.
+</I>&gt;<i>  &#160;&#160;&#160; dwbl-&gt;drawImplementation(renderInfo);
+</I>&gt;<i>  &#160; }
+</I>&gt;<i> };
+</I>&gt;<i> 
+</I>&gt;<i> But glGenerateMipmap segfaults. To be able to call it, I included and 
+</I>&gt;<i> linked GLEW. Could that be the problem? I somehow have the impression 
+</I>&gt;<i> that I am following an invalid function pointer here.
+</I>&gt;<i> 
+</I>&gt;<i> I have attached the modified osgprerender source code. GLEW must be 
+</I>&gt;<i> linked to it. I build with this cmdline
+</I>&gt;<i> 
+</I>&gt;<i> g++ osgprerender.cpp -o osgprerender `pkg-config --libs --cflags 
+</I>&gt;<i> openscenegraph` -std=c++11 -lGLEW -lGL
+</I>&gt;<i> 
+</I>&gt;<i> I have tested this with OSG 3.4.0 on Linux 14.04 with an nvidia driver. 
+</I>&gt;<i> glxinfo | grep OpenGL shows this:
+</I>&gt;<i> 
+</I>&gt;<i> OpenGL vendor string: NVIDIA Corporation
+</I>&gt;<i> OpenGL renderer string: GeForce GTX 750 Ti/PCIe/SSE2
+</I>&gt;<i> OpenGL core profile version string: 4.3.0 NVIDIA 384.111
+</I>&gt;<i> OpenGL core profile shading language version string: 4.30 NVIDIA via Cg 
+</I>&gt;<i> compiler
+</I>&gt;<i> OpenGL core profile context flags: (none)
+</I>&gt;<i> OpenGL core profile profile mask: core profile
+</I>&gt;<i> OpenGL core profile extensions:
+</I>&gt;<i> OpenGL version string: 4.5.0 NVIDIA 384.111
+</I>&gt;<i> OpenGL shading language version string: 4.50 NVIDIA
+</I>&gt;<i> OpenGL context flags: (none)
+</I>&gt;<i> OpenGL profile mask: (none)
+</I>&gt;<i> OpenGL extensions:
+</I>&gt;<i> 
+</I>&gt;<i> This is a &quot;vanilla&quot; build of OpenSceneGraph with no special build settings.
+</I>&gt;<i> 
+</I>&gt;<i> My actual target system is more complicated, since for various 
+</I>&gt;<i> compatability reasons (Intel driver without proper compatability 
+</I>&gt;<i> profile) I had to both build a GL3 version of OSG, and use a recent 
+</I>&gt;<i> repository version of it. This might be the reason for the second 
+</I>&gt;<i> problem I have, but we can discuss this later.
+</I>&gt;<i> 
+</I>&gt;<i> How do I properly call glGenerateMipmap?
+</I>&gt;<i> 
+</I>&gt;<i> Thanks!
+</I>&gt;<i> Julius
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> On 04/10/2018 10:06 PM, Robert Osfield wrote:
+</I>&gt;&gt;<i> Hi Julius,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> There isn't much we can do to help at this stage as you don't provide
+</I>&gt;&gt;<i> any information about the hadware, OS, driver, OSG version, all we
+</I>&gt;&gt;<i> know is that you are using a render to texture technique and there is
+</I>&gt;&gt;<i> some issue with mipmapping and some unspecified hardware, OS and OSG
+</I>&gt;&gt;<i> version.&#160; We don't have your sofftware, data or hardware configuration
+</I>&gt;&gt;<i> to test against.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> It could be a driver bug, it could be a scene graph set up issue, it
+</I>&gt;&gt;<i> could be a data problem, it could be an OSG&#160; bug, at this stage that's
+</I>&gt;&gt;<i> all anyone could say with the information provided.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The most productive way for others to help would be if you could
+</I>&gt;&gt;<i> provide a small test program that illustrates the problem so that
+</I>&gt;&gt;<i> others can run this test on their own systems to see if problem
+</I>&gt;&gt;<i> appears, this then should shine more light on the nature of the
+</I>&gt;&gt;<i> problem and give us a better chance of getting a solution.&#160; Sometimes
+</I>&gt;&gt;<i> issues like this turn out to hardware/driver/OS specific so wider
+</I>&gt;&gt;<i> testing can show this.&#160; If it's a OSG bug then we can then use this a
+</I>&gt;&gt;<i> unit test for testing any fixes that will be made.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Failing a means to tests things ourselves, the only workaround I an
+</I>&gt;&gt;<i> suggest is to not using mipmapping on the texture you are rendering
+</I>&gt;&gt;<i> to.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 10 April 2018 at 20:45, Julius Ziegler &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ziegler at atlatec.de</A>&gt; wrote:
+</I>&gt;&gt;&gt;<i> Dear OSG-friends,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I currently have a scene graph set up where a pre-render camera renders
+</I>&gt;&gt;&gt;<i> content to a texture via an FBO, and the main camera uses this 
+</I>&gt;&gt;&gt;<i> texture to
+</I>&gt;&gt;&gt;<i> texture a quad with it. This works, in principle.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> However I need mipmapping for that texture, and all but the 0th 
+</I>&gt;&gt;&gt;<i> mipmap level
+</I>&gt;&gt;&gt;<i> of the texture are empty.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> With an apitracer, I found out that the glGenerateMipMap call happens
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> 1. only in the first frame (but I want it to be called every frame).
+</I>&gt;&gt;&gt;<i> 2. before any draw calls towards the FBO (but I want it after the draw
+</I>&gt;&gt;&gt;<i> calls).
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I tried to inject a glGenerateMipMap via a DrawCallback which I 
+</I>&gt;&gt;&gt;<i> attached to
+</I>&gt;&gt;&gt;<i> the quad, and which just extends the original draw implementation
+</I>&gt;&gt;&gt;<i> (glGenerateMipMap immediately before the original draw implementation).
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> With the apitracer, I validated that, at the position where I 
+</I>&gt;&gt;&gt;<i> injected the
+</I>&gt;&gt;&gt;<i> glGenerateMipMap
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> a. the correct texture is bound
+</I>&gt;&gt;&gt;<i> b. the frame buffer is un-bound.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> But glGenerateMipMap just seg'faults. Because of the seg'fault (I 
+</I>&gt;&gt;&gt;<i> mean we
+</I>&gt;&gt;&gt;<i> are all used to GL_ERRORS, but seg'faults?) I suspected a driver 
+</I>&gt;&gt;&gt;<i> issue, but
+</I>&gt;&gt;&gt;<i> I tried it on an alternative platform (one is Intel Graphics, one is 
+</I>&gt;&gt;&gt;<i> Nvidia,
+</I>&gt;&gt;&gt;<i> both on Linux). Both to the same result.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Can you please help? Maybe I overlooked a simple osg-ish way to 
+</I>&gt;&gt;&gt;<i> achieve this
+</I>&gt;&gt;&gt;<i> (maybe I just have to set something dirty()?)
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Thanks!
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Julius
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A> 
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I>
+-- 
+Dr.-Ing. Julius Ziegler
+
+Phone:  +49 151 722 026 63
+E-Mail: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ziegler at atlatec.de</A>
+Web:    www.atlatec.de
+
+Atlatec GmbH
+Haid- und Neu-Strasse 7
+D-76131 Karlsruhe
+
+Sitz der Gesellschaft: Karlsruhe | Registergericht Mannheim
+Handelsregisternummer: HRB 718673 | USt-IdNr. DE293003755
+Gesch&#228;ftsf&#252;hrer: Dr. Henning Lategahn
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008002.html">[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame
+</A></li>
+	<LI>Next message (by thread): <A HREF="007996.html">[osg-users] What coordinate system does OSG use?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8003">[ date ]</a>
+              <a href="thread.html#8003">[ thread ]</a>
+              <a href="subject.html#8003">[ subject ]</a>
+              <a href="author.html#8003">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

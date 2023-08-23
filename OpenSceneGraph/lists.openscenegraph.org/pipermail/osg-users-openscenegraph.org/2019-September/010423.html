@@ -1,0 +1,262 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] questions about developing drivers for osg/osgEarth
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20questions%20about%20developing%20drivers%20for%20osg/osgEarth&In-Reply-To=%3C44432A5AD7D51B4189508B62FAD2B54D3230E7%40Ideal-Exchange.IdealAero.lan%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010422.html">
+   <LINK REL="Next"  HREF="010426.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] questions about developing drivers for osg/osgEarth</H1>
+<!--htdig_noindex-->
+    <B>speterson at idealaero.com</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20questions%20about%20developing%20drivers%20for%20osg/osgEarth&In-Reply-To=%3C44432A5AD7D51B4189508B62FAD2B54D3230E7%40Ideal-Exchange.IdealAero.lan%3E"
+       TITLE="[osg-users] questions about developing drivers for osg/osgEarth">speterson at idealaero.com
+       </A><BR>
+    <I>Wed Sep 18 14:40:54 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010422.html">[osg-users] questions about developing drivers for osg/osgEarth
+</A></li>
+        <LI>Next message (by thread): <A HREF="010426.html">[osg-users] questions about developing drivers for osg/osgEarth
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10423">[ date ]</a>
+              <a href="thread.html#10423">[ thread ]</a>
+              <a href="subject.html#10423">[ subject ]</a>
+              <a href="author.html#10423">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chis,
+
+Any examples on how to do this?  I tried that so many ways and gave up.  I could never get anything to update at all.
+
+I have been having a hard time finding any examples on how to do this, so any help would be great.
+
+Thanks
+
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Chris Hanson
+Sent: Wednesday, September 18, 2019 4:35 PM
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+Subject: Re: [osg-users] questions about developing drivers for osg/osgEarth
+
+You kind of seem to be going about this a difficult way.
+
+Is dynamically altering a surface texture layer really the best way to add an arrow to the scene?
+
+It seems like you're trying to use a screwdriver to hammer nails.
+
+Is it not more effective to use some kind of symbology and render passes to overlay it onto the surface without testing or rewriting the Z buffer?
+
+
+On Wed, Sep 18, 2019 at 2:57 PM <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">speterson at idealaero.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">speterson at idealaero.com</A>&gt; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">speterson at idealaero.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">speterson at idealaero.com</A>&gt;&gt; wrote:
+Hello again,
+
+I have gotten some of the things I want done somewhat working.
+
+I am now having an issue attempting to get a layer to update within a system thread I made.
+
+First off I built all this using the Simple Ocean plugin code as my base line.  I then added a way to get a simple yellow box to show where I wanted programically with osgEarth.  I do have shader code working but what I need help with now is updating my layer ever so often with new data for my shaders to run on.
+
+Below is my simple function that my thread runs,  layer is a valid layer that is displayed named &#8220;newlayer&#8221;.
+
+The code runs and ramps up the alpha channel for a while (sometimes few seconds, sometimes minutes) and starts the ramp again with almost transparent, but eventually I get a read access violation in osg/NodeVisitor.cpp line 107.
+
+Can anyone look and hint to what might be causing this issue?
+
+It is almost as if my code and osg code are conflicting with some pointer somewhere and I am not sure how to mutex my code correctly.  Maybe it is my thread?  I am using a std::thread to run this function on.  Am I updating my layer wrong completely by removing and adding a new one?
+
+Thanks in advance.
+
+void mysimpleocean::mylayer_redraw(osg::ref_ptr&lt;osgEarth::ImageLayer&gt; layer) {
+    int width = 200;
+    int height = 200;
+
+    double wlon = -104.00;
+    double nlat = 49.00;
+    double elon = -96.00;
+    double slat = 45.00;
+
+    int target_height = 200;
+    int target_width = 200;
+
+    double geoTransform[6];
+    geoTransform[0] = wlon;
+    geoTransform[1] = (elon - wlon) / width;
+    geoTransform[2] = 0.00;
+    geoTransform[3] = nlat;
+    geoTransform[4] = 0.00;
+    geoTransform[5] = (slat - nlat) / height;
+
+    GDALAllRegister();
+    GDALDataset* nmemDS;
+    osgEarth::SpatialReference* srs = const_cast&lt;osgEarth::SpatialReference*&gt;(_map-&gt;getProfile()-&gt;getSRS());
+    GDALRasterBand* bandRed;
+    GDALRasterBand* bandGreen;
+    GDALRasterBand* bandBlue;
+    GDALRasterBand* bandAlpha;
+    osgEarth::Drivers::GDALOptions gdaloptions;
+    osg::ref_ptr&lt;osgEarth::Drivers::GDALOptions::ExternalDataset&gt; eds;
+    Threading::Mutex _mutex;
+    osg::ref_ptr&lt;osgEarth::ImageLayer&gt; tlayer;
+
+  int alpha = 143;
+  while (true) {
+    nmemDS = (GDALDataset*)GDALCreate(GDALGetDriverByName(&quot;MEM&quot;), &quot;&quot;, 200, 200, 0, GDT_Byte, nullptr);
+    GDALSetProjection(nmemDS, srs-&gt;getWKT().c_str());
+    GDALSetGeoTransform(nmemDS, geoTransform);
+
+    nmemDS-&gt;AddBand(GDT_Byte, nullptr);
+    nmemDS-&gt;AddBand(GDT_Byte, nullptr);
+    nmemDS-&gt;AddBand(GDT_Byte, nullptr);
+    nmemDS-&gt;AddBand(GDT_Byte, nullptr);
+
+    bandRed = nmemDS-&gt;GetRasterBand(1);
+    bandGreen = nmemDS-&gt;GetRasterBand(2);
+    bandBlue = nmemDS-&gt;GetRasterBand(3);
+    bandAlpha = nmemDS-&gt;GetRasterBand(4);
+
+    BYTE* rrowbuff = new BYTE[width];
+    BYTE* growbuff = new BYTE[width];
+    BYTE* browbuff = new BYTE[width];
+    BYTE* arowbuff = new BYTE[width];
+
+    for (int y = 0; y &lt; height; y++) {
+      for (int x = 0; x &lt; width; x++) {
+        rrowbuff[x] = (BYTE)255;
+        growbuff[x] = (BYTE)253;
+        browbuff[x] = (BYTE)143;
+        arowbuff[x] = (BYTE)alpha;
+
+      }
+      CPLErr rerr = bandRed-&gt;RasterIO(GF_Write, 0, 0, target_width, target_height, rrowbuff, target_width * ((elon - wlon) / target_width), target_height * abs((slat - nlat) / target_height), GDT_Byte, 4, 0);
+      CPLErr gerr = bandGreen-&gt;RasterIO(GF_Write, 0, 0, target_width, target_height, growbuff, target_width * ((elon - wlon) / target_width), target_height * abs((slat - nlat) / target_height), GDT_Byte, 4, 0);
+      CPLErr berr = bandBlue-&gt;RasterIO(GF_Write, 0, 0, target_width, target_height, browbuff, target_width * ((elon - wlon) / target_width), target_height * abs((slat - nlat) / target_height), GDT_Byte, 4, 0);
+      CPLErr aerr = bandAlpha-&gt;RasterIO(GF_Write, 0, 0, target_width, target_height, arowbuff, target_width * ((elon - wlon) / target_width), target_height * abs((slat - nlat) / target_height), GDT_Byte, 4, 0);
+    }
+
+    alpha = alpha + 10;
+    if (alpha &gt; 255)
+      alpha = alpha - 255;
+
+    eds = new osgEarth::Drivers::GDALOptions::ExternalDataset(nmemDS, true);
+    gdaloptions.externalDataset() = eds;
+
+    tlayer = dynamic_cast&lt;osgEarth::ImageLayer*&gt;(_map-&gt;getLayerByName(&quot;newlayer&quot;));
+
+    tlayer-&gt;setDataVariance(osg::Object::DYNAMIC);
+    tlayer-&gt;getOrCreateStateSet()-&gt;setDataVariance(osg::Object::DYNAMIC);
+
+    // tlayer-&gt;disable(&quot;&quot;);
+    Threading::ScopedMutexLock exclusiveLock(_mutex);
+    _map-&gt;removeLayer(tlayer);
+
+    layer = new osgEarth::ImageLayer(&quot;newlayer&quot;, gdaloptions);
+
+    layer-&gt;setDataVariance(osg::Object::DYNAMIC);
+    layer-&gt;getOrCreateStateSet()-&gt;setDataVariance(osg::Object::DYNAMIC);
+
+    _map-&gt;addLayer(layer);
+
+    delete rrowbuff;
+    delete growbuff;
+    delete browbuff;
+    delete arowbuff;
+
+    Sleep(2000);
+
+  }
+}
+From: Shannon Peterson
+Sent: Friday, August 30, 2019 3:27 PM
+To: '<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;' &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;&gt;
+Subject: questions about developing drivers for osg/osgEarth
+
+I have a few questions about how to build a driver to do some specific tasks in osgEarth.
+
+Simple example.
+Using simple ocean as an example replace the texture piece with geo-spacial image and then build a shader to add effect to the image.
+Ie. Arrowed line that changes color in towards the direction a path should be followed start to end.
+
+The shader piece can be figured out by us working with the shader code.
+
+The part I am having issues with is adding an arrow image or geometry polygon of an arrow to the map at the position I need it at to run the shader effect on.
+
+Is this the correct place to aske this sort of question or is there a different mailing list or thread I should use to get help with getting this designed.
+
+Thank you in advance
+
+Shannon Peterson
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">speterson at idealaero.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">speterson at idealaero.com</A>&gt;
+The information contained in this email and any attachments is intended only for the personal and confidential use of the intended recipients. This email message may be or may contain privileged and confidential communications. If the reader of this e-mail is not an intended recipient, you are hereby notified that you have received this communication in error and that any retention, review, use, dissemination, distribution or copying of this communication or the information contained herein is strictly prohibited. If you have received this communication in error, please notify the sender immediately and delete the original message and all attachments from your system. The recipient should check this email and any attachments for the presence of viruses. The company accepts no liability for any damage caused, directly or indirectly, by any virus transmitted in this email. This communication may also contain data subject to U.S. export laws. If so, that data subject to the International Traffic in Arms Regulation (ITAR) cannot be disseminated, distributed or copied to foreign nationals, residing in the U.S. or abroad, absent the express prior approval of the U.S. Department of State. If you have received this communication in error, please notify the sender by reply e-mail and destroy the e-mail message and any physical copies made of the communication. Thank you.
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+
+
+--
+Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>&gt; <A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+Training &#8226; Consulting &#8226; Contracting
+3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226; GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+Legal/IP &#8226; Forensics &#8226; Imaging &#8226; UAVs &#8226; GIS &#8226; GPS &#8226; osgEarth &#8226; Terrain &#8226; Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226; iPhone/iPad/iOS &#8226; Android
+@alphapixel&lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt; facebook.com/alphapixel&lt;<A HREF="http://facebook.com/alphapixel">http://facebook.com/alphapixel</A>&gt; (775) 623-PIXL [7495]
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190918/718331e4/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190918/718331e4/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010422.html">[osg-users] questions about developing drivers for osg/osgEarth
+</A></li>
+	<LI>Next message (by thread): <A HREF="010426.html">[osg-users] questions about developing drivers for osg/osgEarth
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10423">[ date ]</a>
+              <a href="thread.html#10423">[ thread ]</a>
+              <a href="subject.html#10423">[ subject ]</a>
+              <a href="author.html#10423">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

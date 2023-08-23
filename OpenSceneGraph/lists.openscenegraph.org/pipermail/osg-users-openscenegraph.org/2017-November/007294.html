@@ -1,0 +1,200 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Slow optimization and OpenFlight
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Slow%20optimization%20and%20OpenFlight&In-Reply-To=%3Cf8ff205a-b8b2-a510-636f-69d56608dfe2%40remograph.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007292.html">
+   <LINK REL="Next"  HREF="007295.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Slow optimization and OpenFlight</H1>
+<!--htdig_noindex-->
+    <B>Andreas Ekstrand</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Slow%20optimization%20and%20OpenFlight&In-Reply-To=%3Cf8ff205a-b8b2-a510-636f-69d56608dfe2%40remograph.com%3E"
+       TITLE="[osg-users] Slow optimization and OpenFlight">andreas.ekstrand at remograph.com
+       </A><BR>
+    <I>Mon Nov 27 07:56:42 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007292.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+        <LI>Next message (by thread): <A HREF="007295.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7294">[ date ]</a>
+              <a href="thread.html#7294">[ thread ]</a>
+              <a href="subject.html#7294">[ subject ]</a>
+              <a href="author.html#7294">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Thanks for looking into this!
+
+Yes, you can argue that the dataset is awful, but it's actually just 
+storing 150k triangles on one graph level, as separate OpenFlight face 
+records, which is what the OpenFlight file format offers if you don't 
+use its specific mesh nodes that aren't supported by all tools and don't 
+offer full control of each triangle. OpenFlight is a modeling file 
+format which is surely not visualization-friendly. I think the 
+OpenFlight plugin simply uses the Optimizer to convert this to a dataset 
+for effective visualization instead of converting to a more optimal 
+scene graph to start with - a choice that I can't really say if it's 
+good or bad, but the Optimizer should of course handle bad data in the 
+best way possible.
+
+The main issue for me though, is that OSG handles this dataset in a much 
+slower way than before, hence my re-introduction of the previous 
+optimization. But you're completely right, and I realize now, that other 
+nodes than drawables aren't handle correctly. I haven't gotten used to 
+drawables being nodes yet...
+
+So the fact that the OpenFlight plugin creates a non-optimal scene graph 
+and then uses the Optimizer itself to fix this is probably a separate 
+and larger problem - if it indeed is a problem. But I believe it's 
+necessary to at least get MergeGeometryVisitor to behave as fast as 
+before, either by modifying my fixes or by rewriting parts of it. I hope 
+you will find the time to decide on this soon, and please let me know if 
+I can help!
+
+Regards,
+Andreas
+
+
+On 2017-11-27 14:27, Robert Osfield wrote:
+&gt;<i> HI Andreas,
+</I>&gt;<i>
+</I>&gt;<i> I gave up the valgrind tool=callgrind because it was taking too long
+</I>&gt;<i> to complete.  What I did gleen from it was that the run confirms that
+</I>&gt;<i> removeChildren() is a bottleneck.
+</I>&gt;<i>
+</I>&gt;<i> To get some context to why it's a bottlenck I put in some stats output
+</I>&gt;<i> from the MergeGeometryVisitor::mergeGroup(..) and got the following
+</I>&gt;<i> output:
+</I>&gt;<i>
+</I>&gt;<i> $ osgconv house_150k.flt test3.osgb
+</I>&gt;<i> Optimizer::MergeGeometryVisitor::mergeGroup() 148976
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=3333
+</I>&gt;<i>      duplicateList.size()=2324
+</I>&gt;<i> Data written to 'test3.osgb'.
+</I>&gt;<i>
+</I>&gt;<i> What this tells us that this dataset generated by the OpenFlight
+</I>&gt;<i> loader is truly dreadful.  It's just appalling how it's handling the
+</I>&gt;<i> house_150k.flt database.  I don't know if this can be traced back to
+</I>&gt;<i> what the OSG's OpenFlight plugin is doing or whether the tool that
+</I>&gt;<i> generated the .flt file is just has a completely awful export tool.
+</I>&gt;<i> What I can say is that the fact that the OSG can handle at all such a
+</I>&gt;<i> brain dead messed up dataset is a miracle.
+</I>&gt;<i>
+</I>&gt;<i> The best way to resolve this issue is to refactor the
+</I>&gt;<i> MergeGeometryVisitor so it handles these really bad datasets with more
+</I>&gt;<i> grace, avoiding the pitfalls of an O(N^2) algorithm.
+</I>&gt;<i>
+</I>&gt;<i> Having the core OSG &quot;fix&quot; really bad data is not a proper resolution.
+</I>&gt;<i> it doesn't fix the fact the the OpenFlight loader is generating such a
+</I>&gt;<i> dreadful scene graph.  It might be that the OpenFlight loader is just
+</I>&gt;<i> doing what the source database is tell it to do and isn't to blame,
+</I>&gt;<i> but like the change MergeGeometryVisitor, it may be worth catching
+</I>&gt;<i> this dreadful datacase on load and never generating the broken scene
+</I>&gt;<i> graph.  It's better to fix problems like this early rather than let it
+</I>&gt;<i> get all the way to the osgUtil::Optimizer to patch fix things up, the
+</I>&gt;<i> early it is done the less memory will be used and less memory will be
+</I>&gt;<i> fragmented and better the performance will be.
+</I>&gt;<i>
+</I>&gt;<i> I am afraid I just don't have the time to go chasing fixes to awful
+</I>&gt;<i> 3rd party data, I already have enough core OSG issues to do that
+</I>&gt;<i> unpaid without taking on more.  I will resolve the
+</I>&gt;<i> MergeGeometryVisitor O(N^2) issue but improving the OpenFlight loader
+</I>&gt;<i> to handle dreadful 3rd party data better I'll have to defer to the
+</I>&gt;<i> community.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20171127/5250d545/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20171127/5250d545/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007292.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+	<LI>Next message (by thread): <A HREF="007295.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7294">[ date ]</a>
+              <a href="thread.html#7294">[ thread ]</a>
+              <a href="subject.html#7294">[ subject ]</a>
+              <a href="author.html#7294">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

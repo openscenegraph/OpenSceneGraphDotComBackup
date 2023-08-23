@@ -1,0 +1,481 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] using modern shaders with osg - setting vertex attribute layout
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20using%20modern%20shaders%20with%20osg%20-%20setting%20vertex%0A%20attribute%20layout&In-Reply-To=%3C43bd4068-00b8-bab4-db79-98d0f4589700%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006745.html">
+   <LINK REL="Next"  HREF="006746.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] using modern shaders with osg - setting vertex attribute layout</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20using%20modern%20shaders%20with%20osg%20-%20setting%20vertex%0A%20attribute%20layout&In-Reply-To=%3C43bd4068-00b8-bab4-db79-98d0f4589700%40gmx.de%3E"
+       TITLE="[osg-users] using modern shaders with osg - setting vertex attribute layout">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Sun Sep  3 07:23:51 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006745.html">[osg-users] using modern shaders with osg - setting vertex	attribute layout
+</A></li>
+        <LI>Next message: <A HREF="006746.html">[osg-users] using modern shaders with osg - setting vertex attribute layout
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6749">[ date ]</a>
+              <a href="thread.html#6749">[ thread ]</a>
+              <a href="subject.html#6749">[ subject ]</a>
+              <a href="author.html#6749">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Antiro,
+
+I've cleaned up the example (removed the image mod, hdr etc.) and 
+supplied vertex shaders (once you move towards aliasing, you basically 
+need to replace ALL fixed function stuff).
+
+You were right about the viewer.realize before setting up the aliasing 
+however. This is due the the context not being available before
+realizing it.
+
+
+(Some additonal notes: you don't need to use texture rectangle. Instead 
+in deferred steps simply use texelFetch in conjunction with textureSize 
+on Texture2D targets.
+)
+
+
+Below you find the adapted example, giving the desired result:
+#include &lt;osg/GLExtensions&gt;
+#include &lt;osg/Node&gt;
+#include &lt;osg/Geometry&gt;
+#include &lt;osg/Notify&gt;
+#include &lt;osg/MatrixTransform&gt;
+#include &lt;osg/Texture2D&gt;
+#include &lt;osg/TextureRectangle&gt;
+#include &lt;osg/ColorMask&gt;
+#include &lt;osg/Material&gt;
+#include &lt;osg/Capability&gt;
+
+#include &lt;osgGA/TrackballManipulator&gt;
+#include &lt;osgGA/FlightManipulator&gt;
+#include &lt;osgGA/DriveManipulator&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+
+#include &lt;iostream&gt;
+#include &lt;stdio.h&gt;
+
+#include &lt;osg/PolygonMode&gt;
+
+static std::string vertex_shader =
+{
+	&quot;#version 330\n&quot;
+	&quot;layout(location = 0) in vec4 osg_Vertex;	\n&quot;
+	&quot;layout(location = 1) in vec3 osg_Normal;	\n&quot;
+	&quot;layout(location = 2) in vec4 osg_Color;	\n&quot;
+	&quot;layout(location = 3) in vec4 osg_MultiTexCoord0; \n&quot;
+	&quot;uniform mat4 osg_ModelViewProjectionMatrix; \n&quot;
+	&quot;out vec2 texture_coords;&quot;
+	&quot;void main(void) \n&quot;
+	&quot;{ \n&quot;
+		&quot;texture_coords = osg_MultiTexCoord0.st;\n&quot;
+	&quot;	gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex; \n&quot;
+	&quot;}\n&quot;
+};
+
+static std::string def_frag_shader =
+{
+	&quot;#version 330\n&quot;
+	&quot;uniform sampler2DRect textureID0;\n&quot;
+
+	&quot;in vec2 texture_coords;&quot;
+	&quot;out vec4 target;&quot;
+	&quot;void main(void)\n&quot;
+	&quot;{\n&quot;
+	&quot;    target = vec4(texture( textureID0, texture_coords.st ).rgb, 1);  \n&quot;
+	&quot;}\n&quot;
+};
+
+osg::Geode *createScreenQuad(float width,
+	float height,
+	float scale,
+	osg::Vec3 corner)
+{
+	osg::Geometry* geom = osg::createTexturedQuadGeometry(
+		corner,
+		osg::Vec3(width, 0, 0),
+		osg::Vec3(0, height, 0),
+		0,
+		0,
+		scale,
+		scale);
+	osg::ref_ptr&lt;osg::Geode&gt; quad = new osg::Geode;
+	quad-&gt;addDrawable(geom);
+	int values = osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED;
+	quad-&gt;getOrCreateStateSet()-&gt;setAttribute(
+		new osg::PolygonMode(osg::PolygonMode::FRONT_AND_BACK,
+			osg::PolygonMode::FILL),
+		values);
+	quad-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, values);
+	return quad.release();
+}
+
+
+osg::Camera *createHUDCamera(double left = 0,
+	double right = 1,
+	double bottom = 0,
+	double top = 1)
+{
+	osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+	camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+	camera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+	camera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+	camera-&gt;setAllowEventFocus(false);
+	camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(left, right, bottom, 
+top));
+	camera-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, 
+osg::StateAttribute::OFF);
+	return camera.release();
+}
+
+osg::ref_ptr&lt;osg::Camera&gt; createTextureDisplayQuad(
+	const osg::Vec3 &amp;pos,
+	osg::StateAttribute *tex,
+	float scale,
+	float width = 0.3,
+	float height = 0.2)
+{
+	osg::ref_ptr&lt;osg::Camera&gt; hc = createHUDCamera();
+	hc-&gt;addChild(createScreenQuad(width, height, scale, pos));
+	hc-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, tex);
+	//need shader!!
+	
+	osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+	osg::ref_ptr&lt;osg::Shader&gt; vshader = new 
+osg::Shader(osg::Shader::VERTEX, vertex_shader);
+	osg::ref_ptr&lt;osg::Shader&gt; fshader = new 
+osg::Shader(osg::Shader::FRAGMENT, def_frag_shader);
+	program-&gt;addShader(vshader.get());
+	program-&gt;addShader(fshader.get());
+	hc-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(program.get(), 
+osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+
+	return hc;
+}
+
+
+#define NUM_TEXTURES 2
+
+// The quad geometry is used by the render to texture camera to generate 
+multiple textures.
+osg::Group* createRTTQuad(unsigned int tex_width, unsigned int 
+tex_height, bool useHDR)
+{
+	osg::Group *top_group = new osg::Group;
+
+	osg::ref_ptr&lt;osg::Geode&gt; quad_geode = new osg::Geode;
+
+	osg::ref_ptr&lt;osg::Vec3Array&gt; quad_coords = new osg::Vec3Array; // 
+vertex coords
+																   // counter-clockwise
+	quad_coords-&gt;push_back(osg::Vec3d(0, 0, -1));
+	quad_coords-&gt;push_back(osg::Vec3d(1, 0, -1));
+	quad_coords-&gt;push_back(osg::Vec3d(1, 1, -1));
+	quad_coords-&gt;push_back(osg::Vec3d(0, 1, -1));
+
+	osg::ref_ptr&lt;osg::Vec2Array&gt; quad_tcoords = new osg::Vec2Array; // 
+texture coords
+	quad_tcoords-&gt;push_back(osg::Vec2(0, 0));
+	quad_tcoords-&gt;push_back(osg::Vec2(tex_width, 0));
+	quad_tcoords-&gt;push_back(osg::Vec2(tex_width, tex_height));
+	quad_tcoords-&gt;push_back(osg::Vec2(0, tex_height));
+
+	osg::ref_ptr&lt;osg::Geometry&gt; quad_geom = new osg::Geometry;
+	osg::ref_ptr&lt;osg::DrawArrays&gt; quad_da = new 
+osg::DrawArrays(osg::PrimitiveSet::QUADS, 0, 4);
+
+	osg::ref_ptr&lt;osg::Vec4Array&gt; quad_colors = new osg::Vec4Array;
+	quad_colors-&gt;push_back(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+	quad_geom-&gt;setVertexArray(quad_coords.get());
+	quad_geom-&gt;setTexCoordArray(0, quad_tcoords.get());
+	quad_geom-&gt;addPrimitiveSet(quad_da.get());
+	quad_geom-&gt;setColorArray(quad_colors.get(), osg::Array::BIND_OVERALL);
+
+	osg::StateSet *stateset = quad_geom-&gt;getOrCreateStateSet();
+	stateset-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+	stateset-&gt;addUniform(new osg::Uniform(&quot;width&quot;, (int)tex_width));
+
+	// Attach shader, glFragData is used to create data for multiple render 
+targets
+
+	{
+		static const char *shaderSource = {
+			&quot;uniform int width;&quot;
+			&quot;void main(void)\n&quot;
+			&quot;{\n&quot;
+			&quot;    gl_FragData[0] = vec4(1,0,0,1);\n&quot;
+			&quot;    gl_FragData[1] = vec4(0,1,0,1);\n&quot;
+			&quot;    gl_FragData[2] = vec4(0,0,1,1);\n&quot;
+			&quot;    gl_FragData[3] = vec4(0,0,1,1);\n&quot;
+			&quot;}\n&quot;
+		};
+
+		osg::ref_ptr&lt;osg::Shader&gt; fshader = new 
+osg::Shader(osg::Shader::FRAGMENT, shaderSource);
+		osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+		osg::ref_ptr&lt;osg::Shader&gt; vshader = new 
+osg::Shader(osg::Shader::VERTEX, vertex_shader);
+		program-&gt;addShader(vshader.get());
+
+		program-&gt;addShader(fshader.get());
+		stateset-&gt;setAttributeAndModes(program.get(), osg::StateAttribute::ON 
+|<i> osg::StateAttribute::OVERRIDE);
+</I>	}
+
+	quad_geode-&gt;addDrawable(quad_geom.get());
+
+	top_group-&gt;addChild(quad_geode.get());
+
+	return top_group;
+}
+
+
+osg::TextureRectangle* textureRect[NUM_TEXTURES] = { 0,0 }; //moved to 
+global scope to easily view intermediate textures
+															// Here a scene consisting of a single quad is created. 
+This scene is viewed by the screen camera.
+															// The quad is textured using a shader and the multiple 
+textures generated in the RTT stage.
+osg::Node* createScene(osg::Node* cam_subgraph, unsigned int tex_width, 
+unsigned int tex_height, bool useHDR, bool useImage, bool useMultiSample)
+{
+	if (!cam_subgraph) return 0;
+
+	// create a group to contain the quad and the pre render camera.
+	osg::Group* parent = new osg::Group;
+
+	// textures to render to and to use for texturing of the final quad
+	//osg::TextureRectangle* textureRect[NUM_TEXTURES] = {0,0,0,0};
+
+	for (int i = 0; i &lt; NUM_TEXTURES; i++)
+	{
+		textureRect[i] = new osg::TextureRectangle;
+		textureRect[i]-&gt;setTextureSize(tex_width, tex_height);
+		textureRect[i]-&gt;setInternalFormat(GL_RGBA);
+		textureRect[i]-&gt;setFilter(osg::Texture2D::MIN_FILTER, 
+osg::Texture2D::LINEAR);
+		textureRect[i]-&gt;setFilter(osg::Texture2D::MAG_FILTER, 
+osg::Texture2D::LINEAR);
+	}
+
+	// first create the geometry of the quad
+	{
+		osg::Geometry* polyGeom = new osg::Geometry();
+
+		polyGeom-&gt;setSupportsDisplayList(false);
+
+		osg::Vec3Array* vertices = new osg::Vec3Array;
+		osg::Vec2Array* texcoords = new osg::Vec2Array;
+
+		vertices-&gt;push_back(osg::Vec3d(0, 0, 0));
+		texcoords-&gt;push_back(osg::Vec2(0, 0));
+
+		vertices-&gt;push_back(osg::Vec3d(1, 0, 0));
+		texcoords-&gt;push_back(osg::Vec2(tex_width, 0));
+
+		vertices-&gt;push_back(osg::Vec3d(1, 0, 1));
+		texcoords-&gt;push_back(osg::Vec2(tex_width, tex_height));
+
+		vertices-&gt;push_back(osg::Vec3d(0, 0, 1));
+		texcoords-&gt;push_back(osg::Vec2(0, tex_height));
+
+		polyGeom-&gt;setVertexArray(vertices);
+		polyGeom-&gt;setTexCoordArray(0, texcoords);
+
+		osg::Vec4Array* colors = new osg::Vec4Array;
+		colors-&gt;push_back(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+		polyGeom-&gt;setColorArray(colors, osg::Array::BIND_OVERALL);
+
+		polyGeom-&gt;addPrimitiveSet(new 
+osg::DrawArrays(osg::PrimitiveSet::QUADS, 0, vertices-&gt;size()));
+
+		// now we need to add the textures (generated by RTT) to the Drawable.
+		osg::StateSet* stateset = new osg::StateSet;
+		for (int i = 0; i &lt; NUM_TEXTURES; i++) {
+			stateset-&gt;setTextureAttributeAndModes(i, textureRect[i], 
+osg::StateAttribute::ON);
+		}
+
+		polyGeom-&gt;setStateSet(stateset);
+	
+		// Attach a shader to the final quad to combine the input textures.
+		{
+			static const char *shaderSource = {
+				&quot;#version 330\n&quot;
+				&quot;uniform sampler2DRect textureID0;\n&quot;
+				&quot;uniform sampler2DRect textureID1;\n&quot;
+				&quot;uniform sampler2DRect textureID2;\n&quot;
+				&quot;uniform sampler2DRect textureID3;\n&quot;
+
+				&quot;in vec2 texture_coords;&quot;
+				&quot;void main(void)\n&quot;
+				&quot;{\n&quot;
+				&quot;    gl_FragData[0] = \n&quot;
+				&quot;          vec4(texture2DRect( textureID0, texture_coords.st ).rgb, 
+1) + \n&quot;
+				&quot;          vec4(texture2DRect( textureID1, texture_coords.st ).rgb, 
+1) + \n&quot;
+				&quot;          vec4(texture2DRect( textureID2, texture_coords.st ).rgb, 
+1) + \n&quot;
+				&quot;     -0.5*vec4(texture2DRect( textureID3, texture_coords.st ).rgb, 
+1);  \n&quot;
+				&quot;}\n&quot;
+			};
+			osg::ref_ptr&lt;osg::Shader&gt; fshader = new 
+osg::Shader(osg::Shader::FRAGMENT, shaderSource);
+			osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+			osg::ref_ptr&lt;osg::Shader&gt; vshader = new 
+osg::Shader(osg::Shader::VERTEX, vertex_shader);
+			program-&gt;addShader(vshader.get());
+
+			program-&gt;addShader(fshader.get());
+			stateset-&gt;setAttributeAndModes(program.get(), osg::StateAttribute::ON 
+|<i> osg::StateAttribute::OVERRIDE);
+</I>
+		}
+
+		stateset-&gt;addUniform(new osg::Uniform(&quot;textureID0&quot;, 0));
+		stateset-&gt;addUniform(new osg::Uniform(&quot;textureID1&quot;, 1));
+		stateset-&gt;addUniform(new osg::Uniform(&quot;textureID2&quot;, 2));
+		stateset-&gt;addUniform(new osg::Uniform(&quot;textureID3&quot;, 3));
+
+		//stateset-&gt;setDataVariance(osg::Object::DYNAMIC);
+
+		osg::Geode* geode = new osg::Geode();
+		geode-&gt;addDrawable(polyGeom);
+
+		parent-&gt;addChild(geode);
+	}
+
+	// now create the camera to do the multiple render to texture
+	{
+		osg::Camera* camera = new osg::Camera;
+
+		// set up the background color and clear mask.
+		camera-&gt;setClearColor(osg::Vec4(0.1f, 0.1f, 0.3f, 1.0f));
+		camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// the camera is going to look at our input quad
+		camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0, 1, 0, 1));
+		camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+		camera-&gt;setViewMatrix(osg::Matrix::identity());
+
+		// set viewport
+		camera-&gt;setViewport(0, 0, tex_width, tex_height);
+
+		// set the camera to render before the main camera.
+		camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+
+		// tell the camera to use OpenGL frame buffer objects
+		camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+
+		// attach the textures to use
+		for (int i = 0; i &lt; NUM_TEXTURES; i++) {
+		 
+camera-&gt;attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0 + 
+i), textureRect[i]);
+		}
+
+
+
+
+		// add the subgraph to render
+		camera-&gt;addChild(cam_subgraph);
+
+		parent-&gt;addChild(camera);
+	}
+
+	return parent;
+}
+
+int main(int argc, char **argv)
+{
+	// use an ArgumentParser object to manage the program arguments.
+	osg::ArgumentParser arguments(&amp;argc, argv);
+		
+	// construct the viewer.
+	osgViewer::Viewer viewer(arguments);
+
+	unsigned tex_width = 512;
+	unsigned tex_height = 512;
+	
+	
+	osg::Group* subGraph = createRTTQuad(tex_width, tex_height, false);
+
+	osg::Group* rootNode = new osg::Group();
+	rootNode-&gt;addChild(createScene(subGraph, tex_width, tex_height, false, 
+false, false));
+
+	rootNode-&gt;addChild(createScene(subGraph, tex_width, tex_height, false, 
+false, false));
+
+
+	//Some code to view the intermediate textures
+	osg::ref_ptr&lt;osg::Camera&gt; testTex =
+		createTextureDisplayQuad(osg::Vec3(0, 0.7, 0),
+			textureRect[0],
+			tex_width);
+	osg::ref_ptr&lt;osg::Camera&gt; testTex2 =
+		createTextureDisplayQuad(osg::Vec3(0, 0.35, 0),
+			textureRect[1],
+			tex_width);
+
+	rootNode-&gt;addChild(testTex);
+	rootNode-&gt;addChild(testTex2);
+
+	// add model to the viewer.
+	viewer.setSceneData(rootNode);
+	viewer.realize();
+	viewer.getCamera()-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true);
+	viewer.getCamera()-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseVertexAttributeAliasing(true);
+
+	return viewer.run();
+}
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006745.html">[osg-users] using modern shaders with osg - setting vertex	attribute layout
+</A></li>
+	<LI>Next message: <A HREF="006746.html">[osg-users] using modern shaders with osg - setting vertex attribute layout
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6749">[ date ]</a>
+              <a href="thread.html#6749">[ thread ]</a>
+              <a href="subject.html#6749">[ subject ]</a>
+              <a href="author.html#6749">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

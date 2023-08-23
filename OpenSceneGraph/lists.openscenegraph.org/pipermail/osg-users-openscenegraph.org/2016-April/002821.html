@@ -1,0 +1,182 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Disappearing text
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Disappearing%20text&In-Reply-To=%3C1460993438.m2f.66864%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002819.html">
+   <LINK REL="Next"  HREF="002823.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Disappearing text</H1>
+<!--htdig_noindex-->
+    <B>Ronny Hatteland</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Disappearing%20text&In-Reply-To=%3C1460993438.m2f.66864%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Disappearing text">ronnyhatteland at gmail.com
+       </A><BR>
+    <I>Mon Apr 18 08:30:38 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002819.html">[osg-users] Disappearing text
+</A></li>
+        <LI>Next message: <A HREF="002823.html">[osg-users] Disappearing text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2821">[ date ]</a>
+              <a href="thread.html#2821">[ thread ]</a>
+              <a href="subject.html#2821">[ subject ]</a>
+              <a href="author.html#2821">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+&gt;<i> That should not be needed at all, and indicative that something somewhere in your application or it's usage of the OSG is messing up the GL object management. 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> The resizeGLObjbectBuffer() is only needed when graphics context are created or destroyed.  
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> As to what is going wrong your case I can't say - something *very* odd is happening.  Are you creating your own graphics context / modifying the viewer?
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Robert.
+</I>
+
+Yes I am creating my own GraphicsContext:
+
+Code:
+// Local Variable to hold window size data
+RECT rect;
+
+// Get the current window size
+::<i>GetWindowRect(m_hWnd, &amp;rect);
+</I>
+// Init the GraphicsContext Traits
+osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+
+// Init the Windata Variable that holds the handle for the Window to display OSG in.
+osg::ref_ptr&lt;osg::Referenced&gt; windata = new osgViewer::GraphicsWindowWin32::WindowData(m_hWnd);
+
+// Setup the traits parameters
+traits-&gt;x = 0;
+traits-&gt;y = 0;
+traits-&gt;width = (rect.right - rect.left);
+traits-&gt;height = ( rect.bottom - rect.top);
+
+traits-&gt;windowDecoration = true; // CHECK DIFFERENCE
+traits-&gt;doubleBuffer = false;
+traits-&gt;setInheritedWindowPixelFormat = true;
+traits-&gt;inheritedWindowData = windata;
+traits-&gt;samples = samples;
+traits-&gt;vsync = false;
+GraphicsContext* gc = osg::GraphicsContext::createGraphicsContext(traits.get());
+traits-&gt;x = 0;
+traits-&gt;y = 0;
+return gc;
+
+
+which afterwards is used as follows:
+
+
+Code:
+m_defaultGraphicsContext-&gt;clear();
+
+m_defaultGraphicsContext-&gt;setName(&quot;DefaultViewGraphicsContext&quot;);
+m_defaultGraphicsContext-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true); //ADDED FOR SHADER	
+m_defaultGraphicsContext-&gt;getState()-&gt;setUseVertexAttributeAliasing(true); 
+
+if (m_defaultGraphicsContext-&gt;valid())
+{
+	defaultCamera = mViewer-&gt;getCamera();
+	defaultCamera-&gt;setCullMask(0x04);
+	defaultCamera-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF );
+	defaultCamera-&gt;getOrCreateStateSet()-&gt;setMode(osg::StateAttribute::SCISSOR , osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED);
+	defaultCamera-&gt;getOrCreateStateSet()-&gt;removeAttribute(osg::StateAttribute::MATERIAL);
+	defaultCamera-&gt;getView()-&gt;setLightingMode(osg::View::NO_LIGHT);
+	defaultCamera-&gt;setGraphicsContext(m_defaultGraphicsContext);
+	defaultCamera-&gt;setViewport(new osg::Viewport(m_defaultGraphicsContext-&gt;getTraits()-&gt;x, m_defaultGraphicsContext-&gt;getTraits()-&gt;y, m_defaultGraphicsContext-&gt;getTraits()-&gt;width, m_defaultGraphicsContext-&gt;getTraits()-&gt;height));
+}
+
+double fovy, aspectRatio;
+
+mViewer-&gt;getCamera()-&gt;getProjectionMatrixAsPerspective(fovy, aspectRatio, defaultCameraNear, defaultCameraFar);
+aspectRatio = double(m_defaultGraphicsContext-&gt;getTraits()-&gt;width) / double(m_defaultGraphicsContext-&gt;getTraits()-&gt;height);
+mViewer-&gt;getCamera()-&gt;setProjectionMatrixAsPerspective(fovy, aspectRatio, 0.0000000001f, defaultCameraFar); 
+
+initOpenGL(m_defaultGraphicsContext, maxNumUniforms, maxUniformBlockSize);
+
+
+
+
+Code:
+
+void initOpenGL(osg::ref_ptr&lt;osg::GraphicsContext&gt; context, GLint&amp; maxNumUniforms, GLint&amp; maxUniformBlockSize) {
+	context-&gt;realize();
+	context-&gt;makeCurrent();
+	maxNumUniforms = 0;
+	glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &amp;maxNumUniforms);
+	maxUniformBlockSize = 0;
+	glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &amp;maxUniformBlockSize);
+
+	// init glew
+	///glewExperimental = GL_TRUE;
+	/// if (GLEW_ARB_vertex_buffer_object == FALSE || GLEW_ARB_vertex_array_object == FALSE) return;
+#ifdef USE_INSTANCED_DRAWING
+	glewInit();
+#endif
+	context-&gt;releaseContext();
+
+	// ATI driver 11.6 didn't return right number of uniforms which lead to a crash, when the vertex shader was compiled(WTF?!)
+#ifdef ATI_FIX
+	maxNumUniforms      = 576;
+	maxUniformBlockSize = 16384;
+#endif
+}
+
+
+
+Maybe you can spot something that is clearly wrong here, otherwise it could be related to the glewInit()?
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopiccd88.php?p=66864#66864">http://forum.openscenegraph.org/viewtopic.php?p=66864#66864</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002819.html">[osg-users] Disappearing text
+</A></li>
+	<LI>Next message: <A HREF="002823.html">[osg-users] Disappearing text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2821">[ date ]</a>
+              <a href="thread.html#2821">[ thread ]</a>
+              <a href="subject.html#2821">[ subject ]</a>
+              <a href="author.html#2821">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

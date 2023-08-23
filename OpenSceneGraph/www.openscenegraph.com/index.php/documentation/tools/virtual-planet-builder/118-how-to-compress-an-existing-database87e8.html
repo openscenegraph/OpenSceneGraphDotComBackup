@@ -1,0 +1,172 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-gb" lang="en-gb">
+
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
+<head>
+    <script type="text/javascript">
+var siteurl='../../../../index.html';
+var tmplurl='../../../../templates/ja_purity_ii/index.html';
+var isRTL = false;
+</script>
+
+<base  />
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content="scene graph
+OpenGL
+realtime graphics
+OpenGL ES" />
+	<meta name="author" content="openscenengraph" />
+	<meta name="robots" content="noindex, nofollow" />
+	<meta name="description" content="Project website for OpenSceneGraph" />
+	<meta name="generator" content="Joomla! - Open Source Content Management" />
+	<title>How to compress an existing database</title>
+	<link href="../../../../index4adc.css?jat3action=gzip&amp;jat3type=css&amp;jat3file=t3-assets%2Fcss_4ca7c.css" rel="stylesheet" type="text/css" />
+	<script type="application/json" class="joomla-script-options new">{"csrf.token":"8209e1c6468f316786935c5820a254ee","system.paths":{"root":"","base":""}}</script>
+	<script src="../../../../indexa945.php?jat3action=gzip&amp;jat3type=js&amp;jat3file=t3-assets%2Fjs_a0ffa.js" type="text/javascript"></script>
+	<script type="text/javascript">
+jQuery(window).on('load',  function() {
+				new JCaption('img.caption');
+			});
+	</script>
+
+<!--[if ie]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/templates/ja_purity_ii/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+
+
+
+
+<link href="../../../../plugins/system/jat3/jat3/base-themes/default/images/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+
+
+<!--[if IE 7.0]>
+<style>
+.clearfix { display: inline-block; } /* IE7xhtml*/
+</style>
+<![endif]-->
+
+<script language="javascript" type="text/javascript">
+var rightCollapseDefault='show';
+var excludeModules='38';
+</script>
+<script language="javascript" type="text/javascript" src="../../../../templates/ja_purity_ii/js/ja.rightcol.js"></script>
+
+<style type="text/css">
+#ja-header .main {
+	background-image: url(../../../../templates/ja_purity_ii/images/header/header3.jpg);
+}
+</style></head>
+
+<body id="bd" class="fs3 com_content contentpane">
+    <div id="system-message-container">
+	</div>
+
+    <div class="item-page clearfix">
+	<h1 class="componentheading">
+	Virtual Planet Builder	</h1>
+	<h2 class="contentheading">
+			<a href="118-how-to-compress-an-existing-database.html">
+		How to compress an existing database</a>
+		</h2>
+
+	
+<div class="article-tools clearfix">
+	<ul class="actions">
+			<li>
+		<a href="#" onclick="window.print();return false;">			<span class="icon-print" aria-hidden="true"></span>
+		Print	</a>		</li>
+		
+	</ul>
+
+
+
+	<dl class="article-info">
+	<dt class="article-info-term">Details</dt>
+	<dd class="category-name">
+				Category: <span><a href="../virtual-planet-builder.html">Virtual Planet Builder</a></span>		</dd>
+	<dd class="published">
+	Published: <span>14 February 2013</span>	</dd>
+	<dd class="createdby"> 
+				Written by <span>openscenengraph</span>	
+	</dd>
+	
+	<dd class="hits">
+	Hits: <span>12814</span>	</dd>
+	</dl>
+</div>
+
+
+	<div id="content" class="wiki">
+<div class="wikipage searchable">
+<p id="Howtocompressanexistingdatabase">Versions of OSG since around November 2008 support the compression of .ive files using the -O "compressed" writer option. I've tested the procedure on a 22GB database and the resulting database was reduced to 13GB.</p>
+<h3 id="Overview">Overview</h3>
+<p>The idea behind this example is to take an existing database that was not built using compression and use <strong>osgconv</strong> to compress each .ive file into a new database. This procedure is not needed if one creates the database with compression from the start by passing -O "compressed" to vpbmaster.</p>
+<h3 id="Assumptions">Assumptions</h3>
+<p>* Let <strong>old_db</strong> = the root of the old database, i.e. the directory where the top-level .ive file is located.</p>
+<p>* Assume that the parent dir of <strong>old_db</strong> is writable.</p>
+<p>* Let <strong>new_db</strong> = the root of the new database. It would be a sibling of the <strong>old_db</strong> directory.</p>
+<p>* Using bash on Linux.</p>
+<h3 id="Procedure">Procedure</h3>
+<p>Turn off optimization</p>
+<pre class="wiki">export OSG_OPTIMIZER=OFF
+</pre>
+<p>Create a script to convert all .ive files in a given directory (reason later)</p>
+<pre class="wiki">cd old_db
+emacs conv_all_in_dir.sh
+</pre>
+<p>Put the following in the script, edit as needed, comments inline</p>
+<pre class="wiki">#!/bin/bash
+
+# used with e.g.:
+#find . -type d -exec ./conv_all_in_dir.sh {} \;
+
+# the output root, edit as needed
+OUT_ROOT=`pwd`/../new_db
+#echo $OUT_ROOT
+
+# 1st parameter is the directory we should process
+IN_DIR=$1;
+echo Changing to $IN_DIR
+cd $IN_DIR
+
+# find: find all ive files in this directory only, not subdirs
+# sed: remove ./ in front of names
+# xargs: run for every input file, start multiple processes (-P)
+# osgconv -O "compressed": make compressed ive files
+
+find . -maxdepth 1 -name "*.ive" | sed -e s/"\.\/"// | xargs -P 2 -I {} osgconv {} $OUT_ROOT/$IN_DIR/{} -O "compressed"
+
+</pre>
+<p>The script is passed a subdirectory of <strong>old_db</strong>, it goes through that directory and converts all the .ive files and places them in the correct <strong>new_db</strong> directory.</p>
+<p>If you have a multi-core machine, adjust the -P parameter of xargs to suit.</p>
+<p>Make the script executable</p>
+<pre class="wiki">chmod u+x ./conv_all_in_dir.sh
+</pre>
+<p>Recreate the directory structure of the input database. <strong>osgconv</strong> does not like to create directories.</p>
+<pre class="wiki">find . -type d -exec mkdir -p ../new_db/{} \;
+</pre>
+<p>Now, go to each directory of old_db and convert all the .ive files into the proper directory of new_db.</p>
+<pre class="wiki">find . -type d -exec ./conv_all_in_dir.sh {} \;
+</pre>
+<p>Wait...</p>
+<h2 id="Reasonforcdbeforeosgconv">Reason for cd before osgconv</h2>
+<p>For some reason <strong>osgconv</strong> must be run with only the input file name, i.e. from the directory where the file is located. If it is run by passing not only the filename, but a whole path to the file, the links to files in other directories get corrupted somehow. When the links are broken, one can only open the database properly from a single directory, e.g.</p>
+<pre class="wiki">cd new_db
+osgviewer terrain.ive
+</pre>
+<p>would work, but</p>
+<pre class="wiki">cd ..
+osgviewer new_db/terrain.ive
+</pre>
+<p>or execution from any other path would not.</p>
+</div>
+</div> 
+			
+				
+
+	</div>
+</body>
+
+</html>

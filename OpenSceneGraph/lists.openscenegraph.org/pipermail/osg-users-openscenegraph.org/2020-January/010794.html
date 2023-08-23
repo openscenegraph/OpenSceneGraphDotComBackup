@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] DefaultFont crash issue
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20DefaultFont%20crash%20issue&In-Reply-To=%3Cmailman.67525.1580347191.7166.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010793.html">
+   <LINK REL="Next"  HREF="010796.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] DefaultFont crash issue</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20DefaultFont%20crash%20issue&In-Reply-To=%3Cmailman.67525.1580347191.7166.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] DefaultFont crash issue">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Wed Jan 29 17:19:48 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010793.html">[osg-users] DefaultFont crash issue
+</A></li>
+        <LI>Next message (by thread): <A HREF="010796.html">[osg-users] DefaultFont crash issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10794">[ date ]</a>
+              <a href="thread.html#10794">[ thread ]</a>
+              <a href="subject.html#10794">[ subject ]</a>
+              <a href="author.html#10794">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+I have new information about what Fabian has done that's weird. When he's 
+been saying he's doing static linking, he's not doing what most people 
+would associate that phrase with (i.e. building OSG to a library file such 
+that all code is contained within and consuming that when linking OpenMW). 
+Instead, it's more like what CMake calls an object library - he's building 
+dependencies to intermediate-representation object files, but only doing 
+translation to native code and linking once when everything's an object 
+file. I wouldn't be surprised if this puts static initialisers and 
+destructors in orders they've never been in before and that's what's 
+causing the problem.
+
+Hopefully this will point the investigation in the right direction.
+
+Cheers,
+
+Chris
+
+On Wednesday, 29 January 2020 22:38:08 UTC, OpenSceneGraph Users wrote:
+&gt;<i>
+</I>&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> In relation to the DefaultFont crash issue, I noticed that my code would 
+</I>&gt;<i> occasionally crash on creation of osgText::Text. 
+</I>&gt;<i> Most of my osgText::Text is not created on the main thread. 
+</I>&gt;<i> In order to avoid the DefaultFont crash, I created a 
+</I>&gt;<i> osg::ref_ptr&lt;osgText::Font&gt; necessaryFont = 
+</I>&gt;<i> osgText::Font::getDefaultFont();
+</I>&gt;<i> which sticks around from the beginning of the program to the end and 
+</I>&gt;<i> doesn't get used by anything.
+</I>&gt;<i> After I did this, my code no longer crashed on osgText::Text creation.
+</I>&gt;<i> The OpenSceneGraph version used is 3.6.4 and on both Windows (7 64-bit) 
+</I>&gt;<i> and Linux (Ubuntu 16.04).
+</I>&gt;<i> Also when I was previously using OpenSceneGraph version 3.6.2, 
+</I>&gt;<i> osgText::Text creation never crashed.
+</I>&gt;<i>
+</I>&gt;<i> Regards,
+</I>&gt;<i> Anna
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Wed, Jan 29, 2020 at 5:15 PM OpenSceneGraph Users &lt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at lists.openscenegraph.org</A> &lt;javascript:&gt;&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi Robert,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm reasonably sure that Fabian's crash isn't the same issue as that 
+</I>&gt;&gt;<i> example exposes.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>    - Fabian has done something weird with either OSG or OpenMW that 
+</I>&gt;&gt;&gt;&gt;<i>    hasn't been specified yet.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> If the codebase is the same perhaps it comes down to a sensitivity to 
+</I>&gt;&gt;&gt;<i> compiler version or dependencies?
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> We have official builds for a variety of Linux distros, Windows and MacOS 
+</I>&gt;&gt;<i> (and semi-official builds for Android that are generally less reliable) so 
+</I>&gt;&gt;<i> we should have pretty good coverage with known-good dependency and tooling 
+</I>&gt;&gt;<i> versions. As I've mentioned before, the most likely culprit for this 
+</I>&gt;&gt;<i> suddenly appearing for Fabian is that we pretty much never link to OSG 
+</I>&gt;&gt;<i> statically. It's a nightmare on Windows (I don't think anyone's even 
+</I>&gt;&gt;<i> attempted it in the last five years) but is more feasible on Linux, where 
+</I>&gt;&gt;<i> the majority of our contributors are, so I've put out a call for other 
+</I>&gt;&gt;<i> testers to try and reproduce the problem.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Also, Robert, I'm assuming you don't have a copy of Morrowind to test 
+</I>&gt;&gt;<i> OpenMW with. Right now, Steam, GreenManGaming and Fanatical are all 
+</I>&gt;&gt;<i> offering it for less than &#163;4, but at least one of those sales ends in less 
+</I>&gt;&gt;<i> than twenty hours. If you're not keen, &#163;4 is a reasonable investment for me 
+</I>&gt;&gt;<i> to make to increase cooperation between our projects, but it would help if 
+</I>&gt;&gt;<i> you got back to me quickly.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Chris
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On Wednesday, 29 January 2020 14:46:02 UTC, OpenSceneGraph Users wrote:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Hi Chris,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Thanks the links.  I've tracked down the example you created and re-run 
+</I>&gt;&gt;&gt;<i> it on my system and on the scene graph creation of the second window/view I 
+</I>&gt;&gt;&gt;<i> get text without textures.  
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> In summary:
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>    - Fabian has done something weird with either OSG or OpenMW that 
+</I>&gt;&gt;&gt;&gt;<i>    hasn't been specified yet.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> If the codebase is the same perhaps it comes down to a sensitivity to 
+</I>&gt;&gt;&gt;<i> compiler version or dependencies?
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>    - It's beginning to feel like you're misspelling OpenMW 
+</I>&gt;&gt;&gt;&gt;<i>    deliberately.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Sigh.  I likely have dyslexia, while I've never been formally diagnosed 
+</I>&gt;&gt;&gt;<i> I have the traits, the downside is that I regularily get letters wrong, 
+</I>&gt;&gt;&gt;<i> don't spot mispellings.  This isn't personal, it's just an issue I have to 
+</I>&gt;&gt;&gt;<i> deal with, and unfortunately as I read/wrote code and read/write email the 
+</I>&gt;&gt;&gt;<i> community also have to accept that I don't get everything right every 
+</I>&gt;&gt;&gt;<i> time.  In other ways my brain functions pretty well so overall I can still 
+</I>&gt;&gt;&gt;<i> be productive.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>    - Regarding the as-yet unresolved default font/object cache not 
+</I>&gt;&gt;&gt;&gt;<i>    being released issue I reported in March, the ball was left in your court 
+</I>&gt;&gt;&gt;&gt;<i>    with nothing more I could do. Hopefully enough has been linked above that 
+</I>&gt;&gt;&gt;&gt;<i>    we can move forward with that again if you've got more time now.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> If this is the one that the attached example recreates then I will be 
+</I>&gt;&gt;&gt;<i> looking into this today.
+</I>&gt;&gt;&gt;<i>  
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i> -- 
+</I>&gt;&gt;<i> You received this message because you are subscribed to the Google Groups 
+</I>&gt;&gt;<i> &quot;OpenSceneGraph Users&quot; group.
+</I>&gt;&gt;<i> To unsubscribe from this group and stop receiving emails from it, send an 
+</I>&gt;&gt;<i> email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at googlegroups.com</A> &lt;javascript:&gt;.
+</I>&gt;&gt;<i> To view this discussion on the web visit 
+</I>&gt;&gt;<i> <A HREF="https://groups.google.com/d/msgid/osg-users/73cd3f2d-7a89-4ded-b247-e3586cea02ca%40googlegroups.com">https://groups.google.com/d/msgid/osg-users/73cd3f2d-7a89-4ded-b247-e3586cea02ca%40googlegroups.com</A> 
+</I>&gt;&gt;<i> &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/73cd3f2d-7a89-4ded-b247-e3586cea02ca%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/73cd3f2d-7a89-4ded-b247-e3586cea02ca%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt;
+</I>&gt;&gt;<i> .
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at lists.openscenegraph.org</A> &lt;javascript:&gt;
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/91df491f-65a5-4918-9857-743103fab8f8%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/91df491f-65a5-4918-9857-743103fab8f8%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200129/6b6a30b4/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200129/6b6a30b4/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010793.html">[osg-users] DefaultFont crash issue
+</A></li>
+	<LI>Next message (by thread): <A HREF="010796.html">[osg-users] DefaultFont crash issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10794">[ date ]</a>
+              <a href="thread.html#10794">[ thread ]</a>
+              <a href="subject.html#10794">[ subject ]</a>
+              <a href="author.html#10794">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

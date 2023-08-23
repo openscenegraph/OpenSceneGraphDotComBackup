@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Resizing an FBO camera with OSG 3.2.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Resizing%20an%20FBO%20camera%20with%20OSG%203.2.0&In-Reply-To=%3CCAHhtjQbfhkcY7oxkSC_g8J8%3DdwadjbQyV8QQxMcvkktHzNo0kw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007438.html">
+   <LINK REL="Next"  HREF="007440.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Resizing an FBO camera with OSG 3.2.0</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Resizing%20an%20FBO%20camera%20with%20OSG%203.2.0&In-Reply-To=%3CCAHhtjQbfhkcY7oxkSC_g8J8%3DdwadjbQyV8QQxMcvkktHzNo0kw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Resizing an FBO camera with OSG 3.2.0">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Sat Dec 23 01:28:52 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007438.html">[osg-users] Resizing an FBO camera with OSG 3.2.0
+</A></li>
+        <LI>Next message (by thread): <A HREF="007440.html">[osg-users] Resizing an FBO camera with OSG 3.2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7439">[ date ]</a>
+              <a href="thread.html#7439">[ thread ]</a>
+              <a href="subject.html#7439">[ subject ]</a>
+              <a href="author.html#7439">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, James,
+
+Unfortunately I could not dig out the code I had to solve this problem. But
+I did fight with it on couple occasions. I do remember that often the
+solution I adopted had to use 2 callbacks (cull/update callback +
+prerender/render/or postrender callbace). One update/cull callback was
+needed to resize textures (they were tied to main window resolution) and
+second callback to invoke FBO update setup for new sizes. Somehow it was
+impossible to do that in one shot (probably because I could not access
+proper RenderStage in cull/update callback). That second callback had to be
+a camera PreRender or (some earlier render order camera PostRender or some
+other earlier render order drawable DrawCalback). Role of that second
+callback was to obtain proper RenderStage for FBO camera and set its
+_cameraRequiresSetup flag.   Once _cameraRequiresSetup flag was set to
+true, next rendering traversal was doing the rest. Really setting
+RenderStage::_cameraRequiresSetup was the crucial ingredient to solve that
+problem back then.
+
+Hope this helps,
+Wojtek
+
+PS. If you are still fighting with it, but may wait till January, send me a
+private email and I will dig out the code. Unfortunately I cannot do it
+right away (I am swamped in December) but may be have more time to scan
+through my backups and find it in January.
+
+
+
+
+2017-12-23 9:09 GMT+01:00 James Turner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">zakalawe at mac.com</A>&gt;:
+
+&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> &gt; On 18 Dec 2017, at 11:51, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;    if (modified)
+</I>&gt;<i> &gt;    {
+</I>&gt;<i> &gt;        dirtyAttachmentMap();
+</I>&gt;<i> &gt;    }
+</I>&gt;<i>
+</I>&gt;<i> Thanks Robert,
+</I>&gt;<i>
+</I>&gt;<i> Unfortunately this line is the part that I can&#8217;t figure out how to
+</I>&gt;<i> replicate in OSG-3.2 - resizing the textures is easy enough and I&#8217;ve
+</I>&gt;<i> already been doing that, but the attachment-map-dirty mechanism seems to go
+</I>&gt;<i> deeper into the render pass system.
+</I>&gt;<i>
+</I>&gt;<i> I did try actually removing and re-adding the attachments to the Camera,
+</I>&gt;<i> to trigger the same work as when the attachments are initially made. That
+</I>&gt;<i> compiles but doesn&#8217;t make any difference alas.
+</I>&gt;<i>
+</I>&gt;<i> (Something like&#8230;.)
+</I>&gt;<i>
+</I>&gt;<i>         camera-&gt;detach(osg::Camera::COLOR_BUFFER);
+</I>&gt;<i>         camera -&gt;attach(osg::Camera::COLOR_BUFFER, _fboTexture);
+</I>&gt;<i>
+</I>&gt;<i> Oh well, thanks for the suggestion anyway.
+</I>&gt;<i>
+</I>&gt;<i> James
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20171223/d8cb1ad0/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20171223/d8cb1ad0/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007438.html">[osg-users] Resizing an FBO camera with OSG 3.2.0
+</A></li>
+	<LI>Next message (by thread): <A HREF="007440.html">[osg-users] Resizing an FBO camera with OSG 3.2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7439">[ date ]</a>
+              <a href="thread.html#7439">[ thread ]</a>
+              <a href="subject.html#7439">[ subject ]</a>
+              <a href="author.html#7439">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

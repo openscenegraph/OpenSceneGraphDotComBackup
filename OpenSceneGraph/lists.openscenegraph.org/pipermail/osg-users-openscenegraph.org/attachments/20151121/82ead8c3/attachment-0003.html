@@ -1,0 +1,55 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;HI&nbsp;Jannik,&lt;br&gt;&lt;br&gt;&lt;/div&gt;I&nbsp;haven&#39;t&nbsp;had&nbsp;a&nbsp;look&nbsp;at&nbsp;the&nbsp;modified&nbsp;example&nbsp;yet,&nbsp;it&#39;s&nbsp;the&nbsp;weekend&nbsp;so&nbsp;I&#39;m&nbsp;just&nbsp;briefly&nbsp;online. &nbsp;Quick&nbsp;thoughts&nbsp;are:&lt;br&gt;&lt;br&gt;&lt;/div&gt; &nbsp;inverting&nbsp;a&nbsp;zero&#39;d&nbsp;matrix&nbsp;will&nbsp;naturally&nbsp;lead&nbsp;to&nbsp;an&nbsp;invalid&nbsp;matrix.&lt;br&gt;&lt;br&gt;&lt;/div&gt;My&nbsp;inclination&nbsp;is&nbsp;that&nbsp;the&nbsp;case&nbsp;where&nbsp;a&nbsp;zero&nbsp;matrix&nbsp;could&nbsp;be&nbsp;produced&nbsp;is&nbsp;a&nbsp;special&nbsp;case&nbsp;that&nbsp;needs&nbsp;to&nbsp;be&nbsp;caught&nbsp;higher&nbsp;up&nbsp;in&nbsp;the&nbsp;calling&nbsp;methods&nbsp;rather&nbsp;than&nbsp;try&nbsp;and&nbsp;implement&nbsp;so&nbsp;lower&nbsp;level&nbsp;workaround.&lt;br&gt;&lt;br&gt;&lt;/div&gt;The&nbsp;actual&nbsp;concept&nbsp;behind&nbsp;the&nbsp;transformations&nbsp;that&nbsp;are&nbsp;being&nbsp;done&nbsp;of&nbsp;the&nbsp;line&nbsp;segment&nbsp;is&nbsp;transform&nbsp;into&nbsp;the&nbsp;coordinate&nbsp;frame&nbsp;of&nbsp;a&nbsp;subgraph&nbsp;and&nbsp;then&nbsp;trimming&nbsp;it&nbsp;so&nbsp;that&nbsp;you&nbsp;only&nbsp;test&nbsp;the&nbsp;extents&nbsp;that&nbsp;intersect&nbsp;that&nbsp;subgaph&#39;s&nbsp;bounding&nbsp;volume. &nbsp;If&nbsp;a&nbsp;bounding&nbsp;volume&nbsp;is&nbsp;invalid&nbsp;then&nbsp;you&nbsp;can&#39;t&nbsp;do&nbsp;this&nbsp;test&nbsp;and&nbsp;clip.&lt;br&gt;&lt;br&gt;For&nbsp;a&nbsp;zero&nbsp;radius&nbsp;bounding&nbsp;sphere,&nbsp;such&nbsp;as&nbsp;a&nbsp;sub-graph&nbsp;that&nbsp;contains&nbsp;just&nbsp;a&nbsp;single&nbsp;point&nbsp;then&nbsp;this&nbsp;is&nbsp;a&nbsp;special&nbsp;case&nbsp;-&nbsp;the&nbsp;line&nbsp;segment&nbsp;would&nbsp;have&nbsp;to&nbsp;exactly&nbsp;pass&nbsp;through&nbsp;the&nbsp;centre&nbsp;of&nbsp;the&nbsp;bounding&nbsp;sphere. &nbsp;One&nbsp;approach&nbsp;this&nbsp;might&nbsp;be&nbsp;to&nbsp;always&nbsp;increase&nbsp;the&nbsp;radius&nbsp;of&nbsp;the&nbsp;sphere&nbsp;by&nbsp;an&nbsp;epsilon&nbsp;so&nbsp;it;&#39;s&nbsp;not&nbsp;non&nbsp;zero&nbsp;and&nbsp;do&nbsp;the&nbsp;test&nbsp;and&nbsp;clip&nbsp;against&nbsp;this. &nbsp;epsilon&#39;s&nbsp;are&nbsp;already&nbsp;used&nbsp;elsewhere&nbsp;in&nbsp;LineSegmentIntersector, &nbsp;I&nbsp;need&nbsp;to&nbsp;get&nbsp;back&nbsp;to&nbsp;me&nbsp;family&nbsp;now&nbsp;so&nbsp;can&#39;t&nbsp;look&nbsp;further&nbsp;into&nbsp;the&nbsp;topic.&lt;br&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;21&nbsp;November&nbsp;2015&nbsp;at&nbsp;16:02,&nbsp;Jannik&nbsp;Heller&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:scrawl@baseoftrash.de&quot;&nbsp;target=&quot;_blank&quot;&gt;scrawl@baseoftrash.de&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;LineSegmentIntersector&nbsp;creates&nbsp;NaN&nbsp;warnings&nbsp;when&nbsp;applied&nbsp;to&nbsp;a&nbsp;node&nbsp;with&nbsp;zero&nbsp;scale.&nbsp;I&#39;ve&nbsp;attached&nbsp;a&nbsp;3&nbsp;line&nbsp;change&nbsp;to&nbsp;osgintersection.cpp&nbsp;to&nbsp;reproduce&nbsp;the&nbsp;issue.&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;NaN&#39;s&nbsp;first&nbsp;pop&nbsp;up&nbsp;when&nbsp;OSG&nbsp;tries&nbsp;to&nbsp;invert&nbsp;a&nbsp;zero&nbsp;matrix&nbsp;here:&nbsp;&lt;a&nbsp;href=&quot;https://github.com/openscenegraph/osg/blob/master/src/osgUtil/LineSegmentIntersector.cpp#L294&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;https://github.com/openscenegraph/osg/blob/master/src/osgUtil/LineSegmentIntersector.cpp#L294&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+Check&nbsp;with&nbsp;the&nbsp;following&nbsp;code&nbsp;snippet:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::Matrix&nbsp;zero(0,0,0,0,&nbsp;0,0,0,0,&nbsp;0,0,0,0,&nbsp;0,0,0,1);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(zero.invert(zero))&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;inverted&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;zero&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+invert()&nbsp;returns&nbsp;true&nbsp;but&nbsp;the&nbsp;inverted&nbsp;matrix&nbsp;is&lt;br&gt;<br>
+&lt;br&gt;<br>
+inverted&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;-nan&nbsp;-nan&nbsp;-nan&nbsp;0&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;-nan&nbsp;-nan&nbsp;-nan&nbsp;0&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;-nan&nbsp;-nan&nbsp;-nan&nbsp;0&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;nan&nbsp;nan&nbsp;nan&nbsp;1&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+This&nbsp;looks&nbsp;like&nbsp;a&nbsp;bug&nbsp;in&nbsp;the&nbsp;Matrix&nbsp;invert&nbsp;function.&lt;br&gt;<br>
+&lt;br&gt;<br>
+However&nbsp;even&nbsp;if&nbsp;the&nbsp;matrix&nbsp;was&nbsp;still&nbsp;zero&nbsp;instead&nbsp;of&nbsp;NaN,&nbsp;there&nbsp;is&nbsp;another&nbsp;issue&nbsp;here:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;LineSegmentIntersector&gt;&nbsp;lsi&nbsp;=&nbsp;new&nbsp;LineSegmentIntersector(_start&nbsp;*&nbsp;matrix,&nbsp;_end&nbsp;*&nbsp;matrix);&lt;br&gt;<br>
+&lt;br&gt;<br>
+Multiplying&nbsp;a&nbsp;vec3&nbsp;with&nbsp;a&nbsp;zero&nbsp;matrix&nbsp;will&nbsp;cause&nbsp;NaN&#39;s,&nbsp;because&nbsp;there&nbsp;is&nbsp;an&nbsp;1.0&nbsp;/&nbsp;(mat&nbsp;*&nbsp;vec&nbsp;...)&nbsp;in&nbsp;the&nbsp;Matrix::preMult(Vec3)&nbsp;function.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Not&nbsp;sure&nbsp;on&nbsp;the&nbsp;best&nbsp;way&nbsp;to&nbsp;fix&nbsp;this.&nbsp;Should&nbsp;we&nbsp;add&nbsp;explicit&nbsp;checks&nbsp;for&nbsp;zero&nbsp;scaled&nbsp;matrices&nbsp;in&nbsp;the&nbsp;LineSegmentIntersector,&nbsp;or&nbsp;fix&nbsp;the&nbsp;Matrix&nbsp;and&nbsp;Vec&nbsp;classes&nbsp;so&nbsp;they&nbsp;don&#39;t&nbsp;produce&nbsp;NaN&#39;s&nbsp;under&nbsp;any&nbsp;circumstances&nbsp;for&nbsp;(borderline)&nbsp;valid&nbsp;input?&nbsp;The&nbsp;latter&nbsp;seems&nbsp;the&nbsp;cleaner&nbsp;fix&nbsp;but&nbsp;would&nbsp;have&nbsp;a&nbsp;performance&nbsp;impact&nbsp;all&nbsp;over&nbsp;OSG.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Jannik&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=65720#65720&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=65720#65720&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

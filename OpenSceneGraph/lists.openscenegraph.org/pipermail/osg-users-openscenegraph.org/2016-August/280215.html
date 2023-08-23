@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] GUIEventHandler called twice - possible bug(s)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GUIEventHandler%20called%20twice%20-%20possible%20bug%28s%29&In-Reply-To=%3CCAHhSftg9BxZsy4HOUNpyW6-wN1RQw7P8Qjn9g8knkOCeAO7PmQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004007.html">
+   <LINK REL="Next"  HREF="003993.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] GUIEventHandler called twice - possible bug(s)</H1>
+<!--htdig_noindex-->
+    <B>Riccardo Corsi</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GUIEventHandler%20called%20twice%20-%20possible%20bug%28s%29&In-Reply-To=%3CCAHhSftg9BxZsy4HOUNpyW6-wN1RQw7P8Qjn9g8knkOCeAO7PmQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] GUIEventHandler called twice - possible bug(s)">riccardo.corsi at kairos3d.it
+       </A><BR>
+    <I>Mon Aug 29 07:00:07 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004007.html">[osg-users] Write osgText to an FLT file
+</A></li>
+        <LI>Next message: <A HREF="003993.html">[osg-users] GUIEventHandler called twice - possible bug(s)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280215">[ date ]</a>
+              <a href="thread.html#280215">[ thread ]</a>
+              <a href="subject.html#280215">[ subject ]</a>
+              <a href="author.html#280215">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+I report what I believe could be considered a bug, probably introduced
+after the promotion of the Drawable class to a node, together with the new
+callback system.
+
+I have a GUIEventHandler derived class installed on a Drawable.
+After some digging I've realized that it's called twice for every event due
+to the EventVisitor code here: <A HREF="https://github.com/">https://github.com/</A>
+openscenegraph/OpenSceneGraph/blob/master/include/osgGA/EventVisitor#L86
+
+GUIEventHandler happens to derive both from NodeCallback
+and DrawableEventCallback, resulting in it being called twice. I think this
+might be considered as a bug if the intended behavior was to keep using the
+old GUIEventHandler interface the way it was (when attached to the viewer
+for instance, it is called only once as expected).
+
+Relate issue:
+I've re-implemented my callback deriving from osg::Callback, but this
+results in a crash as the osg::CallbackObject interface is used even if the
+cast does not succeed (first if condition)
+<A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/master/include/osgGA/EventVisitor#L93">https://github.com/openscenegraph/OpenSceneGraph/blob/master/include/osgGA/EventVisitor#L93</A>
+
+I fixed that by deriving from osg::NodeCallback, but I had to reimplement
+the operator() method instead of run(), as the second is not called by the
+visitor - that also it's a bit counter-intuitive with respect to the
+osg::Callback class interface.
+
+Ricky
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160829/31dfb163/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160829/31dfb163/attachment-0001.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004007.html">[osg-users] Write osgText to an FLT file
+</A></li>
+	<LI>Next message: <A HREF="003993.html">[osg-users] GUIEventHandler called twice - possible bug(s)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280215">[ date ]</a>
+              <a href="thread.html#280215">[ thread ]</a>
+              <a href="subject.html#280215">[ subject ]</a>
+              <a href="author.html#280215">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

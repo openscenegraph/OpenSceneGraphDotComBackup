@@ -1,0 +1,252 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] issue about getting the material properties from the current state in rendering info
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20issue%20about%20getting%20the%20material%20properties%20from%0A%20the%20current%20state%20in%20rendering%20info&In-Reply-To=%3CCALqoK0cn2kudfABLTvH42%2Bub35shWtMTSaQp066x6KXENBg-sw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000707.html">
+   <LINK REL="Next"  HREF="000709.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] issue about getting the material properties from the current state in rendering info</H1>
+<!--htdig_noindex-->
+    <B>Farshid Lashkari</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20issue%20about%20getting%20the%20material%20properties%20from%0A%20the%20current%20state%20in%20rendering%20info&In-Reply-To=%3CCALqoK0cn2kudfABLTvH42%2Bub35shWtMTSaQp066x6KXENBg-sw%40mail.gmail.com%3E"
+       TITLE="[osg-users] issue about getting the material properties from the current state in rendering info">flashk at gmail.com
+       </A><BR>
+    <I>Tue Jun 23 09:53:43 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000707.html">[osg-users] issue about getting the material properties from the current state in rendering info
+</A></li>
+        <LI>Next message: <A HREF="000709.html">[osg-users] FW: issue about getting the material properties from the current state in rendering info
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#708">[ date ]</a>
+              <a href="thread.html#708">[ thread ]</a>
+              <a href="subject.html#708">[ subject ]</a>
+              <a href="author.html#708">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Gianluca,
+
+Have you tried using &quot;getLastAppliedAttribute&quot; on the osg::State object?
+
+const osg::Material* mat = dynamic_cast&lt;const
+osg::Material*&gt;(state.getLastAppliedAttribute(osg::StateAttribute::MATERIAL));
+if(mat)
+{
+    // do something with material
+}
+
+I've used this method to access attributes from the current state and it
+has worked for me.
+
+Cheers,
+Farshid
+
+On Tue, Jun 23, 2015 at 9:49 AM, Gianluca Natale &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">natale at europe.altair.com</A>&gt;
+wrote:
+
+&gt;<i>  Thanks Sebastian,
+</I>&gt;<i>
+</I>&gt;<i> I&#8217;m simply trying to get the alpha value of the diffuse component of the
+</I>&gt;<i> material properties, because I have to pass it to an underlying
+</I>&gt;<i>
+</I>&gt;<i> graphic library that I use for rendering that custom drawable.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> BTW, I further investigated.
+</I>&gt;<i>
+</I>&gt;<i> In the following function:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> State::captureCurrentState(StateSet&amp; stateset)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The _attributeMap actually contains as MATERIAL attribute exactly the
+</I>&gt;<i> pointer to the osg::Material property that I created.
+</I>&gt;<i>
+</I>&gt;<i> But in the attribute stack it appears as the &#8216;last_applied_attribute&#8217;, and
+</I>&gt;<i> &#8216;changed&#8217; is set to true.
+</I>&gt;<i>
+</I>&gt;<i> For all other attributes the pointers stored in &#8216;last_applied_attribute&#8217;
+</I>&gt;<i> are correct as well, but &#8216;changed&#8217; is set to false.
+</I>&gt;<i>
+</I>&gt;<i> Also, in that AttributeStack the member attributeVec contains just one
+</I>&gt;<i> element, that is not the correct one (it points to a different
+</I>&gt;<i> osg::Material).
+</I>&gt;<i>
+</I>&gt;<i> While for all the other attributes, which have &#8216;changed&#8217; set to false,
+</I>&gt;<i> last_applied_attribute coincides with the first element in attributeVec.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I don&#8217;t know anything of that code, but I don&#8217;t understand why
+</I>&gt;<i> osg::Material appears to be changed while other attributes not.
+</I>&gt;<i>
+</I>&gt;<i> Or should I use a different API to get the current osg::Material?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i>
+</I>&gt;<i> Gianluca Natale
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> *From:* osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] *On
+</I>&gt;<i> Behalf Of *Sebastian Messerschmidt
+</I>&gt;<i> *Sent:* marted&#236; 23 giugno 2015 18:15
+</I>&gt;<i> *To:* OpenSceneGraph Users; Osg Users
+</I>&gt;<i> *Subject:* Re: [osg-users] issue about getting the material properties
+</I>&gt;<i> from the current state in rendering info
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Am 23.06.2015 18:05, schrieb Gianluca Natale:
+</I>&gt;<i>
+</I>&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> I&#8217;m using OSG 3.0.1.
+</I>&gt;<i>
+</I>&gt;<i> I have an issue when I try to retrieve the material properties from the
+</I>&gt;<i> rendering info, in my custom drawable.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> To be clearer:
+</I>&gt;<i>
+</I>&gt;<i> I have a custom drawable, for which I implemented a
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> myDrawable::drawImplementation(osg::RenderInfo&amp; osgRenderInfo).
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> When I try to get the material properties inside that function, by
+</I>&gt;<i> following code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> osg::StateSet  drwbStateSet;
+</I>&gt;<i>
+</I>&gt;<i> osg::State *state = osgRenderInfo.getState();
+</I>&gt;<i>
+</I>&gt;<i> state-&gt;captureCurrentState(drwbStateSet);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> the returned material properties is invalid.
+</I>&gt;<i>
+</I>&gt;<i> Specifically, I put a breakpoint in following function:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> StateSet::setAttribute(StateAttribute *attribute,
+</I>&gt;<i> StateAttribute::OverrideValue value)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> that is called inside captureCurrentState.
+</I>&gt;<i>
+</I>&gt;<i> When the attribute is an osg::Material, the _ptr is different from the one
+</I>&gt;<i> allocated when the material has been set, in the state set associated to a
+</I>&gt;<i> parent node of that drawable.
+</I>&gt;<i>
+</I>&gt;<i> Furthermore, _userDataContainer is 0x0000000000000000, so no valid
+</I>&gt;<i> osg::Material is returned in the captured state set.
+</I>&gt;<i>
+</I>&gt;<i> User data defaults to nullptr. So if you're not setting it up that is
+</I>&gt;<i> expected.
+</I>&gt;<i> As you don't explain why you are trying to inspect state during draw it is
+</I>&gt;<i> hard to guess what you are after.
+</I>&gt;<i> I simply guess that your state is set up somewhere further up in the
+</I>&gt;<i> stategraph (i.e. in one of the parents) and that state is set up lazy.
+</I>&gt;<i> Maybe Robert can give some insights here.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Any idea of the possible cause of the issue? Where did I go wrong?
+</I>&gt;<i>
+</I>&gt;<i> BTW, all other attributes (polygon offset, polygon mode, etc&#8230;) are
+</I>&gt;<i> returned correctly.
+</I>&gt;<i>
+</I>&gt;<i> Are you sure you are setting up an osg::Material state attribute somewhere?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i>
+</I>&gt;<i> Gianluca Natale
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>  _______________________________________________
+</I>&gt;<i>
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150623/fbe60564/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150623/fbe60564/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000707.html">[osg-users] issue about getting the material properties from the current state in rendering info
+</A></li>
+	<LI>Next message: <A HREF="000709.html">[osg-users] FW: issue about getting the material properties from the current state in rendering info
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#708">[ date ]</a>
+              <a href="thread.html#708">[ thread ]</a>
+              <a href="subject.html#708">[ subject ]</a>
+              <a href="author.html#708">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

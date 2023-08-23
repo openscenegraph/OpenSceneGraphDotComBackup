@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Advice on how to best inject behavoir regarding FBOs
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Advice%20on%20how%20to%20best%20inject%20behavoir%20regarding%20FBOs&In-Reply-To=%3C55C857B9.2040902%40ib-caddy.si%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001123.html">
+   <LINK REL="Next"  HREF="001146.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Advice on how to best inject behavoir regarding FBOs</H1>
+<!--htdig_noindex-->
+    <B>Robert Milharcic</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Advice%20on%20how%20to%20best%20inject%20behavoir%20regarding%20FBOs&In-Reply-To=%3C55C857B9.2040902%40ib-caddy.si%3E"
+       TITLE="[osg-users] Advice on how to best inject behavoir regarding FBOs">robert.milharcic at ib-caddy.si
+       </A><BR>
+    <I>Mon Aug 10 00:50:17 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001123.html">[osg-users] Advice on how to best inject behavoir regarding FBOs
+</A></li>
+        <LI>Next message: <A HREF="001146.html">[osg-users] Advice on how to best inject behavoir regarding FBOs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1140">[ date ]</a>
+              <a href="thread.html#1140">[ thread ]</a>
+              <a href="subject.html#1140">[ subject ]</a>
+              <a href="author.html#1140">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>On 9.8.2015 17:04, BjXXrn Blissing wrote:
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> Well, I was hoping to be able to do the integration without modifications to OSG. If such modifications proves to be necessary, then I agree with Jan that we should wait for v0.7 to see if that integration is easier. It seems unnecessary to change OSG for a problem that may disappear in later Oculus SDK versions.
+</I>&gt;<i>
+</I>&gt;<i> But I am happy to report that I have a working, flicker free solution. Although I had to make a rather cumbersome call inside my pre draw camera callback to get the FBO handle:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::Camera* camera = renderInfo.getCurrentCamera();
+</I>&gt;<i> osgViewer::Renderer *camRenderer = (dynamic_cast&lt;osgViewer::Renderer*&gt;(camera-&gt;getRenderer()));
+</I>&gt;<i> if (camRenderer != NULL) {
+</I>&gt;<i>    osgUtil::SceneView* sceneView = camRenderer-&gt;getSceneView(0);
+</I>&gt;<i>    if (sceneView != NULL) {
+</I>&gt;<i>      osgUtil::RenderStage* renderStage = sceneView-&gt;getRenderStage();
+</I>&gt;<i>      if (renderStage != NULL) {
+</I>&gt;<i>        osg::FrameBufferObject* fbo = renderStage-&gt;getFrameBufferObject();
+</I>&gt;<i>        GLuint fboHandle = fbo-&gt;getHandle(ctx);
+</I>&gt;<i>      }
+</I>&gt;<i>    }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> This also forced me to link with osgUtil. I don't know if there is a simpler way of getting the FBO handle, which does not involve osgUtil?
+</I>&gt;<i>
+</I>&gt;<i> Best regards
+</I>&gt;<i>
+</I>&gt;<i> Bj&#246;rn
+</I>&gt;<i>
+</I>
+Hi Bj&#246;rn,
+
+If you need low level manipulation of the FBO, it migh be best to simply create one that is fully independent/transparent to the osg (as opposed to fully automated high-level camera attachment). Having said that, you could simply create new FBO, in let's say, CustomCamera constructor:
+
+CustomCamera::CustomCamera()
+{
+     //usual camera setup for rtt
+     //...
+
+     osg::Texture2D* texture =  createTexture();
+     //attach(osg::Camera::COLOR_BUFFER, texture);
+
+     _fbo = new osg::FrameBufferObject;
+     _fbo-&gt;setAttachment(osg::Camera::COLOR_BUFFER, osg::FrameBufferAttachment(texture));
+     setPreDrawCallback(new BindFboPreDrawCallback(_fbo.get()));
+     setPostDrawCallback(new UnBindFboPostDrawCallback);
+}
+
+class BindFboPreDrawCallback : public osg::Camera::DrawCallback
+{
+public:
+     BindFboPreDrawCallback(osg::FrameBufferObject* fbo) : _fbo(fbo) {}
+     virtual void operator () (osg::RenderInfo&amp; renderInfo) const
+     {
+         _fbo-&gt;apply(*renderInfo.getState()); //bind FBO
+     }
+protected:
+     osg::ref_ptr&lt;osg::FrameBufferObject&gt; _fbo;
+};
+
+class UnBindFboPostDrawCallback : public osg::Camera::DrawCallback
+{
+public:
+     virtual void operator () (osg::RenderInfo&amp; renderInfo) const
+     {
+renderInfo.getState()-&gt;get&lt;osg::GLExtensions&gt;()-&gt;glBindFramebuffer(osg::FrameBufferObject::READ_DRAW_FRAMEBUFFER, 0);
+     }
+};
+
+You can the manipulate CustomCamera's owned fbo or reattach textures at any suitable stage ...
+
+P.S.: You may also need to call _fbo-&gt;resizeGLObjectBuffers(maxSize) and _fbo-&gt;releaseGLObjects(state) when appropriate.
+
+Best Regards,
+Robert Milharcic
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001123.html">[osg-users] Advice on how to best inject behavoir regarding FBOs
+</A></li>
+	<LI>Next message: <A HREF="001146.html">[osg-users] Advice on how to best inject behavoir regarding FBOs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1140">[ date ]</a>
+              <a href="thread.html#1140">[ thread ]</a>
+              <a href="subject.html#1140">[ subject ]</a>
+              <a href="author.html#1140">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

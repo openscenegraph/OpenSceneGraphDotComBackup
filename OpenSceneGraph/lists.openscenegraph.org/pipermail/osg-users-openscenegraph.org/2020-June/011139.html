@@ -1,0 +1,231 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Why does the computeshaderblur program not display properly?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20does%20the%20computeshaderblur%20program%20not%20display%0A%20properly%3F&In-Reply-To=%3Cmailman.801.1592552180.1729.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011138.html">
+   <LINK REL="Next"  HREF="011140.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Why does the computeshaderblur program not display properly?</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20does%20the%20computeshaderblur%20program%20not%20display%0A%20properly%3F&In-Reply-To=%3Cmailman.801.1592552180.1729.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Why does the computeshaderblur program not display properly?">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Thu Jun 18 22:27:24 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011138.html">[osg-users] How to clean up Stencil Buffer between two nodes in OSG
+</A></li>
+        <LI>Next message (by thread): <A HREF="011140.html">[osg-users] Why does the computeshaderblur program not display properly?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11139">[ date ]</a>
+              <a href="thread.html#11139">[ thread ]</a>
+              <a href="subject.html#11139">[ subject ]</a>
+              <a href="author.html#11139">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>/* -*-c++-*- OpenSceneGraph example, osgcomputeshaders.
+*
+*  Permission is hereby granted, free of charge, to any person obtaining a 
+copy
+*  of this software and associated documentation files (the &quot;Software&quot;), to 
+deal
+*  in the Software without restriction, including without limitation the 
+rights
+*  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*  copies of the Software, and to permit persons to whom the Software is
+*  furnished to do so, subject to the following conditions:
+*
+*  THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS 
+OR
+*  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+THE
+*  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+FROM,
+*  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*  THE SOFTWARE.
+*/
+
+// Written by Wang Rui
+// This example can work only if GL version is 4.3 or greater
+
+#include &lt;osg/Texture2D&gt;
+#include &lt;osg/BindImageTexture&gt;
+#include &lt;osg/DispatchCompute&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgGA/StateSetManipulator&gt;
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+static const char* computeSrc = {
+&quot;#version 430\n&quot;
+&quot;precision highp float;\n&quot;
+&quot;precision highp int;\n&quot;
+    &quot;layout (rgba32f, binding =0) highp uniform image2D uImageIn;\n&quot;
+&quot;layout (rgba32f, binding =1) highp uniform image2D uImageOut;\n&quot;
+    &quot;layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;\n&quot;
+    &quot;void main() {\n&quot;
+&quot; ivec2 id   = ivec2(gl_GlobalInvocationID.xy);        \n&quot;
+&quot; ivec2 size = imageSize(uImageOut); \n&quot;
+&quot; if (id.x &gt;= size.x || id.y &gt;= size.y) { \n&quot;
+&quot; return; \n&quot;
+&quot; } \n&quot;
+&quot;   const int uSigma = 15;\n&quot;
+&quot; // 0.9544 \n&quot;
+&quot; int kernel   = int(ceil(2.0 * uSigma)); \n&quot;
+&quot; \n&quot;
+&quot; vec4 pixel = vec4(0.0); \n&quot;
+&quot; float coef = 0.0; \n&quot;
+&quot; for (int dx = -kernel; dx &lt;= kernel; dx++) { \n&quot;
+&quot; for (int dy = -kernel; dy &lt;= kernel; dy++) { \n&quot;
+&quot; int x = id.x + dx; \n&quot;
+&quot; int y = id.y + dy; \n&quot;
+&quot; if (x &lt; 0 || x &gt;= size.x || \n&quot;
+&quot; y &lt; 0 || y &gt;= size.y) { \n&quot;
+&quot; continue; \n&quot;
+&quot; } \n&quot;
+&quot; float c = exp(-float(dx * dx + dy * dy) / (2.0 * uSigma * uSigma + 1e-5)); 
+\n&quot;
+&quot; pixel += (imageLoad(uImageIn, ivec2(x, y)) * c); \n&quot;
+&quot; coef  += c; \n&quot;
+&quot; } \n&quot;
+&quot; } \n&quot;
+&quot; imageStore(uImageOut, id, pixel / (coef + 1e-5)); \n&quot;
+    &quot;}\n&quot;
+};
+
+int main( int argc, char** argv )
+{
+    osg::ArgumentParser arguments( &amp;argc, argv );
+
+    // Create the texture as both the output of compute shader and the 
+input of a normal quad
+    osg::ref_ptr&lt;osg::Texture2D&gt; tex2D = new osg::Texture2D;
+osg::Image* pImage = osgDB::readImageFile(&quot;Images/man.png&quot;);
+pImage-&gt;setDataVariance(osg::Object::DYNAMIC);
+tex2D-&gt;setImage(pImage);
+    tex2D-&gt;setTextureSize( 512, 512 );
+    tex2D-&gt;setFilter( osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR );
+    tex2D-&gt;setFilter( osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR );
+tex2D-&gt;setInternalFormat(GL_RGBA32F_ARB);
+tex2D-&gt;setSourceFormat(GL_RGBA);
+    tex2D-&gt;setSourceType( GL_FLOAT );
+    // So we can use 'image2D' in the compute shader
+    osg::ref_ptr&lt;osg::BindImageTexture&gt; imagbinding = new 
+osg::BindImageTexture(0, tex2D.get(), osg::BindImageTexture::READ_WRITE, 
+GL_RGBA32F_ARB);
+    
+osg::ref_ptr&lt;osg::Texture2D&gt; tex2D2 = new osg::Texture2D;
+tex2D2-&gt;setTextureSize(512, 512);
+tex2D2-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+tex2D2-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+tex2D2-&gt;setInternalFormat(GL_RGBA32F_ARB);
+tex2D2-&gt;setSourceFormat(GL_RGBA);
+tex2D2-&gt;setSourceType(GL_FLOAT);
+// So we can use 'image2D' in the compute shader
+osg::ref_ptr&lt;osg::BindImageTexture&gt; imagbinding2 = new 
+osg::BindImageTexture(0, tex2D2.get(), osg::BindImageTexture::READ_WRITE, 
+GL_RGBA32F_ARB);
+
+// The compute shader can't work with other kinds of shaders
+    // It also requires the work group numbers. Setting them to 0 will 
+disable the compute shader
+    osg::ref_ptr&lt;osg::Program&gt; computeProg = new osg::Program;
+    computeProg-&gt;addShader( new osg::Shader(osg::Shader::COMPUTE, 
+computeSrc) );
+
+    // Create a node for outputting to the texture.
+    // It is OK to have just an empty node here, but seems inbuilt uniforms 
+like osg_FrameTime won't work then.
+    // TODO: maybe we can have a custom drawable which also will implement 
+glMemoryBarrier?
+    osg::ref_ptr&lt;osg::Node&gt; sourceNode = new osg::DispatchCompute(512/16, 
+512/16, 1 );
+    sourceNode-&gt;setDataVariance( osg::Object::DYNAMIC );
+    sourceNode-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes( 
+computeProg.get() );
+    sourceNode-&gt;getOrCreateStateSet()-&gt;addUniform( new 
+osg::Uniform(&quot;uImageIn&quot;, (int)0) );
+    sourceNode-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, 
+tex2D.get() );
+sourceNode-&gt;getOrCreateStateSet()-&gt;addUniform(new osg::Uniform(&quot;uImageOut&quot;, 
+(int)1));
+sourceNode-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(1, 
+tex2D2.get());
+
+    // Display the texture on a quad. We will also be able to operate on 
+the data if reading back to CPU side
+    osg::Geometry* geom = osg::createTexturedQuadGeometry(
+        osg::Vec3(), osg::Vec3(1.0f,0.0f,0.0f), osg::Vec3(0.0f,0.0f,1.0f) );
+    osg::ref_ptr&lt;osg::Geode&gt; quad = new osg::Geode;
+    quad-&gt;addDrawable( geom );
+    quad-&gt;getOrCreateStateSet()-&gt;setMode( GL_LIGHTING, 
+osg::StateAttribute::OFF );
+    quad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes( 0, 
+tex2D2.get() );
+    quad-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(imagbinding2.get());
+    // Create the scene graph and start the viewer
+    osg::ref_ptr&lt;osg::Group&gt; scene = new osg::Group;
+    scene-&gt;addChild( sourceNode );
+    scene-&gt;addChild( quad.get() );
+
+    osgViewer::Viewer viewer;
+    viewer.addEventHandler( new 
+osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()) );
+    viewer.addEventHandler( new osgViewer::StatsHandler );
+    viewer.addEventHandler( new osgViewer::WindowSizeHandler );
+    viewer.setSceneData( scene.get() );
+    return viewer.run();
+}
+
+
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/f560c951-678e-4b67-b7bb-e4c4569207cco%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/f560c951-678e-4b67-b7bb-e4c4569207cco%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200618/2bd18197/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200618/2bd18197/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011138.html">[osg-users] How to clean up Stencil Buffer between two nodes in OSG
+</A></li>
+	<LI>Next message (by thread): <A HREF="011140.html">[osg-users] Why does the computeshaderblur program not display properly?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11139">[ date ]</a>
+              <a href="thread.html#11139">[ thread ]</a>
+              <a href="subject.html#11139">[ subject ]</a>
+              <a href="author.html#11139">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

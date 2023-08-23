@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] About Interleaved Array Support
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20About%20Interleaved%20Array%20Support&In-Reply-To=%3C1539171256.m2f.75062%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009249.html">
+   <LINK REL="Next"  HREF="009251.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] About Interleaved Array Support</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20About%20Interleaved%20Array%20Support&In-Reply-To=%3C1539171256.m2f.75062%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] About Interleaved Array Support">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Wed Oct 10 04:34:16 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009249.html">[osg-users] About Interleaved Array Support
+</A></li>
+        <LI>Next message (by thread): <A HREF="009251.html">[osg-users] About Interleaved Array Support
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9250">[ date ]</a>
+              <a href="thread.html#9250">[ thread ]</a>
+              <a href="subject.html#9250">[ subject ]</a>
+              <a href="author.html#9250">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>AFAIK Memory alignement compliance yield in greater performance..No?
+
+
+robertosfield wrote:
+&gt;<i> Hi Julien,
+</I>&gt;<i> 
+</I>&gt;<i> I considered interleaved support in the past and decided against it as
+</I>&gt;<i> the value it provided isn't that great and it limits how many classes
+</I>&gt;<i> can process the geometry as it's an non standard form.
+</I>&gt;<i> 
+</I>&gt;<i> Modern graphics card cope just fine with non interleaved data so what
+</I>&gt;<i> is your motivation?
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Robert.
+</I>&gt;<i> On Wed, 10 Oct 2018 at 10:50, Julien Valentin
+</I>&gt;<i> &lt;&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Hi,
+</I>&gt;<i> &gt; I have an implementation of InterleavedGeometry : public Drawable
+</I>&gt;<i> &gt; I think it's really something missing for a long time in osg
+</I>&gt;<i> &gt; Would it worse a pr...?
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; here's a sample usage  to review chosen api
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Code:
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; ///test interleavedGeometry
+</I>&gt;<i> &gt; InterleavedGeometry * igeom=new InterleavedGeometry();
+</I>&gt;<i> &gt; igeom-&gt;setUseDisplayList(false);
+</I>&gt;<i> &gt; igeom-&gt;setUseVertexBufferObjects(true);
+</I>&gt;<i> &gt; igeom-&gt;setUseVertexArrayObject(true);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; struct example{
+</I>&gt;<i> &gt; float pos[3],norm[3],texcoor[3],padding[3];//add 3 float padding for mem alignement
+</I>&gt;<i> &gt; };
+</I>&gt;<i> &gt; unsigned int stride=sizeof(struct example);
+</I>&gt;<i> &gt; osg::ref_ptr&lt;osg::BufferTemplate&lt; std::vector&lt;example&gt;  &gt; &gt;  hostarray=new osg::BufferTemplate&lt; std::vector&lt;example&gt;  &gt;;
+</I>&gt;<i> &gt; hostarray-&gt;resize(4);
+</I>&gt;<i> &gt; hostarray-&gt;setBinding(osg::Array::BIND_PER_VERTEX);
+</I>&gt;<i> &gt; hostarray-&gt;setBufferObject(new osg::VertexBufferObject);
+</I>&gt;<i> &gt; InterleavedGeometry::RangedBufferData *rbd=new InterleavedGeometry::RangedBufferData;
+</I>&gt;<i> &gt; InterleavedGeometry::RangeDesc interleaveddesc;
+</I>&gt;<i> &gt; interleaveddesc.push_back(InterleavedGeometry::SubDataDesc(GL_FLOAT,3,0));
+</I>&gt;<i> &gt; interleaveddesc.push_back(InterleavedGeometry::SubDataDesc(GL_FLOAT,3,3*sizeof(GLfloat)));
+</I>&gt;<i> &gt; interleaveddesc.push_back(InterleavedGeometry::SubDataDesc(GL_FLOAT,3,6*sizeof(GLfloat)));
+</I>&gt;<i> &gt; igeom-&gt;addRangedBufferData(0,2,hostarray,interleaveddesc,stride );
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; for(int j=0;j&lt;2;j++){
+</I>&gt;<i> &gt; for(int i=0;i&lt;2;i++){
+</I>&gt;<i> &gt; for(int k=0;k&lt;3;k++){
+</I>&gt;<i> &gt; float * fdata=igeom-&gt;getRangedBufferData(0)-&gt;data&lt;float&gt;(i*2+j,k);
+</I>&gt;<i> &gt; *fdata++=float(i)*1.0f;
+</I>&gt;<i> &gt; *fdata++=float(j)*1.0f;
+</I>&gt;<i> &gt; *fdata++=0;
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Julien[/code]
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; ------------------------
+</I>&gt;<i> &gt; Twirling twirling twirling toward freedom
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; ------------------
+</I>&gt;<i> &gt; Read this topic online here:
+</I>&gt;<i> &gt; <A HREF="../../../../forum.openscenegraph.org/viewtopic62aa.php?p=75058#75058">http://forum.openscenegraph.org/viewtopic.php?p=75058#75058</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> 
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I>&gt;<i>  ------------------
+</I>&gt;<i> Post generated by Mail2Forum
+</I>
+
+------------------------
+Twirling twirling twirling toward freedom
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic1fa9.php?p=75062#75062">http://forum.openscenegraph.org/viewtopic.php?p=75062#75062</A>
+
+
+
+
+
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009249.html">[osg-users] About Interleaved Array Support
+</A></li>
+	<LI>Next message (by thread): <A HREF="009251.html">[osg-users] About Interleaved Array Support
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9250">[ date ]</a>
+              <a href="thread.html#9250">[ thread ]</a>
+              <a href="subject.html#9250">[ subject ]</a>
+              <a href="author.html#9250">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

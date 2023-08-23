@@ -1,0 +1,212 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Same vertices selected multiple times
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Same%20vertices%20selected%20multiple%20times&In-Reply-To=%3C1515683619.m2f.72734%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007654.html">
+   <LINK REL="Next"  HREF="007544.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Same vertices selected multiple times</H1>
+<!--htdig_noindex-->
+    <B>Antoine Rennuit</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Same%20vertices%20selected%20multiple%20times&In-Reply-To=%3C1515683619.m2f.72734%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Same vertices selected multiple times">antoinerennuit at hotmail.com
+       </A><BR>
+    <I>Thu Jan 11 07:13:39 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007654.html">[osg-users] Normal Mapping using Dynamic Cubemap
+</A></li>
+        <LI>Next message (by thread): <A HREF="007544.html">[osg-users] Same vertices selected multiple times
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7538">[ date ]</a>
+              <a href="thread.html#7538">[ thread ]</a>
+              <a href="subject.html#7538">[ subject ]</a>
+              <a href="author.html#7538">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Dear OSG forum,
+
+I have a vertices selection problem (these are the vertices of a mesh). When I select vertices, each vertex appears multiple times in my selection (e.g. if I select 30000 vertices, there are actually 90000 entries in the selected vertices array - each vertex being duplicated).
+
+The reason of this behavior stems from the way I have coded the selection: I actually select faces/triangles, then look for the corresponding vertices and add these to my selected vertices array, via this code:
+
+
+Code:
+
+// Find the primitives inside the polygon.
+osg::ref_ptr&lt;osgUtil::PolytopeIntersector&gt; intersector = new osgUtil::PolytopeIntersector( osgUtil::Intersector::WINDOW, polytope );
+osgUtil::IntersectionVisitor intersectionVisitor( intersector.get() );
+viewer-&gt;getCamera()-&gt;accept( intersectionVisitor );
+
+if ( !intersector-&gt;containsIntersections() )
+    return;
+
+// Loop through each primitive.
+primitives.reserve( intersector-&gt;getIntersections().size() );
+
+for (auto it = intersector-&gt;getIntersections().begin(); it != intersector-&gt;getIntersections().end(); ++it)
+{
+    osgUtil::PolytopeIntersector::Intersection intersection = *it;
+
+    primitives.push_back( intersection.primitiveIndex );
+}
+
+std::vector&lt;unsigned int&gt; subObjects;
+for (uint i = 0; i&lt; primitives.size(); ++i)
+{
+    subObjects.push_back(3 * primitives[i]);
+    subObjects.push_back(3 * primitives[i] + 1);
+    subObjects.push_back(3 * primitives[i] + 2);
+}
+
+
+
+
+subObjects being my vertices array.
+
+Do you have any idea of how I could do to only select vertices once rather than multiple times?
+
+THIS IS NOT DIRECTLY LINKED TO THE QUESTION BUT IT COULD HAVE AN IMPACT ON YOUR ANSWER: for your information, currently the mesh is drawn in such a way that vertices are NOT shared among triangles (that is if 2 triangles share the same vertex, the same vertex appears twice in the vertices array) as shown below:
+
+
+Code:
+
+osg::ref_ptr&lt;osg::Geode&gt; SetupMesh(const Eigen::Vector3Array&amp; vertices, IntegerArray const&amp; triangles, const Eigen::Vector3Array&amp; normals, const osg::Vec4f&amp; color, Node* node)
+{
+    osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode();
+    assert(geode);
+    osg::ref_ptr&lt;osg::Geometry&gt; geometry = new osg::Geometry();
+    assert(geometry);
+    osg::ref_ptr&lt;osg::Vec3Array&gt; vertices_osg = new osg::Vec3Array();
+    assert(vertices_osg);
+    osg::ref_ptr&lt;osg::Vec3Array&gt; normals_osg = new osg::Vec3Array();
+    assert(normals_osg);
+    osg::ref_ptr&lt;osg::DrawElementsUInt&gt; triangles_osg = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
+    assert(triangles_osg);
+    osg::ref_ptr&lt;osg::Vec4Array&gt; colors = new osg::Vec4Array();
+    assert(colors);
+
+    // Attach a reference to the node inside the geometry.
+    // NOTE: this is used for picking.
+    osg::ref_ptr&lt;NodeReference&gt; userData = new NodeReference(node);
+    geometry-&gt;setUserData(userData);
+
+    // Use VBOs (rather than deprecated display lists).
+    geometry-&gt;setUseVertexBufferObjects(true);
+
+    // Setup.
+    geode-&gt;addDrawable(geometry);
+    geometry-&gt;setVertexArray(vertices_osg);
+    geometry-&gt;setNormalArray(normals_osg);
+    geometry-&gt;addPrimitiveSet(triangles_osg);
+    geometry-&gt;setColorArray(colors);
+
+    // Vertices.
+    vertices_osg-&gt;reserve(vertices.size());
+    for (int i = 0; i &lt; vertices.size(); ++i)
+        vertices_osg-&gt;push_back(EigenToOsgVector3(vertices[i]));
+
+    // Normals.
+    normals_osg-&gt;setBinding(osg::Array::BIND_PER_VERTEX);
+
+    normals_osg-&gt;reserve(normals.size());
+    for (int i = 0; i &lt; normals.size(); ++i)
+        normals_osg-&gt;push_back(EigenToOsgVector3(normals[i]));
+
+    // Triangles (primitive sets).
+    triangles_osg-&gt;reserve(triangles.size());
+    for (int i = 0; i &lt; triangles.size(); ++i)
+        triangles_osg-&gt;push_back(triangles[i]);
+
+    // Colors.
+    colors-&gt;setBinding(osg::Array::BIND_PER_VERTEX);
+
+    colors-&gt;reserve(vertices.size());
+    for (int i = 0; i &lt; vertices.size(); ++i)
+        colors-&gt;push_back(color);
+
+    return geode;
+}
+
+
+
+
+Kind regards,
+
+Antoine.
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopiccaa2.php?p=72734#72734">http://forum.openscenegraph.org/viewtopic.php?p=72734#72734</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007654.html">[osg-users] Normal Mapping using Dynamic Cubemap
+</A></li>
+	<LI>Next message (by thread): <A HREF="007544.html">[osg-users] Same vertices selected multiple times
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7538">[ date ]</a>
+              <a href="thread.html#7538">[ thread ]</a>
+              <a href="subject.html#7538">[ subject ]</a>
+              <a href="author.html#7538">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

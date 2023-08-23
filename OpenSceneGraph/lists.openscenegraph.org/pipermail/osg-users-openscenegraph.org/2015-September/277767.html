@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [forum] How to take screen shot of osgviewer
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bforum%5D%20How%20to%20take%20screen%20shot%20of%20osgviewer&In-Reply-To=%3C1442316240.m2f.65135%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001534.html">
+   <LINK REL="Next"  HREF="277766.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [forum] How to take screen shot of osgviewer</H1>
+<!--htdig_noindex-->
+    <B>Yeedunuri  Hema</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bforum%5D%20How%20to%20take%20screen%20shot%20of%20osgviewer&In-Reply-To=%3C1442316240.m2f.65135%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [forum] How to take screen shot of osgviewer">hema.yeedunuri at amigooptima.in
+       </A><BR>
+    <I>Tue Sep 15 04:24:00 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001534.html">[osg-users] Normal bindind
+</A></li>
+        <LI>Next message: <A HREF="277766.html">[osg-users] HUD camera and post render camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277767">[ date ]</a>
+              <a href="thread.html#277767">[ thread ]</a>
+              <a href="subject.html#277767">[ subject ]</a>
+              <a href="author.html#277767">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+i want to take screen shot of osgviewer and save it as .png. i referred to osgposter example. I am using osg and qt for my application. when i am trying to implemennt the same as shown in poster the image is not rendered properly.
+
+
+this is the code im using .images are not properly rendered.how can it be done .
+
+    QWidget* addViewWidget( osg::Camera* camera, osg::Node* scene )
+    {
+        // Poster arguments
+           bool activeMode = true;
+           bool outputPoster = true;
+           //bool outputTiles = false;
+           int tileWidth = 640, tileHeight = 480;
+           int posterWidth = 640*2, posterHeight = 480*2;
+           std::string posterName = &quot;poster.png&quot;, extName = &quot;png&quot;;
+           osg::Vec4 bgColor(0.2f, 0.2f, 0.6f, 1.0f);
+        osgViewer::View* view = new osgViewer::View;
+        view-&gt;setCamera( camera );
+      camera-&gt;addChild(scene); // added for poster
+        addView( view );
+        osg::Group *group = new osg::Group; // added for poster
+        group-&gt;addChild(camera); // added for poster
+        group-&gt;addChild(scene); // added for poster
+        osg::ref_ptr&lt;PosterPrinter&gt; printer = new PosterPrinter;
+        printer-&gt;setTileSize( tileWidth, tileHeight );
+        printer-&gt;setPosterSize( posterWidth, posterHeight );
+        printer-&gt;setCamera( camera );
+
+        osg::ref_ptr&lt;osg::Image&gt; posterImage = 0;
+        if ( outputPoster )
+        {
+            posterImage = new osg::Image;
+            posterImage-&gt;allocateImage( posterWidth, posterHeight, 1, GL_RGBA, GL_UNSIGNED_BYTE );
+            printer-&gt;setFinalPoster( posterImage.get() );
+            printer-&gt;setOutputPosterName( posterName );
+        }
+        view-&gt;setSceneData( scene ); // added for poster
+        view-&gt;addEventHandler( new osgViewer::StatsHandler );
+        view-&gt;setCameraManipulator( new osgGA::TrackballManipulator );
+        view-&gt;addEventHandler( new PrintPosterHandler(printer.get()) );
+        osgQt::GraphicsWindowQt* gw = dynamic_cast&lt;osgQt::GraphicsWindowQt*&gt;( camera-&gt;getGraphicsContext() );
+        return gw ? gw-&gt;getGLWidget() : NULL;
+    }
+
+    osg::Camera* createCamera( int x, int y, int w, int h, const std::string&amp; name=&quot;&quot;, bool windowDecoration=false )
+    {
+        osg::DisplaySettings* ds = osg::DisplaySettings::instance().get();
+        osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+        traits-&gt;windowName = name;
+        traits-&gt;windowDecoration = windowDecoration;
+        traits-&gt;x = x;
+        traits-&gt;y = y;
+        traits-&gt;width = w;
+        traits-&gt;height = h;
+        traits-&gt;doubleBuffer = true;
+        traits-&gt;alpha = ds-&gt;getMinimumNumAlphaBits();
+        traits-&gt;stencil = ds-&gt;getMinimumNumStencilBits();
+        traits-&gt;sampleBuffers = ds-&gt;getMultiSamples();
+        traits-&gt;samples = ds-&gt;getNumMultiSamples();
+
+        osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+        camera-&gt;setGraphicsContext( new osgQt::GraphicsWindowQt(traits.get()) );
+
+        camera-&gt;setClearColor( osg::Vec4(0.2, 0.2, 0.6, 1.0) );
+        camera-&gt;setViewport( new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height) );
+        camera-&gt;setProjectionMatrixAsPerspective(
+            30.0f, static_cast&lt;double&gt;(traits-&gt;width)/static_cast&lt;double&gt;(traits-&gt;height), 1.0f, 10000.0f );
+        camera-&gt;setClearMask( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+          // camera-&gt;setReferenceFrame( osg::Transform::ABSOLUTE_RF );
+          // camera-&gt;setRenderOrder( osg::Camera::PRE_RENDER );
+           osg::Camera::RenderTargetImplementation renderImplementation = osg::Camera::FRAME_BUFFER;
+
+    camera-&gt;setRenderTargetImplementation( renderImplementation );
+           camera-&gt;setViewport( 0, 0, 640, 480 );
+//           camera-&gt;addChild( scene );
+
+           // Set the printer
+
+
+        return camera.release();
+    }
+
+
+
+... 
+
+
+Thank you!
+
+Cheers,
+y
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic85d9.php?p=65135#65135">http://forum.openscenegraph.org/viewtopic.php?p=65135#65135</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: poster.png
+Type: image/png
+Size: 222635 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20150915/114e49a9/attachment-0002.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150915/114e49a9/attachment-0002.png</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001534.html">[osg-users] Normal bindind
+</A></li>
+	<LI>Next message: <A HREF="277766.html">[osg-users] HUD camera and post render camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277767">[ date ]</a>
+              <a href="thread.html#277767">[ thread ]</a>
+              <a href="subject.html#277767">[ subject ]</a>
+              <a href="author.html#277767">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

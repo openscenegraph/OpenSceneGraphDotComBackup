@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Read Image from RTT
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Read%20Image%20from%20RTT&In-Reply-To=%3CCAFN7Y%2BW4T1tFKyCekCF1Z%2BEKOZfOxqbjz%3DauRKWHSFW9aUm5oQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009185.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Read Image from RTT</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Read%20Image%20from%20RTT&In-Reply-To=%3CCAFN7Y%2BW4T1tFKyCekCF1Z%2BEKOZfOxqbjz%3DauRKWHSFW9aUm5oQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Read Image from RTT">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Sep 27 23:46:07 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009185.html">[osg-users] EXTERNAL: Re:  Read Image from RTT
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9187">[ date ]</a>
+              <a href="thread.html#9187">[ thread ]</a>
+              <a href="subject.html#9187">[ subject ]</a>
+              <a href="author.html#9187">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi R&#244;mulo,
+
+Without the the line numbers on the source we can't match up the stack
+trace crash point to lines of code.
+
+Robert.
+On Thu, 27 Sep 2018 at 20:45, R&#244;mulo Cerqueira
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">romulogcerqueira at gmail.com</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I have tried to read image from RTT (where the image is &quot;not attached&quot;, but available on buffer) using a osg::Camera::DrawCallback, the compilation is working, however the executable brings me a segmentation fault during image rendering. How can I solve this?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> WindowCaptureScreen::WindowCaptureScreen(osg::ref_ptr&lt;osg::GraphicsContext&gt; gfxc, osg::Texture2D* tex) {
+</I>&gt;<i>     _mutex = new OpenThreads::Mutex();
+</I>&gt;<i>     _condition = new OpenThreads::Condition();
+</I>&gt;<i>     _image = new osg::Image();
+</I>&gt;<i>
+</I>&gt;<i>     // checks the GraficContext from the camera viewer
+</I>&gt;<i>     if (gfxc-&gt;getTraits()) {
+</I>&gt;<i>         _tex = tex;
+</I>&gt;<i>         int width = gfxc-&gt;getTraits()-&gt;width;
+</I>&gt;<i>         int height = gfxc-&gt;getTraits()-&gt;height;
+</I>&gt;<i>         _image-&gt;allocateImage(width, height, 1, GL_RGBA, GL_FLOAT);
+</I>&gt;<i>     }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> WindowCaptureScreen::~WindowCaptureScreen() {
+</I>&gt;<i>     delete (_condition);
+</I>&gt;<i>     delete (_mutex);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::Image&gt; WindowCaptureScreen::captureImage() {
+</I>&gt;<i>     //wait to finish the capture image in call back
+</I>&gt;<i>     _condition-&gt;wait(_mutex);
+</I>&gt;<i>
+</I>&gt;<i>     return _image;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void WindowCaptureScreen::operator ()(osg::RenderInfo&amp; renderInfo) const {
+</I>&gt;<i>     osg::ref_ptr&lt;osg::GraphicsContext&gt; gfxc = renderInfo.getState()-&gt;getGraphicsContext();
+</I>&gt;<i>
+</I>&gt;<i>     if (gfxc-&gt;getTraits()) {
+</I>&gt;<i>         _mutex-&gt;lock();
+</I>&gt;<i>
+</I>&gt;<i>         // read the color buffer as 32-bit floating point
+</I>&gt;<i>         renderInfo.getState()-&gt;applyTextureAttribute(0, _tex);
+</I>&gt;<i>
+</I>&gt;<i>         // THE PROGRAM CRASHES HERE
+</I>&gt;<i>         _image-&gt;readImageFromCurrentTexture(renderInfo.getContextID(), true, GL_FLOAT);
+</I>&gt;<i>
+</I>&gt;<i>         // grants the access to image
+</I>&gt;<i>         _condition-&gt;signal();
+</I>&gt;<i>         _mutex-&gt;unlock();
+</I>&gt;<i>     }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Output from GDB:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> #0  0xffffffffffffff88 in ?? ()
+</I>&gt;<i> #1  0x00007fffef1ee39d in normal_depth_map::WindowCaptureScreen::operator() (this=0x7fffb53ee7a0, renderInfo=...)
+</I>&gt;<i>     at /home/romulo/dev/sonarsim/simulation/normal_depth_map/src/ImageViewerCaptureTool.cpp:158
+</I>&gt;<i> #2  0x00007fffebb43b10 in osgUtil::RenderStage::draw(osg::RenderInfo&amp;, osgUtil::RenderLeaf*&amp;) ()
+</I>&gt;<i>    from target:/usr/lib/x86_64-linux-gnu/libosgUtil.so.100
+</I>&gt;<i> #3  0x00007fffebb4bdb7 in osgUtil::SceneView::draw() () from target:/usr/lib/x86_64-linux-gnu/libosgUtil.so.100
+</I>&gt;<i> #4  0x00007fffec31c03f in osgViewer::Renderer::draw() () from target:/usr/lib/x86_64-linux-gnu/libosgViewer.so.100
+</I>&gt;<i> #5  0x00007fffef557d49 in osg::GraphicsContext::runOperations() ()
+</I>&gt;<i>    from target:/usr/lib/x86_64-linux-gnu/libosg.so.100
+</I>&gt;<i> #6  0x00007fffef5a7bbf in osg::OperationThread::run() () from target:/usr/lib/x86_64-linux-gnu/libosg.so.100
+</I>&gt;<i> #7  0x00007fffef5596f8 in osg::GraphicsThread::run() () from target:/usr/lib/x86_64-linux-gnu/libosg.so.100
+</I>&gt;<i> #8  0x00007fffecbd06c8 in OpenThreads::ThreadPrivateActions::StartThread(void*) ()
+</I>&gt;<i>    from target:/usr/lib/x86_64-linux-gnu/libOpenThreads.so.20
+</I>&gt;<i> #9  0x00007ffff60246ba in start_thread (arg=0x7fffa7efe700) at pthread_create.c:333
+</I>&gt;<i> #10 0x00007ffff130f41d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:109
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thanks in advance,
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> R&#244;mulo
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicd62c.php?p=74982#74982">http://forum.openscenegraph.org/viewtopic.php?p=74982#74982</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009185.html">[osg-users] EXTERNAL: Re:  Read Image from RTT
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9187">[ date ]</a>
+              <a href="thread.html#9187">[ thread ]</a>
+              <a href="subject.html#9187">[ subject ]</a>
+              <a href="author.html#9187">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

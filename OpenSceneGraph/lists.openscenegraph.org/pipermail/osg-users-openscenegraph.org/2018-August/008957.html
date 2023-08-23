@@ -1,0 +1,136 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Using Light without LightSource in OSG 3.4.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20Light%20without%20LightSource%20in%20OSG%203.4.0&In-Reply-To=%3CCAFN7Y%2BVZa_GDKxqAZohq_NY7%3Ddue4cgZcnSZfukGxJZaAN%3DUQw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008954.html">
+   <LINK REL="Next"  HREF="008964.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Using Light without LightSource in OSG 3.4.0</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20Light%20without%20LightSource%20in%20OSG%203.4.0&In-Reply-To=%3CCAFN7Y%2BVZa_GDKxqAZohq_NY7%3Ddue4cgZcnSZfukGxJZaAN%3DUQw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Using Light without LightSource in OSG 3.4.0">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Aug 22 02:52:20 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008954.html">[osg-users] Using Light without LightSource in OSG 3.4.0
+</A></li>
+        <LI>Next message (by thread): <A HREF="008964.html">[osg-users] Re-purposing the performance graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8957">[ date ]</a>
+              <a href="thread.html#8957">[ thread ]</a>
+              <a href="subject.html#8957">[ subject ]</a>
+              <a href="author.html#8957">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chenyanlin,
+
+OpenGL lights are a form of positional state, positional state uses
+the current modelview matrix to compute the values in eye space that
+are passed to the graphics card to do the maths required within the
+shaders.
+
+If you just place the Light into the scene graph as you'd do with non
+positional state then it's value will change as the eye point is
+moved.
+
+The LightSource node exists to fix a Light into a particular position
+in space - with a particular modelview matrix, which is how the OSG
+resolves the correct position of Light in the scene.
+
+Because positional state has to have a specific position in space to
+work correctly there are limits on how they are handled - you can't
+have different state in different subgraph, instead the OSG has apply
+the same Light at the same position for the whole rendering stage.
+This coupled with OpenGL's own limits on the number of glLights that
+can be active at once with the fixed function pipeline means that to
+have larger numbers of lights you need to start thinking about using
+shaders or using multiple stages of rendering, which each stage
+handling a different region of the scene with it's own sets of lights.
+
+Robert.
+On Wed, 22 Aug 2018 at 04:28, <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">chenyanlin at fulongtech.cn</A>
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">chenyanlin at fulongtech.cn</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I want to add light to my scene and I want the different light which have same Number can be used at the same time.Thus , I use light as a Attribute to set it to stateset. There is no problem when the model is not rotate.But when model is rotated, the light seemed rotated by the matrix.There is my source code:
+</I>&gt;<i>
+</I>&gt;<i> int main()
+</I>&gt;<i> {
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Light&gt; light = new osg::Light;
+</I>&gt;<i>     light-&gt;setLightNum(0);
+</I>&gt;<i>     light-&gt;setPosition(osg::Vec4(0, 0, 1, 0));
+</I>&gt;<i>     light-&gt;setAmbient(osg::Vec4(0,0, 0, 1));
+</I>&gt;<i>     light-&gt;setDiffuse(osg::Vec4(0, 1, 0, 1));
+</I>&gt;<i>     light-&gt;setSpecular(osg::Vec4(1, 0, 0, 1));
+</I>&gt;<i>     auto stateSet = root-&gt;getOrCreateStateSet();
+</I>&gt;<i>     stateSet-&gt;setAttributeAndModes(light);
+</I>&gt;<i>     osg::ref_ptr&lt;osg::TessellationHints&gt; hints = new osg::TessellationHints;
+</I>&gt;<i>     hints-&gt;setDetailRatio(0.1);
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Geode&gt; geode1 = new osg::Geode;
+</I>&gt;<i>     osg::ref_ptr&lt;osg::ShapeDrawable&gt; shape1 = new osg::ShapeDrawable(new     osg::Box(osg::Vec3(0, 0, 0), 10, 10,10), hints.get());
+</I>&gt;<i>     geode1-&gt;addDrawable(shape1);
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Geode&gt; geode2 = new osg::Geode;
+</I>&gt;<i>     osg::ref_ptr&lt;osg::ShapeDrawable&gt; shape2 = new osg::ShapeDrawable(new osg::Box(osg::Vec3(20, 20, 20), 10, 10, 10), hints.get());
+</I>&gt;<i>     geode2-&gt;addDrawable(shape2);
+</I>&gt;<i>     osg::ref_ptr&lt;osg::MatrixTransform&gt; mt = new osg::MatrixTransform;
+</I>&gt;<i>     osg::Matrix mat;
+</I>&gt;<i>     mat = mat.rotate(180, osg::Vec3(0, 1, 0));
+</I>&gt;<i>     mt-&gt;setMatrix(mat);
+</I>&gt;<i>     mt-&gt;addChild(geode2);
+</I>&gt;<i>     root-&gt;addChild(mt);
+</I>&gt;<i>     root-&gt;addChild(geode1);
+</I>&gt;<i>     osgViewer::
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008954.html">[osg-users] Using Light without LightSource in OSG 3.4.0
+</A></li>
+	<LI>Next message (by thread): <A HREF="008964.html">[osg-users] Re-purposing the performance graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8957">[ date ]</a>
+              <a href="thread.html#8957">[ thread ]</a>
+              <a href="subject.html#8957">[ subject ]</a>
+              <a href="author.html#8957">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

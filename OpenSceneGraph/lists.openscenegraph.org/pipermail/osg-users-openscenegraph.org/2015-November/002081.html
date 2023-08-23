@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Dynamic terrains, DatabasePager + PagedLODs
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dynamic%20terrains%2C%20DatabasePager%20%2B%20PagedLODs&In-Reply-To=%3CCAFN7Y%2BVcvpZ526Jsm36Lx5kfrZDxet%3DRHwKio4ky_80WYZU1Rg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278302.html">
+   <LINK REL="Next"  HREF="002083.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Dynamic terrains, DatabasePager + PagedLODs</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dynamic%20terrains%2C%20DatabasePager%20%2B%20PagedLODs&In-Reply-To=%3CCAFN7Y%2BVcvpZ526Jsm36Lx5kfrZDxet%3DRHwKio4ky_80WYZU1Rg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Dynamic terrains, DatabasePager + PagedLODs">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Nov 27 09:44:02 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278302.html">[osg-users] Dynamic terrains, DatabasePager + PagedLODs
+</A></li>
+        <LI>Next message: <A HREF="002083.html">[osg-users] Dynamic terrains, DatabasePager + PagedLODs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2081">[ date ]</a>
+              <a href="thread.html#2081">[ thread ]</a>
+              <a href="subject.html#2081">[ subject ]</a>
+              <a href="author.html#2081">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Daniel,
+
+The core OSG doesn't directly provide dynamic terrain modification, you can
+potentially co-opt some of the features to do it but my inclination would
+be to come up with a custom scheme for your specific needs.
+
+The approach I'd be inclined to take would be to use a displacement map
+approach where you share osg::geometry that represent fixed size tiles and
+have these dispaced to the final positions by have a vertex shader read a
+texture that represent the height field of the tile.  You can dynamic
+modify the texture and have this subloading on the fly with very low cost -
+you are only updating the height field, the rest of the geometry remains
+static.  This approach would allow you to render very large terrains, have
+dynamic modification and run them a solid 60Hz.
+
+The OSG-3.4 release includes an osgTerrain::DisplacementMappingTechnique
+that implements static geometry sharing and provision of the height field
+via textures, with shaders doing the displacement mapping and normal
+computation all for you.  Potentially you might be able to reuse this by
+modifying the osgTerrain::HeightFieldLayer at runtime,  There is a dirty()
+method on it by I don't recall if I've wired up the backend to update the
+textures, it was written for static meshes, but it might well do what you
+need already so certainly worth looking at.
+
+Robert.
+
+
+
+Robert.
+
+On 27 November 2015 at 14:29, Daniel Lazaroff &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">lazaroff_daniel at yahoo.ca</A>&gt;
+wrote:
+
+&gt;<i> Greetings,
+</I>&gt;<i>
+</I>&gt;<i> I am looking for suggestions from anyone that might have worked on dynamic
+</I>&gt;<i> terrains (with OSG).
+</I>&gt;<i>
+</I>&gt;<i> We currently are in need of having a very large renderable terrain that
+</I>&gt;<i> can be modified (locally,with respect to the viewpoint) in real time (for
+</I>&gt;<i> digging holes).
+</I>&gt;<i> I have started to look into using the osgDB::DatabasePager and the
+</I>&gt;<i> osg::PagedLODs. The initial results I have so far a quite interesting. I
+</I>&gt;<i> created a large triangle mesh (on a square surface) with multiple levels of
+</I>&gt;<i> details LOD of this mesh (OpenFlight format).
+</I>&gt;<i> I repeated this pattern across over the simulated large flat terrain and
+</I>&gt;<i> was able to appreciate the huge difference the multi-threading used from
+</I>&gt;<i> DatabasePager + PagedLOD (which I was able to generate with the
+</I>&gt;<i> osgpagedlod.cpp example) made compared to only using the main thread with
+</I>&gt;<i> LODs.
+</I>&gt;<i>
+</I>&gt;<i> I am now at the stage of experimenting on how to modify the vertex arrays
+</I>&gt;<i> (starting at the highest resolution level mesh) in the PLOD and being
+</I>&gt;<i> able to save these modifications back to disk when the PLOD has expired. I
+</I>&gt;<i> am not sure if the DatabasePager can handle this somehow ? (or is it
+</I>&gt;<i> completely impossible)
+</I>&gt;<i>
+</I>&gt;<i> Perhaps this has already been addressed in the forum. Thanks for any links
+</I>&gt;<i> or advice about this matter.
+</I>&gt;<i>
+</I>&gt;<i> Daniel
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic2749.php?p=65775#65775">http://forum.openscenegraph.org/viewtopic.php?p=65775#65775</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151127/57ea591c/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151127/57ea591c/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278302.html">[osg-users] Dynamic terrains, DatabasePager + PagedLODs
+</A></li>
+	<LI>Next message: <A HREF="002083.html">[osg-users] Dynamic terrains, DatabasePager + PagedLODs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2081">[ date ]</a>
+              <a href="thread.html#2081">[ thread ]</a>
+              <a href="subject.html#2081">[ subject ]</a>
+              <a href="author.html#2081">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

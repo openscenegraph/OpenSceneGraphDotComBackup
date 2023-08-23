@@ -1,0 +1,187 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [forum] Huge delays while mouse clicking with many	draggers in scene
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bforum%5D%20Huge%20delays%20while%20mouse%20clicking%20with%20many%0A%09draggers%20in%20scene&In-Reply-To=%3C1431340675.m2f.63699%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000326.html">
+   <LINK REL="Next"  HREF="276564.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [forum] Huge delays while mouse clicking with many	draggers in scene</H1>
+<!--htdig_noindex-->
+    <B>Jaap Glas</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bforum%5D%20Huge%20delays%20while%20mouse%20clicking%20with%20many%0A%09draggers%20in%20scene&In-Reply-To=%3C1431340675.m2f.63699%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [forum] Huge delays while mouse clicking with many	draggers in scene">jaap.glas at dgbes.com
+       </A><BR>
+    <I>Mon May 11 03:37:55 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000326.html">[osg-users] [forum] Huge delays while mouse clicking with many draggers in scene
+</A></li>
+        <LI>Next message: <A HREF="276564.html">[osg-users] Compiling osgVRPN
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#355">[ date ]</a>
+              <a href="thread.html#355">[ thread ]</a>
+              <a href="subject.html#355">[ subject ]</a>
+              <a href="author.html#355">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Dear all,
+
+I agree with Robert that the whole scene has to be tested to avoid
+picking obscured draggers. But this will not be a real computational
+burden if it would happen only once for every new event. As long
+as it is not redone for every dragger again.
+
+I am aware that the original dragger code was made by others.
+And our current workaround works fine for us. We do not need
+an immediate fix.
+
+The main reason to post it on the forum is to signal that the problem
+exists and to share our findings with others that may search for an
+explanation or a solution.
+
+
+Best regards,
+
+Jaap Glas
+
+-- dr Jaap C. Glas
+-- Software Engineer
+-- dGB Earth Sciences
+-- Phone: +31 53 4315155
+-- Email: 
+-- Internet: dgbes.com &amp; opendtect.org
+
+
+
+robertosfield wrote:
+&gt;<i> Hi Jaap,
+</I>&gt;<i> 
+</I>&gt;<i> The whole scene is tested so that obscured dragger don't get picked
+</I>&gt;<i> unintentionally.  Each dragger doing the same intersection traversal
+</I>&gt;<i> is inefficient though, athough as I'm not the original author of
+</I>&gt;<i> osgManipulator I'd had to do a code review to look at all the
+</I>&gt;<i> possibilities and consequences.  I'm current deep in another complex
+</I>&gt;<i> part of the OSG so don't have the spare brain capacity or time to do a
+</I>&gt;<i> review right away.
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Robert.
+</I>&gt;<i> 
+</I>&gt;<i> On 6 May 2015 at 17:49, Jaap Glas &lt;&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i> &gt; Dear all,
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; I am an employee of dGB Earth Sciences, and we use OpenSceneGraph for
+</I>&gt;<i> &gt; the 3D visualization of our open-source seismic interpretation package
+</I>&gt;<i> &gt; OpendTect.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Our scenes may sometimes contain hundreds to thousands of draggers, mostly
+</I>&gt;<i> &gt; Translate(1D/2D)Draggers. We found that mouse clicking in the scene becomes
+</I>&gt;<i> &gt; very slow in that case. It turns out that every OSG dragger tries to intersect
+</I>&gt;<i> &gt; the line from camera eye to mouse position with all objects in the scene in
+</I>&gt;<i> &gt; order to produce its private list of intersections:
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; [osgManipulator/Dragger.cpp:371]
+</I>&gt;<i> &gt; if ( view-&gt;computeIntersections(ea ,intersections,_intersectionMask) )
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; My question is whether this is really necessary? I don't see (yet) why
+</I>&gt;<i> &gt; this list cannot be calculated only once and shared by all OSG draggers.
+</I>&gt;<i> &gt; Or alternatively, only calculated for draggers that are located under the
+</I>&gt;<i> &gt; mouse pointer.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Our current workaround consists of derived dragger classes that overload
+</I>&gt;<i> &gt; the Dragger::traverse(.) function to test this latter alternative in advance,
+</I>&gt;<i> &gt; passing the current node path as an extra parameter:
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; if ( !view-&gt;computeIntersections(*ea,nv.getNodePath(),intersections,
+</I>&gt;<i> &gt; _intersectionMask) ) continue;
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; This reduces the computational order of mouse clicking from quadratic to
+</I>&gt;<i> &gt; linear with the number of draggers in the scene. And mouse clicking in the
+</I>&gt;<i> &gt; scene can be done again without huge delay.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; However, the question is whether such a shortcut would apply in the general
+</I>&gt;<i> &gt; case. Why is the osgManipulator::Dragger class doing this the way it does?
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Best regards,
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Jaap Glas
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; -- dr Jaap C. Glas
+</I>&gt;<i> &gt; -- Software Engineer
+</I>&gt;<i> &gt; -- dGB Earth Sciences
+</I>&gt;<i> &gt; -- Phone: +31 53 435155
+</I>&gt;<i> &gt; -- Email:
+</I>&gt;<i> &gt; -- Internet: dgbes.com &amp; opendtect.org
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; ------------------
+</I>&gt;<i> &gt; Read this topic online here:
+</I>&gt;<i> &gt; <A HREF="../../../../forum.openscenegraph.org/viewtopic2746.php?p=63651#63651">http://forum.openscenegraph.org/viewtopic.php?p=63651#63651</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> 
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I>&gt;<i>  ------------------
+</I>&gt;<i> Post generated by Mail2Forum
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicf73c.php?p=63699#63699">http://forum.openscenegraph.org/viewtopic.php?p=63699#63699</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000326.html">[osg-users] [forum] Huge delays while mouse clicking with many draggers in scene
+</A></li>
+	<LI>Next message: <A HREF="276564.html">[osg-users] Compiling osgVRPN
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#355">[ date ]</a>
+              <a href="thread.html#355">[ thread ]</a>
+              <a href="subject.html#355">[ subject ]</a>
+              <a href="author.html#355">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

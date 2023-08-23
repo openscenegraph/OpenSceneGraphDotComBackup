@@ -1,0 +1,225 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG and NVX_gpu_memory_info
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20and%20NVX_gpu_memory_info&In-Reply-To=%3C560C8159.5080909%40entropicsoftware.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001643.html">
+   <LINK REL="Next"  HREF="001653.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG and NVX_gpu_memory_info</H1>
+<!--htdig_noindex-->
+    <B>Garth D</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20and%20NVX_gpu_memory_info&In-Reply-To=%3C560C8159.5080909%40entropicsoftware.com%3E"
+       TITLE="[osg-users] OSG and NVX_gpu_memory_info">garthy_gso at entropicsoftware.com
+       </A><BR>
+    <I>Wed Sep 30 17:42:01 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001643.html">[osg-users] OSG and NVX_gpu_memory_info
+</A></li>
+        <LI>Next message: <A HREF="001653.html">[osg-users] OSG and NVX_gpu_memory_info
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1652">[ date ]</a>
+              <a href="thread.html#1652">[ thread ]</a>
+              <a href="subject.html#1652">[ subject ]</a>
+              <a href="author.html#1652">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+Hi Robert,
+
+On 30/09/15 19:50, Robert Osfield wrote:&gt; If you want to check 
+periodically then just use a Camera::DrawCallback
+ &gt; attached to the main camera attached to the GraphicsContext/Window of
+ &gt; interest.  This will be called every frame, but within this callback you
+ &gt; could have your own check to see if the GL calls are required for that
+ &gt; frame.
+
+I've put together a test application that tries out a bunch of simple 
+configurations based on the exact setup you describe. The calls worked 
+correctly and consistently with either an Operation (or 
+GraphicsOperation) attached with setRealizeOperation(), or a 
+Camera::DrawCallback attached with setInitialDrawCallback(), or both.
+
+If I had to guess, I am doing something in my project at some point 
+after the setRealizeOperation operation is called that causes it to fail 
+by the time it gets around to the first call to the callback set by 
+setInitialDrawCallback() in the Camera.
+
+Many thanks for pointing me in the right direction. Both techniques you 
+mention work perfectly in the simple test application. The actual issue 
+must be something I am doing differently between the minimal example and 
+the full project. I'll have to experiment with the two to figure out 
+what the difference is.
+
+Cheers,
+Garth
+
+ &gt; On 30 September 2015 at 10:56, Garth D &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">garthy_gso at entropicsoftware.com</A>&gt;
+&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi Robert,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks for having a look at things and for the suggestion.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 30/09/15 17:35, Robert Osfield wrote:&gt; HI Garth,
+</I>&gt;&gt;&gt;<i> I'd use a RealizerOperation.  Have a look at the osgvolume example to an
+</I>&gt;&gt;&gt;<i> example of using a RealizerOperation to get information from the graphics
+</I>&gt;&gt;&gt;<i> context.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I was unfortunately unable to solve the problem. Here is what I tried:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I checked the osgvolume.cpp source for 3.2.1 and 3.4.0, but did not find a
+</I>&gt;&gt;<i> RealizerOperation in either.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I did notice that osgvolume does also use viewer.setRealizeOperation() for
+</I>&gt;&gt;<i> TestSupportOperation, defined earlier. Is this what you are referring to?
+</I>&gt;&gt;<i> Assuming yes: This is the way I was able to successfully query the
+</I>&gt;&gt;<i> information once only at the start of the program. Unfortunately I need to
+</I>&gt;&gt;<i> query the information periodically, ie. over the course of the program,
+</I>&gt;&gt;<i> rather than just at initialisation. Unless I am mistaken, the target of
+</I>&gt;&gt;<i> setRealizeOperation is only called the one time, on viewer realization. Is
+</I>&gt;&gt;<i> this right? If so: Is there a corresponding call that I can use to attach
+</I>&gt;&gt;<i> an osg::Operation or similar to in order to make the required calls
+</I>&gt;&gt;<i> periodically? If not: Is there a way to indicate that the operation should
+</I>&gt;&gt;<i> be repeatedly called?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Or is there another part of osgvolume.cpp that I should be looking at? The
+</I>&gt;&gt;<i> only glGet* call in the file is in TestSupportOperation, which is set using
+</I>&gt;&gt;<i> setRealizeOperation(), so I think I am looking in the right place?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'll continue to experiment. Thanks again for the suggestion. Is there
+</I>&gt;&gt;<i> anything else I should try?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Cheers,
+</I>&gt;&gt;<i> Garth
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Robert.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> On 30 September 2015 at 03:49, Garth D &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">garthy_gso at entropicsoftware.com</A>&gt;
+</I>&gt;&gt;&gt;<i> wrote:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Hi all,
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> I was wondering if anyone has been successful in using the
+</I>&gt;&gt;&gt;&gt;<i> NVX_gpu_memory_info extension with OpenSceneGraph, and the best place to
+</I>&gt;&gt;&gt;&gt;<i> call glGetIntegerv to get the associated values.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Details on the extension here:
+</I>&gt;&gt;&gt;&gt;<i> <A HREF="https://www.opengl.org/registry/specs/NVX/gpu_memory_info.txt">https://www.opengl.org/registry/specs/NVX/gpu_memory_info.txt</A>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> I'm using Linux, OSG 3.2.1, and a card that supports the
+</I>&gt;&gt;&gt;&gt;<i> NVX_gpu_memory_info extension.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> I have tried querying the current and total memory using
+</I>&gt;&gt;&gt;&gt;<i> GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX and
+</I>&gt;&gt;&gt;&gt;<i> GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, and in each case but one,
+</I>&gt;&gt;<i> the
+</I>&gt;&gt;&gt;&gt;<i> values reported back are zero.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> The only success I have had thus far has been querying the values via an
+</I>&gt;&gt;&gt;&gt;<i> osg::Operation set with ViewerBase::setRealizeOperation() on my viewer
+</I>&gt;&gt;&gt;&gt;<i> (osg::Viewer). The values returned appear to be correct. This allows me
+</I>&gt;&gt;<i> to
+</I>&gt;&gt;&gt;&gt;<i> get the correct values *once* at the start of the program.
+</I>&gt;&gt;<i> Unfortunately I
+</I>&gt;&gt;&gt;&gt;<i> need to query them periodically, and I have been unable to do this.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> So far, I have tried hooking the calls into:
+</I>&gt;&gt;&gt;&gt;<i> - An osg::Camera::DrawHandler, set via
+</I>&gt;&gt;&gt;&gt;<i> osg::Camera::setInitialDrawCallback().
+</I>&gt;&gt;&gt;&gt;<i> - An osg::Node::NodeHandler, hooked into the root node via
+</I>&gt;&gt;&gt;&gt;<i> osg::Node::setUpdateCallback.
+</I>&gt;&gt;&gt;&gt;<i> - An osg::Drawable::DrawCallback, hooked into a dummy chain off the root
+</I>&gt;&gt;&gt;&gt;<i> of: osg::Node -&gt; osg::Geode -&gt; osg::Geometry (osg::Drawable), via
+</I>&gt;&gt;&gt;&gt;<i> osg::Drawable::setDrawCallback.
+</I>&gt;&gt;&gt;&gt;<i> - An osg::Drawable::CullCallback , hooked into a dummy chain off the
+</I>&gt;&gt;<i> root
+</I>&gt;&gt;&gt;&gt;<i> of: osg::Node -&gt; osg::Geode -&gt; osg::Geometry (osg::Drawable), via
+</I>&gt;&gt;&gt;&gt;<i> osg::Drawable::setCullCallback.
+</I>&gt;&gt;&gt;&gt;<i> - An osg::Camera::DrawHandler, set via
+</I>&gt;&gt;&gt;&gt;<i> osg::Camera::setFinalDrawCallback(). Only partly-tested due to a
+</I>&gt;&gt;&gt;&gt;<i> race-condition that occurs in my code, but appears to fail.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> I have experimented with osg::GraphicsContext::makeCurrent() with each.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Can anyone suggest a better place to hook these calls into? Or
+</I>&gt;&gt;&gt;&gt;<i> alternatively confirm that they have the extension working with one of
+</I>&gt;&gt;<i> the
+</I>&gt;&gt;&gt;&gt;<i> above, so I can change or experiment with my existing setup to try to
+</I>&gt;&gt;<i> make
+</I>&gt;&gt;&gt;&gt;<i> it work?
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Cheers,
+</I>&gt;&gt;&gt;&gt;<i> Garth
+</I>&gt;&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001643.html">[osg-users] OSG and NVX_gpu_memory_info
+</A></li>
+	<LI>Next message: <A HREF="001653.html">[osg-users] OSG and NVX_gpu_memory_info
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1652">[ date ]</a>
+              <a href="thread.html#1652">[ thread ]</a>
+              <a href="subject.html#1652">[ subject ]</a>
+              <a href="author.html#1652">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BosgPlugins%5D%20Multiple%20video%20textures%20using%20ffmpeg%0A%20plugin&In-Reply-To=%3C34dae6bb-31d4-ad5e-4356-f15900536619%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006984.html">
+   <LINK REL="Next"  HREF="007003.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BosgPlugins%5D%20Multiple%20video%20textures%20using%20ffmpeg%0A%20plugin&In-Reply-To=%3C34dae6bb-31d4-ad5e-4356-f15900536619%40gmx.de%3E"
+       TITLE="[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Fri Oct  6 06:15:23 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="006984.html">[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+</A></li>
+        <LI>Next message (by thread): <A HREF="007003.html">[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6980">[ date ]</a>
+              <a href="thread.html#6980">[ thread ]</a>
+              <a href="subject.html#6980">[ subject ]</a>
+              <a href="author.html#6980">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Guys,
+
+Maybe this [1] might help to increase performance.
+I'm not sure which ffmpeg is supported now, but maybe that's a good 
+argument to upgrade.
+
+Cheers
+Sebastian
+
+[1] <A HREF="https://developer.nvidia.com/ffmpeg">https://developer.nvidia.com/ffmpeg</A>
+
+&gt;<i> Hi Michael,
+</I>&gt;<i> we use a modified version of the ffmpeg plugin with changes in
+</I>&gt;<i> OpenSceneGraph\src\osgPlugins\ffmpeg\FFmpegDecoderVideo.cpp
+</I>&gt;<i> to move the threads to different processors. (full modified file 
+</I>&gt;<i> attached) It's a crude bit of code,
+</I>&gt;<i> but it allows us to decode and show 2&#160;&#160;1920x1080 movies at 30 fps.
+</I>&gt;<i> I've pulled out just the code for cpu affinity, this should work with 
+</I>&gt;<i> osg 3.4.2 as well as git master.
+</I>&gt;<i> Regards, Laurens.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> + #define RESERVERD_CORES 2
+</I>&gt;<i> + static int next_cpu = RESERVERD_CORES;
+</I>&gt;<i> 
+</I>&gt;<i> void FFmpegDecoderVideo::decodeLoop()
+</I>&gt;<i> {
+</I>&gt;<i>  &#160; &#160; FFmpegPacket packet;
+</I>&gt;<i>  &#160; &#160; double pts;
+</I>&gt;<i> +&#160; &#160; &#160;{
+</I>&gt;<i> +&#160; &#160; &#160; &#160; &#160;int num_cpus = OpenThreads::GetNumberOfProcessors();
+</I>&gt;<i> +&#160; &#160; &#160; &#160; &#160;if (num_cpus &gt; RESERVERD_CORES + 1) {
+</I>&gt;<i> +&#160; &#160; &#160; &#160; &#160; &#160; &#160;int cpu = next_cpu;
+</I>&gt;<i> +&#160; &#160; &#160; &#160; &#160; &#160; &#160;++next_cpu;
+</I>&gt;<i> +&#160; &#160; &#160; &#160; &#160; &#160; &#160;if (next_cpu &gt;= num_cpus) next_cpu -= num_cpus - 
+</I>&gt;<i> RESERVERD_CORES;
+</I>&gt;<i> +&#160; &#160; &#160; &#160; &#160; &#160; &#160;if (cpu &gt;= num_cpus) cpu -= num_cpus - RESERVERD_CORES;
+</I>&gt;<i> +&#160; &#160; &#160; &#160; &#160; &#160; &#160;OpenThreads::SetProcessorAffinityOfCurrentThread(cpu);
+</I>&gt;<i> +&#160; &#160; &#160; &#160; &#160; &#160; &#160;OSG_WARN &lt;&lt; &quot;FFmpegDecoderVideo::run : 
+</I>&gt;<i> OpenThreads::SetProcessorAffinityOfCurrentThread&quot; &lt;&lt; cpu &lt;&lt; std::endl;
+</I>&gt;<i> +&#160; &#160; &#160; &#160; &#160;}
+</I>&gt;<i> +&#160; &#160; &#160;}
+</I>&gt;<i> 
+</I>&gt;<i> On Thu, Oct 5, 2017 at 4:54 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A> 
+</I>&gt;<i> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i>     Hi Michael,
+</I>&gt;<i> 
+</I>&gt;<i>     On 5 October 2017 at 15:41, Michael Maurus &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">michael.maurus at web.de</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">michael.maurus at web.de</A>&gt;&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i>         This was actually a nice hint.
+</I>&gt;<i>         Only one of my CPUs was working at full capacity.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i>     I haven't looked at the code recently so I'm a bit cold on the
+</I>&gt;<i>     ffmpeg implementation side.&#160; I don't recall any external way to
+</I>&gt;<i>     control the threads that the ffmpeg creates.
+</I>&gt;<i> 
+</I>&gt;<i>      From what it sounds like is the threads that the ffmpeg plugin is
+</I>&gt;<i>     creating is inheriting the affinity of the thread that created
+</I>&gt;<i>     them.&#160; In OSG master there is finer grained control over the
+</I>&gt;<i>     affinity setting behaviour, in your case it might be appropriate to
+</I>&gt;<i>     disable the default setting of affinity.
+</I>&gt;<i> 
+</I>&gt;<i>     In an ideal world you want to decided which threads you want to run
+</I>&gt;<i>     on what threads, but this reques knowledge of all the threads, their
+</I>&gt;<i>     needs, and the hardware you are working on.
+</I>&gt;<i> 
+</I>&gt;<i>     FYI, the OSG by default tries to make a best guess based on your the
+</I>&gt;<i>     number of CPU cores the OS says the machine has and the
+</I>&gt;<i>     configuration of your viewer, this scheme doesn't know about any
+</I>&gt;<i>     extra threads that plugins might create though.&#160; This scheme is more
+</I>&gt;<i>     hardwired in OSG-3.4 and prior releases, so master might be the
+</I>&gt;<i>     thing to use if you do end up needing more control.
+</I>&gt;<i> 
+</I>&gt;<i>     Robert.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i>     _______________________________________________
+</I>&gt;<i>     osg-users mailing list
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>&gt;
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I></PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="006984.html">[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+</A></li>
+	<LI>Next message (by thread): <A HREF="007003.html">[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6980">[ date ]</a>
+              <a href="thread.html#6980">[ thread ]</a>
+              <a href="subject.html#6980">[ subject ]</a>
+              <a href="author.html#6980">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,853 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Synchronizing with textures uploads.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Synchronizing%20with%20textures%20uploads.&In-Reply-To=%3C1520522354.m2f.73049%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007797.html">
+   <LINK REL="Next"  HREF="007799.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Synchronizing with textures uploads.</H1>
+<!--htdig_noindex-->
+    <B>Altin Gjata</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Synchronizing%20with%20textures%20uploads.&In-Reply-To=%3C1520522354.m2f.73049%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Synchronizing with textures uploads.">altingjataj at gmail.com
+       </A><BR>
+    <I>Thu Mar  8 07:19:14 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007797.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+        <LI>Next message (by thread): <A HREF="007799.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7798">[ date ]</a>
+              <a href="thread.html#7798">[ thread ]</a>
+              <a href="subject.html#7798">[ subject ]</a>
+              <a href="author.html#7798">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Just an update. Calling setDataVariance(osg::Object::DYNAMIC), either (or both) in quad's StateSet or in the texture itself doesn't seem to have any affect.
+
+In SingleThreaded mode it works OK. 
+
+If the driver uses triple buffering, can I do anything to disable it?
+
+I'm using OSG 3.5.6. I understand that it's neither the stable release nor the most updated development release, but it's the version that vcpkg installs.
+Maybe this is all irrelevant.
+
+The content of the entire source file is below, including the commented out hacks.
+
+Code:
+
+#include &quot;StdAfx.h&quot;
+#include &lt;osgViewer/Renderer&gt;
+#include &quot;Viewer.h&quot;
+#include &quot;../sciter/Window.h&quot;
+#include &quot;../opencv/feature_detector.h&quot;
+
+
+osg::Matrix to_osg_Matrix(cv::Matx44d const&amp; rhs) {
+	osg::Matrix		lhs{}; // identity
+	for (int row = 0; 4 &gt; row; ++row)
+		for (int col = 0; 4 &gt; col; ++ col)
+			lhs(row, col) = rhs(row, col);
+	return lhs;
+}
+
+
+
+Viewer::Viewer(osg::ArgumentParser&amp; arguments)
+	:	BaseClass(arguments)
+	,	circularFrameBuffer_(2) // 2 element capacity
+{
+	logging::fmt_print(&quot;{} &gt;&gt; Viewer\n&quot;, cclock::now());
+	configure();
+}
+
+Viewer::Viewer(int argc, char* argv[])
+	:	Viewer(osg::ArgumentParser(&amp;argc, argv))
+{
+}
+
+Viewer::~Viewer() {
+	release_pending_frames();
+	logging::fmt_print(&quot;{} &lt;&lt; Viewer\n&quot;, cclock::now());
+}
+
+
+
+void Viewer::on_frame(frame_stream_t frame_stream) {
+	concurrentFrameQueue_.push(frame_stream);
+}
+
+
+
+int Viewer::run () {
+    setReleaseContextAtEndOfFrameHint(false); // copied from osgViewer::Viewer
+
+	// copied from ViewerBase
+    if (!isRealized())
+    {
+        realize();
+    }
+
+    const char* run_frame_count_str = getenv(&quot;OSG_RUN_FRAME_COUNT&quot;);
+    unsigned int runTillFrameNumber = run_frame_count_str==0 ? osg::UNINITIALIZED_FRAME_NUMBER : atoi(run_frame_count_str);
+
+    while(!done() &amp;&amp; (run_frame_count_str==0 || getViewerFrameStamp()-&gt;getFrameNumber()&lt;runTillFrameNumber))
+    {
+		//SDL_Delay(100);
+		upload_video_frame();
+		//SDL_Delay(1000);
+		use_and_release_video_frame();
+		//SDL_Delay(1000);
+        double minFrameTime = _runMaxFrameRate&gt;0.0 ? 1.0/_runMaxFrameRate : 0.0;
+        osg::Timer_t startFrameTick = osg::Timer::instance()-&gt;tick();
+        if (_runFrameScheme==ON_DEMAND)
+        {
+            if (checkNeedToDoFrame())
+            {
+                frame();
+            }
+            else
+            {
+                // we don't need to render a frame but we don't want to spin the run loop so make sure the minimum
+                // loop time is 1/100th of second, if not otherwise set, so enabling the frame microSleep below to
+                // avoid consume excessive CPU resources.
+                if (minFrameTime==0.0) minFrameTime=0.01;
+            }
+        }
+        else
+        {
+            frame();
+        }
+
+        // work out if we need to force a sleep to hold back the frame rate
+        osg::Timer_t endFrameTick = osg::Timer::instance()-&gt;tick();
+        double frameTime = osg::Timer::instance()-&gt;delta_s(startFrameTick, endFrameTick);
+        if (frameTime &lt; minFrameTime) OpenThreads::Thread::microSleep(static_cast&lt;unsigned int&gt;(1000000.0*(minFrameTime-frameTime)));
+    }
+
+
+	release_pending_frames();
+    return 0;
+}
+
+
+/* Copied from ViewerBase */
+void Viewer::frame(double simulationTime) {
+    if (_done) return;
+
+    // OSG_NOTICE&lt;&lt;std::endl&lt;&lt;&quot;CompositeViewer::frame()&quot;&lt;&lt;std::endl&lt;&lt;std::endl;
+
+    if (_firstFrame)
+    {
+        viewerInit();
+
+        if (!isRealized())
+        {
+            realize();
+        }
+
+        _firstFrame = false;
+    }
+    advance(simulationTime);
+
+    eventTraversal();
+    updateTraversal();
+	//circular_swap_frames_.push_back(true);
+	renderingTraversals();
+}
+
+
+//void Viewer::prerender_uploaded_frame() {
+//    Contexts contexts;
+//    getContexts(contexts);
+//
+//    // check to see if windows are still valid
+//    checkWindowStatus(contexts);
+//    if (_done) return;
+//
+//    double beginRenderingTraversals = elapsedTime();
+//
+//    osg::FrameStamp* frameStamp = getViewerFrameStamp();
+//    unsigned int frameNumber = frameStamp ? frameStamp-&gt;getFrameNumber() : 0;
+//
+//
+//    Scenes scenes;
+//    getScenes(scenes);
+//
+//    for(Scenes::iterator sitr = scenes.begin();
+//        sitr != scenes.end();
+//        ++sitr)
+//    {
+//        osgViewer::Scene* scene = *sitr;
+//        if (!scene) continue;
+//
+//        osgDB::DatabasePager* dp = scene-&gt;getDatabasePager();
+//        if (dp) dp-&gt;signalBeginFrame(frameStamp);
+//
+//        osgDB::ImagePager* ip = scene-&gt;getImagePager();
+//        if (ip) ip-&gt;signalBeginFrame(frameStamp);
+//
+//        if (scene-&gt;getSceneData())
+//        {
+//            // fire off a build of the bounding volumes while we
+//            // are still running single threaded.
+//            scene-&gt;getSceneData()-&gt;getBound();
+//        }
+//    }
+//
+//    // OSG_NOTICE&lt;&lt;std::endl&lt;&lt;&quot;Start frame&quot;&lt;&lt;std::endl;
+//
+//
+//    Cameras cameras;
+//    getCameras(cameras);
+//
+//    Contexts::iterator itr;
+//
+//    bool doneMakeCurrentInThisThread = false;
+//
+//    if (_endDynamicDrawBlock.valid())
+//    {
+//        _endDynamicDrawBlock-&gt;reset();
+//    }
+//
+//    // dispatch the rendering threads
+//    if (_startRenderingBarrier.valid()) _startRenderingBarrier-&gt;block();
+//
+//    // reset any double buffer graphics objects
+//    for(Cameras::iterator camItr = cameras.begin();
+//        camItr != cameras.end();
+//        ++camItr)
+//    {
+//        osg::Camera* camera = *camItr;
+//        osgViewer::Renderer* renderer = dynamic_cast&lt;osgViewer::Renderer*&gt;(camera-&gt;getRenderer());
+//        if (renderer)
+//        {
+//            if (!renderer-&gt;getGraphicsThreadDoesCull() &amp;&amp; !(camera-&gt;getCameraThread()))
+//            {
+//                renderer-&gt;cull();
+//            }
+//        }
+//    }
+//
+//    for(itr = contexts.begin();
+//        itr != contexts.end() &amp;&amp; !_done;
+//        ++itr)
+//    {
+//        if (!((*itr)-&gt;getGraphicsThread()) &amp;&amp; (*itr)-&gt;valid())
+//        {
+//            doneMakeCurrentInThisThread = true;
+//            makeCurrent(*itr);
+//            (*itr)-&gt;runOperations();
+//        }
+//    }
+//
+//    // OSG_NOTICE&lt;&lt;&quot;Joing _endRenderingDispatchBarrier block &quot;&lt;&lt;_endRenderingDispatchBarrier.get()&lt;&lt;std::endl;
+//
+//    // wait till the rendering dispatch is done.
+//    if (_endRenderingDispatchBarrier.valid()) _endRenderingDispatchBarrier-&gt;block();
+//
+//    for(itr = contexts.begin();
+//        itr != contexts.end() &amp;&amp; !_done;
+//        ++itr)
+//    {
+//        if (!((*itr)-&gt;getGraphicsThread()) &amp;&amp; (*itr)-&gt;valid())
+//        {
+//            doneMakeCurrentInThisThread = true;
+//            makeCurrent(*itr);
+//            //(*itr)-&gt;swapBuffers();
+//			//glFlush();
+//        }
+//    }
+//
+//    for(Scenes::iterator sitr = scenes.begin();
+//        sitr != scenes.end();
+//        ++sitr)
+//    {
+//        osgViewer::Scene* scene = *sitr;
+//        if (!scene) continue;
+//
+//        osgDB::DatabasePager* dp = scene-&gt;getDatabasePager();
+//        if (dp) dp-&gt;signalEndFrame();
+//
+//        osgDB::ImagePager* ip = scene-&gt;getImagePager();
+//        if (ip) ip-&gt;signalEndFrame();
+//    }
+//
+//    // wait till the dynamic draw is complete.
+//    if (_endDynamicDrawBlock.valid())
+//    {
+//        // osg::Timer_t startTick = osg::Timer::instance()-&gt;tick();
+//        _endDynamicDrawBlock-&gt;block();
+//        // OSG_NOTICE&lt;&lt;&quot;Time waiting &quot;&lt;&lt;osg::Timer::instance()-&gt;delta_m(startTick, osg::Timer::instance()-&gt;tick())&lt;&lt;std::endl;;
+//    }
+//
+//    if (_releaseContextAtEndOfFrameHint &amp;&amp; doneMakeCurrentInThisThread)
+//    {
+//        //OSG_NOTICE&lt;&lt;&quot;Doing release context&quot;&lt;&lt;std::endl;
+//        releaseContext();
+//    }
+//
+//    _requestRedraw = false;
+//}
+
+
+void Viewer::upload_video_frame() {
+	frame_stream_t frameStream;
+	if (concurrentFrameQueue_.try_pop(frameStream)) {
+		auto frame = std::get&lt;0&gt;(frameStream);
+		auto imageStream = std::get&lt;1&gt;(frameStream);
+		// set image buffer and dirty flag
+		imageStream-&gt;setImage(frame);
+		//if (auto gc = bg_image_camera_-&gt;getGraphicsContext()) {
+		//	if (auto go = bg_image_camera_-&gt;getRenderer()) {
+		//		(*go)(gc);
+		//	}
+		//}
+		// signal to draw the 3D scene
+		//osg::ref_ptr&lt;osg::Node&gt; sd = getSceneData();
+		//auto mm = sd-&gt;getNodeMask();
+		//sd-&gt;setNodeMask(0);
+		//circular_swap_frames_.push_back(false);
+		////renderingTraversals();
+		//prerender_uploaded_frame();
+		//sd-&gt;setNodeMask(mm);
+		//logging::fmt_print(&quot;frame:{:n}\n&quot;, frame-&gt;ccc);
+		circularFrameBuffer_.push_back(frameStream);
+	}
+}
+void Viewer::use_and_release_video_frame() {
+	if (!circularFrameBuffer_.empty()) {
+		frame_stream_t	frameStream = circularFrameBuffer_.front();
+		circularFrameBuffer_.pop_front();
+		auto frame = std::get&lt;0&gt;(frameStream);
+		update_tracked_objects(frame);
+		//dbg_show_colored_plane(frame-&gt;dbg_color_);
+		async_finished(frame);
+		requestRedraw();
+	}
+}
+
+
+
+void Viewer::update_tracked_objects(frame_t frame) {
+	if (auto frameData = dynamic_cast&lt;FeatureDetector::FrameData*&gt;(frame-&gt;data.get())) {
+		for (auto&amp; matched_pattern: frameData-&gt;matched_patterns) {
+			if (tracked_) {
+				tracked_-&gt;setMatrix(to_osg_Matrix(matched_pattern-&gt;transform()));
+			}
+			break;
+		}
+	}
+}
+
+
+void Viewer::release_pending_frames() {
+	frame_stream_t frame_stream;
+	while (!circularFrameBuffer_.empty()) {
+		frame_stream = circularFrameBuffer_.front();
+		circularFrameBuffer_.pop_front();
+		async_finished(std::get&lt;0&gt;(frame_stream));
+	}
+	while (concurrentFrameQueue_.try_pop(frame_stream)) {
+		async_finished(std::get&lt;0&gt;(frame_stream));
+	}
+}
+
+
+void Viewer::dbg_show_colored_plane(int val) {
+	if (0 &lt;= val) {
+		float red = (float)val / 255.0;
+		if (!dbgPlane) {
+			if (auto root = dynamic_cast&lt;osg::Group*&gt;(getSceneData())) {
+				const float width = 5, height = 5, distance = -20;
+				dbgPlane = osg::createTexturedQuadGeometry(
+					osg::Vec3(-width / 2 - 4, height / 2 + 4, distance), osg::Vec3(width, 0, 0), osg::Vec3(0, -height, 0), 0, 0, 1, 1);
+				dbgPlane-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED);
+			root-&gt;addChild(dbgPlane);
+			}
+		}
+		if (dbgPlane) {
+			osg::Vec4Array* colours = new osg::Vec4Array(1);
+			(*colours)[0].set(red,0.0f,0.0, 1);
+			dbgPlane-&gt;setColorArray(colours, osg::Array::BIND_OVERALL);
+		}
+	} else if (dbgPlane) {
+		if (auto root = dynamic_cast&lt;osg::Group*&gt;(getSceneData())) {
+			root-&gt;removeChild(dbgPlane);
+			dbgPlane = nullptr;
+		}
+	}
+}
+
+
+
+/*
+**-----------------------------------------------------------------------------
+**
+**-----------------------------------------------------------------------------
+*/
+
+class RenderGUIEventHandler : public osgGA::GUIEventHandler
+{
+public:
+	RenderGUIEventHandler(Viewer *viewer)
+		:	viewer_(viewer)
+	{}
+	~RenderGUIEventHandler() {
+	}
+	// osgGA::GUIEventHandler:
+	bool handle(const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; aa) override {
+		switch (ea.getEventType()) {
+		case	osgGA::GUIEventAdapter::KEYDOWN:
+			switch (ea.getKey()) {
+			case	osgGA::GUIEventAdapter::KEY_F8:
+				++viewer_-&gt;resizing_mode_;
+				viewer_-&gt;resizeViewports();
+				return true;
+			}
+			break;
+		}
+		return	false;
+	}
+
+private:
+	Viewer	*viewer_;
+};
+
+
+
+
+void Viewer::configure() {
+	// <A HREF="https://groups.google.com/forum/#!topic/osg-users/s8ESNvqtfag">https://groups.google.com/forum/#!topic/osg-users/s8ESNvqtfag</A>
+	osgDB::setLibraryFilePathList(&quot;.;D:/programing/vcpkg/installed/x86-windows/tools/osg/osgPlugins-3.5.6&quot;);
+	osgDB::setDataFilePathList(&quot;.;D:/programing/sdk/OSG/OpenSceneGraph-Data;D:/programing/sdk/OSG/data&quot;);
+
+	//osg::DisplaySettings::instance()-&gt;setNumMultiSamples(4);
+
+	auto main_camera = getCamera();
+	main_camera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+
+	// 'F7' - cycle between stats
+	osg::ref_ptr&lt;osgViewer::StatsHandler&gt;	statsHandler = new osgViewer::StatsHandler();
+	statsHandler-&gt;setKeyEventTogglesOnScreenStats(osgGA::GUIEventAdapter::KEY_F7);
+	addEventHandler(statsHandler);
+	// 'F11' - fullscreen / windowed
+	osg::ref_ptr&lt;osgViewer::WindowSizeHandler&gt;	sizeHandler = new osgViewer::WindowSizeHandler();
+	sizeHandler-&gt;setKeyEventToggleFullscreen(osgGA::GUIEventAdapter::KEY_F11);
+	addEventHandler(sizeHandler);
+
+	addEventHandler(new RenderGUIEventHandler{this});
+
+	// disable closing window with Esc
+	setKeyEventSetsDone(0);
+
+
+	setRunFrameScheme(osgViewer::Viewer::ON_DEMAND);
+	//setRunMaxFrameRate(30);
+	setThreadingModel(osgViewer::Viewer::SingleThreaded);
+}
+
+
+
+osg::ref_ptr&lt;osg::Geometry&gt; Viewer::createTexturedQuadGeometry(const osg::Vec3&amp; pos,float width,float height,
+	osg::ref_ptr&lt;osg::Image&gt; image,	bool useTextureRectangle, bool xyPlane, bool option_flip)
+{
+    bool flip = image-&gt;getOrigin()==osg::Image::TOP_LEFT;
+    if (option_flip) flip = !flip;
+
+    if (useTextureRectangle)
+    {
+        osg::ref_ptr&lt;osg::Geometry&gt; pictureQuad = osg::createTexturedQuadGeometry(pos,
+                                           osg::Vec3(width,0.0f,0.0f),
+                                           xyPlane ? osg::Vec3(0.0f,height,0.0f) : osg::Vec3(0.0f,0.0f,height),
+                                           0.0f, flip ? image-&gt;t() : 0.0, image-&gt;s(), flip ? 0.0 : image-&gt;t());
+
+        osg::ref_ptr&lt;osg::TextureRectangle&gt; texture = new osg::TextureRectangle(image);
+        texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+        texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+
+
+        pictureQuad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,
+                                                                        texture,
+                                                                        osg::StateAttribute::ON);
+
+        return pictureQuad;
+    }
+    else
+    {
+        osg::ref_ptr&lt;osg::Geometry&gt; pictureQuad = osg::createTexturedQuadGeometry(pos,
+                                           osg::Vec3(width,0.0f,0.0f),
+                                           xyPlane ? osg::Vec3(0.0f,height,0.0f) : osg::Vec3(0.0f,0.0f,height),
+                                           0.0f, flip ? 1.0f : 0.0f , 1.0f, flip ? 0.0f : 1.0f);
+
+        osg::ref_ptr&lt;osg::Texture2D&gt; texture = new osg::Texture2D(image);
+        texture-&gt;setResizeNonPowerOfTwoHint(false);
+        texture-&gt;setFilter(osg::Texture::MIN_FILTER,osg::Texture::LINEAR);
+        texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+        texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+
+
+        pictureQuad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,
+                    texture,
+                    osg::StateAttribute::ON);
+
+        return pictureQuad;
+    }
+}
+
+
+osg::ref_ptr&lt;osg::Camera&gt; Viewer::create_display_image_camera(osg::View&amp; view,
+	osg::ref_ptr&lt;osg::Drawable&gt; video_quad, bool b_background)
+{
+	const osg::BoundingBox&amp; bb = video_quad-&gt;getBoundingBox();
+
+	osg::ref_ptr&lt;osg::Camera&gt; image_camera{new osg::Camera{}};
+
+	image_camera-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+	image_camera-&gt;setAllowEventFocus(false);
+
+	image_camera-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+	image_camera-&gt;setGraphicsContext(view.getCamera()-&gt;getGraphicsContext());
+	image_camera-&gt;setViewport(view.getCamera()-&gt;getViewport());
+
+	//image_camera-&gt;setViewMatrix(osg::Matrixd::identity());
+	image_camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(bb.xMin(), bb.xMax(), bb.yMin(), bb.yMax()));
+
+	if (b_background) {
+		image_camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+		image_camera-&gt;getOrCreateStateSet()-&gt;setMode(GL_BLEND, osg::StateAttribute::OFF);
+		//image_camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//image_camera-&gt;setClearMask(0);
+		image_camera-&gt;setClearColor(osg::Vec4(.3f, 0.4f, 0.5f, 1.f));
+	} else {
+		image_camera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+		image_camera-&gt;getOrCreateStateSet()-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+		image_camera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+	}
+
+	image_camera-&gt;addChild(video_quad);
+	view.addSlave(image_camera, false);
+
+	return image_camera;
+}
+
+
+void Viewer::cameraSetGraphicsContext(osg::Camera* camera, osg::GraphicsContext* gc) {
+	if (camera &amp;&amp; gc) {
+		camera-&gt;setGraphicsContext(gc);
+
+		double fovy, aspectRatio, zNear, zFar;
+		camera-&gt;getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
+
+		osg::GraphicsContext::Traits const *traits = gc-&gt;getTraits();
+		double newAspectRatio = double(traits-&gt;width) / double(traits-&gt;height);
+		double aspectRatioChange = newAspectRatio / aspectRatio;
+		if (aspectRatioChange != 1.0)
+		{
+			camera-&gt;getProjectionMatrix() *= osg::Matrix::scale(1.0/aspectRatioChange,1.0,1.0);
+		}
+
+		camera-&gt;setViewport(new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height));
+
+		GLenum buffer = traits-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+
+		camera-&gt;setDrawBuffer(buffer);
+		camera-&gt;setReadBuffer(buffer);
+	}
+}
+
+
+class DrawSciterAndSwap : public osg::GraphicsContext::SwapCallback
+{
+public:
+	DrawSciterAndSwap(Viewer&amp; viewer, std::shared_ptr&lt;Window&gt; window)
+		:	viewer_(viewer), window_(window)
+	{}
+private:
+	void swapBuffersImplementation(osg::GraphicsContext* gc) override {
+		//bool bSwap = viewer_.circular_swap_frames_.front();
+		//viewer_.circular_swap_frames_.pop_front();
+		//if (bSwap) {
+			glFlush(); // flickering happens without this
+			if (auto win = window_.lock()) {
+				win-&gt;drawWithOpenGL();
+			}
+			gc-&gt;swapBuffersImplementation();
+		//}
+	}
+
+	Viewer&amp;							viewer_;
+	std::weak_ptr&lt;Window&gt;			window_;
+};
+
+
+
+class GraphicsContextResizedCallback : public osg::GraphicsContext::ResizedCallback
+{
+public:
+	GraphicsContextResizedCallback(Viewer *viewer)
+		:	viewer_(viewer)
+	{}
+	~GraphicsContextResizedCallback() {}
+private:
+	// osg::GraphicsContext::ResizedCallback:
+	void resizedImplementation(osg::GraphicsContext *gc, int x, int y, int width, int height) override {
+		if (viewer_) {
+			viewer_-&gt;resizeViewports(width, height);
+			auto traits = const_cast&lt;osg::GraphicsContext::Traits*&gt;(gc-&gt;getTraits());
+			traits-&gt;x = x;
+			traits-&gt;y = y;
+			traits-&gt;width = width;
+			traits-&gt;height = height;
+		} else {
+			gc-&gt;resizedImplementation(x, y, width, height);
+		}
+	}
+
+	Viewer		*viewer_;
+};
+
+
+void Viewer::setGraphicsContext(std::shared_ptr&lt;Window&gt; window) {
+	auto graphicsContext = window-&gt;getGraphicsContext();
+	cameraSetGraphicsContext(getCamera(), graphicsContext);
+	graphicsContext-&gt;setSwapCallback(new DrawSciterAndSwap(*this, window));
+
+	std::vector&lt;osg::GraphicsContext*&gt;	contexts;
+	getContexts(contexts);
+	for (auto ctx: contexts) {
+		ctx-&gt;setClearColor(osg::Vec4f(0.0f, 0.0f, 0.0f, 1.0f));
+		ctx-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		ctx-&gt;setResizedCallback(new GraphicsContextResizedCallback(this));
+	}
+
+	//main_camera-&gt;setProjectionResizePolicy(osg::Camera::ProjectionResizePolicy::FIXED);
+	//if (auto gw = dynamic_cast&lt;osgViewer::GraphicsWindow*&gt;(main_camera-&gt;getGraphicsContext())) {
+	//	gw-&gt;setSyncToVBlank(false);
+	//}
+}
+
+
+class BgImageResizedCallback : public osg::Image::DimensionsChangedCallback
+{
+public:
+	BgImageResizedCallback(Viewer&amp; viewer)
+		:	viewer_(viewer)
+	{
+	}
+	void operator()(osg::Image* image) override {
+		viewer_.create_or_update_image_scene(image);
+	}
+	Viewer&amp; viewer_;
+};
+
+
+
+void Viewer::create_or_update_image_scene(osg::ref_ptr&lt;osg::Image&gt; image) {
+	if (image) {
+		if (image != bg_image_) {
+			if (bg_image_) {
+				bg_image_-&gt;removeDimensionsChangedCallback(bg_image_resized_callback_);
+			}
+			bg_image_ = image;
+			if (!bg_image_resized_callback_)
+				bg_image_resized_callback_ = new BgImageResizedCallback(*this);
+			bg_image_-&gt;addDimensionsChangedCallback(bg_image_resized_callback_);
+			if (osg::ImageStream *imageStream = dynamic_cast&lt;osg::ImageStream*&gt;(image.get())) {
+				imageStream-&gt;play();
+			}
+		}
+		float	width = image-&gt;s() * image-&gt;getPixelAspectRatio();
+		float	height = image-&gt;t();
+		float xMin = 0.f, xMax = 0.f, yMin = 0.f, yMax = 0.f;
+		if (auto geom = dynamic_cast&lt;osg::Geometry*&gt;(bg_image_quad_.get())) {
+			if (auto coords = dynamic_cast&lt;osg::Vec3Array*&gt;(geom-&gt;getVertexArray())) {
+				(*coords)[2].x() = width;
+				(*coords)[3].x() = width;
+				(*coords)[0].y() = height;
+				(*coords)[3].y() = height;
+				xMin = (*coords)[1].x();
+				yMin = (*coords)[1].y();
+				xMax = (*coords)[3].x();
+				yMax = (*coords)[3].y();
+				coords-&gt;dirty();
+			}
+			if (auto tcoords = dynamic_cast&lt;osg::Vec2Array*&gt;(geom-&gt;getTexCoordArray(0))) {
+				bool flip = image-&gt;getOrigin()==osg::Image::TOP_LEFT;
+				float	l = 0.0f,
+						b = flip ? image-&gt;t() : 0.0,
+						r = image-&gt;s(),
+						t = flip ? 0.0 : image-&gt;t()
+					;
+				(*tcoords)[0].set(l, t);
+				(*tcoords)[1].set(l, b);
+				(*tcoords)[2].set(r, b);
+				(*tcoords)[3].set(r, t);
+				tcoords-&gt;dirty();
+			}
+			geom-&gt;dirtyGLObjects();
+			geom-&gt;dirtyBound();
+			if (bg_image_camera_) {
+				bg_image_camera_-&gt;setProjectionMatrix(osg::Matrix::ortho2D(xMin, xMax, yMin, yMax));
+			}
+			if (fg_image_camera_) {
+				bg_image_camera_-&gt;setProjectionMatrix(osg::Matrix::ortho2D(xMin, xMax, yMin, yMax));
+			}
+			resizeViewports();
+		} else if (0 &lt; width &amp;&amp; 0 &lt; height)
+		{
+			bg_image_quad_ = createTexturedQuadGeometry(osg::Vec3(), width, height, image, true, true, false);
+			if (auto state = bg_image_quad_-&gt;getStateSet()) {
+				// as explained here: <A HREF="../../../../forum.openscenegraph.org/viewtopiceaba.php?t=9004">http://forum.openscenegraph.org/viewtopic.php?t=9004</A>
+				// DYNAMIC has effect only when applied to StateSet or Drawable
+				// apparently DYNAMIC hurt performance, as said here:
+				// <A HREF="https://wiki.openmw.org/index.php?title=Rendering_Architecture">https://wiki.openmw.org/index.php?title=Rendering_Architecture</A>
+				state-&gt;setDataVariance(osg::Object::DYNAMIC);
+				if (osg::ref_ptr&lt;osg::Texture&gt; texture = dynamic_cast&lt;osg::Texture*&gt;(state-&gt;getTextureAttribute(0, osg::StateAttribute::TEXTURE))) {
+					if (auto myImg = dynamic_cast&lt;ImageStream*&gt;(texture-&gt;getImage(0))) {
+						texture-&gt;setDataVariance(osg::Object::DYNAMIC);
+					}
+				}
+			}
+			bg_image_camera_ = create_display_image_camera(*this, bg_image_quad_, true);
+			//fg_image_camera_ = create_display_image_camera(*this, bg_image_quad_, false);
+			resizeViewports();
+		}
+	}
+}
+
+
+void Viewer::resizeViewports(int availWidth, int availHeight) {
+	if (0 &gt; availWidth || 0 &gt; availHeight) {
+		std::vector&lt;osg::GraphicsContext*&gt;	contexts;
+		getContexts(contexts);
+		if (contexts.empty())
+			return;
+		//assert(0 &lt; contexts.size());
+		auto traits = contexts[0]-&gt;getTraits();
+		availWidth = traits-&gt;width;
+		availHeight = traits-&gt;height;
+	}
+
+	if (!bg_image_)
+		return;
+	//assert(bg_image_);
+    float imgWidth = bg_image_-&gt;s() * bg_image_-&gt;getPixelAspectRatio();
+    float imgHeight = bg_image_-&gt;t();
+	if (0 &gt;= imgWidth || 0 &gt;= imgHeight) {
+		imgWidth = 128.f;
+		imgHeight = 64.f;
+	}
+
+	double imgAspectRatio = imgWidth / imgHeight;
+	double availAspectRatio = (double)availWidth / availHeight;
+
+	float vpX, vpY, vpWidth, vpHeight;
+
+	switch (resizing_mode_) {
+	case	kOriginalSize:
+		vpWidth = imgWidth;
+		vpHeight = imgHeight;
+		break;
+	case	kFitWindow:
+		vpWidth = availWidth;
+		vpHeight = availHeight;
+		break;
+	case	kMaintainAspectRatio:
+		if (imgAspectRatio &lt; availAspectRatio) {
+			vpHeight = availHeight;
+			vpWidth = vpHeight * imgAspectRatio;
+		} else {
+			vpWidth = availWidth;
+			vpHeight = vpWidth / imgAspectRatio;
+		}
+		break;
+	}
+	vpX = (availWidth - vpWidth)  / 2.0;
+	vpY = (availHeight - vpHeight) / 2.0;
+
+	std::vector&lt;osg::Camera*&gt;	cameras;
+	cameras.push_back(getCamera());
+	if (bg_image_camera_) cameras.push_back(bg_image_camera_);
+	if (fg_image_camera_) cameras.push_back(fg_image_camera_);
+	for (auto camera : cameras) {
+		if (auto viewport = camera-&gt;getViewport()) {
+			viewport-&gt;setViewport(vpX, vpY, vpWidth, vpHeight);
+		}
+	}
+	if (auto camera = getCamera()) {
+		double fovy, aspectRatio, zNear, zFar;
+		camera-&gt;getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
+		camera-&gt;setProjectionMatrixAsPerspective(fovy, imgAspectRatio, zNear, zFar);
+	}
+}
+
+
+
+
+
+
+
+
+... 
+
+Thank you!
+
+Cheers,
+Altin[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2c9a.php?p=73049#73049">http://forum.openscenegraph.org/viewtopic.php?p=73049#73049</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007797.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+	<LI>Next message (by thread): <A HREF="007799.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7798">[ date ]</a>
+              <a href="thread.html#7798">[ thread ]</a>
+              <a href="subject.html#7798">[ subject ]</a>
+              <a href="author.html#7798">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

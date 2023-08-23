@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] REGISTER_WINDOWINGSYSTEMINTERFACE() breaks build
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20REGISTER_WINDOWINGSYSTEMINTERFACE%28%29%20breaks%20build&In-Reply-To=%3CCAFN7Y%2BXKavECArbTPmMTLA-ojzJh9769SAaQeGVFjUd5adcYJQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279303.html">
+   <LINK REL="Next"  HREF="279299.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] REGISTER_WINDOWINGSYSTEMINTERFACE() breaks build</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20REGISTER_WINDOWINGSYSTEMINTERFACE%28%29%20breaks%20build&In-Reply-To=%3CCAFN7Y%2BXKavECArbTPmMTLA-ojzJh9769SAaQeGVFjUd5adcYJQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] REGISTER_WINDOWINGSYSTEMINTERFACE() breaks build">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri May 20 01:52:03 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279303.html">[osg-users] REGISTER_WINDOWINGSYSTEMINTERFACE() breaks build
+</A></li>
+        <LI>Next message: <A HREF="279299.html">[osg-users] Submission/Pull Request problems on github
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3082">[ date ]</a>
+              <a href="thread.html#3082">[ thread ]</a>
+              <a href="subject.html#3082">[ subject ]</a>
+              <a href="author.html#3082">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi John,
+
+Sorry to hear things have broken.  I had to make the changes to Apple
+side without being able to test it.  I have been able to test under
+Linux and Windows and haven't seen build problems, but... if we look
+at the usage it's slightly different - X11 and Win32 I don't specify a
+namespace at all:
+
+GraphicsWindowCarbon.cpp:REGISTER_WINDOWINGSYSTEMINTERFACE(Carbon,
+osgViewer::CarbonWindowingSystemInterface)
+GraphicsWindowCocoa.mm:REGISTER_WINDOWINGSYSTEMINTERFACE(Cocoa,
+osgViewer::CocoaWindowingSystemInterface)
+GraphicsWindowIOS.mm:REGISTER_WINDOWINGSYSTEMINTERFACE(IOS,
+osgViewer::ConcreteIOSWindowingSystemInterface)
+GraphicsWindowWin32.cpp:REGISTER_WINDOWINGSYSTEMINTERFACE(Win32,
+Win32WindowingSystem)
+GraphicsWindowX11.cpp:REGISTER_WINDOWINGSYSTEMINTERFACE(X11,
+X11WindowingSystemInterface)
+
+What happens if you just remove the namespace under Apple?  If this
+doesn't work and the namespace is required then perhaps adding a
+namespace osgViewer {} around the REGISTER_WINDOWINGSYSTEMINTERFACE
+would be sufficient.
+
+The reason why I suggest this approach is that if we add a namespace
+parameter into the macro as you suggest then we'll need to make sure
+the Win32 and X11 interfaces are placed within a namespace.  Not
+necessarily a bad thing bit just a bit more intrusive than removing a
+namespace:: from the macro under Apple.
+
+Could you test this and let me know.
+
+Robert.
+
+On 18 May 2016 at 22:52, John Hughes &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">johughes at teslamotors.com</A>&gt; wrote:
+&gt;<i> Hi folks,
+</I>&gt;<i>
+</I>&gt;<i> In commit fe6238, a macro was added to osg/GraphicsContext:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> #define REGISTER_WINDOWINGSYSTEMINTERFACE(ext, classname) \
+</I>&gt;<i> extern &quot;C&quot; void graphicswindow_##ext(void) {} \
+</I>&gt;<i> static osg::WindowingSystemInterfaceProxy&lt;classname&gt; s_proxy_##classname(#ext);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> This unfortunately doesn&#8217;t quite work as intended in some of the osgViewer/GraphicsWindow* implementation classes:
+</I>&gt;<i>
+</I>&gt;<i> GraphicsWindowCocoa.mm,
+</I>&gt;<i> GraphicsWindowIOS.mm,
+</I>&gt;<i> GraphicsWindowCarbon.cpp
+</I>&gt;<i>
+</I>&gt;<i> For example in GraphicsWindowCocoa, the macro is invoked as follows:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> REGISTER_WINDOWINGSYSTEMINTERFACE(Cocoa, osgViewer::CocoaWindowingSystemInterface)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> However the &quot;osgViewer::CocoaWindowingSystemInterface&#8221; is viewed as 3 separate tokens by the preprocessor, and so replaces &#8220;##classname&#8221; with only &#8220;osg&#8221;.
+</I>&gt;<i>
+</I>&gt;<i> Here is a proposed work-around:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> #define REGISTER_WINDOWINGSYSTEMINTERFACE(ext, ns, classname) \
+</I>&gt;<i> extern &quot;C&quot; void graphicswindow_##ext(void) {} \
+</I>&gt;<i> static osg::WindowingSystemInterfaceProxy&lt;ns::classname&gt; s_proxy_##classname(#ext);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> &#8230;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> REGISTER_WINDOWINGSYSTEMINTERFACE(Cocoa, osgViewer, CocoaWindowingSystemInterface)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> regards,
+</I>&gt;<i> John
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic4dff.php?p=67147#67147">http://forum.openscenegraph.org/viewtopic.php?p=67147#67147</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279303.html">[osg-users] REGISTER_WINDOWINGSYSTEMINTERFACE() breaks build
+</A></li>
+	<LI>Next message: <A HREF="279299.html">[osg-users] Submission/Pull Request problems on github
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3082">[ date ]</a>
+              <a href="thread.html#3082">[ thread ]</a>
+              <a href="subject.html#3082">[ subject ]</a>
+              <a href="author.html#3082">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

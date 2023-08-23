@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Mouse oriented zooming from OrbitManipulator
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Mouse%20oriented%20zooming%20from%20OrbitManipulator&In-Reply-To=%3CDUB124-W41F8444AF54124C9D7F26AC88C0%40phx.gbl%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001002.html">
+   <LINK REL="Next"  HREF="277213.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Mouse oriented zooming from OrbitManipulator</H1>
+<!--htdig_noindex-->
+    <B>Sonya Blade</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Mouse%20oriented%20zooming%20from%20OrbitManipulator&In-Reply-To=%3CDUB124-W41F8444AF54124C9D7F26AC88C0%40phx.gbl%3E"
+       TITLE="[osg-users] Mouse oriented zooming from OrbitManipulator">sonyablade2010 at hotmail.com
+       </A><BR>
+    <I>Wed Jul 29 07:25:58 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001002.html">[osg-users] osg/CameraNode not in 3.4?
+</A></li>
+        <LI>Next message: <A HREF="277213.html">[osg-users] Problems with fuction viewer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277212">[ date ]</a>
+              <a href="thread.html#277212">[ thread ]</a>
+              <a href="subject.html#277212">[ subject ]</a>
+              <a href="author.html#277212">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Dear All,
+I implement the mouse oriented zooming with following code, where customManipulator derives drectly from OrbitManipulator and I override simply the handleMouseWheel eventhandler. This works to some extend , zooms to mouse position but the more you scroll it seems that eye position reaches the center positon (target) and zooming halts. My guess is I'm stucking to the minimumDistance variable check in OrbitManipulator which doesn't allow to further zooming and sets the _distance to minDistance.
+To remedy it I've tried to change center position with LookAt position matrix seting but this doesn't seems to take any effect,
+Your helps will be appreicated,
+bool customManipulator::handleMouseWheel( const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; us ){    osgViewer::View* view = dynamic_cast&lt;osgViewer::View*&gt;(&amp;us);    osgGA::GUIEventAdapter::ScrollingMotion sm = ea.getScrollingMotion();    switch( sm )        {            // mouse scroll up event            case osgGA::GUIEventAdapter::SCROLL_UP:            {                // perform zoom                //zoomModel( _wheelZoomFactor, true );                //us.requestRedraw();                //us.requestContinuousUpdate( isAnimating() || _thrown );
+                osg::Vec3d new_vec;                double new_dist;                new_dist = _distance;
+                // CORRECT WORKING CODE                osg::Matrix MVPW(view-&gt;getCamera()-&gt;getViewMatrix()*view-&gt;getCamera()-&gt;getProjectionMatrix() *                                             view-&gt;getCamera()-&gt;getViewport()-&gt;computeWindowMatrix() );                float wid = ea.getX();                float hei = ea.getY();                osg::Vec3d mouse_move_pos = osg::Vec3(ea.getX(),ea.getY(),0.0f)*osg::Matrix::inverse(MVPW);
+                // PART RESPONSIBLE FOR MOUSE POINT ORIENTED ZOOMING                osg::Vec3d curr_eye, curr_cnt, curr_up;                osg::Matrixd mat1;                mat1 = view-&gt;getCameraManipulator()-&gt;getInverseMatrix();                osg::Vec3d trans = mat1.getTrans();                mat1.getLookAt(curr_eye,curr_cnt,curr_up );
+                osg::Vec3d delta_vec, dir_vec;
+                // CALCULATE THE DIRECTION                dir_vec = -curr_eye+curr_cnt;                dir_vec *= 10; curr_cnt = dir_vec+ curr_cnt;
+                delta_vec = -mouse_move_pos+curr_eye;                curr_eye = curr_eye+delta_vec*(0.25);                curr_cnt = curr_cnt+delta_vec*(0.25);                mat1.makeLookAt(curr_eye, curr_cnt, curr_up);                view-&gt;getCameraManipulator()-&gt;setByInverseMatrix(mat1);
+                return true;            }
+            // mouse scroll down event            case osgGA::GUIEventAdapter::SCROLL_DOWN:            { 		 	   		  
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150729/41104630/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150729/41104630/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001002.html">[osg-users] osg/CameraNode not in 3.4?
+</A></li>
+	<LI>Next message: <A HREF="277213.html">[osg-users] Problems with fuction viewer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277212">[ date ]</a>
+              <a href="thread.html#277212">[ thread ]</a>
+              <a href="subject.html#277212">[ subject ]</a>
+              <a href="author.html#277212">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

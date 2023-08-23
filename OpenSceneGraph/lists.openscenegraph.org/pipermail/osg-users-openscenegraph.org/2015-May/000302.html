@@ -1,0 +1,219 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OpenThreads, scheduling, etc ... policies
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenThreads%2C%20scheduling%2C%20etc%20...%20policies&In-Reply-To=%3C1430749568.m2f.63627%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000301.html">
+   <LINK REL="Next"  HREF="000303.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OpenThreads, scheduling, etc ... policies</H1>
+<!--htdig_noindex-->
+    <B>Curtis Rubel</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenThreads%2C%20scheduling%2C%20etc%20...%20policies&In-Reply-To=%3C1430749568.m2f.63627%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] OpenThreads, scheduling, etc ... policies">crubel at compro.net
+       </A><BR>
+    <I>Mon May  4 07:26:08 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000301.html">[osg-users] OpenThreads, scheduling, etc ... policies
+</A></li>
+        <LI>Next message: <A HREF="000303.html">[osg-users] OpenThreads, scheduling, etc ... policies
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#302">[ date ]</a>
+              <a href="thread.html#302">[ thread ]</a>
+              <a href="subject.html#302">[ subject ]</a>
+              <a href="author.html#302">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Robert,
+
+When I mentioned crippled, I did not mean that as a bad or derogatory
+comment.  Maybe saying something like intentionally disabled would have
+been a better choice of words, my apologies if my wording offended anyone in any way.
+
+Basic threading is working fine under Linux.  If the user however wants to
+take advantage of all of the available threading policies and priorities now available to them they cannot.  I think that this is just possibly just due to this section of Openthreads not being updated when these features were fully implemented and properly working on the linux platform.
+
+Here is a code excerpt of the SetThreadSchedulingParams
+function call within OpenThreads/phhreads/PThread.cpp
+
+
+Code:
+
+    //--------------------------------------------------------------------------
+    // Set thread scheduling parameters.  Unfortunately on Linux, there's no
+    // good way to set this, as pthread_setschedparam is mostly a no-op.
+    //
+    static int SetThreadSchedulingParams(Thread *thread)
+    {
+
+        int status = 0;
+
+#ifdef ALLOW_PRIORITY_SCHEDULING // [
+
+        if(sysconf(_POSIX_THREAD_PRIORITY_SCHEDULING))
+        {
+
+            int th_policy;
+            int max_priority, nominal_priority, min_priority;
+            sched_param th_param;
+            pthread_getschedparam(thread-&gt;getProcessId(),
+                      &amp;th_policy, &amp;th_param);
+
+#ifndef __linux__
+
+            switch(thread-&gt;getSchedulePolicy())
+            {
+
+                case Thread::THREAD_SCHEDULE_FIFO:
+                th_policy = SCHED_FIFO;
+                break;
+
+                case Thread::THREAD_SCHEDULE_ROUND_ROBIN:
+                th_policy = SCHED_RR;
+                break;
+
+                case Thread::THREAD_SCHEDULE_TIME_SHARE:
+                th_policy = SCHED_OTHER;
+                break;
+
+                default:
+#ifdef __sgi
+                th_policy = SCHED_RR;
+#else
+                th_policy = SCHED_FIFO;
+#endif
+                break;
+            };
+
+#else
+            th_policy = SCHED_OTHER;  // Must protect linux from realtime.
+#endif
+
+#ifdef __linux__
+
+            max_priority = 0;
+            min_priority = 20;
+            nominal_priority = (max_priority + min_priority)/2;
+
+#else
+
+            max_priority = sched_get_priority_max(th_policy);
+            min_priority = sched_get_priority_min(th_policy);
+            nominal_priority = (max_priority + min_priority)/2;
+
+#endif
+
+            switch(thread-&gt;getSchedulePriority())
+            {
+
+                case Thread::THREAD_PRIORITY_MAX:
+                    th_param.sched_priority = max_priority;
+                    break;
+
+                case Thread::THREAD_PRIORITY_HIGH:
+                    th_param.sched_priority = (max_priority + nominal_priority)/2;
+                    break;
+
+                case Thread::THREAD_PRIORITY_NOMINAL:
+                    th_param.sched_priority = nominal_priority;
+                    break;
+
+                case Thread::THREAD_PRIORITY_LOW:
+                    th_param.sched_priority = (min_priority + nominal_priority)/2;
+                    break;
+
+                case Thread::THREAD_PRIORITY_MIN:
+                    th_param.sched_priority = min_priority;
+                    break;
+
+                default:
+                    th_param.sched_priority = max_priority;
+                    break;
+
+            }
+
+            status = pthread_setschedparam(thread-&gt;getProcessId(),
+                           th_policy,
+                           &amp;th_param);
+
+
+            if(getenv(&quot;OUTPUT_THREADLIB_SCHEDULING_INFO&quot;) != 0)
+            PrintThreadSchedulingInfo(thread);
+
+        }
+
+#endif // ] ALLOW_PRIORITY_SCHEDULING
+
+    return status;
+    };
+
+
+
+
+
+You can see in this excerpt that on Linux platforms the code to allow you to select any of the available threading policies is allowed on all platforms but linux.  Linux is hard-coded to set the SCHED_OTHER policy.
+
+The other sections of the code excerpt limit the range of priorities allowed to between 0 and 20, when linux currently has a range of 0 - 99, 99 being the highest priority allowed.  The associated calls to sched_get_priority_max and sched_get_priority_min are not allowed on the linux platform.
+
+I will be happy to provide you with a sample application if you still would like to have one, but I think the ifndef's in the code will let you see what I am referring too.
+
+Again I apologize if I offended anyone, that was not my intention.
+
+... 
+
+Thank you!
+
+Cheers,
+Curtis
+Code:
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopica33b.php?p=63627#63627">http://forum.openscenegraph.org/viewtopic.php?p=63627#63627</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000301.html">[osg-users] OpenThreads, scheduling, etc ... policies
+</A></li>
+	<LI>Next message: <A HREF="000303.html">[osg-users] OpenThreads, scheduling, etc ... policies
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#302">[ date ]</a>
+              <a href="thread.html#302">[ thread ]</a>
+              <a href="subject.html#302">[ subject ]</a>
+              <a href="author.html#302">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

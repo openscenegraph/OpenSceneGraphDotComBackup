@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Many lights in OSG - solution
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Many%20lights%20in%20OSG%20-%20solution&In-Reply-To=%3C1445615923.m2f.65420%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278001.html">
+   <LINK REL="Next"  HREF="001788.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Many lights in OSG - solution</H1>
+<!--htdig_noindex-->
+    <B>Jannik Heller</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Many%20lights%20in%20OSG%20-%20solution&In-Reply-To=%3C1445615923.m2f.65420%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Many lights in OSG - solution">scrawl at baseoftrash.de
+       </A><BR>
+    <I>Fri Oct 23 08:58:43 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278001.html">[osg-users] Adding transparency loses color
+</A></li>
+        <LI>Next message: <A HREF="001788.html">[osg-users] Many lights in OSG - solution
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278005">[ date ]</a>
+              <a href="thread.html#278005">[ thread ]</a>
+              <a href="subject.html#278005">[ subject ]</a>
+              <a href="author.html#278005">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi OSG friends,
+
+I will be wrapping up my OpenMW port to OpenSceneGraph soon and wanted to share a few things with you that I learned along the way. One such thing is the lighting system that I wrote. If you do a quick search on the mailing list, you will see that the OpenGL fixed pipeline supports a maximum of 8 simultaneous lights and OSG inherits this limit. I have a lot more lights in my scenes, so I had to come up with a solution.
+
+What I ended up with is a new lighting system, that allows you to place any number of light sources in the scene graph, but then prior to rendering a particular model will set the 8 closest lights as the OpenGL lights. This is implemented as CullCallback for the individual models, pushing a StateSet with the correct lights onto the CullVisitor. I also needed to implement a custom StateAttribute for the light state, this is because when applying lights OpenGL multiplies the position specified with the current modelView matrix (which is no problem when you apply lights at beginning of frame like OSG does, but in my case the lights are applied in between renderning of models,Ii need to apply the lights in world space rather than relative to that model). The solution was to write a custom light StateAttribute that resets the modelView matrix to just the view matrix before applying the state, then reset again to modelView when done.
+
+The code is here and it should be easily adaptable to your own applications:
+
+<A HREF="https://github.com/OpenMW/openmw/blob/master/components/sceneutil/lightmanager.cpp">https://github.com/OpenMW/openmw/blob/master/components/sceneutil/lightmanager.cpp</A>
+<A HREF="https://github.com/OpenMW/openmw/blob/master/components/sceneutil/lightmanager.hpp">https://github.com/OpenMW/openmw/blob/master/components/sceneutil/lightmanager.hpp</A>
+
+Usage is pretty straight forward:
+
+- Decorate your scene graph with a LightManager node.
+- Create any number of LightSource's in the scene graph. The lightNum of the contained lights do not matter as they are not used.
+- Make sure that you have Mask_Lit (1&lt;&lt;16) in your update and cull masks where lighting is desired.
+- Add some LightListCallback's as CullCallback in your scene graph. Where you put the callbacks determines the granularity of the light lists, so can have an impact on visuals and performance. I recommend adding the callback onto individual model(s) (but not necessarily individual Drawable's as that would be slower).
+
+You can also combine the LightManager with regular OSG lighting. For example, if you need a &quot;global&quot; directional light in your scene that is always active, you can create it as a regular osg::LightSource and tell the LightManager to skip over it, using setStartLight(1). This would mean the LightManager is only managing lights 1-7 rather than all 8.
+
+Hope this might be useful to some OSG users as it took me a while to put together. I did find a previous topic about the subject ( <A HREF="../../../../forum.openscenegraph.org/viewtopicd3e5.php?t=8325&amp;view=previous">http://forum.openscenegraph.org/viewtopic.php?t=8325&amp;view=previous</A> ) but no satisfying solution was posted.
+
+I wonder if there is enough interest, could this turn into an official OSG example? Or even a new NodeKit or part of the core scene graph? 
+
+By the way, I am super impressed that I was able to implement this feature without changing one line of code within OSG - the flexibility you get with the various visitors and callbacks is amazing. A big kudos goes to Robert for making the OSG so extensible!
+
+Cheers,
+Jannik
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc3dc.php?p=65420#65420">http://forum.openscenegraph.org/viewtopic.php?p=65420#65420</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278001.html">[osg-users] Adding transparency loses color
+</A></li>
+	<LI>Next message: <A HREF="001788.html">[osg-users] Many lights in OSG - solution
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278005">[ date ]</a>
+              <a href="thread.html#278005">[ thread ]</a>
+              <a href="subject.html#278005">[ subject ]</a>
+              <a href="author.html#278005">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

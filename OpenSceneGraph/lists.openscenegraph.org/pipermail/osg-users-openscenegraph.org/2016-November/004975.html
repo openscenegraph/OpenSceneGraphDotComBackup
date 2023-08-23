@@ -1,0 +1,163 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to check if pagedLod already exists in databasepager with same filename
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20check%20if%20pagedLod%20already%20exists%20in%0A%20databasepager%20with%20same%20filename&In-Reply-To=%3CCAM-Rrinu0MYhU-vpao4_vuEuart5MkJkvC%2B03U_2owzOPe%2BXSw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004968.html">
+   <LINK REL="Next"  HREF="004989.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to check if pagedLod already exists in databasepager with same filename</H1>
+<!--htdig_noindex-->
+    <B>Rafa Gaitan</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20check%20if%20pagedLod%20already%20exists%20in%0A%20databasepager%20with%20same%20filename&In-Reply-To=%3CCAM-Rrinu0MYhU-vpao4_vuEuart5MkJkvC%2B03U_2owzOPe%2BXSw%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to check if pagedLod already exists in databasepager with same filename">rafa.gaitan at gmail.com
+       </A><BR>
+    <I>Tue Nov 29 10:26:58 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004968.html">[osg-users] How to check if pagedLod already exists in	databasepager with same filename
+</A></li>
+        <LI>Next message: <A HREF="004989.html">[osg-users] How to check if pagedLod already exists in	databasepager with same filename
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4975">[ date ]</a>
+              <a href="thread.html#4975">[ thread ]</a>
+              <a href="subject.html#4975">[ subject ]</a>
+              <a href="author.html#4975">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Simone,
+
+If you just want to use the PagedLOD as a kind of delayed system for
+loading nodes (but not unload them from memory), I suggest you use instead
+de osg::ProxyNode, it defers the loading to the DatabasePager but once
+loaded is not unloaded anymore. If your database is well balanced the
+CullVisitor will ensure good framerate when the node is not in the frustrum.
+
+Just my two cents,
+
+Rafa.
+
+
+El mar., 29 nov. 2016 a las 15:43, Simone Rapposelli (&lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">simone.rapposelli at gmail.com</A>&gt;) escribi&#243;:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> by increasing TargetMaximumNumberOfPageLOD the problem of having to reload
+</I>&gt;<i> the same PageLod disappears, so it works!!
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> robertosfield wrote:
+</I>&gt;<i> &gt; Hi Simone,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; On 29 November 2016 at 12:37, Simone Rapposelli
+</I>&gt;<i> &gt; &lt;&gt; wrote:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; &gt; thank you for your fast reply.
+</I>&gt;<i> &gt; &gt; My problem is that osgDB::ReaderWriter::ReadResult readNode(const
+</I>&gt;<i> std::string &amp;fileName, const osgDB::ReaderWriter::Options *options) gets
+</I>&gt;<i> called even if a PagedLod with the same fileName has been previously
+</I>&gt;<i> loaded: for example, this happens if I move to any position on the viewer
+</I>&gt;<i> and then come back.
+</I>&gt;<i> &gt; &gt; Thus, inside this function I need to check if any of the PagedLod
+</I>&gt;<i> currently loaded in DatabasePager has the same fileName of the passed
+</I>&gt;<i> argument: in this case I could avoid to reload data already in memory.
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The PagedLOD/DatabasePager paging scheme is designed to expire and
+</I>&gt;<i> &gt; reload subgraphs, it *crucial* to load balancing.  If you cached all
+</I>&gt;<i> &gt; loaded subgraphs your memory would rapidly be overwhelmed and your
+</I>&gt;<i> &gt; system would grind to a halt.  The very scheme you are trying to
+</I>&gt;<i> &gt; defeat is one of the best assets of the OSG, you *absolutely* do not
+</I>&gt;<i> &gt; want to be breaking this mechanism.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Now, if you the defaults the paging scheme uses for load balancing is
+</I>&gt;<i> &gt; too conservative w.r.t the number of PagedLOD it will aim for in
+</I>&gt;<i> &gt; memory at one time you can adjust it to be higher simply by setting
+</I>&gt;<i> &gt; the TargetMaximumNumberOfPageLOD parameter, from the DatabasePager
+</I>&gt;<i> &gt; header you'll see:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; /** Set the target maximum number of PagedLOD to maintain in memory.
+</I>&gt;<i> &gt; * Note, if more than the target number are required for
+</I>&gt;<i> &gt; rendering of a frame then these active PagedLOD are excempt from being
+</I>&gt;<i> &gt; expiried.
+</I>&gt;<i> &gt; * But once the number of active drops back below the target
+</I>&gt;<i> &gt; the inactive PagedLOD will be trimmed back to the target number.*/
+</I>&gt;<i> &gt; void setTargetMaximumNumberOfPageLOD(unsigned int target) {
+</I>&gt;<i> &gt; _targetMaximumNumberOfPageLOD = target; }
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; You can also set the default value using the env var OSG_MAX_PAGEDLOD
+</I>&gt;<i> &gt; i,e under bash:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; export OSG_MAX_PAGEDLOD=2000
+</I>&gt;<i> &gt; osgviewer mypageddatabase.osgb
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; You can get a listing of the env vars supported by doing:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; osgviewer --help-env
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Robert.
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;  ------------------
+</I>&gt;<i> &gt; Post generated by Mail2Forum
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopiccddf.php?p=69530#69530">http://forum.openscenegraph.org/viewtopic.php?p=69530#69530</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161129/74bf3b4f/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161129/74bf3b4f/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004968.html">[osg-users] How to check if pagedLod already exists in	databasepager with same filename
+</A></li>
+	<LI>Next message: <A HREF="004989.html">[osg-users] How to check if pagedLod already exists in	databasepager with same filename
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4975">[ date ]</a>
+              <a href="thread.html#4975">[ thread ]</a>
+              <a href="subject.html#4975">[ subject ]</a>
+              <a href="author.html#4975">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

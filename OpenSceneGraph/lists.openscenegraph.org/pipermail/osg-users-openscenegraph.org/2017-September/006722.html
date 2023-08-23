@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] RayTracedTechnique hangs with Intel HD Graphics -	Update
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RayTracedTechnique%20hangs%20with%20Intel%20HD%20Graphics%20-%0A%09Update&In-Reply-To=%3CCAFN7Y%2BU_KPW1xpbBDZ1egWuxynBfRfiBY0qf-nUCUyW83%3D_gAQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006715.html">
+   <LINK REL="Next"  HREF="006737.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] RayTracedTechnique hangs with Intel HD Graphics -	Update</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RayTracedTechnique%20hangs%20with%20Intel%20HD%20Graphics%20-%0A%09Update&In-Reply-To=%3CCAFN7Y%2BU_KPW1xpbBDZ1egWuxynBfRfiBY0qf-nUCUyW83%3D_gAQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] RayTracedTechnique hangs with Intel HD Graphics -	Update">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Sep  1 06:41:14 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006715.html">[osg-users] RayTracedTechnique hangs with Intel HD Graphics	-	Update
+</A></li>
+        <LI>Next message: <A HREF="006737.html">[osg-users] RayTracedTechnique hangs with Intel HD Graphics -	Update
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6722">[ date ]</a>
+              <a href="thread.html#6722">[ thread ]</a>
+              <a href="subject.html#6722">[ subject ]</a>
+              <a href="author.html#6722">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Clement,
+
+On 1 September 2017 at 10:26, &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Clement.Chu at csiro.au</A>&gt; wrote:
+
+&gt;<i>   Since I don't know how to debug or print message in shader code, I am
+</I>&gt;<i> not sure what exact value of vertex.  I guess the value of vertex is not in
+</I>&gt;<i> the range (0.0 to 1.0), so texture3D method cannot get correct color value
+</I>&gt;<i> by coordinate.  In file volume_frag.cpp,  variable texcoord is assigned
+</I>&gt;<i> from vertex data. If vertex data is not the 0.0f to 1.0f range, variable
+</I>&gt;<i> color (type vec4) will become strange value.  Even I added some codes
+</I>&gt;<i> to make sure values of color.x, color.y, color.z and color.w  in the range
+</I>&gt;<i> (0.0 to 1.0), it still cause the crash. Unless vertex is in the range (0.0
+</I>&gt;<i> to 1.0). So far, this problem occurs in Intel HD Graphics 520 or above.  My
+</I>&gt;<i> old laptop is Intel HD Graphics 3000, but it works fine and Nvidia cards
+</I>&gt;<i> work fine too.
+</I>&gt;<i>
+</I>
+Debugging shaders is *really* hard because you just can't put in break
+points, print out values, do any of the normal debugging approaches we take
+for granted on the desktop.  So it's a case of think of idea what might be
+wrong, adapt the shaders to test that, run them app and just and make sense
+of the results.
+
+The fact that shaders can be loaded and compiled at runtime helps reduce
+the time takes to see changes so this can help a bit, for yourself I would
+certainly recommend copying the volume.vert and volume.frag shaders from
+OpenSceneGraph-Data, put  them on your path as use in testing.
+
+Another thing that might help if you are having to put &quot;workaround&quot; code in
+just for a certain hardware vendor then the vendor string and #pragma(tic)
+shader composition might be of help.  I use this facility to detect and
+provide a workaround for an NVidia issue - look at how NVIDIA_Corporation
+is used in the shaders.  The osg::State object checks the GL_VENDOR string
+at runtime and sets a #define with this value that you can then reference
+using #pragma import_defines(..).
+
+I don't know what the string will be for Intel.  Run an OSG application
+with the OSG_NOTIFY_LEVEL set to INFO and search the console output for a
+&quot;GL_VENDOR = &quot; entry.  You can they use this in the shader mods.
+
+--
+
+On the specific issue of the vertex value clamping, RayTracedTechnique
+creates a box with dimensons of 0,0,0 to 1,1,1 so there shouldn't be any
+values outside this being passed to the vertex shader. However, the
+CPU-&gt;driver-&gt;GPU might be changing the precision enough that you are
+getting values outside this range.  I find it odd that the shaders would be
+sensitive to such small precision issues though.
+
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170901/b1d3df21/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170901/b1d3df21/attachment.htm</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006715.html">[osg-users] RayTracedTechnique hangs with Intel HD Graphics	-	Update
+</A></li>
+	<LI>Next message: <A HREF="006737.html">[osg-users] RayTracedTechnique hangs with Intel HD Graphics -	Update
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6722">[ date ]</a>
+              <a href="thread.html#6722">[ thread ]</a>
+              <a href="subject.html#6722">[ subject ]</a>
+              <a href="author.html#6722">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

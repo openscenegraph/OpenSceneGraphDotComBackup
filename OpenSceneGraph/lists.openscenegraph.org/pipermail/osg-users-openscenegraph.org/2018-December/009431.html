@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgUtil::LineSegmentIntersector performance issues
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgUtil%3A%3ALineSegmentIntersector%20performance%20issues&In-Reply-To=%3C1543939809.m2f.75275%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009430.html">
+   <LINK REL="Next"  HREF="009432.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgUtil::LineSegmentIntersector performance issues</H1>
+<!--htdig_noindex-->
+    <B>Andrea Martini</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgUtil%3A%3ALineSegmentIntersector%20performance%20issues&In-Reply-To=%3C1543939809.m2f.75275%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osgUtil::LineSegmentIntersector performance issues">martini.andrea at gmail.com
+       </A><BR>
+    <I>Tue Dec  4 08:10:09 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009430.html">[osg-users] Image::copySubImage
+</A></li>
+        <LI>Next message (by thread): <A HREF="009432.html">[osg-users] osgUtil::LineSegmentIntersector performance issues
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9431">[ date ]</a>
+              <a href="thread.html#9431">[ thread ]</a>
+              <a href="subject.html#9431">[ subject ]</a>
+              <a href="author.html#9431">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello everyone,
+i spent my last weeks to find a reasonable cause concerning osgUtil::LineSegmentIntersector on some osgt file.
+In detail, i would like to identify objects in the scene, using line isector (ray casting) starting from a certain point with a ray of 3 meter length .
+Following the code i used for detecting object in front of camera (i'm using osg 3.5.3 and Oculus Rift device)
+
+
+Code:
+
+
+osg::ref_ptr&lt;osgUtil::LineSegmentIntersector&gt; intersector = new osgUtil::LineSegmentIntersector(startPoint, endPoint); 		
+
+osgUtil::IntersectionVisitor iv(intersector.get());
+
+//intersector-&gt;setIntersectionLimit(osgUtil::Intersector::LIMIT_NEAREST);
+//intersector-&gt;setPrecisionHint(osgUtil::Intersector::PrecisionHint::USE_FLOAT_CALCULATIONS);
+
+//for debugging: evaluation of visitor processing time
+osg::Timer_t timer_tstart = mGlobalHighResTimer-&gt;tick();
+
+iv.setTraversalMask(vrGame::INTERACTIVE);
+
+subgraph-&gt;accept(iv);
+
+
+//for debugging: evaluation of visitor processing time
+osg::Timer_t timer_tend = mGlobalHighResTimer-&gt;tick();
+double  timer_tfinal = mGlobalHighResTimer-&gt;delta_m(timer_tstart, timer_tend);
+std::cout &lt;&lt; &quot; Collision Visitor Time Computed :  &quot; &lt;&lt; std::to_string(timer_tfinal) &lt;&lt; std::endl;
+		
+
+
+
+
+
+This code works correctly in terms of dected object but some times i noticed low performance when camera points in a space region near the object but not on its geometry. I mean, if camera points the geometry of the object, performance is ok. When camera points near the object (on an empty region) but not on its geometry, performance drop down.
+
+Some numbers: When camera points on empty area near the object, Oculus passes from 90Hz to 45Hz framerate and the computation of 
+
+subgraph-&gt;accept(iv);
+
+requires from 2.8 to 4 milliseconds for each frame. 
+I also investigated on osgUtil::IntersectionVisitor class, and it seems that (in my specific situation), 
+
+IntersectionVisitor::apply(osg::Transform&amp; transform) 
+
+needs from 2.8 to 4 ms computation time when processes the following code lines:
+
+ // now push an new intersector clone transform to the new local oordinates
+    push_clone();
+    traverse(transform);
+    // pop the clone.
+    pop_clone();
+
+
+
+Another doubt is related to why, even if i set 
+
+iv.setTraversalMask(0x0001001)
+
+for avoiding to process nodes which have that mask (and the investigated object has this mask), visitor continues to process at each frame something that requires a lot computation time.
+
+The object comes from blender (osgt export), and has One group as root, a MatrixTransform as child, a Geode as child and 3 drawables with 64K vertices on the whole. The osgt file has 18 Mbytes size
+
+
+My question is: Is there some solution I might adopt to improve these performances? Can you give me some suggestions?
+
+
+Thank you!
+
+Cheers,
+Andrea
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicff84.php?p=75275#75275">http://forum.openscenegraph.org/viewtopic.php?p=75275#75275</A>
+
+
+
+
+
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009430.html">[osg-users] Image::copySubImage
+</A></li>
+	<LI>Next message (by thread): <A HREF="009432.html">[osg-users] osgUtil::LineSegmentIntersector performance issues
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9431">[ date ]</a>
+              <a href="thread.html#9431">[ thread ]</a>
+              <a href="subject.html#9431">[ subject ]</a>
+              <a href="author.html#9431">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

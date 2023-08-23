@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] GLBeginEndAdapter
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GLBeginEndAdapter&In-Reply-To=%3CCAFN7Y%2BX0rSWeLgCYSByHvrwgf3kh6-iYhzQRx4SnYC7EyFBXWA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006451.html">
+   <LINK REL="Next"  HREF="006456.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] GLBeginEndAdapter</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GLBeginEndAdapter&In-Reply-To=%3CCAFN7Y%2BX0rSWeLgCYSByHvrwgf3kh6-iYhzQRx4SnYC7EyFBXWA%40mail.gmail.com%3E"
+       TITLE="[osg-users] GLBeginEndAdapter">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Jul 21 01:16:41 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006451.html">[osg-users] GLBeginEndAdapter
+</A></li>
+        <LI>Next message: <A HREF="006456.html">[osg-users] ViewerBase::frame() method slow after changing the	color of a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6453">[ date ]</a>
+              <a href="thread.html#6453">[ thread ]</a>
+              <a href="subject.html#6453">[ subject ]</a>
+              <a href="author.html#6453">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi John,
+
+The GLBeginEndAdapter was an interim solution while older parts of the OSG
+were migrated over to using vertex arrays and DrawArrays/DrawElements, once
+this migration work was completed the core OSG no longer required it, so I
+removed it to avoid bloat.  This migration work was required as OpenGL ES
+and recent versions of OpenGL either don't support or deprecate
+glBegin/glEnd, Further pressure to migrate was due to the need to support
+Vertex Array Objects under recent versions of OpenGL and due to
+peculiarities of OpenGL support under OSX.
+
+For yourself migrating to use osg::Geometry may well be the easiest.
+Sometimes this is straight forward, other times it can be a bit awkward as
+not all glBegin/glEnd(() style usage easily maps to using vertex arrays.
+It's worth the effort though as vertex arrays is how all modern graphics
+hardware work, the GLBeginEndAdapter hides lots of hacky dynamic setting up
+of vertex arrays internal to hide the difference between the old style and
+how modern hardware manage things.
+
+By moving away from GLBeginEndAdapter you have to confront just how best to
+represent your data with modern vertex arrays but it'll be worth it - your
+application should be faster for the improvement.
+
+Robert.
+
+
+
+On 20 July 2017 at 21:11, John Farrier &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">john.farrier at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I am compiling some code with the current git repository version of OSG
+</I>&gt;<i> and found that State's &quot;getGLBeginEndAdapter&quot; has been removed.  Looking
+</I>&gt;<i> through the history, I see this happened at: commit
+</I>&gt;<i> e11e45a2e36de91bbe956223c43e8c5a50f9b72b.
+</I>&gt;<i>
+</I>&gt;<i> The comment is only &quot;Removed GLBeginEndAdapter as it is no longer
+</I>&gt;<i> needed&quot;.  Well, my code seems to need it.  What do I need to do to update
+</I>&gt;<i> my code to not need it?  (I realize this is fixed pipeline code, but it's
+</I>&gt;<i> old code and it works.  So a complete re-write is not desirable.)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> osg::GLBeginEndAdapter&amp; gl = (state.getGLBeginEndAdapter());
+</I>&gt;<i>
+</I>&gt;<i> gl.Color4fv(_surfaceColor.ptr());
+</I>&gt;<i>
+</I>&gt;<i> bool drawBackSide = true;
+</I>&gt;<i> bool drawFrontSide = true;
+</I>&gt;<i>
+</I>&gt;<i> // draw back side.
+</I>&gt;<i> if(drawBackSide)
+</I>&gt;<i> {
+</I>&gt;<i>   for(int i = 0; i + 1 &lt;= _density; i++)
+</I>&gt;<i>   {
+</I>&gt;<i>     const auto az1 = _azMin + (i*azIncr);
+</I>&gt;<i>     const auto az2 = _azMin + ((i + 1)*azIncr);
+</I>&gt;<i>
+</I>&gt;<i>     gl.Begin(GL_QUAD_STRIP);
+</I>&gt;<i>     for(int j = 0; j &lt;= _density; j++)
+</I>&gt;<i>     {
+</I>&gt;<i>       ...
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> John
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic7c4a.php?p=71289#71289">http://forum.openscenegraph.org/viewtopic.php?p=71289#71289</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170721/ce3c1d63/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170721/ce3c1d63/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006451.html">[osg-users] GLBeginEndAdapter
+</A></li>
+	<LI>Next message: <A HREF="006456.html">[osg-users] ViewerBase::frame() method slow after changing the	color of a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6453">[ date ]</a>
+              <a href="thread.html#6453">[ thread ]</a>
+              <a href="subject.html#6453">[ subject ]</a>
+              <a href="author.html#6453">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

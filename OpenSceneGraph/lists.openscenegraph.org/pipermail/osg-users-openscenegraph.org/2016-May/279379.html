@@ -1,0 +1,236 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Qt5 and OSG port issue: Shaking motion when moving a	osgQt widget on Linux
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Qt5%20and%20OSG%20port%20issue%3A%20Shaking%20motion%20when%20moving%20a%0A%09osgQt%20widget%20on%20Linux&In-Reply-To=%3C1464382567.m2f.67264%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003158.html">
+   <LINK REL="Next"  HREF="279380.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Qt5 and OSG port issue: Shaking motion when moving a	osgQt widget on Linux</H1>
+<!--htdig_noindex-->
+    <B>Laurel Kincaid</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Qt5%20and%20OSG%20port%20issue%3A%20Shaking%20motion%20when%20moving%20a%0A%09osgQt%20widget%20on%20Linux&In-Reply-To=%3C1464382567.m2f.67264%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Qt5 and OSG port issue: Shaking motion when moving a	osgQt widget on Linux">laurel at exa.com
+       </A><BR>
+    <I>Fri May 27 13:56:07 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003158.html">[osg-users] [build] CMake not finding many 3rd party plugins	for vs2013
+</A></li>
+        <LI>Next message: <A HREF="279380.html">[osg-users] osg Animation and Geometry Morphing Question
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279379">[ date ]</a>
+              <a href="thread.html#279379">[ thread ]</a>
+              <a href="subject.html#279379">[ subject ]</a>
+              <a href="author.html#279379">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+
+While porting to Qt5, I've run into a problem on Linux with moving an osgQt widget. The
+mouse move events are incorrect and the widget shakes while moving. This issue did not occur with QT4.
+
+I am using osg version 3.4.0-01 and Qt version 5.4.2.
+
+This problem is reproducible with a simple update to the example from the osg distribution , osg/examples/osgviewerQt/osgviewerQt.cpp
+
+In the updated source, the ViewerWidget is added as a child to a QMdiSubwindow. There are two QMdiSubWindows displayed: the first window is the osg cow, the second window is a QLabel containing text. When the osg cow is displayed, both windows shake when moved. When the cow window is closed, the text window moves without shaking.
+
+This problem does not occur on Windows.
+
+I am interested in any help figuring out this problem and also any help to understand the QT xcb changes and how they may conflict with osg.
+
+Thank you!
+
+Cheers,
+Laurel
+
+The source is:
+
+Code:
+
+
+// The ViewerWidget is from osg/examples/osgViewerQt
+// Modified to display the cow only 
+class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
+{
+public:
+    ViewerWidget(QWidget* parent = 0, Qt::WindowFlags f = 0, osgViewer::ViewerBase::ThreadingModel threadingModel=osgViewer::CompositeViewer::SingleThreaded) : QWidget(parent, f)
+    {
+        setThreadingModel(threadingModel);
+
+        // disable the default setting of viewer.done() by pressing Escape.
+        setKeyEventSetsDone(0);
+
+        QWidget* widget1 = addViewWidget(createGraphicsWindow(0, 0, 300, 300), osgDB::readNodeFile(&quot;cow.osgt&quot;));
+        widget1-&gt;setMinimumSize(300, 300);
+        QVBoxLayout *pLayout = new QVBoxLayout();
+        pLayout-&gt;setContentsMargins(1, 1, 1, 1);
+        pLayout-&gt;addWidget(widget1);
+        setLayout(pLayout);
+
+        connect( &amp;_timer, SIGNAL(timeout()), this, SLOT(update()) );
+        _timer.start( 10 );
+    }
+
+    QWidget* addViewWidget( osgQt::GraphicsWindowQt* gw, osg::Node* scene )
+    {
+        osgViewer::View* view = new osgViewer::View;
+        addView( view );
+
+        osg::Camera* camera = view-&gt;getCamera();
+        camera-&gt;setGraphicsContext( gw );
+
+        const osg::GraphicsContext::Traits* traits = gw-&gt;getTraits();
+
+        camera-&gt;setClearColor( osg::Vec4(0.2, 0.2, 0.6, 1.0) );
+        camera-&gt;setViewport( new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height) );
+        camera-&gt;setProjectionMatrixAsPerspective(30.0f, static_cast&lt;double&gt;(traits-&gt;width)/static_cast&lt;double&gt;(traits-&gt;height), 1.0f, 10000.0f );
+
+        view-&gt;setSceneData( scene );
+        view-&gt;addEventHandler( new osgViewer::StatsHandler );
+        view-&gt;setCameraManipulator( new osgGA::MultiTouchTrackballManipulator );
+        //gw-&gt;setTouchEventsEnabled( true );
+        return gw-&gt;getGLWidget();
+    }
+
+    osgQt::GraphicsWindowQt* createGraphicsWindow( int x, int y, int w, int h, const std::string&amp; name=&quot;&quot;, bool windowDecoration=false )
+    {
+        osg::DisplaySettings* ds = osg::DisplaySettings::instance().get();
+        osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+        traits-&gt;windowName = name;
+        traits-&gt;windowDecoration = windowDecoration;
+        traits-&gt;x = x;
+        traits-&gt;y = y;
+        traits-&gt;width = w;
+        traits-&gt;height = h;
+        traits-&gt;doubleBuffer = true;
+        traits-&gt;alpha = ds-&gt;getMinimumNumAlphaBits();
+        traits-&gt;stencil = ds-&gt;getMinimumNumStencilBits();
+        traits-&gt;sampleBuffers = ds-&gt;getMultiSamples();
+        traits-&gt;samples = ds-&gt;getNumMultiSamples();
+
+        return new osgQt::GraphicsWindowQt(traits.get());
+    }
+
+    virtual void paintEvent( QPaintEvent* event )
+    { frame(); }
+
+protected:
+
+    QTimer _timer;
+};
+
+QMdiSubWindow *CreateCowView()
+{
+  // Create widget for the osg 3d cow
+  QMdiSubWindow *pSubWindow = new QMdiSubWindow();
+  QWidget *pOsgWidget = new QWidget();
+  QVBoxLayout *pOsgLayout = new QVBoxLayout();
+  pOsgLayout-&gt;setContentsMargins(1, 1, 1, 1);
+  pOsgWidget-&gt;setLayout(pOsgLayout);
+  // Qt5 is currently crashing and reporting &quot;Cannot make QOpenGLContext current in a different thread&quot; when the viewer is run multi-threaded, this is regression from Qt4
+  ViewerWidget* viewWidget = new ViewerWidget(0, Qt::Widget, osgViewer::ViewerBase::SingleThreaded);
+  pOsgLayout-&gt;addWidget(viewWidget);
+  pSubWindow-&gt;setWidget(pOsgWidget);
+  return pSubWindow;
+}
+QMdiSubWindow *CreateTextView()
+{
+  // Create widget for a text label
+  QMdiSubWindow *pSubWindow = new QMdiSubWindow();
+  QWidget *pLabelWidget = new QWidget();
+  pLabelWidget-&gt;setMinimumSize(150, 150);
+  QVBoxLayout *pLabelLayout = new QVBoxLayout();
+  pLabelLayout-&gt;setContentsMargins(1, 1, 1, 1);
+  pLabelWidget-&gt;setLayout(pLabelLayout);
+  QLabel *pLabel = new QLabel(&quot;Hello World!\n\nReproduce the issue by:\n1. Move both windows.  Observe the shaking behavior of both windows\n2. Close the cow window.\n3. Move this window again.  Observe that the shaking is gone&quot;);
+  pLabel-&gt;setAlignment(Qt::AlignCenter);
+  pLabelLayout-&gt;addWidget(pLabel);
+  pSubWindow-&gt;setWidget(pLabelWidget);
+  return pSubWindow;
+}
+
+int main( int argc, char** argv )
+{
+  // To reproduce the problem:
+  // Execute the testOsgviewerQt program
+  // Observe that there are two windows.  an osg view with a cow displayed, and a text view
+  // Move both windows.
+  // Observe that the move operations shake the windows
+  // Close the osg window
+  // Move the text window
+  // Observe that the text window moves without shaking
+  osg::ArgumentParser arguments(&amp;argc, argv);
+
+  QApplication app(argc, argv);
+
+  QMainWindow window;
+  window.setWindowTitle(QString::fromUtf8(&quot;Test Shake on Move&quot;));
+
+  QMdiArea area;
+  area.setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+  //Add subWindow to Main QMdiWindow here
+  // One window has an osg cow (code is from examples/osgviewerQt)
+  // One window has a Qt text label
+  area.addSubWindow(CreateCowView());
+  area.addSubWindow(CreateTextView());
+
+  window.setCentralWidget(&amp;area);
+
+  window.show();
+
+  return app.exec();
+}
+
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopica811.php?p=67264#67264">http://forum.openscenegraph.org/viewtopic.php?p=67264#67264</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003158.html">[osg-users] [build] CMake not finding many 3rd party plugins	for vs2013
+</A></li>
+	<LI>Next message: <A HREF="279380.html">[osg-users] osg Animation and Geometry Morphing Question
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279379">[ date ]</a>
+              <a href="thread.html#279379">[ thread ]</a>
+              <a href="subject.html#279379">[ subject ]</a>
+              <a href="author.html#279379">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- generator="Joomla! - Open Source Content Management" -->
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Tutorials</title>
+		<description><![CDATA[Project website for OpenSceneGraph]]></description>
+		<link>https://www.openscenegraph.com/index.php/documentation/tutorials</link>
+		<lastBuildDate>Wed, 23 Aug 2023 00:51:14 +0000</lastBuildDate>
+		<generator>Joomla! - Open Source Content Management</generator>
+		<atom:link rel="self" type="application/rss+xml" href="https://www.openscenegraph.com/index.php/documentation/tutorials?format=feed&amp;type=rss"/>
+		<language>en-gb</language>
+		<managingEditor>robert@openscenegraph.com (OpenSceneGraph)</managingEditor>
+		<item>
+			<title>Analysing a Scenegraph</title>
+			<link>https://www.openscenegraph.com/index.php/documentation/tutorials/72-analysing-a-scenegraph</link>
+			<guid isPermaLink="true">https://www.openscenegraph.com/index.php/documentation/tutorials/72-analysing-a-scenegraph</guid>
+			<description><![CDATA[<div id="content" class="wiki">
+<div class="wikipage searchable">Once a scenegraph is loaded you may wish to analyse the in memory tree of nodes. Ideally you would use a nodevisitor, but here is a simple piece of C++ code that works:
+<pre class="wiki"> void analyseGeode(osg::Geode *geode);
+
+void analysePrimSet(osg::PrimitiveSet*prset, const osg::Vec3Array *verts);
+
+void analyse(osg::Node *nd) {
+	/// here you have found a group.
+    osg::Geode *geode = dynamic_cast&lt;osg::Geode *&gt; (nd);
+	if (geode) { // analyse the geode. If it isnt a geode the dynamic cast gives NULL.
+		analyseGeode(geode);
+	} else {
+		osg::Group *gp = dynamic_cast&lt;osg::Group *&gt; (nd);
+		if (gp) {
+			osg::notify(osg::WARN) &lt;&lt; "Group "&lt;&lt;  gp-&gt;getName() &lt;&lt;std::endl;
+			for (unsigned int ic=0; ic&lt;gp-&gt;getNumChildren(); ic++) {
+				analyse(gp-&gt;getChild(ic));
+			}
+		} else {
+			osg::notify(osg::WARN) &lt;&lt; "Unknown node "&lt;&lt;  nd &lt;&lt;std::endl;
+		}
+	}
+}
+// divide the geode into its drawables and primitivesets:
+
+void analyseGeode(osg::Geode *geode) {
+    for (unsigned int i=0; i&lt;geode-&gt;getNumDrawables(); i++) {
+		osg::Drawable *drawable=geode-&gt;getDrawable(i);
+		osg::Geometry *geom=dynamic_cast&lt;osg::Geometry *&gt; (drawable);
+		for (unsigned int ipr=0; ipr&lt;geom-&gt;getNumPrimitiveSets(); ipr++) {
+			osg::PrimitiveSet* prset=geom-&gt;getPrimitiveSet(ipr);
+			osg::notify(osg::WARN) &lt;&lt; "Primitive Set "&lt;&lt; ipr &lt;&lt; std::endl;
+			analysePrimSet(prset, dynamic_cast&lt;const osg::Vec3Array*&gt;(geom-&gt;getVertexArray()));
+		}
+    }
+}
+
+void analysePrimSet(osg::PrimitiveSet*prset, const osg::Vec3Array *verts) {
+	unsigned int ic;
+	unsigned int i2;
+	unsigned int nprim=0;
+	osg::notify(osg::WARN) &lt;&lt; "Prim set type "&lt;&lt; prset-&gt;getMode() &lt;&lt; std::endl;
+	for (ic=0; ic&lt;prset-&gt;getNumIndices(); ic++) { // NB the vertices are held in the drawable -
+		osg::notify(osg::WARN) &lt;&lt; "vertex "&lt;&lt; ic &lt;&lt; " is index "&lt;&lt;prset-&gt;index(ic) &lt;&lt; " at " &lt;&lt;
+			(* verts)[prset-&gt;index(ic)].x() &lt;&lt; "," &lt;&lt;
+			(* verts)[prset-&gt;index(ic)].y() &lt;&lt; "," &lt;&lt; 
+			(* verts)[prset-&gt;index(ic)].z() &lt;&lt; std::endl;
+    }
+	// you might want to handle each type of primset differently: such as:
+	switch (prset-&gt;getMode()) {
+	case osg::PrimitiveSet::TRIANGLES: // get vertices of triangle
+		osg::notify(osg::WARN) &lt;&lt; "Triangles "&lt;&lt; nprim &lt;&lt; " is index "&lt;&lt;prset-&gt;index(ic) &lt;&lt; std::endl;
+		for (i2=0; i2&lt;prset-&gt;getNumIndices()-2; i2+=3) {
+		}
+	break;
+	case osg::PrimitiveSet::TRIANGLE_STRIP: // look up how tristrips are coded
+	break;
+	// etc for all the primitive types you expect. EG quads, quadstrips lines line loops....
+	}
+}
+</pre>
+<p>This code can be inserted into (say) osgviewer.cpp, and called thus:</p>
+<pre class="wiki">analyse(loadedModel.get());
+</pre>
+</div>
+</div>]]></description>
+			<author>jtorresfabra@gmail.com (openscenegraph)</author>
+			<category>Tutorials</category>
+			<pubDate>Tue, 02 Oct 2012 23:51:41 +0000</pubDate>
+		</item>
+	</channel>
+</rss>

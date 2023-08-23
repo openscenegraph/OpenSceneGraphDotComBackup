@@ -1,0 +1,224 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Changes in osgVolume from 3.0 to 3.4
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changes%20in%20osgVolume%20from%203.0%20to%203.4&In-Reply-To=%3CCAHKmQh8fzL-aHza%2B1VX2MJPL5iyixWArL%3DbiadL8sOF1OWEf3A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002284.html">
+   <LINK REL="Next"  HREF="002278.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Changes in osgVolume from 3.0 to 3.4</H1>
+<!--htdig_noindex-->
+    <B>Alex Taylor</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changes%20in%20osgVolume%20from%203.0%20to%203.4&In-Reply-To=%3CCAHKmQh8fzL-aHza%2B1VX2MJPL5iyixWArL%3DbiadL8sOF1OWEf3A%40mail.gmail.com%3E"
+       TITLE="[osg-users] Changes in osgVolume from 3.0 to 3.4">alextaylor at gmail.com
+       </A><BR>
+    <I>Wed Feb  3 13:11:40 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002284.html">[osg-users] Viewing Stacked Semi-Transparent Geodes
+</A></li>
+        <LI>Next message: <A HREF="002278.html">[osg-users] Changes in osgVolume from 3.0 to 3.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278499">[ date ]</a>
+              <a href="thread.html#278499">[ thread ]</a>
+              <a href="subject.html#278499">[ subject ]</a>
+              <a href="author.html#278499">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Robert,
+
+Thanks. There are two main culprits the behavior change I was seeing. The
+first is that for some reason, between OSG 3.0 and 3.4, I now need to
+explicitly set a BlendFunc. With the exception of MIP, it looks like the
+rest of osgVolume just renders with a default BlendFunc and doesn't
+explictly set anything.
+
+I found that by setting
+
+ stateset-&gt;setAttribute(new osg::BlendFunc(GL_SRC_ALPHA,
+GL_ONE_MINUS_SRC_ALPHA), osg::StateAttribute::ON);
+
+There is a second issue I want to ask about:
+
+It looks to me there was a change to the shaders I'm using regarding the
+position of the light source between OSG 3.0 and OSG 3.4:
+
+<A HREF="https://github.com/openscenegraph/osg/commit/4525ec49a386b48608fdb3107033a1c915d928e6">https://github.com/openscenegraph/osg/commit/4525ec49a386b48608fdb3107033a1c915d928e6</A>
+
+The change is to honor the lightDirection from GL_LIGHT0 rather than use
+the eye direction as the direction of the light source.
+
+If I wanted to get the old behavior of using the eyeDirection, is there an
+easy way to go about that?
+
+Thanks,
+
+Alex
+
+On Thu, Jan 28, 2016 at 3:16 PM Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Alex,
+</I>&gt;<i>
+</I>&gt;<i> There were quite a few improvements to osgVolume between OSG-3.0 and
+</I>&gt;<i> OSG-3.4, both in shaders and the introduction of the new
+</I>&gt;<i> MultiPassTechnique.  One thing to look at with your own setup is that you
+</I>&gt;<i> aren't picking up on old
+</I>&gt;<i>  shaders such as by having your own path to old shaders.
+</I>&gt;<i>
+</I>&gt;<i> It's quite a while since I did the work on osgVolume, around two years, so
+</I>&gt;<i> won't be able to be specific without viewing code and being able to
+</I>&gt;<i> reproduce the problems you are seeing first hand.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 28 January 2016 at 15:25, Alex Taylor &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">alextaylor at gmail.com</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm working on upgrading the OSG version used in the product I work on.
+</I>&gt;&gt;<i> When OSG is upgraded with the same client code, I'm noticing differences is
+</I>&gt;&gt;<i> the way my volumes are rendered with all of the rendering algorithms that I
+</I>&gt;&gt;<i> can't explain. I've fixed the parameters I'm using to define the osgVolume
+</I>&gt;&gt;<i> in both versions, so it can't be a matter of picking up a different default
+</I>&gt;&gt;<i> option for a parameter.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> *OSG 3.4 Fixed Function*
+</I>&gt;&gt;<i> [image: osg34RayTraced.jpg]
+</I>&gt;&gt;<i> *OSG 3.0 Fixed Function*
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> *[image: osg30FixedFunction.jpg]*
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> *OSG 3.4 Ray Traced Lit*
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> *[image: osg34RayTracedLit.jpg]*
+</I>&gt;&gt;<i> *OSG 3.0 Ray Traced Lit*
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> *[image: osg30RayTracedLit.jpg]*
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> *OSG 3.4 Isosurface*
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> *[image: osg34Isosurface.jpg]*
+</I>&gt;&gt;<i> *OSG 3.0 Isosurface*
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> *[image: osg30Isosurface.jpg]*
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> In the Ray Traced cases, I'm using the properties:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> AlphaFunc = 0.02;
+</I>&gt;&gt;<i> SampleDensity = 0.005;
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm using setting the TransferFunctionProperty, so I'm using the shaders
+</I>&gt;&gt;<i> to do the alpha/color mapping.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> For the FixedFunctionTechnique, I'm using AlphaFunc = 0.02, and using
+</I>&gt;&gt;<i> the applyTransferFunction function to obtain an RGBA mapped osg::Image
+</I>&gt;&gt;<i> buffer.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> It's very possible that the upgrade to 3.4 has changed something else in
+</I>&gt;&gt;<i> my overall use of OSG elsewhere in the pipeline, unrelated to osgVolume,
+</I>&gt;&gt;<i> that is causing this issue. That said, I thought i'd ask if visually anyone
+</I>&gt;&gt;<i> has a guess it what might have changed between osg 3.0 and osg 3.4 that
+</I>&gt;&gt;<i> might explain these visual differences.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks for your help,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Alex
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160203/f623216e/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160203/f623216e/attachment-0002.htm</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osg30RayTracedLit.jpg
+Type: image/jpeg
+Size: 99825 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160203/f623216e/attachment-0012.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160203/f623216e/attachment-0012.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osg34Isosurface.jpg
+Type: image/jpeg
+Size: 65801 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160203/f623216e/attachment-0013.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160203/f623216e/attachment-0013.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osg34RayTraced.jpg
+Type: image/jpeg
+Size: 65527 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160203/f623216e/attachment-0014.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160203/f623216e/attachment-0014.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osg30FixedFunction.jpg
+Type: image/jpeg
+Size: 64837 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160203/f623216e/attachment-0015.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160203/f623216e/attachment-0015.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osg34RayTracedLit.jpg
+Type: image/jpeg
+Size: 142434 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160203/f623216e/attachment-0016.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160203/f623216e/attachment-0016.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osg30Isosurface.jpg
+Type: image/jpeg
+Size: 76932 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160203/f623216e/attachment-0017.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160203/f623216e/attachment-0017.jpg</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002284.html">[osg-users] Viewing Stacked Semi-Transparent Geodes
+</A></li>
+	<LI>Next message: <A HREF="002278.html">[osg-users] Changes in osgVolume from 3.0 to 3.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278499">[ date ]</a>
+              <a href="thread.html#278499">[ thread ]</a>
+              <a href="subject.html#278499">[ subject ]</a>
+              <a href="author.html#278499">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

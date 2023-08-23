@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Removing objects with shared GL state from scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1561851866.m2f.76341%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010158.html">
+   <LINK REL="Next"  HREF="010160.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Removing objects with shared GL state from scene graph</H1>
+<!--htdig_noindex-->
+    <B>Chris Djali</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1561851866.m2f.76341%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Removing objects with shared GL state from scene graph">krizdjali at gmail.com
+       </A><BR>
+    <I>Sat Jun 29 16:44:26 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010158.html">[osg-users] Valve Index
+</A></li>
+        <LI>Next message (by thread): <A HREF="010160.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10159">[ date ]</a>
+              <a href="thread.html#10159">[ thread ]</a>
+              <a href="subject.html#10159">[ subject ]</a>
+              <a href="author.html#10159">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I've been putting off responding to the last post as I wanted to be sure I wasn't misunderstanding you, but after several rereadings, I still think you've missed my point. I'll try explaining the issue again, but I'm not sure which part isn't clear, so I don't know how much it'll help.
+
+In the application I'm working with, many viewers (and their OpenGL contexts) can come and go over the lifetime of the program, but the scenegraph doesn't get replaced, so can be used with multiple viewers, potentially at the same time.
+
+OSG has mechanisms that make this work, such as how osg::Program has PerContextProgram. Most of the time, this works just fine - provided you release a node's GL objects when you remove it from the scene, and let a viewer release the GL objects it has in the scene when you destroy it, everything is managed correctly.
+
+However, osgText::Text doesn't work well with this approach. It uses one osg::Program for all instances in the scene that have the same font, so it's not safe to release a text node's GL objects when you remove it, as they may still be being used by another text node. Unless you've got a hacky workaround in place (a few of which I've outlined above), the shared program will leak when the viewer is destroyed (which is bad) and then, if another viewer is assigned the same context ID (which it will be), it's mistaken for the old one, and the invalid PerContextProgram (which refers to the leaked GL program) gets used, causing OpenGL errors.
+
+This might have wider-reaching consequences than just the issue I'm having in the lots-of-viewers case - if two text nodes with the same font are used and one gets deleted, regardless of whether more contexts are created later:
+	calling 
+osgText::Text::releaseGLObjects calls osgText::TextBase::releaseGLObjects, which calls osgText::Font::releaseGLObjects, releasing GL objects still in use by the other text node.
+	Not calling 
+osgText::Text::releaseGLObjects means that the other GL objects the node owns, such as its vertex buffers, get leaked, even though the shared font might get cleaned up later with the other text node.
+
+
+Maybe the right thing to do is to only release the font's GL objects when all its users request it, rather than just one. I've not thought of a nice way of implementing this yet.
+
+
+I'll address specific parts of the previous post now:
+
+
+&gt;<i> there is no mechanism for deleting
+</I>&gt;<i> this global prior to the viewer cleans up so in essence it's prevent
+</I>&gt;<i> that scene graph from being deleted and cleaned up. After the exit of
+</I>&gt;<i> the main frame loop you could explicitly delete this object.
+</I>
+
+There's not supposed to be any mechanism for deleting it prior to the viewer cleaning up as it's going to be used by another viewer later. Pretend it's not just a few ShapeDrawables with labels, but instead something really complicated that takes a long time to regenerate.
+
+
+&gt;<i> Another
+</I>&gt;<i> approach would be to make this World object a custom Group node in the
+</I>&gt;<i> scene graph that adds the high level behaviors you want and with it
+</I>&gt;<i> ensure that you can override any releaseGLObjects() etc on any locally
+</I>&gt;<i> cached objects that would otherwise be hidden from the OSG's attempts
+</I>&gt;<i> at cleaning things up.
+</I>
+
+The high-level behaviour is all fine as-is. The specific problem is that it's not safe to call osgText::Text::releaseGLObjects when removing a text object as that releases GL objects for the font, too, and that can still be in use by other text nodes.
+
+Cheers,
+Chris
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic7305.php?p=76341#76341">http://forum.openscenegraph.org/viewtopic.php?p=76341#76341</A>
+
+
+
+
+
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010158.html">[osg-users] Valve Index
+</A></li>
+	<LI>Next message (by thread): <A HREF="010160.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10159">[ date ]</a>
+              <a href="thread.html#10159">[ thread ]</a>
+              <a href="subject.html#10159">[ subject ]</a>
+              <a href="author.html#10159">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

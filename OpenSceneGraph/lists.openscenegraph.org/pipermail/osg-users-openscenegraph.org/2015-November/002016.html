@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Changing minFilter/magFilter of texture in	osgVolume::FixedFunctionTechnique
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changing%20minFilter/magFilter%20of%20texture%20in%0A%09osgVolume%3A%3AFixedFunctionTechnique&In-Reply-To=%3CCAFN7Y%2BXnQb0i1WqaeJt1dNEAe9HCvmm%2B-ZV%2B_6C79E36HtB7oQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278238.html">
+   <LINK REL="Next"  HREF="278240.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Changing minFilter/magFilter of texture in	osgVolume::FixedFunctionTechnique</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changing%20minFilter/magFilter%20of%20texture%20in%0A%09osgVolume%3A%3AFixedFunctionTechnique&In-Reply-To=%3CCAFN7Y%2BXnQb0i1WqaeJt1dNEAe9HCvmm%2B-ZV%2B_6C79E36HtB7oQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Changing minFilter/magFilter of texture in	osgVolume::FixedFunctionTechnique">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Nov 19 00:16:07 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278238.html">[osg-users] Changing minFilter/magFilter of texture in	osgVolume::FixedFunctionTechnique
+</A></li>
+        <LI>Next message: <A HREF="278240.html">[osg-users] Glowing Sphere Effect
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2016">[ date ]</a>
+              <a href="thread.html#2016">[ thread ]</a>
+              <a href="subject.html#2016">[ subject ]</a>
+              <a href="author.html#2016">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Alex,
+
+I have just looked at the code and for some reason the
+FixedFunctionTechnque is enforcing NEAREST, not sure why.  I haven't
+touched this code particular bit of code for a long while.
+
+FixedFunctionTechnique is a fallback implementation though, you really
+should be using RayTracedTechnique as the results will be much better.
+
+And yes you should upgrade to OSG-3.4.  osgVolume has a number of
+improvements as well as the rest of the OSG being more mature.
+
+Robert.
+
+On 19 November 2015 at 01:11, Alex Taylor &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">alextaylor at gmail.com</A>&gt; wrote:
+
+&gt;<i> This is probably a silly question, but I'm playing around with the
+</I>&gt;<i> osgVolume nodekit. I have FixedFunctionTechnique putting graphics on the
+</I>&gt;<i> screen, but things are rendering more &quot;blocky&quot; than I would like. The
+</I>&gt;<i> culprit is the NEAREST neighbor choice that is used by default as the
+</I>&gt;<i> min/mag filter for the Texture3D object created by FixedFunctionTechnique.
+</I>&gt;<i> I'd like to change to LINEAR. The problem I'm seeing is that when I use the
+</I>&gt;<i> setMinFilter and setMaxFilter methods on the associated ImageLayer, things
+</I>&gt;<i> aren't getting updated for some reason.* I know that's what's going on
+</I>&gt;<i> because if I actually edit the code in FixedFunctionTechnique to use LINEAR
+</I>&gt;<i> for the min/max filter on the Texture3D, I get the texture I want on the
+</I>&gt;<i> screen.*
+</I>&gt;<i>
+</I>&gt;<i> Here is some code for context:
+</I>&gt;<i>
+</I>&gt;<i>             osg::ref_ptr&lt;osgVolume::Volume&gt; volume = new
+</I>&gt;<i>  osgVolume::Volume;
+</I>&gt;<i>
+</I>&gt;<i>             osg::ref_ptr&lt;osgVolume::VolumeTile&gt; tile = new
+</I>&gt;<i>  osgVolume::VolumeTile;
+</I>&gt;<i>             volume-&gt;addChild(tile.get());
+</I>&gt;<i>
+</I>&gt;<i>             osg::ref_ptr&lt;osg::Image&gt; image_3d =
+</I>&gt;<i> createTexture3D(data,xfer_table);
+</I>&gt;<i>
+</I>&gt;<i>             osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer = new
+</I>&gt;<i>  osgVolume::ImageLayer(image_3d.get());
+</I>&gt;<i>
+</I>&gt;<i>             tile-&gt;setLayer(layer.get());
+</I>&gt;<i>
+</I>&gt;<i>             layer-&gt;addProperty(new osgVolume::AlphaFuncProperty(0.02f));
+</I>&gt;<i>
+</I>&gt;<i>             osg::ref_ptr&lt;osgVolume::FixedFunctionTechnique&gt; technique =
+</I>&gt;<i> new osgVolume::FixedFunctionTechnique();
+</I>&gt;<i>             technique-&gt;setNumSlices(200);
+</I>&gt;<i>             tile-&gt;setVolumeTechnique(technique);
+</I>&gt;<i>
+</I>&gt;<i>             layer-&gt;setMagFilter(osg::Texture3D::LINEAR);
+</I>&gt;<i>             layer-&gt;setMinFilter(osg::Texture3D::LINEAR);
+</I>&gt;<i>
+</I>&gt;<i> How can I force the Texture3D object created by FixedFunctionTechnique to
+</I>&gt;<i> use LINEAR for minFilter/magFiltering?
+</I>&gt;<i>
+</I>&gt;<i> I'm using OSG 3.0 (I know I need to upgrade).
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i>
+</I>&gt;<i> Alex
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151119/c8361a23/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151119/c8361a23/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278238.html">[osg-users] Changing minFilter/magFilter of texture in	osgVolume::FixedFunctionTechnique
+</A></li>
+	<LI>Next message: <A HREF="278240.html">[osg-users] Glowing Sphere Effect
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2016">[ date ]</a>
+              <a href="thread.html#2016">[ thread ]</a>
+              <a href="subject.html#2016">[ subject ]</a>
+              <a href="author.html#2016">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

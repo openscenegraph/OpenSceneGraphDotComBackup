@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Different results from camera-&gt;getViewMatrix() in OSG	3.4.0 compared to OSG 3.2.1
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Different%20results%20from%20camera-%3EgetViewMatrix%28%29%20in%20OSG%0A%093.4.0%20compared%20to%20OSG%203.2.1&In-Reply-To=%3C1460631769.m2f.66808%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278988.html">
+   <LINK REL="Next"  HREF="002768.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Different results from camera-&gt;getViewMatrix() in OSG	3.4.0 compared to OSG 3.2.1</H1>
+<!--htdig_noindex-->
+    <B>Ronny Hatteland</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Different%20results%20from%20camera-%3EgetViewMatrix%28%29%20in%20OSG%0A%093.4.0%20compared%20to%20OSG%203.2.1&In-Reply-To=%3C1460631769.m2f.66808%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Different results from camera-&gt;getViewMatrix() in OSG	3.4.0 compared to OSG 3.2.1">ronnyhatteland at gmail.com
+       </A><BR>
+    <I>Thu Apr 14 04:02:49 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278988.html">[osg-users] Question about osgVolume::createNormalMapTexture
+</A></li>
+        <LI>Next message: <A HREF="002768.html">[osg-users] Different results from camera-&gt;getViewMatrix() in OSG 3.4.0 compared to OSG 3.2.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278990">[ date ]</a>
+              <a href="thread.html#278990">[ thread ]</a>
+              <a href="subject.html#278990">[ subject ]</a>
+              <a href="author.html#278990">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I have some code for doing picking of objects on the screen:
+
+
+Code:
+float dX = ea.getX();
+float dY = ea.getY();
+
+osg::ref_ptr&lt;osg::Camera&gt; camera = view-&gt;getCamera();
+
+// compute model to window transform
+// Model*View*Projection*WindowMatrix
+osg::Matrixd matrix;
+matrix.postMult(camera-&gt;getViewMatrix());
+matrix.postMult(camera-&gt;getProjectionMatrix());
+osg::Matrixd windowMatrix = camera-&gt;getViewport()-&gt;computeWindowMatrix();
+matrix.postMult(windowMatrix);
+
+osg::Matrixd inverse;
+inverse.invert(matrix);
+
+// get the coordinates in screen-space:
+osg::Vec3 mouseloc = osg::Vec3(dX, dY, 0) * inverse;
+osg::Vec3 normalizedMouseRay = (osg::Vec3(dX, dY, 1) * inverse) - mouseloc;
+osg::Plane _dragPlane(osg::Vec4d(0, 1, 0, 0));
+
+
+Which was working perfectly fine in OSG 3.2.1.
+However, when I updated to OSG 3.4.0 a vertical offset was introduced, which seems to be constant regardless of the camera.
+
+Positioning the camera at approximately the same place in both cases, and looking at the matrices, it looks like the offset was introduced already by the getViewMatrix() method, value[3][3]:
+
+
+Code:
+matrix.postMult(camera-&gt;getViewMatrix());
+3.4.0:
+[0] {1.0000000000000000, 0.00000000000000000, 0.00000000000000000, 0.00000000000000000}
+[1] {0.00000000000000000, 0.00000000000000000, -1.0000000000000000, 0.00000000000000000}
+[2] {0.00000000000000000, 1.0000000000000000, 0.00000000000000000, 0.00000000000000000}
+[3] {-1009.2817596644163, 216.03970056772232, -509.02834880430618, 1.0000000000000000}
+3.2.1:
+[0] {1.0000000000000000, 0.00000000000000000, 0.00000000000000000, 0.00000000000000000}
+[1] {0.00000000000000000, 0.00000000000000000, -1.0000000000000000, 0.00000000000000000}
+[2] {0.00000000000000000, 1.0000000000000000, 0.00000000000000000, 0.00000000000000000}
+[3] {-1061.2815714627504, 239.85043859481812, -599.72003111232948, 1.0000000000000000}
+
+matrix.postMult(camera-&gt;getProjectionMatrix());
+3.4.0:
+[0] {1.7748398086904795, 0.00000000000000000, 0.00000000000000000, 0.00000000000000000}
+[1] {0.00000000000000000, 0.00000000000000000, 1.0000000000000200, 1.0000000000000000}
+[2] {0.00000000000000000, 3.8461539872299335, 0.00000000000000000, 0.00000000000000000}
+[3] {-1791.3134452375832, 830.92195573850609, 509.02834880411638, 509.02834880430618}
+3.2.1
+[0] {1.7748398086904795, 0.00000000000000000, 0.00000000000000000, 0.00000000000000000}
+[1] {0.00000000000000000, 0.00000000000000000, 1.0000000000000200, 1.0000000000000000}
+[2] {0.00000000000000000, 3.8461539872299335, 0.00000000000000000, 0.00000000000000000}
+[3] {-1883.6047812616794, 922.50172074030797, 599.72003111214144, 599.72003111232948}
+
+WindowMatrix
+3.4.0:
+[0] {960.00000000000000, 0.00000000000000000, 0.00000000000000000, 0.00000000000000000}
+[1] {0.00000000000000000, 443.00000000000000, 0.00000000000000000, 0.00000000000000000}
+[2] {0.00000000000000000, 0.00000000000000000, 0.50000000000000000, 0.00000000000000000}
+[3] {960.00000000000000, 581.00000000000000, 0.50000000000000000, 1.0000000000000000}
+3.2.1
+[0] {960.00000000000000, 0.00000000000000000, 0.00000000000000000, 0.00000000000000000}
+[1] {0.00000000000000000, 443.00000000000000, 0.00000000000000000, 0.00000000000000000}
+[2] {0.00000000000000000, 0.00000000000000000, 0.50000000000000000, 0.00000000000000000}
+[3] {960.00000000000000, 443.00000000000000, 0.50000000000000000, 1.0000000000000000}
+
+matrix.postMult(windowMatrix); 
+3.4.0:
+[0] {1703.8462163428603, 0.00000000000000000, 0.00000000000000000, 0.00000000000000000}
+[1] {960.00000000000000, 581.00000000000000, 1.0000000000000100, 1.0000000000000000}
+[2] {0.00000000000000000, 1703.8462163428605, 0.00000000000000000, 0.00000000000000000}
+[3] {-1230993.6925759460, 663843.89704746008, 509.02834880421130, 509.02834880430618}
+3.2.1
+[0] {1703.8462163428603, 0.00000000000000000, 0.00000000000000000, 0.00000000000000000}
+[1] {960.00000000000000, 443.00000000000000, 1.0000000000000100, 1.0000000000000000}
+[2] {0.00000000000000000, 1703.8462163428605, 0.00000000000000000, 0.00000000000000000}
+[3] {-1232529.3601433760, 674344.23607071838, 599.72003111223546, 599.72003111232948}
+
+inverse
+3.4.0:
+[0] {0.00058670300251959689, 1.0310124207250091e-007, 4.3757801540539190e-008, -2.0254518695206543e-010}
+[1] {0.00000000000000000, 0.00000000000000000, 0.00058690742768229540, 0.00000000000000000}
+[2] {-10086449333416.564, 5087071672824.5107, 2159033860383.4014, -9993690301.8739624}
+[3] {10086449333416.104, -5087071672823.5625, -2159033860383.7642, 9993690301.8740635}
+3.2.1
+[0] {0.00058743635625737895, -2.9889246175079844e-007, -1.1953825839478168e-007, 4.9838665751483716e-010}
+[1] {0.00000000000000000, 0.00000000000000000, 0.00058690742768229540, 0.00000000000000000}
+[2] {-10634237608903.178, 6009305617996.5537, 2403345750271.9492, -10020184930.042784}
+[3] {10634237608902.719, -6009305617995.6123, -2403345750272.2324, 10020184930.042881}
+
+
+Is this a bug or is there a reason why this is different between the two versions?
+
+Thank you!
+
+Cheers,
+Ronny[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic6f85.php?p=66808#66808">http://forum.openscenegraph.org/viewtopic.php?p=66808#66808</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278988.html">[osg-users] Question about osgVolume::createNormalMapTexture
+</A></li>
+	<LI>Next message: <A HREF="002768.html">[osg-users] Different results from camera-&gt;getViewMatrix() in OSG 3.4.0 compared to OSG 3.2.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278990">[ date ]</a>
+              <a href="thread.html#278990">[ thread ]</a>
+              <a href="subject.html#278990">[ subject ]</a>
+              <a href="author.html#278990">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

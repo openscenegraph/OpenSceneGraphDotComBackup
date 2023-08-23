@@ -1,0 +1,183 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [3rdparty] Use PNG as texture for terrain in osgEarth
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5B3rdparty%5D%20Use%20PNG%20as%20texture%20for%20terrain%20in%0A%20osgEarth&In-Reply-To=%3CCAGoufmZJSTPFU8vxaJj6-8ha_kcFJhq-A%2Bsg2ZFFFZ0tYacL5w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009574.html">
+   <LINK REL="Next"  HREF="009577.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [3rdparty] Use PNG as texture for terrain in osgEarth</H1>
+<!--htdig_noindex-->
+    <B>Chris Hanson</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5B3rdparty%5D%20Use%20PNG%20as%20texture%20for%20terrain%20in%0A%20osgEarth&In-Reply-To=%3CCAGoufmZJSTPFU8vxaJj6-8ha_kcFJhq-A%2Bsg2ZFFFZ0tYacL5w%40mail.gmail.com%3E"
+       TITLE="[osg-users] [3rdparty] Use PNG as texture for terrain in osgEarth">xenon at alphapixel.com
+       </A><BR>
+    <I>Tue Jan  8 03:59:16 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009574.html">[osg-users] [3rdparty] Use PNG as texture for terrain in osgEarth
+</A></li>
+        <LI>Next message (by thread): <A HREF="009577.html">[osg-users] [3rdparty] Use PNG as texture for terrain in osgEarth
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9576">[ date ]</a>
+              <a href="thread.html#9576">[ thread ]</a>
+              <a href="subject.html#9576">[ subject ]</a>
+              <a href="author.html#9576">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>If you feed the TIFF LWZ coder the same 4-bit data as the PNG is made form,
+I would think it would code about as efficiently, even if the data is
+stored in an 8-bit representation. Forward-dictionary compression systems
+work on how many unique symbols are found and if you make a 16m color image
+with only 256 colors, it'll only take 256 symbol table entries to store.
+
+I'm not sure why the TIFF wouldn't be displaying. What is the bit depth of
+the TIFF? Have you told osgEarth how to scale the elevation from the TIFF
+file into real world units? If it's an 8-bit TIFF, you are only feeding it
+up to 256m of elevation which won't look like much for the Andes.
+
+On Tue, Jan 8, 2019 at 12:32 PM Rodrigo Dias &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rodrigo1406 at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> Sorry, I didn't post the updated code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> #include &lt;iostream&gt;
+</I>&gt;<i> #include &lt;osg/Camera&gt;
+</I>&gt;<i> #include &lt;osgDB/ReadFile&gt;
+</I>&gt;<i> #include &lt;osgGA/TrackballManipulator&gt;
+</I>&gt;<i> #include &lt;osgViewer/Viewer&gt;
+</I>&gt;<i> #include &lt;osgEarth/ImageLayer&gt;
+</I>&gt;<i> #include &lt;osgEarth/Map&gt;
+</I>&gt;<i> #include &lt;osgEarth/MapNode&gt;
+</I>&gt;<i> #include &lt;osgEarthDrivers/gdal/GDALOptions&gt;
+</I>&gt;<i>
+</I>&gt;<i> using namespace std;
+</I>&gt;<i> using namespace osg;
+</I>&gt;<i> using namespace osgEarth;
+</I>&gt;<i> using namespace osgEarth::Drivers;
+</I>&gt;<i>
+</I>&gt;<i> int main (int argc, char** argv) {
+</I>&gt;<i>         MapOptions mapOpt;
+</I>&gt;<i>         mapOpt.coordSysType() = MapOptions::CSTYPE_PROJECTED;
+</I>&gt;<i>         mapOpt.profile() = ProfileOptions(&quot;plate-carre&quot;);
+</I>&gt;<i>         osg::ref_ptr&lt;Map&gt; map = new Map(mapOpt);
+</I>&gt;<i>         {
+</I>&gt;<i>                 GDALOptions gdal;
+</I>&gt;<i>                 gdal.url() = &quot;br_modified.tif&quot;;
+</I>&gt;<i>                 osg::ref_ptr&lt;ImageLayer&gt; layer = new ImageLayer( &quot;BR&quot;,
+</I>&gt;<i> gdal );
+</I>&gt;<i>                 map-&gt;addLayer( layer );
+</I>&gt;<i>         }
+</I>&gt;<i>         {
+</I>&gt;<i>                 GDALOptions gdal;
+</I>&gt;<i>                 gdal.url() = &quot;BRalt.tif&quot;;
+</I>&gt;<i>                 osg::ref_ptr&lt;ElevationLayer&gt; layer = new ElevationLayer(
+</I>&gt;<i> &quot;SRTM&quot;, gdal );
+</I>&gt;<i>                 map-&gt;addLayer( layer );
+</I>&gt;<i>         }
+</I>&gt;<i>         osg::ref_ptr&lt;MapNode&gt; mapNode = new MapNode( map );
+</I>&gt;<i>         osgViewer::Viewer viewer;
+</I>&gt;<i>         viewer.setSceneData( mapNode.get() );
+</I>&gt;<i>         viewer.setCameraManipulator( new osgGA::TrackballManipulator );
+</I>&gt;<i>         while ( !viewer.done() ) {
+</I>&gt;<i>                 viewer.frame();
+</I>&gt;<i>         }
+</I>&gt;<i>         return 0;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> As you can see, I guess I should be seeing some elevation by now, since my
+</I>&gt;<i> image is a square around Brazil, and it includes a good portion of the
+</I>&gt;<i> Andes mountain range (with higher pixels closer to white, and sea level in
+</I>&gt;<i> black).
+</I>&gt;<i>
+</I>&gt;<i> The texture file is 4392x4392 pixels (1.6 MB on PNG/4-bit-depth and 2.6 MB
+</I>&gt;<i> on TIFF/LZW/8-bit-depth, the difference seems due to bit depth, and I'm not
+</I>&gt;<i> sure if I can use a 4-bit TIFF, but that's ok by now; I'll also try tiling
+</I>&gt;<i> later). The elevation file is 588x588 pixels (70 kB). Both TIFFs are
+</I>&gt;<i> GeoTIFFs.
+</I>&gt;<i>
+</I>&gt;<i> What I'm trying to accomplish is this:
+</I>&gt;<i> <A HREF="https://www.youtube.com/watch?v=vVm_qWeB9wg">https://www.youtube.com/watch?v=vVm_qWeB9wg</A>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Rodrigo
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic647d.php?p=75423#75423">http://forum.openscenegraph.org/viewtopic.php?p=75423#75423</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+-- 
+Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>
+<A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+Training &#8226; Consulting &#8226; Contracting
+3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226;
+GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+Legal/IP &#8226; Forensics &#8226; Imaging &#8226; UAVs &#8226; GIS &#8226; GPS &#8226;
+osgEarth &#8226; Terrain &#8226; Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226;
+iPhone/iPad/iOS &#8226; Android
+@alphapixel &lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt; facebook.com/alphapixel (775)
+623-PIXL [7495]
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190108/2ed00065/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190108/2ed00065/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009574.html">[osg-users] [3rdparty] Use PNG as texture for terrain in osgEarth
+</A></li>
+	<LI>Next message (by thread): <A HREF="009577.html">[osg-users] [3rdparty] Use PNG as texture for terrain in osgEarth
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9576">[ date ]</a>
+              <a href="thread.html#9576">[ thread ]</a>
+              <a href="subject.html#9576">[ subject ]</a>
+              <a href="author.html#9576">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

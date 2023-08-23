@@ -1,0 +1,191 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Finding the edge of a frustum, or intersection with the edge of a frustum
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Finding%20the%20edge%20of%20a%20frustum%2C%0A%20or%20intersection%20with%20the%20edge%20of%20a%20frustum&In-Reply-To=%3C1573840237.m2f.76910%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010590.html">
+   <LINK REL="Next"  HREF="010591.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Finding the edge of a frustum, or intersection with the edge of a frustum</H1>
+<!--htdig_noindex-->
+    <B>Brad Colbert</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Finding%20the%20edge%20of%20a%20frustum%2C%0A%20or%20intersection%20with%20the%20edge%20of%20a%20frustum&In-Reply-To=%3C1573840237.m2f.76910%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Finding the edge of a frustum, or intersection with the edge of a frustum">bcolbert at rscusa.com
+       </A><BR>
+    <I>Fri Nov 15 09:50:37 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010590.html">[osg-users] Finding the edge of a frustum, or intersection with the edge of a frustum
+</A></li>
+        <LI>Next message (by thread): <A HREF="010591.html">&#208;&#158;&#209;&#130;&#208;&#190;&#208;&#177;&#209;&#128;&#208;&#176;&#208;&#182;&#208;&#181;&#208;&#189;&#208;&#184;&#208;&#181; &#208;&#187;&#208;&#184;&#208;&#189;&#208;&#184;&#208;&#185; &#208;&#180;&#208;&#176;&#208;&#187;&#208;&#181;&#208;&#186;&#208;&#190; &#208;&#190;&#209;&#130; &#208;&#189;&#208;&#176;&#209;&#135;&#208;&#176;&#208;&#187;&#208;&#176; &#208;&#161;&#208;&#154;
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10603">[ date ]</a>
+              <a href="thread.html#10603">[ thread ]</a>
+              <a href="subject.html#10603">[ subject ]</a>
+              <a href="author.html#10603">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I thought I would post my solution for finding the intersection of circles with a rectangle.  Used to test were circles are intersecting the edge of my Ortho projection.
+
+
+Code:
+bool isPointOnSegment(const osg::Vec3d&amp; p1, const osg::Vec3d&amp; p2, const osg::Vec3d&amp; point)
+{
+    // First test that the point is co-linear
+    osg::Vec3d v1 = p2 - p1;
+    osg::Vec3d v2 = point - p1;
+
+    // Cross product
+    double z = v1.x() * v2.y() - v1.y() * v2.x();
+
+    if(z)
+        return false;
+
+    // Dot product will tell us if it's between the points
+    double dp1 = v1 * v1;
+    double dp2 = v1 * v2;
+
+    // On end
+    if((dp1 == 0) || (dp1 == dp2))
+        return true;
+
+    // On Segment
+    else if((dp1 &gt; 0.0) &amp;&amp; (dp2 &lt; dp1))
+        return true;
+
+    return false;
+}
+
+//
+template &lt;typename T&gt; int sgn(T val) {
+    return (T(0) &lt; val) - (val &lt; T(0));
+}
+std::list&lt;osg::Vec3d&gt; findLineCircleIntersections(const osg::Vec3d&amp; p1, const osg::Vec3d&amp; p2, const osg::Vec3d&amp; center, const double r)
+{
+    std::list&lt;osg::Vec3d&gt; points;
+    double dx, dy, A, B, C, dis, t;
+
+    dx = p2.x() - p1.x();
+    dy = p2.y() - p1.y();
+
+    A = dx * dx + dy * dy;
+    B = 2 * (dx * (p1.x() - center.x()) + dy * (p1.y() - center.y()));
+    C = (p1.x() - center.x()) * (p1.x() - center.x()) +
+        (p1.y() - center.y()) * (p1.y() - center.y()) -
+        r * r;
+
+    dis = B * B - 4 * A * C;
+
+    if(dis &lt; 0.0)
+    {
+        // No intersection
+    }
+    else
+    {
+        // Two solutions.
+        double t1 = (float)((-B - sqrt(dis)) / (2 * A));
+        double t2 = (float)((-B + sqrt(dis)) / (2 * A));
+
+        double x1 = p1.x() + t2 * dx;
+        double y1 = p1.y() + t2 * dy;
+        osg::Vec3d point1(x1, y1, p1.z());
+
+        if (dis == 0.0) // Tangent
+        {
+            // Validate
+            if(isPointOnSegment(p1, p2, point1))
+                points.push_back(point1);
+        }
+        else if (dis &gt; 0.0)
+        {
+            double x2 = p1.x() + t1 * dx;
+            double y2 = p1.y() + t1 * dy;
+            osg::Vec3d point2(x2, y2, p1.z());
+
+            // Two intersections
+            if(isPointOnSegment(p1, p2, point1))
+                points.push_back(osg::Vec3d(x1,y1,p1.z()));
+            if(isPointOnSegment(p1, p2, point2))
+                points.push_back(osg::Vec3d(x2,y2,p1.z()));
+        }
+    }
+
+    return points;
+}
+
+std::list&lt;osg::Vec3d&gt; findRectangleCircleIntersections(const osg::Vec3d&amp; s1p1, const osg::Vec3d&amp; s1p2,
+                                                       const osg::Vec3d&amp; s2p1, const osg::Vec3d&amp; s2p2,
+                                                       const osg::Vec3d&amp; s3p1, const osg::Vec3d&amp; s3p2,
+                                                       const osg::Vec3d&amp; s4p1, const osg::Vec3d&amp; s4p2,
+                                                       const osg::Vec3d&amp; center, const double r)
+{
+    std::list&lt;osg::Vec3d&gt; points;
+
+    std::list&lt;osg::Vec3d&gt; s1points = findLineCircleIntersections(s1p1, s1p2, center, r);
+    points.insert(points.end(), s1points.begin(), s1points.end());
+
+    std::list&lt;osg::Vec3d&gt; s2points = findLineCircleIntersections(s2p1, s2p2, center, r);
+    points.insert(points.end(), s2points.begin(), s2points.end());
+
+    std::list&lt;osg::Vec3d&gt; s3points = findLineCircleIntersections(s3p1, s3p2, center, r);
+    points.insert(points.end(), s3points.begin(), s3points.end());
+
+    std::list&lt;osg::Vec3d&gt; s4points = findLineCircleIntersections(s4p1, s4p2, center, r);
+    points.insert(points.end(), s4points.begin(), s4points.end());
+
+    return points;
+}
+
+
+
+
+Cheers,
+Brad
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4a55.php?p=76910#76910">http://forum.openscenegraph.org/viewtopic.php?p=76910#76910</A>
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010590.html">[osg-users] Finding the edge of a frustum, or intersection with the edge of a frustum
+</A></li>
+	<LI>Next message (by thread): <A HREF="010591.html">&#208;&#158;&#209;&#130;&#208;&#190;&#208;&#177;&#209;&#128;&#208;&#176;&#208;&#182;&#208;&#181;&#208;&#189;&#208;&#184;&#208;&#181; &#208;&#187;&#208;&#184;&#208;&#189;&#208;&#184;&#208;&#185; &#208;&#180;&#208;&#176;&#208;&#187;&#208;&#181;&#208;&#186;&#208;&#190; &#208;&#190;&#209;&#130; &#208;&#189;&#208;&#176;&#209;&#135;&#208;&#176;&#208;&#187;&#208;&#176; &#208;&#161;&#208;&#154;
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10603">[ date ]</a>
+              <a href="thread.html#10603">[ thread ]</a>
+              <a href="subject.html#10603">[ subject ]</a>
+              <a href="author.html#10603">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

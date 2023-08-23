@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to reduce the cache size limit of OSG ?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20reduce%20the%20cache%20size%20limit%20of%20OSG%20%3F&In-Reply-To=%3Cmailman.7347.1590995092.4144.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="011124.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to reduce the cache size limit of OSG ?</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20reduce%20the%20cache%20size%20limit%20of%20OSG%20%3F&In-Reply-To=%3Cmailman.7347.1590995092.4144.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] How to reduce the cache size limit of OSG ?">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Mon Jun  1 00:04:49 PDT 2020</I>
+    <P><UL>
+        
+        <LI>Next message (by thread): <A HREF="011124.html">[osg-users] Effecting MatrixTransform matrix change
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11123">[ date ]</a>
+              <a href="thread.html#11123">[ thread ]</a>
+              <a href="subject.html#11123">[ subject ]</a>
+              <a href="author.html#11123">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Hui,
+
+On Monday, 1 June 2020 02:28:04 UTC+1, Hui Li wrote:
+&gt;<i>
+</I>&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> Sorry for the late reply. The codes of CreateGeometryNode looks like this: 
+</I>&gt;<i> osg::ref_ptr&lt;osg::MatrixTransform&gt; CreateGeometryNode() {
+</I>&gt;<i>     std::vector&lt;float&gt; xyzs = RandomPoints(); ///&lt; Create ramdon number of 
+</I>&gt;<i> points 
+</I>&gt;<i>     osg::Vec3Array vs = new osg::Vec3Array(xyzs.size()/3, (const osg::Vec3 
+</I>&gt;<i> *)(xyzs.data()));
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Geometry&gt; geo = new osg::Geometry;
+</I>&gt;<i>     geo-&gt;setVertexArray(vs.get());
+</I>&gt;<i>     geo-&gt;setColorArray(osg::Vec3(0.5,0.5,0.5));
+</I>&gt;<i>     geo-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+</I>&gt;<i>     geo-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, 
+</I>&gt;<i> numpt));
+</I>&gt;<i>     geo-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, 
+</I>&gt;<i> osg::StateAttribute::OFF);
+</I>&gt;<i>     geo-&gt;getOrCreateStateSet()-&gt;setAttribute(new osg::Point(size), 
+</I>&gt;<i> osg::StateAttribute::ON);
+</I>&gt;<i>     osg::ref_ptr&lt;osg::MatrixTransform&gt; mt = new osg::MatrixTransform;
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+</I>&gt;<i>     geode-&gt;addDrawable(geo.get());
+</I>&gt;<i>     mt-&gt;addChild(geode);
+</I>&gt;<i>     return mt; 
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>Adding and removing data continuously is least efficient way to implement 
+this type of functionality, it's not just an OpenGL/OSG thing, it applies 
+pretty well to all computing.
+
+If you have a stream of data coming in then the best way to manage it is to 
+allocated fixed size data and then fill it in dynamically.  So no adding 
+and removing, no new and delete on every frame.
+
+If you have a really large dataset then chunk the data into blocks, 10,000 
+vertices per osg::Gemetry in a good place to start, but make this variable 
+so you can figure what is the sweet spot for your system.
+
+To vary th enumber of points draw using single DrawArrays per osg::Geometry 
+and simply change the count to match the number of vertices you want to 
+render.
+
+If your data stream suddenly needs more points to represent it and your 
+don't have enough available in your bricks then that is the time to 
+allocate new bricks.
+
+As for the cache, well the OSG does have cache for reusing GL objects but 
+it intended to be used for the types of usage you are pushing it through.  
+Follow the above steps and your application will work perfectly.
+
+Cheers,
+Robert.
+ 
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/df2eb7ed-2790-4212-bb25-3935326d8edf%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/df2eb7ed-2790-4212-bb25-3935326d8edf%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200601/89863d1a/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200601/89863d1a/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message (by thread): <A HREF="011124.html">[osg-users] Effecting MatrixTransform matrix change
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11123">[ date ]</a>
+              <a href="thread.html#11123">[ thread ]</a>
+              <a href="subject.html#11123">[ subject ]</a>
+              <a href="author.html#11123">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

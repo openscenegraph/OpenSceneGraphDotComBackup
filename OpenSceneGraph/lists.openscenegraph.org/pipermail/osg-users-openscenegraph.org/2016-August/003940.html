@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Render to texture ONLY?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20to%20texture%20ONLY%3F&In-Reply-To=%3CCALm6U%2BqsDALRUqNBO%3DPi5nS9iRMQ3Gyry9Cq6P2KJ79ULM5DNg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003939.html">
+   <LINK REL="Next"  HREF="003941.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Render to texture ONLY?</H1>
+<!--htdig_noindex-->
+    <B>Christian Buchner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20to%20texture%20ONLY%3F&In-Reply-To=%3CCALm6U%2BqsDALRUqNBO%3DPi5nS9iRMQ3Gyry9Cq6P2KJ79ULM5DNg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Render to texture ONLY?">christian.buchner at gmail.com
+       </A><BR>
+    <I>Thu Aug 18 08:07:00 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003939.html">[osg-users] Render to texture ONLY?
+</A></li>
+        <LI>Next message: <A HREF="003941.html">[osg-users] Render to texture ONLY?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3940">[ date ]</a>
+              <a href="thread.html#3940">[ thread ]</a>
+              <a href="subject.html#3940">[ subject ]</a>
+              <a href="author.html#3940">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>On Windows, create a graphics context with the pbuffer flag set to true
+and windowDecoration set to false.
+
+        osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new
+osg::GraphicsContext::Traits;
+        traits-&gt;x = 0;
+        traits-&gt;y = 0;
+        traits-&gt;width = 640;
+        traits-&gt;height = 480;
+        traits-&gt;red = 8;
+        traits-&gt;green = 8;
+        traits-&gt;blue = 8;
+        traits-&gt;alpha = 8;
+        traits-&gt;windowDecoration = false;
+        traits-&gt;pbuffer = true;
+        traits-&gt;doubleBuffer = false; // or true as needed
+        traits-&gt;sharedContext = 0;
+
+        m_pbuffer =
+osg::GraphicsContext::createGraphicsContext(traits.get());
+        if (!m_pbuffer.valid())
+        {
+            osg::notify(osg::NOTICE) &lt;&lt; &quot;Pixel buffer has not been created
+successfully. NOTE: update your dependencies folder if you see this error!&quot;
+&lt;&lt; std::endl;
+            exit(1);
+        }
+        else
+        {
+            // Create an osgViewer running on top of a pbuffer graphics
+context
+            m_viewer = new osgViewer::Viewer();
+
+            // in my case I use a slave camera with ortho projection
+            // to render whatever is needed
+            m_camera = new osg::Camera;
+            m_camera-&gt;setGraphicsContext(m_pbuffer.get());
+m_camera-&gt;setComputeNearFarMode(osg::Camera::DO_NOT_COMPUTE_NEAR_FAR);
+            m_camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+            m_camera-&gt;setViewMatrix(osg::Matrix());
+            m_camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0, 1.0, 0,
+1.0));
+            m_camera-&gt;setViewport(new osg::Viewport(0, 0, 640, 480));
+            m_camera-&gt;setDrawBuffer(GL_FRONT);
+            m_camera-&gt;setReadBuffer(GL_FRONT);
+            m_viewer-&gt;addSlave(m_camera.get(), osg::Matrixd(),
+osg::Matrixd());
+            m_viewer-&gt;realize();
+
+
+I do not know if the same would work on Linux, as pbuffers on Linux are an
+optional extension that might not be supported.
+
+I get this to render at arbitrary frame rates, entirely decoupled from the
+screen's VBLANK interval.
+
+Christian
+
+
+2016-08-18 16:47 GMT+02:00 Chris Thomas &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">cthomas at soasta.com</A>&gt;:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> OK, I based my initial integration into my app on osgteapot.cpp. As with
+</I>&gt;<i> all the other examples, it os run via
+</I>&gt;<i>
+</I>&gt;<i> viewer.run();
+</I>&gt;<i>
+</I>&gt;<i> And this creates an output window in OSX (and I am assuming any other OS
+</I>&gt;<i> its run on). And thats the issue I have, I need OSG to run &quot;headless&quot;, that
+</I>&gt;<i> is to say, producing no visible window in the OS.
+</I>&gt;<i>
+</I>&gt;<i> If OSG is rendering away, to a non visible buffer, I can then expose this
+</I>&gt;<i> to the user via my UI api (see above). Having this visible viewer, is the
+</I>&gt;<i> issue right now. Is there an option to run viewer with no visible
+</I>&gt;<i> display/window, or is there an alternative to viewer() ?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Chris
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicf1e7.php?p=68420#68420">http://forum.openscenegraph.org/viewtopic.php?p=68420#68420</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160818/dbcd9b37/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160818/dbcd9b37/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003939.html">[osg-users] Render to texture ONLY?
+</A></li>
+	<LI>Next message: <A HREF="003941.html">[osg-users] Render to texture ONLY?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3940">[ date ]</a>
+              <a href="thread.html#3940">[ thread ]</a>
+              <a href="subject.html#3940">[ subject ]</a>
+              <a href="author.html#3940">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

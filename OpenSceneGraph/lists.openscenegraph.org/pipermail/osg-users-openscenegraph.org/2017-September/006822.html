@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osggeometryshaders example question
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osggeometryshaders%20example%20question&In-Reply-To=%3CCAFN7Y%2BXCz803wCsYtr3ob6cEmB2xBdVv8bg0RgVmxGwS9cWn7A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006821.html">
+   <LINK REL="Next"  HREF="006823.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osggeometryshaders example question</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osggeometryshaders%20example%20question&In-Reply-To=%3CCAFN7Y%2BXCz803wCsYtr3ob6cEmB2xBdVv8bg0RgVmxGwS9cWn7A%40mail.gmail.com%3E"
+       TITLE="[osg-users] osggeometryshaders example question">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Sep 12 09:27:24 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="006821.html">[osg-users] osggeometryshaders example question
+</A></li>
+        <LI>Next message (by thread): <A HREF="006823.html">[osg-users] osggeometryshaders example question
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6822">[ date ]</a>
+              <a href="thread.html#6822">[ thread ]</a>
+              <a href="subject.html#6822">[ subject ]</a>
+              <a href="author.html#6822">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Mike,
+
+I have just done a quick experiement with the osgshadersexample and found
+the with one vertex I wouldn't see anything.
+
+With only a single vertex the bounding box would just be zero sized so the
+scaling of the camera would likely be a bit off as well as small feature
+culling wanting to cull this drawable as it would percieve it to be an
+invisibly small point. To test possibility out I added the line:
+
+        setInitialBound(osg::BoundingBox(0.0f,0.0f,0.0f,1.0f,1.0f,1.0f));
+
+After the set up of the geometry to force the bounding box to a sensible
+initial size and then it works fine with just a single vertex.  Ideally
+you'd set the size that the geometry could end up once you apply the
+vertex/geometry shader modifications so that culling can properly take into
+account the range the geometry could end up in.
+
+Another approach is you can disable the small feature culling by setting
+the culling mode to just use the frustum sides (or other modes without
+SMALL_FEATURE_CULLING see include/osg/CullSettings for details):
+
+
+viewer.getCamera()-&gt;setCullingMode(osg::CullSettings::VIEW_FRUSTUM_SIDES_CULLING);
+
+You'd also need to set the camera home position as well, but given you will
+likely have other elements in a real scene graph this is likely not
+required.
+
+The setInitalBound() or using your own ComputeBoundCallback is probably the
+most general helpful way to handle position modifications, the Camera
+settings are really just high level workarounds to this special case of a
+zero sized scene graph.
+
+Robert.
+
+
+On 12 September 2017 at 16:12, Mike Greene &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">mgreene at hiwaay.net</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> In reference to the osggeometryshaders example, I have a question about a
+</I>&gt;<i> seeming problem when only passing one point to the geometry shader:
+</I>&gt;<i>
+</I>&gt;<i> If I comment out all but the first push back:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> osg::Vec3Array* vAry = new osg::Vec3Array;
+</I>&gt;<i> setVertexArray( vAry );
+</I>&gt;<i> vAry-&gt;push_back( osg::Vec3(0,0,0) );
+</I>&gt;<i> /*vAry-&gt;push_back( osg::Vec3(0,1,0) );
+</I>&gt;<i> vAry-&gt;push_back( osg::Vec3(1,0,0) );
+</I>&gt;<i> vAry-&gt;push_back( osg::Vec3(1,1,0) );
+</I>&gt;<i> vAry-&gt;push_back( osg::Vec3(0,0,1) );
+</I>&gt;<i> vAry-&gt;push_back( osg::Vec3(0,1,1) );
+</I>&gt;<i> vAry-&gt;push_back( osg::Vec3(1,0,1) );
+</I>&gt;<i> vAry-&gt;push_back( osg::Vec3(1,1,1) );*/
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Nothing shows up. But if I do two, three or more points, every thing works
+</I>&gt;<i> fine. It seems a minimum of two points in the DrawArrays array is required?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Mike[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic73c8.php?p=71697#71697">http://forum.openscenegraph.org/viewtopic.php?p=71697#71697</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170912/8f0ce352/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170912/8f0ce352/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="006821.html">[osg-users] osggeometryshaders example question
+</A></li>
+	<LI>Next message (by thread): <A HREF="006823.html">[osg-users] osggeometryshaders example question
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6822">[ date ]</a>
+              <a href="thread.html#6822">[ thread ]</a>
+              <a href="subject.html#6822">[ subject ]</a>
+              <a href="author.html#6822">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

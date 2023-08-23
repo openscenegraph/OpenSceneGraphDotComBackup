@@ -1,0 +1,338 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [vpb] geographic to geocentric coordinate	transformation
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bvpb%5D%20geographic%20to%20geocentric%20coordinate%0A%09transformation&In-Reply-To=%3C55842FD1.9010501%40onera.fr%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000659.html">
+   <LINK REL="Next"  HREF="000667.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [vpb] geographic to geocentric coordinate	transformation</H1>
+<!--htdig_noindex-->
+    <B>Christian Schulte</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bvpb%5D%20geographic%20to%20geocentric%20coordinate%0A%09transformation&In-Reply-To=%3C55842FD1.9010501%40onera.fr%3E"
+       TITLE="[osg-users] [vpb] geographic to geocentric coordinate	transformation">christian.schulte at onera.fr
+       </A><BR>
+    <I>Fri Jun 19 08:05:53 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000659.html">[osg-users] [vpb] geographic to geocentric coordinate	transformation
+</A></li>
+        <LI>Next message: <A HREF="000667.html">[osg-users] [vpb] geographic to geocentric coordinate	transformation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#664">[ date ]</a>
+              <a href="thread.html#664">[ thread ]</a>
+              <a href="subject.html#664">[ subject ]</a>
+              <a href="author.html#664">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello Elias,
+
+underneath you will find your corrected and commented example (sorry, I 
+had to change the lat,lon and models :-) ).
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osg/PositionAttitudeTransform&gt;
+
+int main( int argc, char** argv ) {
+
+      osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits;
+     if(!(traits = new osg::GraphicsContext::Traits()).valid()) {
+         // print
+         osg::notify(osg::WARN)
+             &lt;&lt; &quot; - traits = new osg::GraphicsContext::Traits() -&gt; 
+invalid : abandon&quot; &lt;&lt; std::endl;
+         // error
+         return NULL;
+     }
+
+     // set traits properties
+     traits-&gt;screenNum            = 0;
+     traits-&gt;x                     = 40;
+     traits-&gt;y                     = 40;
+     traits-&gt;width                 = 1024;
+     traits-&gt;height                 = 768;
+     traits-&gt;doubleBuffer         = true;
+     traits-&gt;windowDecoration     = true;
+     traits-&gt;vsync                = true;
+
+     osg::ref_ptr&lt;osg::GraphicsContext&gt; gc = 
+osg::GraphicsContext::createGraphicsContext(traits);
+
+     osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+     osg::ref_ptr&lt;osg::Node&gt; cessna = osgDB::readNodeFile(&quot;EC225.ive&quot;);
+     osg::ref_ptr&lt;osg::Node&gt; map = 
+osgDB::readNodeFile(&quot;y:/Bdt/Marseille/marseillemipmaphard09dds.ive&quot;);
+     osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+     osg::Vec3d center, eye, up;
+
+     //Getting XYZ position for cessna
+     osg::Matrix cessnaLocation;
+     osg::EllipsoidModel ellipsoid;
+     double x,y,z;
+ellipsoid.convertLatLongHeightToXYZ(osg::DegreesToRadians(43.449310), 
+osg::DegreesToRadians(5.197525), 200.0, x, y, z);
+     osg::Vec3 positionForCessna = osg::Vec3d(x,y,z);
+
+     //Placing cessna
+     osg::ref_ptr&lt;osg::PositionAttitudeTransform&gt; moveCessna = new 
+osg::PositionAttitudeTransform;
+     moveCessna-&gt;setPosition(positionForCessna);
+     // Calculating attitude (heading north)
+     double phi = 0.0;
+     double psi = 0.0;
+     double theta = 0.0;
+     osg::Matrixd localToWorld;
+     osg::Matrixd attitude;
+ellipsoid.computeLocalToWorldTransformFromXYZ(osg::DegreesToRadians(43.449310), 
+osg::DegreesToRadians(5.197525), 200.0,    localToWorld);
+     attitude.makeRotate(
+             osg::DegreesToRadians(phi),     osg::Y_AXIS,
+             osg::DegreesToRadians(theta),     osg::X_AXIS,
+             osg::DegreesToRadians(-psi),     osg::Z_AXIS);
+     attitude *= localToWorld;
+     osg::Quat quat = attitude.getRotate();
+     moveCessna-&gt;setAttitude(quat);
+
+     moveCessna-&gt;addChild(cessna.get());
+
+     osg::ref_ptr&lt;osgViewer::Viewer&gt; viewer = new osgViewer::Viewer();
+
+     // Create camera as shallow copy of theo ne of the view
+     camera = 
+dynamic_cast&lt;osg::Camera*&gt;(viewer-&gt;getCamera()-&gt;clone(osg::CopyOp::SHALLOW_COPY));
+     camera-&gt;setGraphicsContext(gc);
+camera-&gt;setProjectionMatrixAsPerspective(40.0,1.33,0.1,10000.0);
+     camera-&gt;setViewport(new osg::Viewport(0, 0, gc-&gt;getTraits()-&gt;width, 
+gc-&gt;getTraits()-&gt;height));
+     camera-&gt;setClearColor(osg::Vec4f(0.5f,0.5f,0.0f,0.0f));
+     camera-&gt;setCullingActive(false);
+
+     //Getting XYZ position for camera
+     //Lat Lon are the same, height is 500.0
+     // The eye : position of the camera
+ellipsoid.convertLatLongHeightToXYZ(osg::DegreesToRadians(43.449310), 
+osg::DegreesToRadians(5.197525), 500.0, x, y, z);
+     eye = osg::Vec3d(x,y,z);
+     // The center : position where you look at (same position a little 
+bit underneath...
+ellipsoid.convertLatLongHeightToXYZ(osg::DegreesToRadians(43.449310), 
+osg::DegreesToRadians(5.197525), 499.9, x, y, z);
+     center = osg::Vec3d(x,y,z);
+     // The up : a little more tricky...
+     // It is the up vector of your screen (ie what is the bottom top 
+axis of your screen)
+     // If you want it to be north up
+     up = osg::Vec3d    ( -std::cos(osg::DegreesToRadians(43.449310)) * 
+std::sin( osg::DegreesToRadians(5.197525)),
+-std::sin(osg::DegreesToRadians(43.449310)) * std::sin( 
+osg::DegreesToRadians(5.197525)),
+std::cos(osg::DegreesToRadians(5.197525)));
+     // If you want it to be east up
+     up = osg::Vec3d    ( -std::cos(osg::DegreesToRadians(43.449310)),
+std::cos(osg::DegreesToRadians(43.449310)),
+                         0.0);
+     // Now you can set your view matrix
+     camera-&gt;setViewMatrixAsLookAt(eye,center,up);
+
+     // Some light for the scene...
+     osg::ref_ptr&lt;osg::Light&gt; light = new osg::Light();
+     light-&gt;setLightNum(0);
+     light-&gt;setDataVariance(osg::Object::DYNAMIC);
+     osg::ref_ptr&lt;osg::LightSource&gt; lightSource = new osg::LightSource;
+     lightSource-&gt;setLight(light);
+lightSource-&gt;setLocalStateSetModes(osg::StateAttribute::ON);
+
+     // Adding the elements
+     root-&gt;addChild( map.get() );
+     root-&gt;addChild( moveCessna.get() );
+     root-&gt;addChild( lightSource.get());
+
+     // Setting up the view
+     viewer-&gt;setCamera( camera.get() );
+     viewer-&gt;setSceneData( root.get() );
+
+     osg::ref_ptr&lt;osgViewer::StatsHandler&gt; stats = new 
+osgViewer::StatsHandler();
+     viewer-&gt;addEventHandler(stats.get());
+
+     while (!viewer-&gt;done())
+     {
+         viewer-&gt;frame();
+     }
+
+     return 1;
+}
+
+
+Hope it helps out !
+
+Cheers,
+
+Christian
+
+Le 18/06/2015 20:23, Elias Tarasov a &#233;crit :
+&gt;<i> Hello, Christian!
+</I>&gt;<i>
+</I>&gt;<i> Again, your comments helped me:)
+</I>&gt;<i> And again, i can't understand it from the first time.
+</I>&gt;<i>
+</I>&gt;<i> The root of the problem here is how to move and rotate camera.
+</I>&gt;<i> And the root of it is how to calculate needed matrices.
+</I>&gt;<i>
+</I>&gt;<i> So, i looked for it:
+</I>&gt;<i>
+</I>&gt;<i> 1. Looked into general OSG forum.
+</I>&gt;<i> 2. Looked into vpb forum.
+</I>&gt;<i> 3. Stackoverflow.
+</I>&gt;<i>
+</I>&gt;<i> There are a lot of info but to indicate what kind of problem i have, here is the pattern of what i found:
+</I>&gt;<i>
+</I>&gt;<i> Vec3d eye( 1000.0, 1000.0, 0.0 );
+</I>&gt;<i> Vec3d center( 0.0, 0.0, 0.0 );
+</I>&gt;<i> Vec3d up( 0.0, 0.0, 1.0 );
+</I>&gt;<i> viewer.getCamera()-&gt;setViewMatrixAsLookAt( eye, center, up );
+</I>&gt;<i>
+</I>&gt;<i> Assumption:
+</I>&gt;<i> Vectors must be defined with respect to some choosen coordinate frame.
+</I>&gt;<i> So, with respect to what frame eye, center, up are defined?
+</I>&gt;<i> How can i calculate them?
+</I>&gt;<i> I presume, that without knowing in what frame vectors are expressed, and how to move to that frame from already defined frame (for instance from ECEF),
+</I>&gt;<i> variables like Vec3d eye( 1000.0, 1000.0, 0.0 ) are useless.
+</I>&gt;<i>
+</I>&gt;<i> Here is the code i changed according to your recomendations.
+</I>&gt;<i> In the comments, there are at least three issues:
+</I>&gt;<i> 1. How to correctly define rotation?
+</I>&gt;<i> 2. How to define Up vector.
+</I>&gt;<i> 3. How to correctly add moved camera.
+</I>&gt;<i>
+</I>&gt;<i> int main( int argc, char** argv ) {
+</I>&gt;<i>
+</I>&gt;<i> 	osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+</I>&gt;<i> 	osg::ref_ptr&lt;osg::Node&gt; cessna = osgDB::readNodeFile(&quot;c:/OpenSceneGraph/data/cessnafire.osg&quot;);
+</I>&gt;<i> 	osg::ref_ptr&lt;osg::Node&gt; map = osgDB::readNodeFile(&quot;c:/Terrain/FromUSGS/output/out.osgb&quot;);
+</I>&gt;<i> 	osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+</I>&gt;<i>
+</I>&gt;<i> 	//Getting XYZ position for cessna
+</I>&gt;<i> 	//-85.4877762 is terrain's center lat
+</I>&gt;<i> 	//30.5292506 is terrain's center lon
+</I>&gt;<i> 	//100 m - height above terrain we want to place the cessna.
+</I>&gt;<i> 	osg::Matrix cessnaLocation;
+</I>&gt;<i> 	osg::EllipsoidModel ellipsoid;
+</I>&gt;<i> 	ellipsoid.computeLocalToWorldTransformFromLatLongHeight(osg::DegreesToRadians(-85.4877762), osg::DegreesToRadians(30.5292506), 100, cessnaLocation);
+</I>&gt;<i> 	osg::Vec3 positionForCessna = cessnaLocation.getTrans();
+</I>&gt;<i> 	
+</I>&gt;<i> 	//Placing cessna
+</I>&gt;<i> 	osg::ref_ptr&lt;osg::PositionAttitudeTransform&gt; moveCessna = new osg::PositionAttitudeTransform;
+</I>&gt;<i> 	moveCessna-&gt;setPosition(positionForCessna);
+</I>&gt;<i> 	moveCessna-&gt;addChild(cessna.get());
+</I>&gt;<i> 		
+</I>&gt;<i> 	//Getting XYZ position for camera
+</I>&gt;<i> 	//Lat Lon are the same, height is 150
+</I>&gt;<i> 	osg::Matrix cameraLocation;
+</I>&gt;<i> 	ellipsoid.computeLocalToWorldTransformFromLatLongHeight(osg::DegreesToRadians(-85.4877762), osg::DegreesToRadians(30.5292506), 150, cameraLocation);
+</I>&gt;<i> 	osg::Vec3 positionForCamera = cameraLocation.getTrans();
+</I>&gt;<i> 	
+</I>&gt;<i> 	//Placing camera
+</I>&gt;<i> 	osg::ref_ptr&lt;osg::PositionAttitudeTransform&gt; moveCamera = new osg::PositionAttitudeTransform;
+</I>&gt;<i> 	moveCamera-&gt;setPosition(positionForCamera);
+</I>&gt;<i> 	moveCamera-&gt;addChild(camera.get());
+</I>&gt;<i> 	
+</I>&gt;<i> 	//rotation and Y up
+</I>&gt;<i> 	//How to setup rotation matrix? with respect to what coordinate frame? I presume View frame with respect to ECEF?
+</I>&gt;<i> 	osg::Matrix rotation;
+</I>&gt;<i> 	rotation.makeRotate(osg::PI_2, osg::Vec3f(1.0, 0.0, 0.0)); //Here we rotate around X on the angle pi/2. But rotate around what?
+</I>&gt;<i> 	
+</I>&gt;<i> 	//How to define that matrix and why does it need?
+</I>&gt;<i> 	osg::Matrix ToYUP;  //Maybe here we can define a direction around of which we make our rotation?
+</I>&gt;<i> 	
+</I>&gt;<i> 	//View = translation * YUP * rotation;
+</I>&gt;<i> 	osg::Matrix viewMatrix;
+</I>&gt;<i> 	viewMatrix = cameraLocation * ToYUP * rotation;
+</I>&gt;<i> 	camera-&gt;setViewMatrix(viewMatrix);
+</I>&gt;<i> 		
+</I>&gt;<i> 	//How to add moved camera?
+</I>&gt;<i> 	root-&gt;addChild(camera.get() );
+</I>&gt;<i> 	//Or maybe even camera-&gt;addChild( root.get() ); ?
+</I>&gt;<i> 	root-&gt;addChild( moveCessna.get() );
+</I>&gt;<i> 	root-&gt;addChild( map.get() );
+</I>&gt;<i> 	
+</I>&gt;<i> 	osg::ref_ptr&lt;osgViewer::Viewer&gt; viewer = new osgViewer::Viewer;
+</I>&gt;<i> 	viewer-&gt;setCamera( camera.get() );
+</I>&gt;<i> 	viewer-&gt;setSceneData( root.get() );
+</I>&gt;<i> 	
+</I>&gt;<i> 	return viewer-&gt;run();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Elias
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopice57f.php?p=64123#64123">http://forum.openscenegraph.org/viewtopic.php?p=64123#64123</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>
+
+-- 
+SCHULTE Christian
+Ing&#233;nieur Recherche
+Responsable du Laboratoire de Simulation
+ONERA - DCSD/PSEV
+D&#233;partement Commande des Syst&#232;mes et Dynamique du Vol
+ONERA - Centre de Salon de Provence
+BA 701
+13661 SALON AIR Cedex - France
+Tel :04.90.17.01.45
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000659.html">[osg-users] [vpb] geographic to geocentric coordinate	transformation
+</A></li>
+	<LI>Next message: <A HREF="000667.html">[osg-users] [vpb] geographic to geocentric coordinate	transformation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#664">[ date ]</a>
+              <a href="thread.html#664">[ thread ]</a>
+              <a href="subject.html#664">[ subject ]</a>
+              <a href="author.html#664">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

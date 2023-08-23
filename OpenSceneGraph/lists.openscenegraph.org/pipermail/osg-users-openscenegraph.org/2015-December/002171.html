@@ -1,0 +1,196 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Alter tree in safe mode.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Alter%20tree%20in%20safe%20mode.&In-Reply-To=%3CCAFN7Y%2BUeu%2B44%2BLGsp%3DKCj_3-L-V8BKJMo5pZ%2BYBEJnC99nFKjg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278393.html">
+   <LINK REL="Next"  HREF="002181.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Alter tree in safe mode.</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Alter%20tree%20in%20safe%20mode.&In-Reply-To=%3CCAFN7Y%2BUeu%2B44%2BLGsp%3DKCj_3-L-V8BKJMo5pZ%2BYBEJnC99nFKjg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Alter tree in safe mode.">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Dec 17 09:11:03 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278393.html">[osg-users] Alter tree in safe mode.
+</A></li>
+        <LI>Next message: <A HREF="002181.html">[osg-users] Alter tree in safe mode.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2171">[ date ]</a>
+              <a href="thread.html#2171">[ thread ]</a>
+              <a href="subject.html#2171">[ subject ]</a>
+              <a href="author.html#2171">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Dario,
+
+The stack trace suggests a problem with the parent list.  The code you've
+supplied itself in principle looks OK, although generally when doing this
+type of work I don't use callbacks, instead placing the sync in a separate
+call in in the viewer's frame - i.e. how the DatabasePager works.  One can
+use an viewer UpdateOperation for this type of scene graph sync work.
+
+W.r.t the parent list adjustment causing a race condition.  At least in
+last few releases of the OSG there has been a mutex to protect access
+add/remove from the parent list.  Which version of the OSG are you using?
+Check to see whether it's got the appropriate mutex code in the
+Node::addParent()/removeParent().
+
+Robert.
+
+On 17 December 2015 at 16:56, Dario Minieri &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">paradox at cheapnet.it</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I have a system which use an UpdateCallback for every node which can be
+</I>&gt;<i> modified (adding or removing his children).  Sometime I have segmentation
+</I>&gt;<i> fault inside the callback, like this one:
+</I>&gt;<i>
+</I>&gt;<i> #0  0x00007ffff4b02cc9 in __GI_raise (sig=<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sig at entry</A>=6) at
+</I>&gt;<i> ../nptl/sysdeps/unix/sysv/linux/raise.c:56
+</I>&gt;<i> #1  0x00007ffff4b060d8 in __GI_abort () at abort.c:89
+</I>&gt;<i> #2  0x00007ffff5107535 in __gnu_cxx::__verbose_terminate_handler() () from
+</I>&gt;<i> /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+</I>&gt;<i> #3  0x00007ffff51056d6 in ?? () from
+</I>&gt;<i> /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+</I>&gt;<i> #4  0x00007ffff5105703 in std::terminate() () from
+</I>&gt;<i> /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+</I>&gt;<i> #5  0x00007ffff5105922 in __cxa_throw () from
+</I>&gt;<i> /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+</I>&gt;<i> #6  0x00007ffff5105e0d in operator new(unsigned long) () from
+</I>&gt;<i> /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+</I>&gt;<i> #7  0x00007ffff0e83ac6 in std::vector&lt;osg::Group*,
+</I>&gt;<i> std::allocator&lt;osg::Group*&gt;
+</I>&gt;<i> &gt;::_M_insert_aux(__gnu_cxx::__normal_iterator&lt;osg::Group**,
+</I>&gt;<i> std::vector&lt;osg::Group*, std::allocator&lt;osg::Group*&gt; &gt; &gt;, osg::Group*
+</I>&gt;<i> const&amp;) () from /usr/local/lib/libosg.so.100
+</I>&gt;<i> #8  0x00007ffff0e83266 in osg::Node::addParent(osg::Group*) () from
+</I>&gt;<i> /usr/local/lib/libosg.so.100
+</I>&gt;<i> #9  0x00007ffff0e14bad in osg::Group::insertChild(unsigned int,
+</I>&gt;<i> osg::Node*) () from /usr/local/lib/libosg.so.100
+</I>&gt;<i> #10 0x00007ffff488501f in AlterTreeNodeCallback::operator()(osg::Node*,
+</I>&gt;<i> osg::NodeVisitor*) () from /usr/local/lib/libSimWorld.so
+</I>&gt;<i> #11 0x00007ffff0e150b2 in osg::Group::accept(osg::NodeVisitor&amp;) () from
+</I>&gt;<i> /usr/local/lib/libosg.so.100
+</I>&gt;<i> #12 0x00007ffff0e13af3 in osg::Group::traverse(osg::NodeVisitor&amp;) () from
+</I>&gt;<i> /usr/local/lib/libosg.so.100
+</I>&gt;<i> #13 0x00007ffff0e150b2 in osg::Group::accept(osg::NodeVisitor&amp;) () from
+</I>&gt;<i> /usr/local/lib/libosg.so.100
+</I>&gt;<i> #14 0x00007ffff0e13af3 in osg::Group::traverse(osg::NodeVisitor&amp;) () from
+</I>&gt;<i> /usr/local/lib/libosg.so.100
+</I>&gt;<i> #15 0x00007ffff0e150b2 in osg::Group::accept(osg::NodeVisitor&amp;) () from
+</I>&gt;<i> /usr/local/lib/libosg.so.100
+</I>&gt;<i> #16 0x00007fffeff514a1 in osgViewer::Viewer::updateTraversal() () from
+</I>&gt;<i> /usr/local/lib/libosgViewer.so.100
+</I>&gt;<i> #17 0x00007fffeff5b685 in osgViewer::ViewerBase::frame(double) () from
+</I>&gt;<i> /usr/local/lib/libosgViewer.so.100
+</I>&gt;<i> #18 0x00007ffff04356e4 in QGLWidget::glDraw() () from
+</I>&gt;<i> /usr/lib/x86_64-linux-gnu/libQt5OpenGL.so.5
+</I>&gt;<i> #19 0x00007ffff04326f9 in QGLWidget::paintEvent(QPaintEvent*) () from
+</I>&gt;<i> /usr/lib/x86_64-linux-gnu/libQt5OpenGL.so.5
+</I>&gt;<i> #20 0x00007ffff5521302 in QWidget::event(QEvent*) () from
+</I>&gt;<i> /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5
+</I>&gt;<i> #21 0x00007ffff54e5c8c in QApplicationPrivate::notify_helper(QObject*,
+</I>&gt;<i> QEvent*) () from /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5
+</I>&gt;<i> #22 0x00007ffff54eae56 in QApplication::notify(QObject*, QEvent*) () from
+</I>&gt;<i> /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5
+</I>&gt;<i> #23 0x00007ffff6488c2d in QCoreApplication::notifyInternal(QObject*,
+</I>&gt;<i> QEvent*) () from /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
+</I>&gt;<i> #24 0x00007ffff551bbea in QWidgetPrivate::drawWidget(QPaintDevice*,
+</I>&gt;<i> QRegion const&amp;, QPoint const&amp;, int, QPainter*, QWidgetBackingStore*) ()
+</I>&gt;<i>    from /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5
+</I>&gt;<i>
+</I>&gt;<i> Adding (insertChild) some new node at runtime, show the problem. This
+</I>&gt;<i> happens especially when I made some remove and insert in short time.
+</I>&gt;<i>
+</I>&gt;<i> The callback is something like this:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> void AlterCallback::operator()(Node* p_node, NodeVisitor* p_nv) {
+</I>&gt;<i>   if (p_node != NULL) {
+</I>&gt;<i>     Group* p_group = p_node-&gt;asGroup();
+</I>&gt;<i>     if (p_group != NULL) {
+</I>&gt;<i>       while (m_add_nodes.size() &gt; 0) {
+</I>&gt;<i>           Node* l_node = (Node*)m_add_nodes.popFront();
+</I>&gt;<i>           p_group-&gt;addChild(l_node);
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>       while (m_remove_nodes.size() &gt; 0) {
+</I>&gt;<i>         Node* l_node = (Node*)m_remove_nodes.popFront();
+</I>&gt;<i>         p_group-&gt;removeChild(l_node);
+</I>&gt;<i>       }
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     traverse(p_node, p_nv);
+</I>&gt;<i>   }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> m_add_nodes and m_remove_nodes are thread-safe structures which holds the
+</I>&gt;<i> list of nodes (pointers) to add and remove.
+</I>&gt;<i>
+</I>&gt;<i> This is a good way to alter the tree at runtime?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Dario
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicff69.php?p=65891#65891">http://forum.openscenegraph.org/viewtopic.php?p=65891#65891</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151217/27c1643d/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151217/27c1643d/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278393.html">[osg-users] Alter tree in safe mode.
+</A></li>
+	<LI>Next message: <A HREF="002181.html">[osg-users] Alter tree in safe mode.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2171">[ date ]</a>
+              <a href="thread.html#2171">[ thread ]</a>
+              <a href="subject.html#2171">[ subject ]</a>
+              <a href="author.html#2171">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

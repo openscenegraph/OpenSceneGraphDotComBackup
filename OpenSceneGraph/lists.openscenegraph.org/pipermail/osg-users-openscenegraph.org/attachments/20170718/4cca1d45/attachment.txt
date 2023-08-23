@@ -1,0 +1,99 @@
+#include <osg/Depth>
+#include <osg/Light>
+#include <osg/Material>
+#include <osg/PolygonMode>
+#include <osg/PolygonOffset>
+
+#include "Wireframable.h"
+
+//-----------------------------------------------------------------------------
+Wireframable::Wireframable()
+{
+   decorator = new osg::Group;
+   decorator->setName("wireframe");
+   decorator->setNodeMask(0x0); //disable wireframe by default
+
+   setPolygonMode();
+   setMaterial(osg::Vec4(0.5, 0.5f, 0.5f, 1.0f));
+}
+
+//-----------------------------------------------------------------------------
+Wireframable::Wireframable(const Wireframable& iOther)
+: viframework::viobjects::SmartPointer(iOther)
+{
+}
+
+//-----------------------------------------------------------------------------
+void Wireframable::enableWireframe(bool iEnable)
+{
+   decorator->setNodeMask(static_cast<osg::Node::NodeMask>(iEnable));
+}
+
+//-----------------------------------------------------------------------------
+void Wireframable::enableLighting(bool enable)
+{
+   decorator->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OVERRIDE | enable ? osg::StateAttribute::ON : osg::StateAttribute::OFF);
+}
+
+//-----------------------------------------------------------------------------
+bool Wireframable::isWireframeEnabled() const
+{
+   return static_cast<bool>(decorator->getNodeMask());
+}
+
+//-----------------------------------------------------------------------------
+void Wireframable::setMaterial(const osg::Vec4& color)
+{
+#if 0
+   //osg::Material* material = new osg::Material;
+   //decorator->getOrCreateStateSet()->setAttributeAndModes(material, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+   //enableLighting(false);
+   //osg::Material* material = new osg::Material;
+   //decorator->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OVERRIDE | osg::StateAttribute::OFF);
+   decorator->getOrCreateStateSet()->setAttributeAndModes(new osg::Depth(osg::Depth::ALWAYS, 0.0, 1.0, false), osg::StateAttribute::ON);
+   //decorator->getOrCreateStateSet()->setMode(GL_DEPTH_TEST, osg::StateAttribute::OVERRIDE | osg::StateAttribute::OFF);
+   //decorator->getOrCreateStateSet()->setAttributeAndModes(material, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+#else
+   // version which sets the color of the wireframe.
+   osg::Material* material = new osg::Material;
+   material->setColorMode(osg::Material::OFF); // switch glColor usage off
+   // turn all lighting off
+   material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0, 0.0f, 0.0f, 1.0f));
+   material->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0, 0.0f, 0.0f, 1.0f));
+   material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0, 0.0f, 0.0f, 1.0f));
+   // except emission... in which we set the color we desire
+   material->setEmission(osg::Material::FRONT_AND_BACK, color);
+   decorator->getOrCreateStateSet()->setAttributeAndModes(material, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+   enableLighting(true);
+#endif
+}
+
+//-----------------------------------------------------------------------------
+void Wireframable::setNode(osg::ref_ptr<osg::Node> iNode)
+{
+   bool nodeAlreadySet = false;
+   if (iNode->getParents().size()>0) {
+      // call from GraphicObject copy constructor: decorator is already a child of node's parent
+      osg::Group* parent = iNode->getParent(0);
+      for (unsigned int i = 0; i<parent->getNumChildren(); ++i) {
+         if ("wireframe" == parent->getChild(i)->getName()) {
+            decorator = static_cast<osg::Group*>(parent->getChild(i));
+            decorator->addChild(iNode); // we need to repeate this because DEEP_COPY_ALL does not keep the relation
+            nodeAlreadySet = true;
+            break;
+         }
+      }
+   }
+   if (false == nodeAlreadySet) {
+      decorator->addChild(iNode);
+      iNode->getParent(0)->addChild(decorator);
+   }
+}
+
+//-----------------------------------------------------------------------------
+void Wireframable::setPolygonMode()
+{
+   osg::PolygonMode* polymode = new osg::PolygonMode;
+   polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+   decorator->getOrCreateStateSet()->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+}

@@ -1,0 +1,115 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Database pager and failed loading of PagedLOD's children
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Database%20pager%20and%20failed%20loading%20of%20PagedLOD%27s%0A%20children&In-Reply-To=%3CCAFN7Y%2BUP-5BWfdHyrEL9LhOOoczVn2J-xa-rviwQVDC9b7dPiA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007771.html">
+   <LINK REL="Next"  HREF="007775.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Database pager and failed loading of PagedLOD's children</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Database%20pager%20and%20failed%20loading%20of%20PagedLOD%27s%0A%20children&In-Reply-To=%3CCAFN7Y%2BUP-5BWfdHyrEL9LhOOoczVn2J-xa-rviwQVDC9b7dPiA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Database pager and failed loading of PagedLOD's children">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Mar  5 00:21:09 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007771.html">[osg-users] Database pager and failed loading of PagedLOD's children
+</A></li>
+        <LI>Next message (by thread): <A HREF="007775.html">[osg-users] Issues with Qt based application and occulusion queries
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7772">[ date ]</a>
+              <a href="thread.html#7772">[ thread ]</a>
+              <a href="subject.html#7772">[ subject ]</a>
+              <a href="author.html#7772">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Hatwig,
+
+On 4 March 2018 at 21:02, Hartwig Wiesmann &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hartwig.wiesmann at skywind.eu</A>&gt; wrote:
+&gt;<i> the problem seems to be that the database pager (respectively the paged LOD) keeps trying to load the node that fails to load. To stop this I somehow have to tell the paged LOD to stop loading the children, or I have to modify the limits. But for doing so I need to know when a child fails to load.
+</I>
+This repeating of requests is part of the design of
+PagedLOD/DatabasePager, the pager gets requested each time a LOD level
+is selected as required by the cull traversal isn't available.  This
+request happens every frame till that LOD level is loaded or isn't
+required anymore. The later part is the key to why the mechanism is
+used, the pager prunes requests that are no longer being requested so
+that areas that you move out of view don't get paged in as they aren't
+needed anymore.  This mechanism is crucial part of achieving the
+lowest latency on loading tiles that are required for the view on
+screen.  The faster moving the view is the more important it becomes -
+think flight simulators etc.
+
+For you usage case it sounds like your database isn't complete for
+some reason, the current design+implementation doesn't have any
+fallback mechanism for incomplete paged databases.  Nothing untoward
+should happen in this case, all will happen is that the paging thread
+will spend a bit of time trying and failing, so it'll lower
+performance a bit but that's it. If the database is fixed while the
+application is running - for instance a lost http connection is
+re-established then finally the tiles can be loaded, so this scheme
+will isn't 100% efficient in the failure case it does add resilience.
+
+If it really is the case that a file request failure is permanent for
+the life of the application then what you'd ideally want to do is have
+the missing child entry into PageLOD be filled in be the child before
+it.  This would then kill off any future requests for the missing
+child.  Save for modifying the core OSG (PagedLOD/DatabasePager) to
+add support this particular behaviour it wouldn't be straight forward,
+but there is chance you might be able to use a combination of a
+osgDB::Option object with a ReadFileCallback assigned to it such that
+it uses the existing PagedLOD children as fallback.
+
+Robert
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007771.html">[osg-users] Database pager and failed loading of PagedLOD's children
+</A></li>
+	<LI>Next message (by thread): <A HREF="007775.html">[osg-users] Issues with Qt based application and occulusion queries
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7772">[ date ]</a>
+              <a href="thread.html#7772">[ thread ]</a>
+              <a href="subject.html#7772">[ subject ]</a>
+              <a href="author.html#7772">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

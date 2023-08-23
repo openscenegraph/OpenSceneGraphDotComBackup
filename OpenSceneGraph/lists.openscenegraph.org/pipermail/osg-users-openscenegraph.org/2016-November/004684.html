@@ -1,0 +1,223 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] design issues
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20design%20issues&In-Reply-To=%3CCAO-%2Bzimb8ukCPCCQitUKgWj6F3iD-eJBM7rRopAmtnOu1eezEg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004682.html">
+   <LINK REL="Next"  HREF="280889.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] design issues</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20design%20issues&In-Reply-To=%3CCAO-%2Bzimb8ukCPCCQitUKgWj6F3iD-eJBM7rRopAmtnOu1eezEg%40mail.gmail.com%3E"
+       TITLE="[osg-users] design issues">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Thu Nov  3 08:27:11 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004682.html">[osg-users] design issues
+</A></li>
+        <LI>Next message: <A HREF="280889.html">[osg-users] Rendering Model in color
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4684">[ date ]</a>
+              <a href="thread.html#4684">[ thread ]</a>
+              <a href="subject.html#4684">[ subject ]</a>
+              <a href="author.html#4684">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+I am very thankful for every hint, really. These hints are really valuable
+for optimization. And I found the issue, it was pre/post multiply order of
+the matrices. I was to avoid the calculus from the nodepath and use the
+ModelView matrix already available in the CullVisitor. Here is the snippet
+for someone who might face the same issue:
+
+osg::Matrixd inverseViewMatrix = getCurrentCamera()-&gt;getInverseViewMatrix();
+osg::Matrixd modelViewMatrix = (*getModelViewMatrix());
+osg::Matrixd worldMatrix = osg::computeLocalToWorld(getNodePath());
+osg::Matrixd worldMatrix2 = modelViewMatrix * inverseViewMatrix;
+
+worldMatrix is equal to worldMatrix2 .. It was really the order of the
+matrices. I was under impression it is the same as in GLSL
+
+Thanks a bunch again!
+
+Cheers,
+Nick
+
+On Thu, Nov 3, 2016 at 2:59 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> I don't have time to dive deeply in user projects, I can do quick
+</I>&gt;<i> scans of email and provide quick replies where possible.  In terms of
+</I>&gt;<i> optimization I'd say avoiding the inverse matrix might be useful.
+</I>&gt;<i> Using the Matrix.postMultTrans/preMultTrans would also be another
+</I>&gt;<i> optimization step you could use.  The use of the UserValue looks like
+</I>&gt;<i> it won't be thread safe or even safe n the presence of multiple cull
+</I>&gt;<i> traversals.
+</I>&gt;<i>
+</I>&gt;<i> On 3 November 2016 at 11:40, Trajce Nikolov NICK
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Thanks Robert,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I am aware of it, it is already used in my second snippet. Here it is:
+</I>&gt;<i> (is
+</I>&gt;<i> &gt; it done properly?)
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; void MyCullVisitor::apply(osg::LightSource&amp; node)
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     osg::Matrixd inverseViewMatrix =
+</I>&gt;<i> &gt; osg::Matrixd::inverse(getCurrentCamera()-&gt;getViewMatrix());
+</I>&gt;<i> &gt;     osg::Matrixd worldMatrix = inverseViewMatrix *
+</I>&gt;<i> (*getModelViewMatrix());
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     osg::Vec3d pos(node.getLight()-&gt;getPosition().x(),
+</I>&gt;<i> &gt; node.getLight()-&gt;getPosition().y(), node.getLight()-&gt;getPosition().z());
+</I>&gt;<i> &gt;     worldMatrix = osg::Matrixd::translate(pos) * worldMatrix;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     node.setUserValue(&quot;WorldMatrix&quot;, worldMatrix);
+</I>&gt;<i> &gt;     if (node.getLight()-&gt;getLightNum() == 0)
+</I>&gt;<i> &gt;     {
+</I>&gt;<i> &gt;         osgUtil::CullVisitor::apply(node);
+</I>&gt;<i> &gt;     }
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; On Thu, Nov 3, 2016 at 9:14 AM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; wrote:
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Hi Nick,
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; The osgUtil::CullVisitor has the maintains a stack of ModelViewMatrix
+</I>&gt;<i> &gt;&gt; that it accumulates through the the scene graph traversal, you should
+</I>&gt;<i> &gt;&gt; just need to get the top of this stack using
+</I>&gt;<i> &gt;&gt; cullVisitor-&gt;getModelViewMatrix().
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Robert.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; On 2 November 2016 at 22:25, Trajce Nikolov NICK
+</I>&gt;<i> &gt;&gt; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt;&gt; &gt; Hi Community,
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; I am trying to optimize the rendering. Getting huge update numbers.
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; The story is this:
+</I>&gt;<i> &gt;&gt; &gt; My scene has huge number of lights, some are static (streetlights)
+</I>&gt;<i> some
+</I>&gt;<i> &gt;&gt; &gt; dynamic (a car). The lighting engine needs the World matrix of a
+</I>&gt;<i> &gt;&gt; &gt; LightSource
+</I>&gt;<i> &gt;&gt; &gt; and the ViewMatrix (which is the same as the World inverse just with
+</I>&gt;<i> &gt;&gt; &gt; some
+</I>&gt;<i> &gt;&gt; &gt; extra rotation). In my code after the update before the rendering
+</I>&gt;<i> &gt;&gt; &gt; traversal
+</I>&gt;<i> &gt;&gt; &gt; I am updating these matrices each frame and I am about to place this
+</I>&gt;<i> &gt;&gt; &gt; code in
+</I>&gt;<i> &gt;&gt; &gt; my custom CullVisitor (which traverse the scene anyway but only the
+</I>&gt;<i> &gt;&gt; &gt; active
+</I>&gt;<i> &gt;&gt; &gt; children).
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; Here is my approach at the moment: list of light entities and here is
+</I>&gt;<i> &gt;&gt; &gt; how I
+</I>&gt;<i> &gt;&gt; &gt; am computing these:
+</I>&gt;<i> &gt;&gt; &gt; <A HREF="http://pastebin.com/0A64sc7Y">http://pastebin.com/0A64sc7Y</A>
+</I>&gt;<i> &gt;&gt; &gt; Simply getting the NodePath and computing the world matrix from this
+</I>&gt;<i> &gt;&gt; &gt; node
+</I>&gt;<i> &gt;&gt; &gt; path. This seams to be costly
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; I am after wiser optimization, to place this in my CullVistor: Here is
+</I>&gt;<i> &gt;&gt; &gt; the
+</I>&gt;<i> &gt;&gt; &gt; snippet:
+</I>&gt;<i> &gt;&gt; &gt; <A HREF="http://pastebin.com/6dQnih8N">http://pastebin.com/6dQnih8N</A>
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; These snippets are simple and I would like to ask if this is more
+</I>&gt;<i> proper
+</I>&gt;<i> &gt;&gt; &gt; way, which it seams to me since I will gain more performance by
+</I>&gt;<i> updating
+</I>&gt;<i> &gt;&gt; &gt; only the culled and active nodes. Also the math in the cull visitor.
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; Thanks a lot for any hints, ideas. As always :-)
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; Cheers,
+</I>&gt;<i> &gt;&gt; &gt; Nick
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; --
+</I>&gt;<i> &gt;&gt; &gt; trajce nikolov nick
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; _______________________________________________
+</I>&gt;<i> &gt;&gt; &gt; osg-users mailing list
+</I>&gt;<i> &gt;&gt; &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; <A HREF="../../../listinfo.cgi/osg-users-.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-</A>
+</I>&gt;<i> openscenegraph.org
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; _______________________________________________
+</I>&gt;<i> &gt;&gt; osg-users mailing list
+</I>&gt;<i> &gt;&gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt; <A HREF="../../../listinfo.cgi/osg-users-.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-</A>
+</I>&gt;<i> openscenegraph.org
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; --
+</I>&gt;<i> &gt; trajce nikolov nick
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-</A>
+</I>&gt;<i> openscenegraph.org
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161103/f8869eb8/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161103/f8869eb8/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004682.html">[osg-users] design issues
+</A></li>
+	<LI>Next message: <A HREF="280889.html">[osg-users] Rendering Model in color
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4684">[ date ]</a>
+              <a href="thread.html#4684">[ thread ]</a>
+              <a href="subject.html#4684">[ subject ]</a>
+              <a href="author.html#4684">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

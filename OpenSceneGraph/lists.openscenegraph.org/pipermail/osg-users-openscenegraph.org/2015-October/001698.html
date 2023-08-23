@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to grab color from a point on a model?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20grab%20color%20from%20a%20point%20on%20a%20model%3F&In-Reply-To=%3CCAFN7Y%2BVcCFrNytqEMZrX3bm_O1sqrhFdxS3D5iZZ8%2BjVeZN5Jw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277920.html">
+   <LINK REL="Next"  HREF="001708.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to grab color from a point on a model?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20grab%20color%20from%20a%20point%20on%20a%20model%3F&In-Reply-To=%3CCAFN7Y%2BVcCFrNytqEMZrX3bm_O1sqrhFdxS3D5iZZ8%2BjVeZN5Jw%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to grab color from a point on a model?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Oct  7 07:53:54 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277920.html">[osg-users] How to grab color from a point on a model?
+</A></li>
+        <LI>Next message: <A HREF="001708.html">[osg-users] How to grab color from a point on a model?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1698">[ date ]</a>
+              <a href="thread.html#1698">[ thread ]</a>
+              <a href="subject.html#1698">[ subject ]</a>
+              <a href="author.html#1698">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Dan,
+
+LineSegmentIntersector won't work with point clouds.  You potentially could
+use the PolytopeIntersector instead or write a custom Intersector class
+that can handle point data by testing against against cylinder.
+
+As for the NULL Image data this may well be down to the OSG automatically
+unref'ing osg::Image once they have been download to OpenGL - this
+optimization isn't on by default but if you run the osgUtil::Optimizer on
+the scene graph this optimization will be enabled.  The feature which
+controls this automatic unref'ing is
+osg::Texture::setUnRefImageDataAfterApply(bool), from include/osg/Texture
+the docs are:
+
+        /** Sets whether or not the apply() function will unreference the
+image
+          * data. If enabled, and the image data is only referenced by this
+          * Texture, apply() will delete the image data. */
+        inline void setUnRefImageDataAfterApply(bool flag) {
+_unrefImageDataAfterApply = flag; }
+
+Try not calling osgUtil::Optimizer or reset the UnRefImageDataAfterApply
+back to false before any rendering is done on the scene graph.
+
+Robert.
+
+
+On 7 October 2015 at 15:31, Dan Flickinger &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dmflickinger at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> I recently took over maintaining a system utilizing osg, which simulates
+</I>&gt;<i> sensors on an autonomous vehicle. One of the features in the works is to
+</I>&gt;<i> model a new LIDAR sensor. The system grabs intersections of line segments
+</I>&gt;<i> approximating laser pulses, pulling points into
+</I>&gt;<i> osgUtil::LineSegmentIntersector::Intersection objects. Now these
+</I>&gt;<i> intersections are used to generate simulated point clouds, and I am
+</I>&gt;<i> attempting to model intensity in these points by approximating the color of
+</I>&gt;<i> the model at the intersection point. So this is where I run into a wall.
+</I>&gt;<i>
+</I>&gt;<i> I get an osg::Texture pointer from
+</I>&gt;<i> osg::Util::LineSegmentIntersector::Intersection.getTextureLookUp(osg::Vec3),
+</I>&gt;<i> which is an osg::Texture2D. This pulls the texture as expected. From there,
+</I>&gt;<i> I attempt to pull out an osg::Image* out of osg::Texture2D.getImage(0). All
+</I>&gt;<i> I'm getting from that is a bunch of NULLs; on multiple models.
+</I>&gt;<i>
+</I>&gt;<i> My working theory is that _image is never getting set in the Texture2D
+</I>&gt;<i> object, or is that set right before getting handed over to OpenGL, and then
+</I>&gt;<i> unset as the images are deleted in order to not drag around a bunch of
+</I>&gt;<i> cruft? So is there a way to retain the images after loading the models? Or
+</I>&gt;<i> is there a better way to go about grabbing the color of a point on a model?
+</I>&gt;<i> Does texture compression play a part in this? I assume that compressed
+</I>&gt;<i> textures would just return garbage, not have _image set as NULL.
+</I>&gt;<i>
+</I>&gt;<i> Best regards,
+</I>&gt;<i>
+</I>&gt;<i> Dan
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic95f1.php?p=65318#65318">http://forum.openscenegraph.org/viewtopic.php?p=65318#65318</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151007/796ca230/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151007/796ca230/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277920.html">[osg-users] How to grab color from a point on a model?
+</A></li>
+	<LI>Next message: <A HREF="001708.html">[osg-users] How to grab color from a point on a model?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1698">[ date ]</a>
+              <a href="thread.html#1698">[ thread ]</a>
+              <a href="subject.html#1698">[ subject ]</a>
+              <a href="author.html#1698">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Anyone Experimenting with OSVR
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Anyone%20Experimenting%20with%20OSVR&In-Reply-To=%3CCALFd4Ccm4j%3DbScMiVLqVxUSKwX1_%2BJLZcOHzncx0WfJmPPmq7A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001940.html">
+   <LINK REL="Next"  HREF="002023.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Anyone Experimenting with OSVR</H1>
+<!--htdig_noindex-->
+    <B>Jan Ciger</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Anyone%20Experimenting%20with%20OSVR&In-Reply-To=%3CCALFd4Ccm4j%3DbScMiVLqVxUSKwX1_%2BJLZcOHzncx0WfJmPPmq7A%40mail.gmail.com%3E"
+       TITLE="[osg-users] Anyone Experimenting with OSVR">jan.ciger at gmail.com
+       </A><BR>
+    <I>Tue Nov 10 06:19:21 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001940.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+        <LI>Next message: <A HREF="002023.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1939">[ date ]</a>
+              <a href="thread.html#1939">[ thread ]</a>
+              <a href="subject.html#1939">[ subject ]</a>
+              <a href="author.html#1939">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>On Mon, Nov 9, 2015 at 11:26 PM, David Glenn &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david at dglenn.com</A>&gt; wrote:
+&gt;<i> Greetings All!
+</I>&gt;<i>
+</I>&gt;<i> Is anyone experimenting with OSVR yet?
+</I>&gt;<i>
+</I>&gt;<i> I know that there is some Oculus stuff that people have tried with some limited success, but just wondering if anyone looked at it from the OSVR standpoint!
+</I>
+I am doing quite a bit of OSVR integration work at my current job,
+mostly because we use GearVR quite a bit and getting VRPN working on
+Android and in Unity3D is a pain. It can be done, but OSVR had
+supposedly supported Android port and more features, so we have tried
+that instead.
+
+In short, the framework parts related to device management and
+tracking work, even though you need to expect some rough edges. It is
+basically a layer on top of VRPN (the VRPN maintainer now works for
+Sensics, the company behind OSVR), with the protocol mostly being
+compatible. For example, you can use VRPN clients to receive data from
+an OSVR server for devices like trackers or buttons, of course without
+the extra metadata.
+
+I have also written a few plugins for OSVR to expose data from other
+sources (Kinect, Natural Point's Optitrack, etc.) or to
+process/transform tracking data using scripts - the APIs required are
+there and it basically works, even though a few things are still a bit
+rough. It is usable, though.
+
+Where things could go south is if you try to do things the OSVR
+developers didn't anticipate - I think I am one of the leading
+external bug reporters on their issue tracker because we are always
+finding use cases they didn't expect or that nobody has attempted
+before.
+
+For example, right now it is impossible to use an external OSVR server
+(i.e. not running on the same machine as your client - probably the
+most common VRPN setup) with the official code, unless you use kludges
+like defining an environment variable or a local OSVR server to point
+to the remote one. The code to allow this is there and works, but I
+was told that the clients are not supposed to use the sw in this way
+so it is not exposed in the API. I have a patch submitted for this,
+but it wasn't accepted yet.
+
+I cannot comment on the parts related to HMDs (management of
+distortion and such) - never used it and Oculus Rift and GearVR that
+we use pretty much require the use of their native SDKs so unless you
+have the OSVR HDK helmet, it is probably not going to be all that
+useful, because the Rift-proprietary features will not be supported
+(at least with the current code - could change in the future).
+
+&gt;<i>From what I can see from the source, the HMD support is right now
+</I>mostly about publishing the HMD parameters (like the distortion
+parameters, focal length, etc.) in the metadata tree and then there
+are some utilities and examples provided that can use that information
+and calculate the correct matrices for your client application (it
+uses Eigen everywhere, so it is API agnostic), making it independent
+from the exact model of the HMD you use. At least that's the idea, the
+practical implementation (and performance) of this remains to be seen.
+There may be some other tools available which are outside of the main
+OSVR-Core tree, but I haven't looked at this part of OSVR in any
+depth, so take this with a grain of salt.
+
+Also keep in mind that OSVR is still under a heavy development - if
+you need unconditional API/protocol stability, it is probably safer to
+use VRPN, which is a known quantity and pretty much an industry
+standard. In addition, there is likely a lot of OSVR development
+happening out of public view - they (Sensics) are certainly at least
+in talks with major hw/sw players if not in collaborations already,
+judging from the list of partners, so things will most likely change
+quite a bit.
+
+On the other hand, VRPN is very limited compared to what OSVR can do,
+especially when it comes to publishing of the metadata - publishing
+things like names of the tracked rigid bodies, marker - rigid body
+associations, orphan markers in the scene, quality of tracking per
+joint, etc. VRPN cannot deal with any of that without major
+nonstandard kludges. OSVR is also designed for runtime reconfiguration
+without restarting the server, so you can have plugins publish changes
+(e.g. when a new device is connected) on the fly and the client will
+pick that up and re-establish the data routing correctly. Again not
+something typical VRPN setups can do.
+
+I suggest you test the software and see whether it fits your needs.
+
+Regards,
+
+Jan
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001940.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+	<LI>Next message: <A HREF="002023.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1939">[ date ]</a>
+              <a href="thread.html#1939">[ thread ]</a>
+              <a href="subject.html#1939">[ subject ]</a>
+              <a href="author.html#1939">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

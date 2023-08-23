@@ -1,0 +1,261 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to properly update a Geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20properly%20update%20a%20Geometry&In-Reply-To=%3CCANfcm6YbxX8W4Mfie-H%3Dwk5S%3Dru9LtGwVaOPUdD03_00DSMSYA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279195.html">
+   <LINK REL="Next"  HREF="002976.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to properly update a Geometry</H1>
+<!--htdig_noindex-->
+    <B>Glenn Waldron</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20properly%20update%20a%20Geometry&In-Reply-To=%3CCANfcm6YbxX8W4Mfie-H%3Dwk5S%3Dru9LtGwVaOPUdD03_00DSMSYA%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to properly update a Geometry">gwaldron at gmail.com
+       </A><BR>
+    <I>Fri Apr 29 05:26:18 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279195.html">[osg-users] How to properly update a Geometry
+</A></li>
+        <LI>Next message: <A HREF="002976.html">[osg-users] How to properly update a Geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2973">[ date ]</a>
+              <a href="thread.html#2973">[ thread ]</a>
+              <a href="subject.html#2973">[ subject ]</a>
+              <a href="author.html#2973">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>If you're just updating an existing array, you don't need to call
+setVertexArray (etc); but you need to mark it dirty by calling
+
+  m_vertices-&gt;dirty();
+
+That applies also to your other buffer objects (color array, elements, etc.)
+
+
+Glenn Waldron
+
+On Thu, Apr 28, 2016 at 3:51 PM, Daniel Neos &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">daniel.rd at hotmail.de</A>&gt; wrote:
+
+&gt;<i> Greetings everyone,
+</I>&gt;<i>
+</I>&gt;<i> I am trying to display a point cloud, consisting of vertices and color
+</I>&gt;<i> with OpenSceneGraph. A static point cloud to display is rather easy with
+</I>&gt;<i> this guide.
+</I>&gt;<i> But I am not capable of updating such a point cloud. My intention is to
+</I>&gt;<i> create a geometry and attach it to my viewer class once.
+</I>&gt;<i> This is the mentioned method which is called once in the beginning.
+</I>&gt;<i>
+</I>&gt;<i> The OSGWidget strongly depends on this OpenGLWidget based approach.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void OSGWidget::attachGeometry(osg::ref_ptr&lt;osg::Geometry&gt; geom)
+</I>&gt;<i> {
+</I>&gt;<i> osg::Geode* geode = new osg::Geode;
+</I>&gt;<i>
+</I>&gt;<i> geom-&gt;setDataVariance(osg::Object::DYNAMIC);
+</I>&gt;<i> geom-&gt;setUseDisplayList(false);
+</I>&gt;<i> geom-&gt;setUseVertexBufferObjects(true);
+</I>&gt;<i> bool addDrawSuccess = geode-&gt;addDrawable(geom.get()); // Adding Drawable
+</I>&gt;<i> Shape to the geometry node
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> if (!addDrawSuccess)
+</I>&gt;<i> {
+</I>&gt;<i> throw &quot;Adding Drawable failed!&quot;;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> osg::StateSet* stateSet = geode-&gt;getOrCreateStateSet();
+</I>&gt;<i> stateSet-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> float aspectRatio = static_cast&lt;float&gt;(this-&gt;width()) /
+</I>&gt;<i> static_cast&lt;float&gt;(this-&gt;height());
+</I>&gt;<i>
+</I>&gt;<i> // Setting up the camera
+</I>&gt;<i> osg::Camera* camera = new osg::Camera;
+</I>&gt;<i> camera-&gt;setViewport(0, 0, this-&gt;width(), this-&gt;height());
+</I>&gt;<i> camera-&gt;setClearColor(osg::Vec4(0.f, 0.f, 0.f, 1.f)); // Kind of
+</I>&gt;<i> Backgroundcolor, clears the buffer and sets the default color (RGBA)
+</I>&gt;<i> camera-&gt;setProjectionMatrixAsPerspective(30.f, aspectRatio, 1.f, 1000.f);
+</I>&gt;<i> // Create perspective projection
+</I>&gt;<i> camera-&gt;setGraphicsContext(graphicsWindow_); // embed
+</I>&gt;<i>
+</I>&gt;<i> osgViewer::View* view = new osgViewer::View;
+</I>&gt;<i> view-&gt;setCamera(camera); // Set the defined camera
+</I>&gt;<i> view-&gt;setSceneData(geode); // Set the geometry
+</I>&gt;<i> view-&gt;addEventHandler(new osgViewer::StatsHandler);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> osgGA::TrackballManipulator* manipulator = new osgGA::TrackballManipulator;
+</I>&gt;<i> manipulator-&gt;setAllowThrow(false);
+</I>&gt;<i>
+</I>&gt;<i> view-&gt;setCameraManipulator(manipulator);
+</I>&gt;<i>
+</I>&gt;<i> ///////////////////////////////////////////////////
+</I>&gt;<i> // Set the viewer
+</I>&gt;<i> //////////////////////////////////////////////////
+</I>&gt;<i> viewer_-&gt;addView(view);
+</I>&gt;<i> viewer_-&gt;setThreadingModel(osgViewer::CompositeViewer::SingleThreaded);
+</I>&gt;<i> viewer_-&gt;realize();
+</I>&gt;<i>
+</I>&gt;<i> this-&gt;setFocusPolicy(Qt::StrongFocus);
+</I>&gt;<i> this-&gt;setMinimumSize(100, 100);
+</I>&gt;<i>
+</I>&gt;<i> this-&gt;setMouseTracking(true);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> This method gets set once and shall set up the camera, interactor settings
+</I>&gt;<i> and the overall scene which only consists of one geode containing the
+</I>&gt;<i> geometry which shall be updated continiously.
+</I>&gt;<i> And after I have 'attached' the geometry, I am trying to update the
+</I>&gt;<i> geometry like this
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void PointCloudViewOSG::processData(DepthDataSet depthData)
+</I>&gt;<i> {
+</I>&gt;<i> if (depthData.points()-&gt;empty())
+</I>&gt;<i> {
+</I>&gt;<i> return; // empty cloud, cannot do anything
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> const DepthDataSet::IndexPtr::element_type&amp; index = *depthData.index();
+</I>&gt;<i> const size_t nPixel = depthData.points().get()-&gt;points.size();
+</I>&gt;<i>
+</I>&gt;<i> if (depthData.intensity().isValid() &amp;&amp; !index.empty() )
+</I>&gt;<i> {
+</I>&gt;<i>     for (int i = 0; i &lt; nPixel; i++)
+</I>&gt;<i>     {
+</I>&gt;<i>         float x = depthData.points().get()-&gt;points[i].x;
+</I>&gt;<i>         float y = depthData.points().get()-&gt;points[i].y;
+</I>&gt;<i>         float z = depthData.points().get()-&gt;points[i].z;
+</I>&gt;<i>         m_vertices-&gt;push_back(osg::Vec3(x
+</I>&gt;<i>             , y
+</I>&gt;<i>             , z));
+</I>&gt;<i>
+</I>&gt;<i>         // 32 bit integer variable containing the rgb (8 bit per channel)
+</I>&gt;<i> value
+</I>&gt;<i>         uint32_t rgb_val_;
+</I>&gt;<i>         memcpy(&amp;rgb_val_, &amp;(depthData.points().get()-&gt;points[i].rgb),
+</I>&gt;<i> sizeof(uint32_t));
+</I>&gt;<i>
+</I>&gt;<i>         uint32_t red, green, blue;
+</I>&gt;<i>         blue = rgb_val_ &amp; 0x000000ff;
+</I>&gt;<i>
+</I>&gt;<i>         rgb_val_ = rgb_val_ &gt;&gt; 8;
+</I>&gt;<i>         green = rgb_val_ &amp; 0x000000ff;
+</I>&gt;<i>
+</I>&gt;<i>         rgb_val_ = rgb_val_ &gt;&gt; 8;
+</I>&gt;<i>         red = rgb_val_ &amp; 0x000000ff;
+</I>&gt;<i>
+</I>&gt;<i>         m_colors-&gt;push_back(
+</I>&gt;<i>             osg::Vec4f((float)red / 255.0f,
+</I>&gt;<i>             (float)green / 255.0f,
+</I>&gt;<i>                 (float)blue / 255.0f,
+</I>&gt;<i>                 1.0f)
+</I>&gt;<i>         );
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     m_geometry-&gt;setVertexArray(m_vertices.get());
+</I>&gt;<i>
+</I>&gt;<i>     m_geometry-&gt;setColorArray(m_colors.get());
+</I>&gt;<i>
+</I>&gt;<i>     m_geometry-&gt;setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+</I>&gt;<i>
+</I>&gt;<i>     m_geometry-&gt;addPrimitiveSet(new
+</I>&gt;<i> osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, m_vertices-&gt;size()));
+</I>&gt;<i>     }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> (Apperantly the code tag can somehow not handle the whitespaces but i will
+</I>&gt;<i> let it be since it is more readable than if everything is aligned)
+</I>&gt;<i>
+</I>&gt;<i> So my guess is that the  addPrimitiveSet(...)  shall not be called
+</I>&gt;<i> everytime I update the geometry, since it will push_back
+</I>&gt;<i> the primitive set everytime the geometry gets updated?
+</I>&gt;<i>
+</I>&gt;<i> Do I have to reattach my geometry after every update? Or do I have to
+</I>&gt;<i> rewrite my update method?
+</I>&gt;<i> So it boils down to the question  What steps are necessary to update my
+</I>&gt;<i> underlying geometry with new vertices and colors
+</I>&gt;<i>
+</I>&gt;<i> I have read the basic tutorials and looked for similar questions in this
+</I>&gt;<i> forum
+</I>&gt;<i> and the only thing that I could adapt is the use of VBO for performance
+</I>&gt;<i> gain
+</I>&gt;<i>
+</I>&gt;<i> PointCloudlibrary (PCL) is unfortunately not an alternative since of some
+</I>&gt;<i> incompatibilities with my application.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Daniel
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic99e3.php?p=67011#67011">http://forum.openscenegraph.org/viewtopic.php?p=67011#67011</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160429/0352f0db/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160429/0352f0db/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279195.html">[osg-users] How to properly update a Geometry
+</A></li>
+	<LI>Next message: <A HREF="002976.html">[osg-users] How to properly update a Geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2973">[ date ]</a>
+              <a href="thread.html#2973">[ thread ]</a>
+              <a href="subject.html#2973">[ subject ]</a>
+              <a href="author.html#2973">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

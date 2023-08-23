@@ -1,0 +1,430 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Using multiples texture for a geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20multiples%20texture%20for%20a%20geometry&In-Reply-To=%3CCAFN7Y%2BXd6%2Bb9dKZMV2vjUBh8WXT3SO_jpGyX_aYx5W%3DziHy01w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002991.html">
+   <LINK REL="Next"  HREF="002997.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Using multiples texture for a geometry</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20multiples%20texture%20for%20a%20geometry&In-Reply-To=%3CCAFN7Y%2BXd6%2Bb9dKZMV2vjUBh8WXT3SO_jpGyX_aYx5W%3DziHy01w%40mail.gmail.com%3E"
+       TITLE="[osg-users] Using multiples texture for a geometry">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed May  4 00:39:32 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002991.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+        <LI>Next message: <A HREF="002997.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2992">[ date ]</a>
+              <a href="thread.html#2992">[ thread ]</a>
+              <a href="subject.html#2992">[ subject ]</a>
+              <a href="author.html#2992">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Florian,
+
+I can't any obvious mistakes, but the use of the SmoothingVisitor looks
+redudent to me as you are providing your own normals.  Try comment it out.
+
+Robert.
+
+On 3 May 2016 at 21:13, Florian GOLESTIN &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">florian.golestin at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> Sorry my mistake, I wanted to put only the interesting part but this is
+</I>&gt;<i> not efficient.
+</I>&gt;<i> No more censure!
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> namespace Soleil
+</I>&gt;<i> {
+</I>&gt;<i>
+</I>&gt;<i>   LevelReader::LevelReader()
+</I>&gt;<i>   {
+</I>&gt;<i>     //supportsExtension(&quot;level&quot;, &quot;Text map format for Donjon&quot;);
+</I>&gt;<i>   }
+</I>&gt;<i>
+</I>&gt;<i>   LevelReader::~LevelReader()
+</I>&gt;<i>   {
+</I>&gt;<i>   }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>   osg::ref_ptr&lt;Level&gt;  LevelReader::readFile(const std::string &amp;file) const
+</I>&gt;<i>   {
+</I>&gt;<i>     std::string fileName = osgDB::findDataFile(file);
+</I>&gt;<i>     if (fileName.empty()) return nullptr; // TODO throw e?
+</I>&gt;<i>
+</I>&gt;<i>     errno = 0;
+</I>&gt;<i>     std::cout &lt;&lt; &quot;Stream: &quot; &lt;&lt; fileName.c_str() &lt;&lt; &quot;\n&quot;;
+</I>&gt;<i>     std::ifstream stream;
+</I>&gt;<i>     stream.exceptions(std::ifstream::failbit); //  | std::ifstream::badbit
+</I>&gt;<i>     stream.open(fileName.c_str(), std::ios::in);
+</I>&gt;<i>     if (!stream) return nullptr; // TODO throw e
+</I>&gt;<i>
+</I>&gt;<i>     return readStream(stream);
+</I>&gt;<i>   }
+</I>&gt;<i>
+</I>&gt;<i>   osg::ref_ptr&lt;Level&gt; LevelReader::readStream(std::istream &amp;stream) const
+</I>&gt;<i>   {
+</I>&gt;<i>     char        block;                  // current reading block
+</I>&gt;<i>     float       x = 0;                  // Current position on x
+</I>&gt;<i>     float       y = 0;                  // Current position on y
+</I>&gt;<i>     int         wallCount = 0;          // Number of cubes
+</I>&gt;<i>     float       maxX = 0;               // Max size of the map in X
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     osg::ref_ptr&lt;Soleil::Level&gt; level = new Soleil::Level();
+</I>&gt;<i>     std::string line;
+</I>&gt;<i>     while(std::getline(stream, line))
+</I>&gt;<i>       {
+</I>&gt;<i>         std::stringstream linestream(line);
+</I>&gt;<i>
+</I>&gt;<i>         while (linestream &gt;&gt; block)
+</I>&gt;<i>           {
+</I>&gt;<i>             /* TODO Configurable size for the blocks */
+</I>&gt;<i>             float posx = 1.0 * x;
+</I>&gt;<i>             float posy = 1.0 * y;
+</I>&gt;<i>             float endx = posx + 1.0;
+</I>&gt;<i>             float endy = posy + 1.0;
+</I>&gt;<i>
+</I>&gt;<i>             bool blockFound = false;
+</I>&gt;<i>             switch (block)
+</I>&gt;<i>               {
+</I>&gt;<i>               case '.':
+</I>&gt;<i>                 break;
+</I>&gt;<i>               case 'D':
+</I>&gt;<i>                 level-&gt;_startingPosition = osg::Vec3(posx + .5, posy + .5,
+</I>&gt;<i> .3);
+</I>&gt;<i>                 blockFound = true;
+</I>&gt;<i>                 break;
+</I>&gt;<i>               case 'd':
+</I>&gt;<i>                 level-&gt;_startingOrientation = osg::Vec3(posx + .5, posy +
+</I>&gt;<i> .5, .3);
+</I>&gt;<i>                 blockFound = true;
+</I>&gt;<i>                 break;
+</I>&gt;<i>               case 'x':
+</I>&gt;<i>                 if (wallCount % 2)
+</I>&gt;<i>                   {
+</I>&gt;<i>                     std::cout &lt;&lt; &quot;1&quot; &lt;&lt; &quot;\n&quot;;
+</I>&gt;<i>                     createCube(level.get(), *level-&gt;texcoords,
+</I>&gt;<i> *level-&gt;texcoords2, posx, posy, endx, endy);
+</I>&gt;<i>                   }
+</I>&gt;<i>                 else
+</I>&gt;<i>                   {
+</I>&gt;<i>                     std::cout &lt;&lt; &quot;2&quot; &lt;&lt; &quot;\n&quot;;
+</I>&gt;<i>                     createCube(level.get(), *level-&gt;texcoords2,
+</I>&gt;<i> *level-&gt;texcoords, posx, posy, endx, endy);
+</I>&gt;<i>                   }
+</I>&gt;<i>                 blockFound = true;
+</I>&gt;<i>                 wallCount++;
+</I>&gt;<i>                 break;
+</I>&gt;<i>                 // default:
+</I>&gt;<i>                 //      blockFound = levelConfiguration(block);
+</I>&gt;<i>                 //      break;
+</I>&gt;<i>               }
+</I>&gt;<i>             if (blockFound == false)
+</I>&gt;<i>               std::cout &lt;&lt; &quot;Unexpected character: &quot; &lt;&lt;  block &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i>             x += 1.0;
+</I>&gt;<i>             maxX = std::max(x, maxX);
+</I>&gt;<i>           }
+</I>&gt;<i>         x  = 0;
+</I>&gt;<i>         y -= 1.0; // TODO Cube size
+</I>&gt;<i>       }
+</I>&gt;<i>     // TODO read failed?
+</I>&gt;<i>
+</I>&gt;<i>     // Floor -------------
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(0.0f, 0.0f, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(maxX, 0.0f, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(maxX, y, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(0, y, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+</I>&gt;<i>
+</I>&gt;<i>     level-&gt;texcoords-&gt;push_back( osg::Vec2(0.0f, 0.0f) ); // 0
+</I>&gt;<i>     level-&gt;texcoords-&gt;push_back( osg::Vec2(0.0f, 1.0f) ); // 1
+</I>&gt;<i>     level-&gt;texcoords-&gt;push_back( osg::Vec2(1.0f, 1.0f) ); // 2
+</I>&gt;<i>     level-&gt;texcoords-&gt;push_back( osg::Vec2(1.0f, 0.0f) ); // 3
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Geometry&gt; geom = new osg::Geometry;
+</I>&gt;<i>     geom-&gt;setVertexArray(level-&gt;vertices);
+</I>&gt;<i>     geom-&gt;setNormalArray(level-&gt;normals,
+</I>&gt;<i> osg::Array::Binding::BIND_PER_VERTEX);
+</I>&gt;<i>     geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0,
+</I>&gt;<i> 24*wallCount+4)); // +4 for the floor texture coordinates
+</I>&gt;<i>     osgUtil::SmoothingVisitor::smooth(*geom);
+</I>&gt;<i>     //
+</I>&gt;<i>
+</I>&gt;<i>     //
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+</I>&gt;<i>     geode-&gt;addDrawable(geom);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     /* I added this in the hope to have the second texture appearing */
+</I>&gt;<i>     // osg::Material* material = new osg::Material;
+</I>&gt;<i>     // material-&gt;setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);
+</I>&gt;<i>     // material-&gt;setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(1, 1,
+</I>&gt;<i> 1, 1));
+</I>&gt;<i>     // material-&gt;setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(1, 1,
+</I>&gt;<i> 1, 1));
+</I>&gt;<i>     // material-&gt;setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(1,
+</I>&gt;<i> 1, 1, 1));
+</I>&gt;<i>     // material-&gt;setShininess(osg::Material::FRONT_AND_BACK, 64.0f);
+</I>&gt;<i>     //
+</I>&gt;<i> level-&gt;getOrCreateStateSet()-&gt;setAttribute(material,osg::StateAttribute::ON
+</I>&gt;<i> | osg::StateAttribute::OVERRIDE);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     level-&gt;addChild(geode);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     // Texture 1
+</I>&gt;<i>     geom-&gt;setTexCoordArray(0, level-&gt;texcoords.get());
+</I>&gt;<i>     {
+</I>&gt;<i>       osg::ref_ptr&lt;osg::Texture2D&gt; texture = new osg::Texture2D;
+</I>&gt;<i>       osg::ref_ptr&lt;osg::Image&gt; image =
+</I>&gt;<i> osgDB::readImageFile(&quot;media/textures/stone_3_2048x2048.jpg&quot;);
+</I>&gt;<i>       texture-&gt;setImage(image);
+</I>&gt;<i>       texture-&gt;setUnRefImageDataAfterApply(true);
+</I>&gt;<i>       level-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,
+</I>&gt;<i> texture);
+</I>&gt;<i>     }
+</I>&gt;<i>     //Texture 2
+</I>&gt;<i>     geom-&gt;setTexCoordArray(1, level-&gt;texcoords2.get());
+</I>&gt;<i>     {
+</I>&gt;<i>       osg::ref_ptr&lt;osg::Texture2D&gt; texture = new osg::Texture2D;
+</I>&gt;<i>       osg::ref_ptr&lt;osg::Image&gt; image =
+</I>&gt;<i> osgDB::readImageFile(&quot;media/textures/Metal_seamless2_ch16.jpg&quot;);
+</I>&gt;<i>       texture-&gt;setImage(image);
+</I>&gt;<i>       texture-&gt;setUnRefImageDataAfterApply(true);
+</I>&gt;<i>       level-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(1,
+</I>&gt;<i> texture);
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     std::cout &lt;&lt; &quot;done.\n&quot;;
+</I>&gt;<i>     return level;
+</I>&gt;<i>   }
+</I>&gt;<i>
+</I>&gt;<i>   /*
+</I>&gt;<i>    * @param Level       Is the container of the vertices, normals and
+</I>&gt;<i> textures for the walls of our labyrinth
+</I>&gt;<i>    * @param tex         Is the Vector that should receive the coordinate
+</I>&gt;<i> for the textures
+</I>&gt;<i>    * @param skip        Is the second vector for texture filled with '0'
+</I>&gt;<i> to 'skip' this wall
+</I>&gt;<i>    */
+</I>&gt;<i>   void LevelReader::createCube(Soleil::Level *level, osg::Vec2Array &amp;tex,
+</I>&gt;<i> osg::Vec2Array &amp;skip,
+</I>&gt;<i>                   float posx, float posy, float endx, float endy) const
+</I>&gt;<i> {
+</I>&gt;<i>     // ------ Front
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 1.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 1.0f));
+</I>&gt;<i>
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 0.0f));
+</I>&gt;<i>     //
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     // ------ top
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 1.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 1.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 1.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 1.0f));
+</I>&gt;<i>
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+</I>&gt;<i>
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 0.0f));
+</I>&gt;<i>     //
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     // ------ back
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 1.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 1.0f));
+</I>&gt;<i>
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 1.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 1.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 1.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 1.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 0.0f));
+</I>&gt;<i>       //
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     // ------ Bottom
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+</I>&gt;<i>
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 0.0f));
+</I>&gt;<i>     //
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     // ------ Left
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 1.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 1.0f));
+</I>&gt;<i>
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f, 0.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f, 0.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f, 0.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f, 0.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 0.0f));
+</I>&gt;<i>       //
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     // ------ Right
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 0.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 1.0f));
+</I>&gt;<i>     level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 1.0f));
+</I>&gt;<i>
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+</I>&gt;<i>     level-&gt;normals-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(0.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 1.0f));
+</I>&gt;<i>     tex.push_back( osg::Vec2(1.0f, 0.0f));
+</I>&gt;<i>     //
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>     skip.push_back( osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>
+</I>&gt;<i>   }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Here is the original file:
+</I>&gt;<i> <A HREF="https://github.com/fulezi/soleil/blob/master/LevelReader.cpp">https://github.com/fulezi/soleil/blob/master/LevelReader.cpp</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> An idea?
+</I>&gt;<i>
+</I>&gt;<i> Florian
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicaf96.php?p=67046#67046">http://forum.openscenegraph.org/viewtopic.php?p=67046#67046</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160504/268208a6/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160504/268208a6/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002991.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+	<LI>Next message: <A HREF="002997.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2992">[ date ]</a>
+              <a href="thread.html#2992">[ thread ]</a>
+              <a href="subject.html#2992">[ subject ]</a>
+              <a href="author.html#2992">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

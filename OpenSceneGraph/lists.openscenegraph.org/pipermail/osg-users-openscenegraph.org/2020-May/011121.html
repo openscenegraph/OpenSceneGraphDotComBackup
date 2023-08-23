@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to reduce the cache size limit of OSG ?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20reduce%20the%20cache%20size%20limit%20of%20OSG%20%3F&In-Reply-To=%3Cmailman.7229.1590974887.4151.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011105.html">
+   <LINK REL="Next"  HREF="011122.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to reduce the cache size limit of OSG ?</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20reduce%20the%20cache%20size%20limit%20of%20OSG%20%3F&In-Reply-To=%3Cmailman.7229.1590974887.4151.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] How to reduce the cache size limit of OSG ?">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Sun May 31 18:28:04 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011105.html">[osg-users] How to reduce the cache size limit of OSG ?
+</A></li>
+        <LI>Next message (by thread): <A HREF="011122.html">[osg-users] How to reduce the cache size limit of OSG ?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11121">[ date ]</a>
+              <a href="thread.html#11121">[ thread ]</a>
+              <a href="subject.html#11121">[ subject ]</a>
+              <a href="author.html#11121">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Sorry for the late reply. The codes of CreateGeometryNode looks like this: 
+osg::ref_ptr&lt;osg::MatrixTransform&gt; CreateGeometryNode() {
+    std::vector&lt;float&gt; xyzs = RandomPoints(); ///&lt; Create ramdon number of 
+points 
+    osg::Vec3Array vs = new osg::Vec3Array(xyzs.size()/3, (const osg::Vec3 
+*)(xyzs.data()));
+    osg::ref_ptr&lt;osg::Geometry&gt; geo = new osg::Geometry;
+    geo-&gt;setVertexArray(vs.get());
+    geo-&gt;setColorArray(osg::Vec3(0.5,0.5,0.5));
+    geo-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+    geo-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, 
+numpt));
+    geo-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, 
+osg::StateAttribute::OFF);
+    geo-&gt;getOrCreateStateSet()-&gt;setAttribute(new osg::Point(size), 
+osg::StateAttribute::ON);
+    osg::ref_ptr&lt;osg::MatrixTransform&gt; mt = new osg::MatrixTransform;
+    osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+    geode-&gt;addDrawable(geo.get());
+    mt-&gt;addChild(geode);
+    return mt; 
+}
+
+There's an old post from you which said that OSG will cache objects to 
+improve performance, I wonder if this is the case and how I could change 
+that behavior. 
+
+Thanks! 
+
+On Wednesday, May 27, 2020 at 2:37:27 AM UTC+8, Robert Osfield wrote:
+&gt;<i>
+</I>&gt;<i> Hi Hui,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Tuesday, 26 May 2020 10:36:18 UTC+1, Hui Li wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The codes looks like this: 
+</I>&gt;&gt;<i> ```
+</I>&gt;&gt;<i> root = GroupOfSwitch(); 
+</I>&gt;&gt;<i> viewer-&gt;setSceneData(root);
+</I>&gt;&gt;<i> while (!viewer-&gt;done()) {
+</I>&gt;&gt;<i>     root-&gt;removeChild(0); // Remove the point cloud 
+</I>&gt;&gt;<i>     pc = sensor.Capture();  // Get the point cloud
+</I>&gt;&gt;<i>     geo = CreateGeometryNode(pc);
+</I>&gt;&gt;<i>     root-&gt;addChild(geo); // Add the pointcloud 
+</I>&gt;&gt;<i>     viewer-&gt;frame();
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i> In &quot;principle&quot; this shouldn't cause unbounded memory growth but as you 
+</I>&gt;<i> don't provide any details about the CreateGeometryNode() there is no way 
+</I>&gt;<i> for use know what is going on there.  It could be that your leak it right 
+</I>&gt;<i> there in that function call, or else where somewhere in your application.
+</I>&gt;<i>
+</I>&gt;<i> While I can't comment about the details of your implementation the 
+</I>&gt;<i> approach of removing, creating and adding new nodes and associated data 
+</I>&gt;<i> each frame is really, really inefficient.
+</I>&gt;<i>
+</I>&gt;<i> As much as possible you should try to reuse data.  For a point cloud 
+</I>&gt;<i> application where the data is dynamic I would personally allocate a fixed 
+</I>&gt;<i> number of Geometry nodes with fixed Vec3Array's within them and single 
+</I>&gt;<i> DrawArray primitive set.  I'd allocate the Vec3Array to it's full size 
+</I>&gt;<i> right up front and next change it's size.  The DrawArrays has a count value 
+</I>&gt;<i> that you can set to specify how many vertices in the array need to be 
+</I>&gt;<i> rendered and needn't be the whole length of the Vec3Aray.
+</I>&gt;<i>
+</I>&gt;<i> With really large datasets I would chunk the data so rather one big 
+</I>&gt;<i> osg::Geometry, I'd have say 10,000 vertices in each osg::Geometry.  I would 
+</I>&gt;<i> also use VertexBufferObjects and avoid using DisplayLists.
+</I>&gt;<i>
+</I>&gt;<i> Do this all correctly and you should get a good performance and no memory 
+</I>&gt;<i> growth.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>  
+</I>&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/ddac852b-0888-42a4-82d8-23a92f83b571%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/ddac852b-0888-42a4-82d8-23a92f83b571%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200531/1f641795/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200531/1f641795/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011105.html">[osg-users] How to reduce the cache size limit of OSG ?
+</A></li>
+	<LI>Next message (by thread): <A HREF="011122.html">[osg-users] How to reduce the cache size limit of OSG ?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11121">[ date ]</a>
+              <a href="thread.html#11121">[ thread ]</a>
+              <a href="subject.html#11121">[ subject ]</a>
+              <a href="author.html#11121">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

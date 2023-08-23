@@ -1,0 +1,209 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Intercepting Windows messages
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Intercepting%20Windows%20messages&In-Reply-To=%3CCAOuEi%2BEa6USzT4h9jv4%3D_BruP4SQ7ARJyjmLaaquRPOSYPzL2A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001944.html">
+   <LINK REL="Next"  HREF="001960.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Intercepting Windows messages</H1>
+<!--htdig_noindex-->
+    <B>Anders Backman</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Intercepting%20Windows%20messages&In-Reply-To=%3CCAOuEi%2BEa6USzT4h9jv4%3D_BruP4SQ7ARJyjmLaaquRPOSYPzL2A%40mail.gmail.com%3E"
+       TITLE="[osg-users] Intercepting Windows messages">andersb at cs.umu.se
+       </A><BR>
+    <I>Thu Nov 12 05:24:56 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001944.html">[osg-users] Intercepting Windows messages
+</A></li>
+        <LI>Next message: <A HREF="001960.html">[osg-users] Intercepting Windows messages
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1957">[ date ]</a>
+              <a href="thread.html#1957">[ thread ]</a>
+              <a href="subject.html#1957">[ subject ]</a>
+              <a href="author.html#1957">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>That is quite explicit. I was thinking about some method for intercepting
+events.
+I tried fiddling with creating a custom GraphicsWindowWin32 class, but it
+turns out that this is explicitly created internally in:
+
+osg::GraphicsContext* Win32WindowingSystem::createGraphicsContext(
+osg::GraphicsContext::Traits* traits )
+{
+...
+        osg::ref_ptr&lt;osgViewer::GraphicsWindowWin32&gt; window = new
+GraphicsWindowWin32(traits);
+
+}
+
+So this does not seem to be the way to catch windows messages.
+My idea was that I could register my instance of the GraphicsWindowWin32 to
+implement the virtual method:
+
+LRESULT GraphicsWindowWin32::handleNativeWindowingEvent( HWND hwnd, UINT
+uMsg, WPARAM wParam, LPARAM lParam )
+
+
+Where I could catch all windows events.
+
+
+Turns out that I do not have enough understanding when and where context
+etc is created.
+
+It seems that a GraphicsWindowWIn32 is first created at the call to:
+
+    osg::ref_ptr&lt;osg::GraphicsContext&gt; gc =
+osg::GraphicsContext::createGraphicsContext(traits.get());
+
+
+And then at the call to:
+
+viewer-&gt;realize();
+
+will also result in a call
+to GraphicsContext::createGraphicsContext(Traits* traits), which in turn
+will create yet another GraphicsWindowWin32.
+
+So there lies my problem, my call to viewer-&gt;realize() will override my
+first call to GraphicsContext::createGraphicsContext(traits.get());
+
+
+Not sure how to get around this though. Ideas?
+
+/Anders
+
+
+On Wed, Nov 11, 2015 at 5:05 PM, Trajce Nikolov NICK &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi Anders,
+</I>&gt;<i>
+</I>&gt;<i> here is what I do for this on Windows
+</I>&gt;<i>
+</I>&gt;<i>     while (!viewer-&gt;done())
+</I>&gt;<i>     {
+</I>&gt;<i>
+</I>&gt;<i> #if defined(_WIN32)
+</I>&gt;<i>         MSG msg;
+</I>&gt;<i>         if (::PeekMessage(&amp;msg,NULL,0,0,PM_NOREMOVE))
+</I>&gt;<i>         {
+</I>&gt;<i>             ::GetMessage(&amp;msg, NULL, 0, 0);
+</I>&gt;<i>
+</I>&gt;<i>             if (wins.size())
+</I>&gt;<i>             {
+</I>&gt;<i>                 osgViewer::GraphicsHandleWin32 *hdl =
+</I>&gt;<i> dynamic_cast&lt;osgViewer::GraphicsHandleWin32*&gt;(wins.at(0));
+</I>&gt;<i>                 if(hdl)
+</I>&gt;<i>                 {
+</I>&gt;<i>                     WNDPROC fWndProc =
+</I>&gt;<i> (WNDPROC)::GetWindowLongPtr(hdl-&gt;getHWND(), GWLP_WNDPROC);
+</I>&gt;<i>                     if (fWndProc &amp;&amp; hdl-&gt;getHWND())
+</I>&gt;<i> {
+</I>&gt;<i> ::CallWindowProc(fWndProc,hdl-&gt;getHWND(),msg.message, msg.wParam,
+</I>&gt;<i> msg.lParam);
+</I>&gt;<i> }
+</I>&gt;<i>                 }
+</I>&gt;<i>             }
+</I>&gt;<i>         }
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i> On Wed, Nov 11, 2015 at 4:21 PM, Anders Backman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Trying the 3DConnexion SpaceNavigator with OSG. However I would like to
+</I>&gt;&gt;<i> stay away from VRPN and such dependencies...
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I was wondering how to best intercept Windows messages from the
+</I>&gt;&gt;<i> GraphicsWindowWin32 class.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> This class has a virtual method handleNativeWindowingEvent which I would
+</I>&gt;&gt;<i> like to override to catch custom messages from my device.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Would it be possible to implement a derived class and have that
+</I>&gt;&gt;<i> instantiated instead of the standard osgViewer::GraphicsWindowWin32 one?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Or is there a different method to listen to the  messages:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> ( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks,
+</I>&gt;&gt;<i> Anders
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> --
+</I>&gt;&gt;<i> __________________________________________
+</I>&gt;&gt;<i> Anders Backman, HPC2N
+</I>&gt;&gt;<i> 90187 Ume&#229; University, Sweden
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A> <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+</I>&gt;&gt;<i> Cell: +46-70-392 64 67
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> trajce nikolov nick
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>
+
+-- 
+__________________________________________
+Anders Backman, HPC2N
+90187 Ume&#229; University, Sweden
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A> <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+Cell: +46-70-392 64 67
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151112/a3ed4e7c/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151112/a3ed4e7c/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001944.html">[osg-users] Intercepting Windows messages
+</A></li>
+	<LI>Next message: <A HREF="001960.html">[osg-users] Intercepting Windows messages
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1957">[ date ]</a>
+              <a href="thread.html#1957">[ thread ]</a>
+              <a href="subject.html#1957">[ subject ]</a>
+              <a href="author.html#1957">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

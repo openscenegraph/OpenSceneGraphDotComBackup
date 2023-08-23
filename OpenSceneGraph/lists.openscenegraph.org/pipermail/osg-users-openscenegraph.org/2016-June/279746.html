@@ -1,0 +1,259 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Render to osg::TextureRectangle fails?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20to%20osg%3A%3ATextureRectangle%20fails%3F&In-Reply-To=%3C1467106443.m2f.67873%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003528.html">
+   <LINK REL="Next"  HREF="003524.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Render to osg::TextureRectangle fails?</H1>
+<!--htdig_noindex-->
+    <B>Philipp Meyer</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20to%20osg%3A%3ATextureRectangle%20fails%3F&In-Reply-To=%3C1467106443.m2f.67873%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Render to osg::TextureRectangle fails?">philipp.meyer at fh-bielefeld.de
+       </A><BR>
+    <I>Tue Jun 28 02:34:03 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003528.html">[osg-users] Problem with osg::Dragger::handle
+</A></li>
+        <LI>Next message: <A HREF="003524.html">[osg-users] Render to osg::TextureRectangle fails?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279746">[ date ]</a>
+              <a href="thread.html#279746">[ thread ]</a>
+              <a href="subject.html#279746">[ subject ]</a>
+              <a href="author.html#279746">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+im using several RTT Cameras in my scene. So far, I have only rendered to osg::Texture2D and that worked fine, however, I need to render to NPOD textures now so that will no longer work.
+
+For that, I changed my render target to a osg::TextureRectangle and left everything else pretty much unchanged. I'm displaying the texture using a custom QUAD. 
+
+Unfortunately I only see a black texture when using TextureRectangle instead of Texture2D. I checked the osg prerender example and noticed that I need to use un-normalized texture coordinates for my QUAD in this case, however, to my own surprise that didn't fix the issue either.
+
+Does anyone have an idea whats wrong?
+
+Some relevant code bits:
+
+Texture creation:
+
+
+Code:
+osg::ref_ptr&lt;osg::Texture&gt; osgHelper::createDefaultRttTexture(int width,
+		int height, GLenum sourceFormat, GLenum sourceType,
+		GLint internalFormat) {
+
+	osg::ref_ptr&lt;osg::Texture&gt; tex;
+
+	auto texImg = osgHelper::make_osgref&lt;osg::Image&gt;();
+	texImg-&gt;setInternalTextureFormat(internalFormat);
+	texImg-&gt;allocateImage(width, height, 1, sourceFormat, sourceType);
+
+	if (isPowerOfTwo(width) &amp;&amp; isPowerOfTwo(height)) {
+		auto specTex = make_osgref&lt;osg::Texture2D&gt;();
+		specTex-&gt;setTextureSize(width, height);
+		specTex-&gt;setImage(texImg);
+
+		tex = specTex;
+	} else {
+		auto specTex = make_osgref&lt;osg::TextureRectangle&gt;();
+		specTex-&gt;setTextureSize(width, height);
+		specTex-&gt;setImage(texImg);
+
+		tex = specTex;
+	}
+
+	tex-&gt;setInternalFormat(internalFormat);
+	tex-&gt;setSourceFormat(sourceFormat);
+	tex-&gt;setSourceType(sourceType);
+	tex-&gt;setFilter(osg::Texture::FilterParameter::MIN_FILTER,
+			osg::Texture::FilterMode::NEAREST);
+	tex-&gt;setFilter(osg::Texture::FilterParameter::MAG_FILTER,
+			osg::Texture::FilterMode::NEAREST);
+	tex-&gt;setDataVariance(osg::Object::DYNAMIC);
+	tex-&gt;setMaxAnisotropy(0);
+
+	return tex;
+}
+
+
+
+RTT Camera setup:
+
+
+Code:
+RTTCamera::RTTCamera(osg::Texture *dest, osg::Viewport *vp) :
+		osg::Camera() {
+
+	// set clear the color and depth buffer
+	this-&gt;setClearColor(osg::Vec4(1, 0, 0, 1));
+
+//matrices get set properly later.
+	setProjectionMatrix(osg::Matrix::identity());
+	setViewMatrix(osg::Matrix::identity());
+
+	setComputeNearFarMode(ComputeNearFarMode::DO_NOT_COMPUTE_NEAR_FAR);
+
+	// set viewport
+	this-&gt;setViewport(vp);
+
+	// set the camera to render before the main camera.
+	this-&gt;setRenderOrder(osg::Camera::RenderOrder::PRE_RENDER);
+
+	// tell the camera to use OpenGL frame buffer object where supported.
+	this-&gt;setRenderTargetImplementation(osg::Camera::RenderTargetImplementation::FRAME_BUFFER_OBJECT);
+
+	// attach the texture and use it as the color buffer.
+	this-&gt;attach(osg::Camera::COLOR_BUFFER0, dest);
+
+}
+
+
+
+Texture display:
+
+Code:
+
+TextureView::TextureView() {
+	setViewMatrix(osg::Matrix::identity());
+	setProjectionMatrix(osg::Matrix::ortho2D(0, 1, 0, 1));
+	setClearColor(osg::Vec4(1, 0, 0, 1));
+
+	auto mt = osgHelper::make_osgref&lt;osg::MatrixTransform&gt;();
+	mt-&gt;setMatrix(osg::Matrix::identity());
+	mt-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+	addChild(mt);
+
+	auto geode = osgHelper::make_osgref&lt;osg::Geode&gt;();
+	geometry = osgHelper::make_osgref&lt;osg::Geometry&gt;();
+	geode-&gt;addDrawable(geometry);
+	mt-&gt;addChild(geode);
+
+	auto quadVertices = osgHelper::make_osgref&lt;osg::Vec3Array&gt;();
+	quadVertices-&gt;push_back(osg::Vec3(0, 0, 0));
+	quadVertices-&gt;push_back(osg::Vec3(1, 0, 0));
+	quadVertices-&gt;push_back(osg::Vec3(1, 1, 0));
+	quadVertices-&gt;push_back(osg::Vec3(0, 1, 0));
+	geometry-&gt;setVertexArray(quadVertices);
+
+	auto quadPrimitiveSet = osgHelper::make_osgref&lt;osg::DrawElementsUInt&gt;(
+			osg::PrimitiveSet::QUADS, 0);
+	quadPrimitiveSet-&gt;push_back(0);
+	quadPrimitiveSet-&gt;push_back(1);
+	quadPrimitiveSet-&gt;push_back(2);
+	quadPrimitiveSet-&gt;push_back(3);
+	geometry-&gt;addPrimitiveSet(quadPrimitiveSet);
+
+	auto texCoords = osgHelper::make_osgref&lt;osg::Vec2Array&gt;();
+	texCoords-&gt;push_back(osg::Vec2(0, 0));
+	texCoords-&gt;push_back(osg::Vec2(1, 0));
+	texCoords-&gt;push_back(osg::Vec2(1, 1));
+	texCoords-&gt;push_back(osg::Vec2(0, 1));
+	geometry-&gt;setTexCoordArray(0, texCoords, osg::Array::BIND_PER_VERTEX);
+
+	auto ss = geode-&gt;getOrCreateStateSet();
+
+	auto program = osgHelper::make_osgref&lt;osg::Program&gt;();
+	auto vertShader = osg::Shader::readShaderFile(osg::Shader::Type::VERTEX,
+			&quot;res/CustomShaders/FrameHeader.vert&quot;);
+	auto fragShader = osg::Shader::readShaderFile(osg::Shader::Type::FRAGMENT,
+			&quot;res/CustomShaders/FrameHeader.frag&quot;);
+
+	if (!vertShader || !fragShader) {
+		throw MDRTExceptionBase(&quot;error loading textureview shaders&quot;);
+	}
+
+	bool ok = true;
+
+	ok = ok &amp;&amp; program-&gt;addShader(vertShader);
+	ok = ok &amp;&amp; program-&gt;addShader(fragShader);
+
+	if (!ok) {
+		throw MDRTExceptionBase(
+				&quot;error adding textureview shaders to program obj&quot;);
+	}
+
+	ss-&gt;setAttributeAndModes(program);
+	ss-&gt;getOrCreateUniform(&quot;tex&quot;, osg::Uniform::Type::SAMPLER_2D, 0);
+
+}
+
+TextureView::~TextureView() {
+	// TODO Auto-generated destructor stub
+}
+
+void TextureView::setTexture(osg::Texture* tex) {
+
+	auto texRec = dynamic_cast&lt;osg::TextureRectangle*&gt;(tex);
+	if (texRec) {
+		auto texWidth = texRec-&gt;getImage()-&gt;s();
+		auto texHeight = texRec-&gt;getImage()-&gt;t();
+
+		auto texCoords = osgHelper::make_osgref&lt;osg::Vec2Array&gt;();
+		texCoords-&gt;push_back(osg::Vec2(0, 0));
+		texCoords-&gt;push_back(osg::Vec2(1 * texWidth, 0));
+		texCoords-&gt;push_back(osg::Vec2(1 * texWidth, 1 * texHeight));
+		texCoords-&gt;push_back(osg::Vec2(0, 1 * texHeight));
+		geometry-&gt;setTexCoordArray(0, texCoords, osg::Array::BIND_PER_VERTEX);
+		geometry-&gt;dirtyDisplayList();
+	}
+
+	geometry-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, tex);
+
+}
+
+
+
+Thank you!
+
+Cheers,
+Philipp
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicea05.php?p=67873#67873">http://forum.openscenegraph.org/viewtopic.php?p=67873#67873</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003528.html">[osg-users] Problem with osg::Dragger::handle
+</A></li>
+	<LI>Next message: <A HREF="003524.html">[osg-users] Render to osg::TextureRectangle fails?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279746">[ date ]</a>
+              <a href="thread.html#279746">[ thread ]</a>
+              <a href="subject.html#279746">[ subject ]</a>
+              <a href="author.html#279746">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

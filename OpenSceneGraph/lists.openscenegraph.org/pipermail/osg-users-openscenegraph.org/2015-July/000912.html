@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OpenSceneGraph-3.4.0-rc6 tagged
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenSceneGraph-3.4.0-rc6%20tagged&In-Reply-To=%3C1437646345.m2f.64443%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000908.html">
+   <LINK REL="Next"  HREF="000913.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OpenSceneGraph-3.4.0-rc6 tagged</H1>
+<!--htdig_noindex-->
+    <B>Pjotr Svetachov</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenSceneGraph-3.4.0-rc6%20tagged&In-Reply-To=%3C1437646345.m2f.64443%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] OpenSceneGraph-3.4.0-rc6 tagged">pjotrsvetachov at gmail.com
+       </A><BR>
+    <I>Thu Jul 23 03:12:26 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000908.html">[osg-users] OpenSceneGraph-3.4.0-rc6 tagged
+</A></li>
+        <LI>Next message: <A HREF="000913.html">[osg-users] OpenSceneGraph-3.4.0-rc6 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#912">[ date ]</a>
+              <a href="thread.html#912">[ thread ]</a>
+              <a href="subject.html#912">[ subject ]</a>
+              <a href="author.html#912">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Testing with the newly released VS2015 produced these 4 warnings for each file that includes (directly or indirectly) osg/GraphicsThread this will lead to hundreds of warnings:
+1&gt;I:\Libraries\OpenSceneGraphTrunk\include\osg/OperationThread(55): warning C4589: Constructor of abstract class 'osg::Operation' ignores initializer for virtual base class 'osg::Referenced'
+1&gt;  I:\Libraries\OpenSceneGraphTrunk\include\osg/OperationThread(55): note: virtual base classes are only initialized by the most-derived type
+1&gt;I:\Libraries\OpenSceneGraphTrunk\include\osg/OperationThread(81): warning C4589: Constructor of abstract class 'osg::Operation' ignores initializer for virtual base class 'osg::Referenced'
+1&gt;  I:\Libraries\OpenSceneGraphTrunk\include\osg/OperationThread(81): note: virtual base classes are only initialized by the most-derived type
+1&gt;I:\Libraries\OpenSceneGraphTrunk\include\osg/OperationThread(85): warning C4589: Constructor of abstract class 'osg::Operation' ignores initializer for virtual base class 'osg::Referenced'
+1&gt;  I:\Libraries\OpenSceneGraphTrunk\include\osg/OperationThread(85): note: virtual base classes are only initialized by the most-derived type
+1&gt;I:\Libraries\OpenSceneGraphTrunk\include\osg/GraphicsThread(45): warning C4589: Constructor of abstract class 'osg::GraphicsOperation' ignores initializer for virtual base class 'osg::Referenced'
+1&gt;  I:\Libraries\OpenSceneGraphTrunk\include\osg/GraphicsThread(45): note: virtual base classes are only initialized by the most-derived type
+1&gt;  I:\Libraries\OpenSceneGraphTrunk\include\osg/GraphicsThread(45): note: This diagnostic occurred in the compiler generated function 'osg::GraphicsOperation::GraphicsOperation(const osg::GraphicsOperation &amp;)'
+
+Trying to find out what is really happening I stumbled on this:
+<A HREF="http://stackoverflow.com/questions/10534228/order-of-constructor-call-in-virtual-inheritance">http://stackoverflow.com/questions/10534228/order-of-constructor-call-in-virtual-inheritance</A>
+
+The first three warnings come from this:
+The problem is that the Operation class is virtually inheriting from the class Referenced. The constructors and copy constructors of the class Operation call Referenced(true). Now, with virtual inheritance the constructors of virtual base classes are always called from the most derived class. Now what Visual Studio is complaining about is that Operations is a abstract class so you can not construct an instance of it directly. You need to inherit from it, implement the abstract methods and construct the derived class. So the call to Referenced(true) will never happen inside the Operation constructors. Instead you need to add this call to the most derived classes of Operation. If you don't do this it will call the default constructor Referenced::Referenced() instead of Referenced::Referenced(true).
+I did a search to see whats inheriting from Operation and found a few cases. For example BlockAndFlushOperation and ReleaseContext_Block_MakeCurrentOperation do not call Referenced(true) in their constructors so then the default constructor Referenced() is called.
+
+The 4th warning comes from that visual studio makes a default constructor for GraphicsOperation that calls Referenced() and then complains about it, this is probably a bug in vs2015, see also: <A HREF="https://connect.microsoft.com/VisualStudio/feedback/details/1570496/vs-2015-generates-a-copy-constructor-and-then-complains-about-it">https://connect.microsoft.com/VisualStudio/feedback/details/1570496/vs-2015-generates-a-copy-constructor-and-then-complains-about-it</A>
+
+The same is happening for the class ViewerBase because it is using virtual inheritance to derive from Object and calling Object(true) from the constructor.
+For ViewerBase I even got an error:
+1&gt;I:\Libraries\OpenSceneGraphTrunk\include\osgViewer/ViewerBase(340): error C2249: 'osg::Object::operator =': no accessible path to private member declared in virtual base 'osg::Object'
+1&gt;  I:\Libraries\OpenSceneGraphTrunk\include\osg/Object(238): note: see declaration of 'osg::Object::operator ='
+1&gt;  I:\Libraries\OpenSceneGraphTrunk\include\osg/Object(56): note: see declaration of 'osg::Object'
+1&gt;  I:\Libraries\OpenSceneGraphTrunk\include\osgViewer/ViewerBase(340): note: This diagnostic occurred in the compiler generated function 'osgViewer::ViewerBase &amp;osgViewer::ViewerBase::operator =(const osgViewer::ViewerBase &amp;)'
+But this looks like the bug in visual studio from above but this time it makes a default copy operator for ViewerBase that tries to call the private copy operator of Object from the generated default copy operator. It might be an bug in the compiler or it might be by a genuine error (I don't know the specs of c++ that well:) ) but a workaround for this error is to add:
+
+Code:
+
+private:
+ViewerBase&amp; operator = (const ViewerBase&amp;) { return *this; }
+
+
+
+At the end of the ViewerBase class. (At least if that is the intended behavior)
+
+
+Cheers,
+Pjotr
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic375d.php?p=64443#64443">http://forum.openscenegraph.org/viewtopic.php?p=64443#64443</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000908.html">[osg-users] OpenSceneGraph-3.4.0-rc6 tagged
+</A></li>
+	<LI>Next message: <A HREF="000913.html">[osg-users] OpenSceneGraph-3.4.0-rc6 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#912">[ date ]</a>
+              <a href="thread.html#912">[ thread ]</a>
+              <a href="subject.html#912">[ subject ]</a>
+              <a href="author.html#912">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

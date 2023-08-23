@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Many lights in OSG - solution
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Many%20lights%20in%20OSG%20-%20solution&In-Reply-To=%3CCAGoufmbwndnjj_mUmBi629E4pSyPgOVPi8GE0_wPBCMgLfb__g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278005.html">
+   <LINK REL="Next"  HREF="001789.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Many lights in OSG - solution</H1>
+<!--htdig_noindex-->
+    <B>Chris Hanson</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Many%20lights%20in%20OSG%20-%20solution&In-Reply-To=%3CCAGoufmbwndnjj_mUmBi629E4pSyPgOVPi8GE0_wPBCMgLfb__g%40mail.gmail.com%3E"
+       TITLE="[osg-users] Many lights in OSG - solution">xenon at alphapixel.com
+       </A><BR>
+    <I>Fri Oct 23 13:32:47 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278005.html">[osg-users] Many lights in OSG - solution
+</A></li>
+        <LI>Next message: <A HREF="001789.html">[osg-users] Many lights in OSG - solution
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1788">[ date ]</a>
+              <a href="thread.html#1788">[ thread ]</a>
+              <a href="subject.html#1788">[ subject ]</a>
+              <a href="author.html#1788">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Cool stuff.
+
+Have you considered a non-FFP solution? Withthis, you could have more than
+8 lights.
+
+Also, there are alternative shader-based non-FFP rendering methods like
+Forward+ that have already successfully been implemented in OSG-based tools
+that offer a large number of lights with good performance:
+<A HREF="https://www.youtube.com/watch?v=LHzNpAb_GjI&amp;app=desktop">https://www.youtube.com/watch?v=LHzNpAb_GjI&amp;app=desktop</A>
+
+
+On Fri, Oct 23, 2015 at 9:58 AM, Jannik Heller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">scrawl at baseoftrash.de</A>&gt;
+wrote:
+
+&gt;<i> Hi OSG friends,
+</I>&gt;<i>
+</I>&gt;<i> I will be wrapping up my OpenMW port to OpenSceneGraph soon and wanted to
+</I>&gt;<i> share a few things with you that I learned along the way. One such thing is
+</I>&gt;<i> the lighting system that I wrote. If you do a quick search on the mailing
+</I>&gt;<i> list, you will see that the OpenGL fixed pipeline supports a maximum of 8
+</I>&gt;<i> simultaneous lights and OSG inherits this limit. I have a lot more lights
+</I>&gt;<i> in my scenes, so I had to come up with a solution.
+</I>&gt;<i>
+</I>&gt;<i> What I ended up with is a new lighting system, that allows you to place
+</I>&gt;<i> any number of light sources in the scene graph, but then prior to rendering
+</I>&gt;<i> a particular model will set the 8 closest lights as the OpenGL lights. This
+</I>&gt;<i> is implemented as CullCallback for the individual models, pushing a
+</I>&gt;<i> StateSet with the correct lights onto the CullVisitor. I also needed to
+</I>&gt;<i> implement a custom StateAttribute for the light state, this is because when
+</I>&gt;<i> applying lights OpenGL multiplies the position specified with the current
+</I>&gt;<i> modelView matrix (which is no problem when you apply lights at beginning of
+</I>&gt;<i> frame like OSG does, but in my case the lights are applied in between
+</I>&gt;<i> renderning of models,Ii need to apply the lights in world space rather than
+</I>&gt;<i> relative to that model). The solution was to write a custom light
+</I>&gt;<i> StateAttribute that resets the modelView matrix to just the view matrix
+</I>&gt;<i> before applying the state, then reset again to modelView when done.
+</I>&gt;<i>
+</I>&gt;<i> The code is here and it should be easily adaptable to your own
+</I>&gt;<i> applications:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="https://github.com/OpenMW/openmw/blob/master/components/sceneutil/lightmanager.cpp">https://github.com/OpenMW/openmw/blob/master/components/sceneutil/lightmanager.cpp</A>
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="https://github.com/OpenMW/openmw/blob/master/components/sceneutil/lightmanager.hpp">https://github.com/OpenMW/openmw/blob/master/components/sceneutil/lightmanager.hpp</A>
+</I>&gt;<i>
+</I>&gt;<i> Usage is pretty straight forward:
+</I>&gt;<i>
+</I>&gt;<i> - Decorate your scene graph with a LightManager node.
+</I>&gt;<i> - Create any number of LightSource's in the scene graph. The lightNum of
+</I>&gt;<i> the contained lights do not matter as they are not used.
+</I>&gt;<i> - Make sure that you have Mask_Lit (1&lt;&lt;16) in your update and cull masks
+</I>&gt;<i> where lighting is desired.
+</I>&gt;<i> - Add some LightListCallback's as CullCallback in your scene graph. Where
+</I>&gt;<i> you put the callbacks determines the granularity of the light lists, so can
+</I>&gt;<i> have an impact on visuals and performance. I recommend adding the callback
+</I>&gt;<i> onto individual model(s) (but not necessarily individual Drawable's as that
+</I>&gt;<i> would be slower).
+</I>&gt;<i>
+</I>&gt;<i> You can also combine the LightManager with regular OSG lighting. For
+</I>&gt;<i> example, if you need a &quot;global&quot; directional light in your scene that is
+</I>&gt;<i> always active, you can create it as a regular osg::LightSource and tell the
+</I>&gt;<i> LightManager to skip over it, using setStartLight(1). This would mean the
+</I>&gt;<i> LightManager is only managing lights 1-7 rather than all 8.
+</I>&gt;<i>
+</I>&gt;<i> Hope this might be useful to some OSG users as it took me a while to put
+</I>&gt;<i> together. I did find a previous topic about the subject (
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicd3e5.php?t=8325&amp;view=previous">http://forum.openscenegraph.org/viewtopic.php?t=8325&amp;view=previous</A> ) but
+</I>&gt;<i> no satisfying solution was posted.
+</I>&gt;<i>
+</I>&gt;<i> I wonder if there is enough interest, could this turn into an official OSG
+</I>&gt;<i> example? Or even a new NodeKit or part of the core scene graph?
+</I>&gt;<i>
+</I>&gt;<i> By the way, I am super impressed that I was able to implement this feature
+</I>&gt;<i> without changing one line of code within OSG - the flexibility you get with
+</I>&gt;<i> the various visitors and callbacks is amazing. A big kudos goes to Robert
+</I>&gt;<i> for making the OSG so extensible!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Jannik
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicc3dc.php?p=65420#65420">http://forum.openscenegraph.org/viewtopic.php?p=65420#65420</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+
+-- 
+Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>
+<A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+Training &#8226; Consulting &#8226; Contracting
+3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226;
+GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+Legal/IP &#8226; Code Forensics &#8226; Digital Imaging &#8226; GIS &#8226; GPS &#8226;
+osgEarth &#8226; Terrain &#8226; Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226;
+iPhone/iPad/iOS &#8226; Android
+@alphapixel &lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt; facebook.com/alphapixel (775)
+623-PIXL [7495]
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151023/b3c3bf49/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151023/b3c3bf49/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278005.html">[osg-users] Many lights in OSG - solution
+</A></li>
+	<LI>Next message: <A HREF="001789.html">[osg-users] Many lights in OSG - solution
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1788">[ date ]</a>
+              <a href="thread.html#1788">[ thread ]</a>
+              <a href="subject.html#1788">[ subject ]</a>
+              <a href="author.html#1788">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

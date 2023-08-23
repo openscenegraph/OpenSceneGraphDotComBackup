@@ -1,0 +1,171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [vpb] geographic to geocentric coordinate	transformation
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bvpb%5D%20geographic%20to%20geocentric%20coordinate%0A%09transformation&In-Reply-To=%3C1434651793.m2f.64123%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000652.html">
+   <LINK REL="Next"  HREF="000664.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [vpb] geographic to geocentric coordinate	transformation</H1>
+<!--htdig_noindex-->
+    <B>Elias Tarasov</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bvpb%5D%20geographic%20to%20geocentric%20coordinate%0A%09transformation&In-Reply-To=%3C1434651793.m2f.64123%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [vpb] geographic to geocentric coordinate	transformation">elias.tarasov at gmail.com
+       </A><BR>
+    <I>Thu Jun 18 11:23:13 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000652.html">[osg-users] [vpb] geographic to geocentric coordinate	transformation
+</A></li>
+        <LI>Next message: <A HREF="000664.html">[osg-users] [vpb] geographic to geocentric coordinate	transformation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#659">[ date ]</a>
+              <a href="thread.html#659">[ thread ]</a>
+              <a href="subject.html#659">[ subject ]</a>
+              <a href="author.html#659">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello, Christian!
+
+Again, your comments helped me:)
+And again, i can't understand it from the first time.
+
+The root of the problem here is how to move and rotate camera.
+And the root of it is how to calculate needed matrices.
+
+So, i looked for it:
+
+1. Looked into general OSG forum.
+2. Looked into vpb forum.
+3. Stackoverflow.
+
+There are a lot of info but to indicate what kind of problem i have, here is the pattern of what i found:
+
+Vec3d eye( 1000.0, 1000.0, 0.0 );
+Vec3d center( 0.0, 0.0, 0.0 );
+Vec3d up( 0.0, 0.0, 1.0 );
+viewer.getCamera()-&gt;setViewMatrixAsLookAt( eye, center, up );
+
+Assumption: 
+Vectors must be defined with respect to some choosen coordinate frame. 
+So, with respect to what frame eye, center, up are defined? 
+How can i calculate them?
+I presume, that without knowing in what frame vectors are expressed, and how to move to that frame from already defined frame (for instance from ECEF), 
+variables like Vec3d eye( 1000.0, 1000.0, 0.0 ) are useless. 
+
+Here is the code i changed according to your recomendations.
+In the comments, there are at least three issues:
+1. How to correctly define rotation?
+2. How to define Up vector.
+3. How to correctly add moved camera.
+
+int main( int argc, char** argv ) {
+
+	osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+	osg::ref_ptr&lt;osg::Node&gt; cessna = osgDB::readNodeFile(&quot;c:/OpenSceneGraph/data/cessnafire.osg&quot;);
+	osg::ref_ptr&lt;osg::Node&gt; map = osgDB::readNodeFile(&quot;c:/Terrain/FromUSGS/output/out.osgb&quot;);
+	osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+
+	//Getting XYZ position for cessna
+	//-85.4877762 is terrain's center lat
+	//30.5292506 is terrain's center lon
+	//100 m - height above terrain we want to place the cessna.
+	osg::Matrix cessnaLocation;
+	osg::EllipsoidModel ellipsoid;
+	ellipsoid.computeLocalToWorldTransformFromLatLongHeight(osg::DegreesToRadians(-85.4877762), osg::DegreesToRadians(30.5292506), 100, cessnaLocation);
+	osg::Vec3 positionForCessna = cessnaLocation.getTrans(); 
+	
+	//Placing cessna
+	osg::ref_ptr&lt;osg::PositionAttitudeTransform&gt; moveCessna = new osg::PositionAttitudeTransform;
+	moveCessna-&gt;setPosition(positionForCessna);
+	moveCessna-&gt;addChild(cessna.get());
+		
+	//Getting XYZ position for camera
+	//Lat Lon are the same, height is 150
+	osg::Matrix cameraLocation;
+	ellipsoid.computeLocalToWorldTransformFromLatLongHeight(osg::DegreesToRadians(-85.4877762), osg::DegreesToRadians(30.5292506), 150, cameraLocation);
+	osg::Vec3 positionForCamera = cameraLocation.getTrans(); 
+	
+	//Placing camera
+	osg::ref_ptr&lt;osg::PositionAttitudeTransform&gt; moveCamera = new osg::PositionAttitudeTransform;
+	moveCamera-&gt;setPosition(positionForCamera);
+	moveCamera-&gt;addChild(camera.get());
+	
+	//rotation and Y up
+	//How to setup rotation matrix? with respect to what coordinate frame? I presume View frame with respect to ECEF?
+	osg::Matrix rotation;
+	rotation.makeRotate(osg::PI_2, osg::Vec3f(1.0, 0.0, 0.0)); //Here we rotate around X on the angle pi/2. But rotate around what?
+	
+	//How to define that matrix and why does it need?
+	osg::Matrix ToYUP;  //Maybe here we can define a direction around of which we make our rotation?
+	
+	//View = translation * YUP * rotation;
+	osg::Matrix viewMatrix;
+	viewMatrix = cameraLocation * ToYUP * rotation;
+	camera-&gt;setViewMatrix(viewMatrix);
+		 
+	//How to add moved camera?
+	root-&gt;addChild(camera.get() );
+	//Or maybe even camera-&gt;addChild( root.get() ); ?
+	root-&gt;addChild( moveCessna.get() );
+	root-&gt;addChild( map.get() );
+	
+	osg::ref_ptr&lt;osgViewer::Viewer&gt; viewer = new osgViewer::Viewer;
+	viewer-&gt;setCamera( camera.get() );
+	viewer-&gt;setSceneData( root.get() );
+	
+	return viewer-&gt;run();
+}
+
+
+Thank you!
+
+Cheers,
+Elias
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopice57f.php?p=64123#64123">http://forum.openscenegraph.org/viewtopic.php?p=64123#64123</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000652.html">[osg-users] [vpb] geographic to geocentric coordinate	transformation
+</A></li>
+	<LI>Next message: <A HREF="000664.html">[osg-users] [vpb] geographic to geocentric coordinate	transformation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#659">[ date ]</a>
+              <a href="thread.html#659">[ thread ]</a>
+              <a href="subject.html#659">[ subject ]</a>
+              <a href="author.html#659">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

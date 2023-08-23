@@ -1,0 +1,180 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Major changes to osgText merged into master, provide high quality text including SDF support
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Major%20changes%20to%20osgText%20merged%20into%20master%2C%0A%20provide%20high%20quality%20text%20including%20SDF%20support&In-Reply-To=%3CCAFN7Y%2BXqPUan5aKURevGYYuXsRVJh0%2BRD2AqOL2WM0Xm3sUhLw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007094.html">
+   <LINK REL="Next"  HREF="007096.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Major changes to osgText merged into master, provide high quality text including SDF support</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Major%20changes%20to%20osgText%20merged%20into%20master%2C%0A%20provide%20high%20quality%20text%20including%20SDF%20support&In-Reply-To=%3CCAFN7Y%2BXqPUan5aKURevGYYuXsRVJh0%2BRD2AqOL2WM0Xm3sUhLw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Major changes to osgText merged into master, provide high quality text including SDF support">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Oct 26 10:29:19 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007094.html">[osg-users] updatecallbacks in sg tree
+</A></li>
+        <LI>Next message (by thread): <A HREF="007096.html">[osg-users] [osganimation branch] Review, test, critics
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7095">[ date ]</a>
+              <a href="thread.html#7095">[ thread ]</a>
+              <a href="subject.html#7095">[ subject ]</a>
+              <a href="author.html#7095">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi All,
+
+Over the last couple of months I've been working on changes to osgText that
+change the way text is rendered with the aim of improving visual quality,
+in particular when using outline and shadows or zooming and zooming out.
+
+The new implementation uses shaders to implement outline and shadows, the
+old multi-pass approach has been removed completely.  If your hardware
+doesn't support shaders then I'm afraid you'll no longer see
+outlines/shadows by as it's been well over a decade that GLSL has become
+mainstream I don't think this should be an issue.  Removing the old codes
+paths help simplify the internals of osgText.
+
+The use of shaders also opens the door to implement new techniques the most
+significant one is that osgText now support generation of and use of Signed
+Distance Field (SDF) based glyph textures. The SDF texture data is
+automatically created from the original grey scale image data that freetype
+and other font reading plugins provide.  SDF strength is when you zoom in
+close to the text you get smoother endges without the pixelation that is
+present with traditional textured glyphs.  Previous to get readable results
+with large characters on screen we'd need to push up the font resolution
+really high, using SDF's this is no longer required.
+
+The new shaders also allows us to do multi-sampling in more creative ways
+that can help address rendering artefacts associated with outline and
+shadows when zoomed far out from the text - previously text would saturate
+to the backdrop colour (typically black) and do so with aliasing
+artefacts.  The new text implementation will provide more smooth
+transitions from near to far and fade out into the distance in a natural
+way.
+
+The different techniques from rendering the text are now controlled using
+the following methods:
+
+1) Setting the text directly:
+
+    text-&gt;setShaderTechniqure(osgText::GREYSALE); // the default
+
+    text-&gt;setShaderTechniqure(osgText::SIGNED_DISTANCE_FIELD);
+
+    text-&gt;setShaderTechniqure(osgText::ALL_FEATURES); // create
+GlyphTexture with both GREYSCALE and SIGNED_DISTANCE_FIELD, shader
+defaulting to  SDF
+
+    text-&gt;setShaderTechniqure(osgText::NO_TEXT_SHADER); // disable use of
+shaders
+
+2) Setting the global default value of Text::ShaderTechnique using
+osg::DisplaySettings::setTextShaderTechnique(..)  :
+
+
+    osg::DisplaySettings::instance()-&gt;setTextShaderTechnque(&quot;GREYSCALE&quot;);
+    osg::DisplaySettings::instance()-&gt;
+setTextShaderTechnque(&quot;SIGNED_DISTANCE_FUNCTION&quot;);
+    osg::DisplaySettings::instance()-&gt;setTextShaderTechnque(&quot;SDF&quot;); //
+short for above
+    osg::DisplaySettings::instance()-&gt;setTextShaderTechnque(&quot;ALL_FEATURES&quot;);
+    osg::DisplaySettings::instance()-&gt;
+setTextShaderTechnque(&quot;NO_TEXT_SHADER&quot;);
+    osg::DisplaySettings::instance()-&gt;setTextShaderTechnque(&quot;NONE); //
+short for above
+
+3) Setting the above DisplaySettings::setTextShaderTechnique(..) string
+using env var:
+
+   export OSG_TEXT_SHADER_TECHNIQUE=&quot;SDF&quot;
+
+
+--
+
+As part of this work I added the ability to assign osg::DisplaySetting
+assigned user values to shaders using DisplaySettings::setValue(name,
+value).  You can use this to pass in globals your shaders, which you can
+leverage for setting things like #version and precision hint, which in turn
+means you can pass in these settings for different platfrom targets, making
+it much easier to share shaders between GL2, GL3 and GLES.
+
+To help with this DisplaySetting automatically sets up the follow values:
+
+OSG_GLSL_VERSION
+OSG_PRECISION_FLOAT
+OSG_VARYING_IN
+OSG_VARYING_OUT
+
+When you build the OSG specifically against a GL2, GL3/GLCORE, GLES2 or
+GLES3 target the appropriate defaults will set, then in your sharer you can
+use the following syntax:
+
+$OSG_GLSL_VERSION
+
+$OSG_PRECISION_FLOAT
+
+$OSG_VARYING_OUT vec2 texCoord;
+
+$OSG_VARYING_IN vec2 texCoord;
+
+You can have a look at the new OpenSceneGraph-Data/shaders/text.vert and
+text.frag to see these in action.  Just update to master of
+OpenSceneGraph-Data to see these shaders.
+
+--
+
+Now while the internals of osgText have changed significantly the API is
+largely identical so hopefully you'll just need to pull down OSG master and
+build the OSG and your application and text will just work (using the
+GREYSCALE default code path.)  Visually it should be pretty similar when
+using this default - you should start to see improvements when doing things
+like outlines/shadows or when enabling SDF.
+
+If there are any issues let me know,
+
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20171026/6c98330b/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20171026/6c98330b/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007094.html">[osg-users] updatecallbacks in sg tree
+</A></li>
+	<LI>Next message (by thread): <A HREF="007096.html">[osg-users] [osganimation branch] Review, test, critics
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7095">[ date ]</a>
+              <a href="thread.html#7095">[ thread ]</a>
+              <a href="subject.html#7095">[ subject ]</a>
+              <a href="author.html#7095">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

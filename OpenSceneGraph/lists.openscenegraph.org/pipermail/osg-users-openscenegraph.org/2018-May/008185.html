@@ -1,0 +1,172 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Shader composition with multiple function injection
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Shader%20composition%20with%20multiple%20function%20injection&In-Reply-To=%3C1526162385.m2f.73625%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008194.html">
+   <LINK REL="Next"  HREF="008187.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Shader composition with multiple function injection</H1>
+<!--htdig_noindex-->
+    <B>Hartwig Wiesmann</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Shader%20composition%20with%20multiple%20function%20injection&In-Reply-To=%3C1526162385.m2f.73625%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Shader composition with multiple function injection">hartwig.wiesmann at skywind.eu
+       </A><BR>
+    <I>Sat May 12 14:59:45 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008194.html">[osg-users] Bug in Cull Visitor
+</A></li>
+        <LI>Next message (by thread): <A HREF="008187.html">[osg-users] Shader composition with multiple function injection
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8185">[ date ]</a>
+              <a href="thread.html#8185">[ thread ]</a>
+              <a href="subject.html#8185">[ subject ]</a>
+              <a href="author.html#8185">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I had a look at the shader composition example. The main shader looks like this:
+
+Code:
+
+#pragma import_defines ( LIGHTING, TEXTURE_2D, VERTEX_FUNC(v) )
+
+#ifdef LIGHTING
+// forward declare lighting computation, provided by lighting.vert shader
+void directionalLight( int lightNum, vec3 normal, inout vec4 color );
+#endif
+
+#ifdef TEXTURE_2D
+varying vec2 texcoord;
+#endif
+
+#ifdef VERTEX_FUNC
+uniform float osg_SimulationTime;
+#endif
+
+varying vec4 basecolor;
+
+void main(void)
+{
+    basecolor = gl_Color;
+
+#ifdef LIGHTING
+    directionalLight( 0, gl_Normal.xyz, basecolor);
+#endif
+
+#ifdef TEXTURE_2D
+    // if we want texturing we need to pass on texture coords
+    texcoord = gl_MultiTexCoord0.xy;
+#endif
+
+#ifdef VERTEX_FUNC
+    gl_Position   = gl_ModelViewProjectionMatrix * VERTEX_FUNC(gl_Vertex);
+#else
+    gl_Position   = gl_ModelViewProjectionMatrix * gl_Vertex;
+#endif
+
+}
+
+
+
+
+In the example code one directional light computation can be injected. What is the best solution if I like to inject 0 to N directional lights where N is runtime dependent?
+
+I could do something like:
+
+Code:
+
+#ifdef LIGHTING0
+    directionalLight( 0, gl_Normal.xyz, basecolor);
+#endif
+#ifdef LIGHTING1
+    directionalLight( 1, gl_Normal.xyz, basecolor);
+#endif
+#ifdef LIGHTING2
+    directionalLight( 2, gl_Normal.xyz, basecolor);
+#endif
+...
+
+
+
+
+but this is not very elegant. Though I do not see any other possibility. Am I missing a better solution?
+
+Thank you!
+
+Cheers,
+Hartwig
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic5241.php?p=73625#73625">http://forum.openscenegraph.org/viewtopic.php?p=73625#73625</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008194.html">[osg-users] Bug in Cull Visitor
+</A></li>
+	<LI>Next message (by thread): <A HREF="008187.html">[osg-users] Shader composition with multiple function injection
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8185">[ date ]</a>
+              <a href="thread.html#8185">[ thread ]</a>
+              <a href="subject.html#8185">[ subject ]</a>
+              <a href="author.html#8185">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

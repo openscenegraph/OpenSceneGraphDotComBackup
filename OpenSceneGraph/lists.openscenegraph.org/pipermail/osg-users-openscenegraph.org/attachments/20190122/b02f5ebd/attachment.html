@@ -1,0 +1,205 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Would&nbsp;it&nbsp;make&nbsp;sense&nbsp;to&nbsp;custom&nbsp;hack&nbsp;a&nbsp;BUNCH&nbsp;of&nbsp;asserts&nbsp;into&nbsp;the&nbsp;suspect&nbsp;code&nbsp;to&nbsp;validate&nbsp;all&nbsp;possible&nbsp;assumptions&nbsp;at&nbsp;runtime&nbsp;and&nbsp;maybe&nbsp;pinpoint&nbsp;erroneous&nbsp;conditions&nbsp;prior&nbsp;to&nbsp;hitting&nbsp;the&nbsp;actual&nbsp;crash?&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Tue,&nbsp;Jan&nbsp;22,&nbsp;2019&nbsp;at&nbsp;9:42&nbsp;PM&nbsp;Robert&nbsp;Osfield&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;Hi&nbsp;Richard,&lt;br&gt;<br>
+&lt;br&gt;<br>
+Sorry&nbsp;to&nbsp;hear&nbsp;your&nbsp;are&nbsp;battling&nbsp;this&nbsp;issue. &nbsp;I&#39;ve&nbsp;read&nbsp;through,&nbsp;and&lt;br&gt;<br>
+had&nbsp;a&nbsp;quick&nbsp;look&nbsp;at&nbsp;simgear&nbsp;master&nbsp;but&nbsp;could&nbsp;find&nbsp;the&lt;br&gt;<br>
+loadUsingReaderWriter()&nbsp;implementation&nbsp;in&nbsp;ModelRegistry.cxx&nbsp;that&nbsp;you&lt;br&gt;<br>
+mention. &nbsp;Are&nbsp;you&nbsp;working&nbsp;on&nbsp;a&nbsp;branch&nbsp;or&nbsp;not&nbsp;checked&nbsp;something&nbsp;in&nbsp;yet?&lt;br&gt;<br>
+&lt;br&gt;<br>
+As&nbsp;a&nbsp;general&nbsp;comment,&nbsp;if&nbsp;you&nbsp;could&nbsp;use&nbsp;the&nbsp;OpenSceneGraph-3.6&nbsp;branch&lt;br&gt;<br>
+rather&nbsp;than&nbsp;master&nbsp;it&nbsp;should&nbsp;give&nbsp;you&nbsp;a&nbsp;more&nbsp;stable&nbsp;and&nbsp;tested&nbsp;OSG&lt;br&gt;<br>
+base&nbsp;to&nbsp;work&nbsp;from. &nbsp;I&#39;d&nbsp;also&nbsp;recommend&nbsp;checking&nbsp;the&nbsp;whole&nbsp;model&lt;br&gt;<br>
+loading/processing&nbsp;path&nbsp;to&nbsp;make&nbsp;sure&nbsp;all&nbsp;the&nbsp;methods&nbsp;are&nbsp;taking&nbsp;and&lt;br&gt;<br>
+passing&nbsp;back&nbsp;ref_ptr&lt;&gt;&nbsp;rather&nbsp;than&nbsp;C&nbsp;pointer. &nbsp;In&nbsp;my&nbsp;quick&nbsp;check&nbsp;I&lt;br&gt;<br>
+spotted&nbsp;a&nbsp;osg::Node*&nbsp;OptimizeModelPolicy::optimize()&nbsp;method&nbsp;that&nbsp;be&lt;br&gt;<br>
+something&nbsp;could&nbsp;be&nbsp;the&nbsp;type&nbsp;of&nbsp;thing&nbsp;to&nbsp;convert&nbsp;across&nbsp;to&nbsp;ref_ptr&lt;&gt;.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Robert.&lt;br&gt;<br>
+&lt;br&gt;<br>
+On&nbsp;Tue,&nbsp;22&nbsp;Jan&nbsp;2019&nbsp;at&nbsp;17:58,&nbsp;Richard&nbsp;Harrison&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:rjh@zaretto.com&quot;&nbsp;target=&quot;_blank&quot;&gt;rjh@zaretto.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;I&#39;ve&nbsp;just&nbsp;got&nbsp;another&nbsp;of&nbsp;these&nbsp;problems.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;This&nbsp;is&nbsp;after&nbsp;changing&nbsp;all&nbsp;of&nbsp;the&nbsp;osgDB::read&nbsp;into&nbsp;osgDB::readRef&lt;br&gt;<br>
+&gt;&nbsp;(simgear&nbsp;commit&nbsp;cb024dd82d4c384df0b599640a98e762fbf66688)&nbsp;and&nbsp;5days&nbsp;of&lt;br&gt;<br>
+&gt;&nbsp;flight&nbsp;time&nbsp;testing&nbsp;(not&nbsp;all&nbsp;the&nbsp;same&nbsp;run,&nbsp;FG&nbsp;was&nbsp;restarted&nbsp;many&lt;br&gt;<br>
+&gt;&nbsp;times)&nbsp;I&#39;ve&nbsp;hit&nbsp;what&nbsp;looks&nbsp;like&nbsp;a&nbsp;the&nbsp;same&nbsp;problem&nbsp;as&nbsp;I&nbsp;originally&lt;br&gt;<br>
+&gt;&nbsp;reported;&nbsp;i.e.&nbsp;the&nbsp;expiry&nbsp;appears&nbsp;to&nbsp;be&nbsp;something&nbsp;that&nbsp;has&nbsp;just&nbsp;been&lt;br&gt;<br>
+&gt;&nbsp;loaded&nbsp;and&nbsp;expired&nbsp;at&nbsp;the&nbsp;same&nbsp;time.&nbsp;I&#39;m&nbsp;keeping&nbsp;my&nbsp;debug&nbsp;session&nbsp;open&lt;br&gt;<br>
+&gt;&nbsp;to&nbsp;allow&nbsp;further&nbsp;investigation&nbsp;in&nbsp;case&nbsp;questions.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;I&#39;m&nbsp;surprised&nbsp;that&nbsp;the&nbsp;fixes&nbsp;didn&#39;t&nbsp;work&nbsp;as&nbsp;they&nbsp;looked&nbsp;to&nbsp;me&nbsp;as&lt;br&gt;<br>
+&gt;&nbsp;though&nbsp;they&nbsp;should&nbsp;fix&nbsp;the&nbsp;problem&nbsp;I&#39;m&nbsp;immediately&nbsp;suspecting&nbsp;that&lt;br&gt;<br>
+&gt;&nbsp;maybe&nbsp;there&nbsp;are&nbsp;other&nbsp;things&nbsp;that&nbsp;we&#39;re&nbsp;doing&nbsp;that&nbsp;are&nbsp;interfering&lt;br&gt;<br>
+&gt;&nbsp;with&nbsp;the&nbsp;thread&nbsp;safety&nbsp;mechanisms.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Having&nbsp;dug&nbsp;into&nbsp;what&#39;s&nbsp;happening;&nbsp;the&nbsp;DatabasePager&nbsp;is&nbsp;currently&lt;br&gt;<br>
+&gt;&nbsp;loading&nbsp;Models/Airport/cargoim.xml;&nbsp;which&nbsp;is&nbsp;defined&nbsp;in&lt;br&gt;<br>
+&gt;&nbsp;project3000/Objects/w010n50/w002n52/2925458.stg;&nbsp;and&nbsp;the&nbsp;ObjectCache&lt;br&gt;<br>
+&gt;&nbsp;is&nbsp;expiring&nbsp;Models/Aircraft/Cessna172_red.ac;&nbsp;Looking&nbsp;at&nbsp;the&nbsp;pertinent&lt;br&gt;<br>
+&gt;&nbsp;part&nbsp;of&nbsp;the&nbsp;.stg&nbsp;it&nbsp;is&nbsp;a&nbsp;fair&nbsp;conclusion&nbsp;that&nbsp;the&nbsp;DatabasePager&nbsp;has&lt;br&gt;<br>
+&gt;&nbsp;just&nbsp;loaded&nbsp;two&nbsp;Cessna172_red.ac&nbsp;models&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;OBJECT_SHARED&nbsp;Models/Aircraft/Cessna172_red.ac&nbsp;-1.47630&nbsp;52.37373&nbsp;82.02&lt;br&gt;<br>
+&gt;&nbsp;223.53&lt;br&gt;<br>
+&gt;&nbsp;OBJECT_SHARED&nbsp;Models/Aircraft/Cessna172_red.ac&nbsp;-1.47560&nbsp;52.37443&nbsp;81.34&nbsp;345.5&lt;br&gt;<br>
+&gt;&nbsp;OBJECT_SHARED&nbsp;Models/lib/&lt;a&nbsp;href=&quot;http://trailer-fedex.ac&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;trailer-fedex.ac&lt;/a&gt;&nbsp;-1.48893&nbsp;52.36957&nbsp;84.13&nbsp;314.01&lt;br&gt;<br>
+&gt;&nbsp;OBJECT_SHARED&nbsp;Models/Airport/cargoim.xml&nbsp;-1.47436&nbsp;52.36886&nbsp;79.91&nbsp;188.47&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;The&nbsp;actual&nbsp;.ac&nbsp;model&nbsp;load&nbsp;is&nbsp;happening&nbsp;in&nbsp;SGReaderWriteXML.cxx&nbsp;line&nbsp;341&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;modelResult&nbsp;=&nbsp;osgDB::readRefNodeFile(modelpath.local8BitStr(),&lt;br&gt;<br>
+&gt;&nbsp;options.get());&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;which&nbsp;will&nbsp;end&nbsp;up&nbsp;in&nbsp;ModelRegistry.cxx&nbsp;line&nbsp;866&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;loadUsingReaderWriter(const&nbsp;std::string&amp;&nbsp;fileName,&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;const&nbsp;osgDB::Options*&nbsp;opt)&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;using&nbsp;namespace&nbsp;osgDB;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;ReaderWriter*&nbsp;rw&nbsp;=&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Registry::instance()&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;-&gt;getReaderWriterForExtension&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;(osgDB::getFileExtension(fileName));&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(!rw)&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;return&nbsp;ReaderWriter::ReadResult();&nbsp;//&nbsp;FILE_NOT_HANDLED&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;return&nbsp;rw-&gt;readNode(fileName,&nbsp;opt);&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;I&nbsp;think&nbsp;it&nbsp;is&nbsp;correct&nbsp;in&nbsp;this&nbsp;instance&nbsp;to&nbsp;use&nbsp;the&nbsp;(ac3d)&nbsp;via&nbsp;the&lt;br&gt;<br>
+&gt;&nbsp;registry&nbsp;and&nbsp;readNode.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;The&nbsp;only&nbsp;other&nbsp;thing&nbsp;that&nbsp;looks&nbsp;a&nbsp;bit&nbsp;odd&nbsp;is&nbsp;the&nbsp;way&nbsp;we&nbsp;are&nbsp;requesting&lt;br&gt;<br>
+&gt;&nbsp;the&nbsp;same&nbsp;.stg&nbsp;file&nbsp;multiple&nbsp;times;&nbsp;maybe&nbsp;that&nbsp;is&nbsp;tripping&nbsp;something&nbsp;up&lt;br&gt;<br>
+&gt;&nbsp;in&nbsp;our&nbsp;code;&nbsp;but&nbsp;I&nbsp;don&#39;t&nbsp;think&nbsp;that&#39;s&nbsp;the&nbsp;cause&nbsp;of&nbsp;the&nbsp;deleting&nbsp;whilst&lt;br&gt;<br>
+&gt;&nbsp;still&nbsp;in&nbsp;use.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp;[0..162]&nbsp;i:/flightgear/project3000/Objects/w010n50/w002n52/2925458.stg&lt;br&gt;<br>
+&gt; &nbsp; &nbsp;[163..178]&nbsp;i:/flightgear/project3000/Objects/w010n50/w002n52/2925458.stg&lt;br&gt;<br>
+&gt; &nbsp; &nbsp;[179..]&nbsp;i:/flightgear/terrasync/Terrain/w010n50/w002n52/2925458.stg&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;-------------------&lt;br&gt;<br>
+&gt;&nbsp;On&nbsp;17/01/2019&nbsp;14:39,&nbsp;Voerman,&nbsp;L.&nbsp;wrote&nbsp;the&nbsp;following&nbsp;questions:&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp;&gt;&nbsp;-&nbsp;did&nbsp;the&nbsp;problematic&nbsp;node&nbsp;come&nbsp;out&nbsp;of&nbsp;the&nbsp;cache,&nbsp;or&nbsp;did&nbsp;it&nbsp;come&lt;br&gt;<br>
+&gt;&nbsp;fresh&nbsp;from&nbsp;disk?&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;It&#39;s&nbsp;hard&nbsp;to&nbsp;tell&nbsp;because&nbsp;as&nbsp;far&nbsp;as&nbsp;I&nbsp;can&nbsp;tell&nbsp;the&nbsp;problematic&nbsp;load&nbsp;has&lt;br&gt;<br>
+&gt;&nbsp;finished&nbsp;and&nbsp;the&nbsp;pager&nbsp;has&nbsp;moved&nbsp;onto&nbsp;the&nbsp;next&nbsp;item.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp;&gt;&nbsp;-&nbsp;Is&nbsp;the&nbsp;parent&nbsp;group&nbsp;(and&nbsp;it&#39;s&nbsp;_children&nbsp;vector)&nbsp;still&nbsp;sane?&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Looking&nbsp;at&nbsp;the&nbsp;node&nbsp;that&nbsp;is&nbsp;being&nbsp;expired&nbsp;it&nbsp;all&nbsp;looks&nbsp;good;&nbsp;the&lt;br&gt;<br>
+&gt;&nbsp;reference&nbsp;count&nbsp;is&nbsp;3;&nbsp;so&nbsp;there&nbsp;remains&nbsp;the&nbsp;mystery&nbsp;of&nbsp;how&nbsp;this&nbsp;can&lt;br&gt;<br>
+&gt;&nbsp;happen.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;oitr&nbsp;(&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;(&quot;Models/Aircraft/Cessna172_&lt;a&nbsp;href=&quot;http://red.ac&quot;&nbsp;target=&quot;_blank&quot;&gt;red.ac&lt;/a&gt;&quot;,&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{_ptr=0x0&nbsp;&lt;NULL&gt;&nbsp;}),&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;({_ptr=0x2441e8bc800&nbsp;{_children={&nbsp;size=0x5&nbsp;}&nbsp;}&nbsp;},&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;5002.8604968999998))&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;first &nbsp; &quot;Models/Aircraft/Cessna172_&lt;a&nbsp;href=&quot;http://red.ac&quot;&nbsp;target=&quot;_blank&quot;&gt;red.ac&lt;/a&gt;&quot;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;second &nbsp;{_ptr=0x0&nbsp;&lt;NULL&gt;&nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;second &nbsp;({_ptr=0x2441e8bc800&nbsp;{_children={&nbsp;size=0x5&nbsp;}&nbsp;}&nbsp;},&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 5002.8604968999998)&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;first &nbsp; {_ptr=0x2441e8bc800&nbsp;{_children={&nbsp;size=0x5&nbsp;}&nbsp;}&nbsp;}&nbsp;o&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; sg::ref_ptr&lt;osg::Object&gt;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_ptr &nbsp; &nbsp;0x2441e8bc800&nbsp;{_children={&nbsp;size=0x5&nbsp;}&nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Object&nbsp;*&nbsp;{osg160-osg.dll!osg::Group}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;[osg::Group]&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{_children={&nbsp;size=0x5&nbsp;}&nbsp;}&nbsp;osg160-osg.dll!osg::Group&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Node &nbsp; {...}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Object&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+&gt;&nbsp;_name=&quot;I:\flightgear\terrasync\Models\Aircraft\Cessna172_red.ac&quot;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_dataVariance=STATIC&nbsp;(0x1)&nbsp;...&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_initialBound&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{_center={_v=0x2441e8bc848&nbsp;{0.0,&nbsp;0.0,&nbsp;0.0}&nbsp;}&nbsp;_radius=-1.0&nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_boundingSphere&nbsp;{&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_center={_v=0x2441e8bc860&nbsp;{0.0,&nbsp;0.0,&nbsp;0.0}&nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_radius=-1.0&nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_boundingSphereComputed&nbsp;false &nbsp; bool&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_parents &nbsp; &nbsp;{&nbsp;size=0x2&nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_numChildrenRequiringUpdateTraversal&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_cullingActive &nbsp;true&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_nodeMask &nbsp; 0xffffdfff&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_children &nbsp; {&nbsp;size=0x5&nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Referenced&nbsp;{_observerSet={_ptr=0x0&nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_refCount={_value=0x3&nbsp;}&nbsp;}&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_dataVariance &nbsp; STATIC&nbsp;(0x1)&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_userDataContainer &nbsp;0x0&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;second &nbsp;5002.8604968999998&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp;&gt;&nbsp;-&nbsp;If&nbsp;the&nbsp;parent&nbsp;node&nbsp;is&nbsp;still&nbsp;sane,&nbsp;can&nbsp;you&nbsp;match&nbsp;it&nbsp;to&nbsp;the&nbsp;file&nbsp;on&lt;br&gt;<br>
+&gt; &nbsp;&gt;&nbsp;disk&nbsp;and&nbsp;possibly&nbsp;tell&nbsp;what&nbsp;sort&nbsp;of&nbsp;node&nbsp;the&nbsp;problem&nbsp;appears&nbsp;in? &nbsp;-&lt;br&gt;<br>
+&gt; &nbsp;&gt;&nbsp;What&nbsp;is&nbsp;the&nbsp;file&nbsp;format&nbsp;of&nbsp;the&nbsp;file&nbsp;on&nbsp;disk?&nbsp;Do&nbsp;you&nbsp;have&nbsp;(use)&lt;br&gt;<br>
+&gt; &nbsp;&gt;&nbsp;multiple&nbsp;pager&nbsp;threads?&nbsp;Could&nbsp;the&nbsp;file&nbsp;loader&nbsp;have&nbsp;a&nbsp;multithreading&lt;br&gt;<br>
+&gt; &nbsp;&gt;&nbsp;problem?&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;It&#39;s&nbsp;a&nbsp;.ac&nbsp;format&nbsp;node;&nbsp;we&#39;re&nbsp;using&nbsp;a&nbsp;single&nbsp;DatabasePager&nbsp;thread&nbsp;(as&lt;br&gt;<br>
+&gt;&nbsp;there&nbsp;are&nbsp;other&nbsp;loading&nbsp;problems&nbsp;within&nbsp;FG&nbsp;that&nbsp;almost&nbsp;prevent&nbsp;it&nbsp;from&lt;br&gt;<br>
+&gt;&nbsp;running&nbsp;at&nbsp;all)&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;--------------------------&lt;br&gt;<br>
+&gt;&nbsp;Stack&nbsp;dumps&nbsp;are&nbsp;as&nbsp;follows:&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Main&nbsp;thread;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!NotifyLogger::notify&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osg.dll!osg::NotifyStreamBuffer::sync&nbsp;L:92&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;msvcp140.dll!00007ffabb8a27f2&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osg.dll!std::endl&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osg.dll!osg::Referenced::~Referenced()&nbsp;L:205&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osgdb_ac.dll!osg::Group::`scalar&nbsp;deleting&nbsp;destructor&#39;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osg.dll!osg::Referenced::signalObserversAndDelete()&nbsp;L:294&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osg.dll!osg::Referenced::unref()&nbsp;L:203&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!std::erase&nbsp;L:1431&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::ObjectCache::removeExpiredObjectsInCache&nbsp;L:171&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgViewer.dll!osgViewer::Viewer::updateTraversal()&nbsp;L:1161&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgViewer.dll!osgViewer::ViewerBase::frame&nbsp;L:748&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!fgOSMainLoop()&nbsp;L:339&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!fgMainInit(int&nbsp;argc,&nbsp;char&nbsp;*&nbsp;*&nbsp;argv)&nbsp;L:619&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!main(int&nbsp;argc,&nbsp;char&nbsp;*&nbsp;*&nbsp;argv)&nbsp;L:339&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!__scrt_common_main_seh()&nbsp;L:253&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;DatabasePager&nbsp;thread&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;ntdll.dll!00007ffaefd51db4&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;KernelBase.dll!00007ffaec855834&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;KernelBase.dll!00007ffaec855bcc&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;kernel32.dll!00007ffaef606413&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;kernel32.dll!00007ffaef642d42&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::getRealPath&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::findFileInPath&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::findFileInPath&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::Registry::findDataFileImplementation&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::Registry::findDataFile&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::findDataFile&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!simgear::SGReaderWriterXML::readNode&lt;br&gt;<br>
+&gt;&nbsp;fgfs.exe!simgear::ModelRegistryCallback&lt;&gt;::loadUsingReaderWriter&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!simgear::ModelRegistryCallback&lt;&gt;::readNode&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!simgear::ModelRegistry::readNode&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::Registry::readNode&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::readRefNodeFile&lt;br&gt;<br>
+&gt;&nbsp;fgfs.exe!simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;::AddModelLOD::operator&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!simgear::QuadTreeBuilder&lt;&gt;::addNode&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!simgear::QuadTreeBuilder&lt;&gt;::buildQuadTree&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;fgfs.exe!simgear::ReaderWriterSTG::_ModelBin&lt;br&gt;<br>
+&gt;&nbsp;::DelayLoadReadFileCallback::readNode&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::Registry::readNode&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp;osg160-osgDB.dll!osgDB::DatabasePager::DatabaseThread::run&lt;br&gt;<br>
+&gt;&nbsp;ot21-OpenThreads.dll!OpenThreads::ThreadPrivateActions::StartThread&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;_______________________________________________&lt;br&gt;<br>
+&gt;&nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Chris&nbsp;&#39;Xenon&#39;&nbsp;Hanson,&nbsp;omo&nbsp;sanza&nbsp;lettere.&nbsp;Xenon@AlphaPixel.com&nbsp;&lt;a&nbsp;href=&quot;http://www.alphapixel.com/&quot;&nbsp;target=&quot;_blank&quot;&gt;http://www.alphapixel.com/&lt;/a&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Training&nbsp;•&nbsp;Consulting&nbsp;•&nbsp;Contracting&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;3D&nbsp;•&nbsp;Scene&nbsp;Graphs&nbsp;(Open&nbsp;Scene&nbsp;Graph/OSG)&nbsp;•&nbsp;OpenGL&nbsp;2&nbsp;•&nbsp;OpenGL&nbsp;3&nbsp;•&nbsp;OpenGL&nbsp;4&nbsp;•&nbsp;GLSL&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;1&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;2&nbsp;•&nbsp;OpenCL&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;Legal/IP&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;Forensics&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;Imaging &lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;UAVs &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&nbsp;GIS&nbsp;•&nbsp;GPS&nbsp;•&nbsp;osgEarth • Terrain • Telemetry&nbsp;•&nbsp;Cryptography&nbsp;•&nbsp;LIDAR&nbsp;•&nbsp;Embedded&nbsp;•&nbsp;Mobile&nbsp;•&nbsp;iPhone/iPad/iOS&nbsp;•&nbsp;Android&lt;/span&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;a&nbsp;href=&quot;https://twitter.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;@alphapixel&lt;/a&gt;&nbsp;&lt;a&nbsp;href=&quot;http://facebook.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;facebook.com/alphapixel&lt;/a&gt; (775)&nbsp;623-PIXL&nbsp;[7495]&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;<br>
+
+</tt>

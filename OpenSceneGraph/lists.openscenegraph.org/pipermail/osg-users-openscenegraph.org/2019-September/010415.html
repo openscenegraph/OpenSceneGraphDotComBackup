@@ -1,0 +1,189 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [OSG 3.6.3 Core Profile GL 3+] Weird clipping behaviour in Fragment Shader
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BOSG%203.6.3%20Core%20Profile%20GL%203%2B%5D%20Weird%20clipping%20behaviour%0A%20in%20Fragment%20Shader&In-Reply-To=%3C1568294265.m2f.76676%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010388.html">
+   <LINK REL="Next"  HREF="010433.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [OSG 3.6.3 Core Profile GL 3+] Weird clipping behaviour in Fragment Shader</H1>
+<!--htdig_noindex-->
+    <B>Dan johansson</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BOSG%203.6.3%20Core%20Profile%20GL%203%2B%5D%20Weird%20clipping%20behaviour%0A%20in%20Fragment%20Shader&In-Reply-To=%3C1568294265.m2f.76676%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [OSG 3.6.3 Core Profile GL 3+] Weird clipping behaviour in Fragment Shader">johansson_dan at hotmail.com
+       </A><BR>
+    <I>Thu Sep 12 06:17:45 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010388.html">[osg-users] Fixed pipeline lighting to shaders
+</A></li>
+        <LI>Next message (by thread): <A HREF="010433.html">[osg-users] [OSG 3.6.3 Core Profile GL 3+] Weird clipping behaviour in Fragment Shader
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10415">[ date ]</a>
+              <a href="thread.html#10415">[ thread ]</a>
+              <a href="subject.html#10415">[ subject ]</a>
+              <a href="author.html#10415">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+New user here, doing a fairly simple program test so far with core profile settings. 
+
+I'm rendering the program through Qt's QOpenGLWidget, even though i don't think this is causing any particular issues.
+
+I'm setting up my Cube model and personal shaders like this 
+
+
+Code:
+
+OSGModel::OSGModel()
+{
+    modelPAT_ = new osg::PositionAttitudeTransform;
+    modelGeode_ = CubeCreator::buildCube();
+
+    osg::StateSet* stateset = modelGeode_-&gt;getOrCreateStateSet();
+    osg::ref_ptr&lt;osg::Program&gt; shaderProgram = new osg::Program;
+    osg::Shader* vShader = osgDB::readShaderFile(osg::Shader::VERTEX, &quot;../VertexShader.glsl&quot;);
+    osg::Shader* fShader = osgDB::readShaderFile(osg::Shader::FRAGMENT, &quot;../FragmentShader.glsl&quot;);
+
+    if (!vShader &amp;&amp; !fShader)
+    {
+        osg::notify(osg::NOTICE) &lt;&lt; &quot;Effect Not Supported !&quot; &lt;&lt; std::endl;
+    }
+    shaderProgram-&gt;addShader(vShader);
+    shaderProgram-&gt;addShader(fShader);
+
+    //wireframe mode
+    //activateWireframeMode(stateset);
+
+    stateset-&gt;setAttributeAndModes(shaderProgram, osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+    stateset-&gt;setMode(GL_CLIP_PLANE0, osg::StateAttribute::ON);
+    stateset-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+
+    auto lightColor = osg::Vec3f(0.5f, 0.2f, 0.35f);
+    auto lightSourcePosition = osg::Vec3f(1.2f, 1.0f, 2.0f);
+    // add uniforms
+
+    osg::ref_ptr&lt;osg::Uniform&gt; uniformLightColor = new osg::Uniform(osg::Uniform::FLOAT_VEC3, &quot;UlightColor&quot;);
+    osg::ref_ptr&lt;osg::Uniform&gt; uniformLightSourcePosition = new osg::Uniform(osg::Uniform::FLOAT_VEC3, &quot;UlightPosition&quot;);
+
+    uniformLightColor-&gt;setElement(0, lightColor);
+    uniformLightSourcePosition-&gt;setElement(0, lightSourcePosition);
+
+    stateset-&gt;addUniform(uniformLightColor.get());
+    stateset-&gt;addUniform(uniformLightSourcePosition.get());
+    //adds normal vectors to the model
+    modelGeode_-&gt;accept(geodeNormals); //Node Visitor
+    modelGeode_-&gt;addChild(geodeNormals.toNormalsGeomtery(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f)));
+
+    modelPAT_-&gt;addChild(modelGeode_);
+}
+
+
+
+
+where i activate the first clip plane GL_CLIP_PLANE0 for the shader. The uniforms are parsed for future implementation of lightning effects.
+
+For experiment, i wanted to pass the vertex position for the fragment shader but for some reason the model is clipped at x = 0. This can be removed by not enable CLIP_PLANE0 but i don't understand why this effect occurs as i havent specified the clip plane and do no calculation for gl_ClipDistance[0]. 
+
+
+
+
+
+
+Following is my vertex and fragment shader
+
+
+Code:
+
+#version 330 core
+
+out vec4 ourPosition;
+out vec3 ourNormal;
+
+//lightsource uniforms
+uniform vec3 UlightColor;
+uniform vec3 UlightPosition;
+
+out vec3 lightResult;
+
+void main (void)
+{
+    ourNormal   = gl_NormalMatrix * gl_Normal;
+    ourPosition = gl_ModelViewMatrix *  gl_Vertex;
+    gl_Position = gl_ProjectionMatrix  * ourPosition;
+}
+
+
+
+
+
+Code:
+
+#version 330 core
+
+//object color
+vec3 objectColor = vec3(1.0f, 0.5f, 0.31f);
+in vec4 ourPosition;
+
+void main(void)
+{
+    gl_FragColor = vec4(ourPosition.xyz, 1.0f);
+}
+
+
+
+
+Any leads to why this is happening and what i can do to solve it would be appreciated. Thanks for reading, i will supply more details if necessary. 
+
+Best regards Dan
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic348a.php?p=76676#76676">http://forum.openscenegraph.org/viewtopic.php?p=76676#76676</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010388.html">[osg-users] Fixed pipeline lighting to shaders
+</A></li>
+	<LI>Next message (by thread): <A HREF="010433.html">[osg-users] [OSG 3.6.3 Core Profile GL 3+] Weird clipping behaviour in Fragment Shader
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10415">[ date ]</a>
+              <a href="thread.html#10415">[ thread ]</a>
+              <a href="subject.html#10415">[ subject ]</a>
+              <a href="author.html#10415">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

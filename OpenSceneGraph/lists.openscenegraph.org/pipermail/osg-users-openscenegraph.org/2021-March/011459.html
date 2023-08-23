@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Creating an OpenGL debug context
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Creating%20an%20OpenGL%20debug%20context&In-Reply-To=%3CCAG7xrZf5NJ7BfoPQUKwF%3DzuJa2Lgrdyf2L3JuP2Y7bg%2B6di2yQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011458.html">
+   <LINK REL="Next"  HREF="011460.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Creating an OpenGL debug context</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Creating%20an%20OpenGL%20debug%20context&In-Reply-To=%3CCAG7xrZf5NJ7BfoPQUKwF%3DzuJa2Lgrdyf2L3JuP2Y7bg%2B6di2yQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Creating an OpenGL debug context">l.voerman at rug.nl
+       </A><BR>
+    <I>Thu Mar 25 06:10:53 PDT 2021</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011458.html">[osg-users] Creating an OpenGL debug context
+</A></li>
+        <LI>Next message (by thread): <A HREF="011460.html">[osg-users]  3D model preparation question
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11459">[ date ]</a>
+              <a href="thread.html#11459">[ thread ]</a>
+              <a href="subject.html#11459">[ subject ]</a>
+              <a href="author.html#11459">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Not exactly what you're asking for, but this is extracted from my code:
+Laurens.
+
+#ifdef OPENGL_DEBUG
+void APIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum
+severity, GLsizei length, const GLchar * message, const void* userParam) {
+    printf(&quot;0x % X: %s\n&quot;, id, message);
+}
+#endif
+
+
+class EnableGLDebugCallback : public osg::GraphicsOperation
+{
+public:
+EnableGLDebugCallback() :
+GraphicsOperation(&quot;EnableGLDebug&quot;, true),
+_dirty(true) { }
+virtual void operator () (osg::GraphicsContext* context) {
+if (_dirty) {
+#ifdef OPENGL_DEBUG
+if (osg::isGLExtensionSupported(contextID, &quot;GL_KHR_debug&quot;)) {
+//PFNGLDEBUGMESSAGECALLBACKPROC
+PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback =
+(PFNGLDEBUGMESSAGECALLBACKPROC)wglGetProcAddress(&quot;glDebugMessageCallback&quot;);
+PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl =
+(PFNGLDEBUGMESSAGECONTROLPROC)wglGetProcAddress(&quot;glDebugMessageControl&quot;);
+glDebugMessageCallback(DebugCallback, NULL);
+glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, 0,
+GL_TRUE);
+glEnable(GL_DEBUG_OUTPUT);
+//glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+}
+#endif
+_dirty = false;
+}
+}
+protected:
+bool                    _dirty;
+};
+};
+
+in main thread:
+        osg::GraphicsContext *gc =
+_viewer-&gt;getCamera()-&gt;getGraphicsContext();
+        if (gc) {
+            gc-&gt;add(new EnableGLDebugCallback());
+            OSGRC_DEBUG(&quot;EnableGLDebugCallback installed&quot; &lt;&lt; std::endl);
+        }
+
+On Thu, Mar 25, 2021 at 11:41 AM Werner Modenbach &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Werner.Modenbach at modenbach-ac.de</A>&gt; wrote:
+
+&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> does anybody know how to create an opengl debug context via flags in the
+</I>&gt;<i> traits?
+</I>&gt;<i>
+</I>&gt;<i> Thanks
+</I>&gt;<i>
+</I>&gt;<i> - Werner -
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20210325/9dc08dcd/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20210325/9dc08dcd/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011458.html">[osg-users] Creating an OpenGL debug context
+</A></li>
+	<LI>Next message (by thread): <A HREF="011460.html">[osg-users]  3D model preparation question
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11459">[ date ]</a>
+              <a href="thread.html#11459">[ thread ]</a>
+              <a href="subject.html#11459">[ subject ]</a>
+              <a href="author.html#11459">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

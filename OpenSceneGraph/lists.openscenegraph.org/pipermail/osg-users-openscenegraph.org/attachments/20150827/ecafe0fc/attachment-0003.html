@@ -1,0 +1,60 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Mike,&lt;br&gt;&lt;br&gt;&lt;/div&gt;OK,&nbsp;the&nbsp;next&nbsp;complication&nbsp;is&nbsp;probably&nbsp;that&nbsp;the&nbsp;osg::Texture&nbsp;has&nbsp;the&nbsp;probably&nbsp;unref&#39;d&nbsp;the&nbsp;Image&nbsp;assigned&nbsp;to&nbsp;it&nbsp;after&nbsp;it&#39;s&nbsp;download&nbsp;to&nbsp;GL,&nbsp;the&nbsp;method&nbsp;that&nbsp;control&nbsp;it&nbsp;is&nbsp;in&nbsp;include/osg/Texture:&lt;br&gt;&lt;br&gt;       &nbsp;/**&nbsp;Sets&nbsp;whether&nbsp;or&nbsp;not&nbsp;the&nbsp;apply()&nbsp;function&nbsp;will&nbsp;unreference&nbsp;the&nbsp;image&lt;br&gt;         &nbsp;*&nbsp;data.&nbsp;If&nbsp;enabled,&nbsp;and&nbsp;the&nbsp;image&nbsp;data&nbsp;is&nbsp;only&nbsp;referenced&nbsp;by&nbsp;this&lt;br&gt;         &nbsp;*&nbsp;Texture,&nbsp;apply()&nbsp;will&nbsp;delete&nbsp;the&nbsp;image&nbsp;data.&nbsp;*/&lt;br&gt;       &nbsp;inline&nbsp;void&nbsp;setUnRefImageDataAfterApply(bool&nbsp;flag)&nbsp;{&nbsp;_unrefImageDataAfterApply&nbsp;=&nbsp;flag;&nbsp;}&lt;br&gt;&lt;br&gt;&lt;/div&gt;This&nbsp;is&nbsp;memory&nbsp;optimization,&nbsp;but...&nbsp;if&nbsp;you&nbsp;want&nbsp;to&nbsp;look&nbsp;at&nbsp;the&nbsp;image&nbsp;data&nbsp;after&nbsp;it&#39;s&nbsp;been&nbsp;rendered&nbsp;you&nbsp;obviously&nbsp;don&#39;t&nbsp;want&nbsp;to&nbsp;use&nbsp;this&nbsp;feature. &nbsp;By&nbsp;default&nbsp;this&nbsp;feature&nbsp;is&nbsp;OFF,&nbsp;but&nbsp;if&nbsp;you&nbsp;run&nbsp;the&nbsp;osgUtil::Optimizer&nbsp;on&nbsp;the&nbsp;scene&nbsp;graph&nbsp;it&nbsp;can&nbsp;switch&nbsp;it&nbsp;on&nbsp;as&nbsp;a&nbsp;memory&nbsp;optimization. &nbsp;&lt;br&gt;&lt;br&gt;You&nbsp;can&nbsp;switch&nbsp;it&nbsp;back&nbsp;on&nbsp;using&nbsp;the&nbsp;osgUtil::Optimizer::TextureVisitor&nbsp;see&nbsp;the&nbsp;include/osgUtil/Optimizer&nbsp;header&nbsp;for&nbsp;the&nbsp;TextureVisitor.&lt;br&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;div&gt;&lt;br&gt; &lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;26&nbsp;August&nbsp;2015&nbsp;at&nbsp;20:34,&nbsp;Mike&nbsp;Greene&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:mgreene@hiwaay.net&quot;&nbsp;target=&quot;_blank&quot;&gt;mgreene@hiwaay.net&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;OK,&nbsp;fixed&nbsp;that&nbsp;-&nbsp;loaded&nbsp;an&nbsp;.ive&nbsp;file&nbsp;and&nbsp;was&nbsp;able&nbsp;to&nbsp;get&nbsp;correct&nbsp;looking&nbsp;texture&nbsp;coordinates.&nbsp;In&nbsp;a&nbsp;.ive&nbsp;file&nbsp;with&nbsp;embedded&nbsp;textures,&nbsp;is&nbsp;there&nbsp;a&nbsp;textureName?&nbsp;Probably&nbsp;not&nbsp;-&nbsp;not&nbsp;really&nbsp;important.&lt;br&gt;<br>
+&lt;br&gt;<br>
+But&nbsp;the&nbsp;code&nbsp;does&nbsp;say&nbsp;that&nbsp;there&nbsp;is&nbsp;one&nbsp;image&nbsp;in&nbsp;the&nbsp;texture.&nbsp;But&nbsp;doing&nbsp;the&nbsp;getImage(0)&nbsp;does&nbsp;not&nbsp;return&nbsp;a&nbsp;valid&nbsp;image&nbsp;and&nbsp;thus&nbsp;no&nbsp;color&nbsp;from&nbsp;the&nbsp;texture&nbsp;is&nbsp;returned.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+ osgUtil::LineSegmentIntersector::Intersections&nbsp;intersections;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(viewer-&gt;computeIntersections(ea,&nbsp;intersections))&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;const&nbsp;osgUtil::LineSegmentIntersector::Intersection&amp;&nbsp;hit&nbsp;=&nbsp;*intersections.begin();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//MGREENE&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;hit&nbsp;=&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;hit.getLocalIntersectPoint().x()&nbsp;&lt;&lt;&nbsp;&quot;,&quot;&nbsp;&lt;&lt;&nbsp;hit.getLocalIntersectPoint().y()&nbsp;&lt;&lt;&nbsp;&quot;,&quot;&nbsp;&lt;&lt;&nbsp;hit.getLocalIntersectPoint().z()&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Vec3&nbsp;tc(0,&nbsp;0,&nbsp;0);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Texture*&nbsp;myTexture&nbsp;=&nbsp;hit.getTextureLookUp(tc);&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;tc&nbsp;=&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;tc.x()&nbsp;&lt;&lt;&nbsp;&quot;,&quot;&nbsp;&lt;&lt;&nbsp;tc.y()&nbsp;&lt;&lt;&nbsp;&quot;,&quot;&nbsp;&lt;&lt;&nbsp;tc.z()&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(myTexture){&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::string&nbsp;myString&nbsp;=&nbsp;myTexture-&gt;getName();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;texturename&nbsp;=&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;myString&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;int&nbsp;numImages&nbsp;=&nbsp;myTexture-&gt;getNumImages();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;numImages&nbsp;=&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;numImages&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Image&nbsp;*myImage&nbsp;=&nbsp;myTexture-&gt;getImage(0);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(myImage)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Vec4&nbsp;textureColor&nbsp;=&nbsp;myImage-&gt;getColor(tc);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;textureColor&nbsp;=&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;textureColor.r()&nbsp;&lt;&lt;&nbsp;&quot;,&quot;&nbsp;&lt;&lt;&nbsp;textureColor.b()&nbsp;&lt;&lt;&nbsp;&quot;,&quot;&nbsp;&lt;&lt;&nbsp;textureColor.g()&nbsp;&lt;&lt;&nbsp;&quot;,&quot;&nbsp;&lt;&lt;&nbsp;textureColor.a()&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//END&nbsp;MGREENE&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+...&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Mike&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;/span&gt;&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=64908#64908&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=64908#64908&lt;/a&gt;&lt;br&gt;<br>
+&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

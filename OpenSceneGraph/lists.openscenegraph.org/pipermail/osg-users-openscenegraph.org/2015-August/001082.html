@@ -1,0 +1,156 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] update slave camera with frame scheme ON_DEMAND
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20update%20slave%20camera%20with%20frame%20scheme%20ON_DEMAND&In-Reply-To=%3CCAFN7Y%2BXNV8Cgh7jesb12%3D6%2BiDmCtWeLxAz%3DhK7Oamf7VsveiiQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001081.html">
+   <LINK REL="Next"  HREF="001088.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] update slave camera with frame scheme ON_DEMAND</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20update%20slave%20camera%20with%20frame%20scheme%20ON_DEMAND&In-Reply-To=%3CCAFN7Y%2BXNV8Cgh7jesb12%3D6%2BiDmCtWeLxAz%3DhK7Oamf7VsveiiQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] update slave camera with frame scheme ON_DEMAND">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Aug  5 09:14:54 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001081.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+        <LI>Next message: <A HREF="001088.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1082">[ date ]</a>
+              <a href="thread.html#1082">[ thread ]</a>
+              <a href="subject.html#1082">[ subject ]</a>
+              <a href="author.html#1082">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Gianni,
+
+There is no need to modify the OSG code, all you need to do is move the
+update of your transform to after the call to updateTraversals().  You
+could do this lots of different ways - all under your application control.
+Personally I'd do it by expanding the call to viewer-&gt;frame() to it's
+component parts as I suggested earlier.  Alternatively you could subclass
+from the Viewer/CompositeViewer and override the updateTraversal() method -
+it's a virtual method to allow you to customize things.
+
+Robert.
+
+On 5 August 2015 at 16:58, Gianni Ambrosio &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">g.ambrosio+osg at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi Robert, I didn't understand your answer.
+</I>&gt;<i>
+</I>&gt;<i> I use OSG 3.0.1 but I tried with 3.4.0.-rc8 and the behavior is the same.
+</I>&gt;<i> Moreover updateTraversal() of CompositeViewer is basically the same for
+</I>&gt;<i> these versions.
+</I>&gt;<i> Anyway we are probably talking of a slightly different scenario: I have a
+</I>&gt;<i> slave camera which update callback needs an up to date viewer master
+</I>&gt;<i> camera's view matrix. In this case, as you told me, since the master camera
+</I>&gt;<i> matrix is updated (with the inverse matrix of the manipulator) after the
+</I>&gt;<i> slave camera update callback, then the value is that of the previous frame.
+</I>&gt;<i> I can understand and the reason is in CompositeViewer::updateTraversal()
+</I>&gt;<i> because the for loop &quot;// Do UpdateTraversal for slaves with their own
+</I>&gt;<i> subgraph&quot; is done before
+</I>&gt;<i> &quot;view-&gt;getCameraManipulator()-&gt;updateCamera(*(view-&gt;getCamera()));&quot;.
+</I>&gt;<i> So, to make scenarios like mine working, my suggestion is to move:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>             // Do UpdateTraversal for slaves with their own subgraph
+</I>&gt;<i>             for(unsigned int i=0; i&lt;view-&gt;getNumSlaves(); ++i)
+</I>&gt;<i>             {
+</I>&gt;<i>                 osg::View::Slave&amp; slave = view-&gt;getSlave(i);
+</I>&gt;<i>                 osg::Camera* camera = slave._camera.get();
+</I>&gt;<i>                 if(camera &amp;&amp; !slave._useMastersSceneData)
+</I>&gt;<i>                 {
+</I>&gt;<i>                     camera-&gt;accept(*_updateVisitor);
+</I>&gt;<i>                 }
+</I>&gt;<i>             }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> after
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>         if (view-&gt;getCameraManipulator())
+</I>&gt;<i>         {
+</I>&gt;<i>             view-&gt;setFusionDistance(
+</I>&gt;<i> view-&gt;getCameraManipulator()-&gt;getFusionDistanceMode(),
+</I>&gt;<i>
+</I>&gt;<i> view-&gt;getCameraManipulator()-&gt;getFusionDistanceValue() );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> view-&gt;getCameraManipulator()-&gt;updateCamera(*(view-&gt;getCamera()));
+</I>&gt;<i>
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I tried this solution and it works fine.
+</I>&gt;<i> With this modification the scene remains updated before the main camera,
+</I>&gt;<i> so nothing you already told me should be broken.
+</I>&gt;<i> Moreover the for loop to move down is related to slave cameras with thier
+</I>&gt;<i> own subgraph.
+</I>&gt;<i>
+</I>&gt;<i> Regards,
+</I>&gt;<i> Gianni[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicc6ce.php?p=64634#64634">http://forum.openscenegraph.org/viewtopic.php?p=64634#64634</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150805/8f53dfd3/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150805/8f53dfd3/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001081.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+	<LI>Next message: <A HREF="001088.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1082">[ date ]</a>
+              <a href="thread.html#1082">[ thread ]</a>
+              <a href="subject.html#1082">[ subject ]</a>
+              <a href="author.html#1082">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

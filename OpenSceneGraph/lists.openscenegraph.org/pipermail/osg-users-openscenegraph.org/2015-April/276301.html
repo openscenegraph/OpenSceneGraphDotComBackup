@@ -1,0 +1,209 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Noobie Problem of the Day - Cookbook Surface/Object	Picking Not Working
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Noobie%20Problem%20of%20the%20Day%20-%20Cookbook%20Surface/Object%0A%09Picking%20Not%20Working&In-Reply-To=%3C1428960484.m2f.63371%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000075.html">
+   <LINK REL="Next"  HREF="000079.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Noobie Problem of the Day - Cookbook Surface/Object	Picking Not Working</H1>
+<!--htdig_noindex-->
+    <B>Dave Sargrad</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Noobie%20Problem%20of%20the%20Day%20-%20Cookbook%20Surface/Object%0A%09Picking%20Not%20Working&In-Reply-To=%3C1428960484.m2f.63371%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Noobie Problem of the Day - Cookbook Surface/Object	Picking Not Working">davidsargrad at hotmail.com
+       </A><BR>
+    <I>Mon Apr 13 14:28:04 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000075.html">[osg-users] StatsHandler rendering issue
+</A></li>
+        <LI>Next message: <A HREF="000079.html">[osg-users] Noobie Problem of the Day - Cookbook Surface/Object	Picking Not Working
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276301">[ date ]</a>
+              <a href="thread.html#276301">[ thread ]</a>
+              <a href="subject.html#276301">[ subject ]</a>
+              <a href="author.html#276301">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I've been working through the osgRecipes cookbooks. I suddenly realized as I was working with cookbook_03_07 that the picking logic did not seem to be working. Indeed I have not been able to pick any of the objects displayed in the cookbooks I've been looking at so far (I'm working the cookbooks in order).
+
+I set a breakpoint in CommonFunctions.cpp within bool PickHandler::handle. I get into the method just fine, when I hold ctrl and left select an object.
+
+However the test intersector -&gt;containsIntersections() always returns false, so a call is never made to doUserOperations.
+
+The only thing that comes to mind is the fact that in my current setup, I have a laptop with 2 external monitors attached, and so the cookbooks render across all 3 of my screens (very nice feature).. I was thinking that perhaps there is something in the cookbook implementation that is ignoring the actual size of my virtual desktop. 
+
+Please forgive the odd looking symbols showing up in the following code blocks... not sure why they are there.
+
+So handle gets called just fine
+
+Code:
+    bool PickHandler::handle( const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; aa )
+    {
+        if ( ea.getEventType()!=osgGA::GUIEventAdapter::RELEASE ||
+             ea.getButton()!=osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON ||
+             !(ea.getModKeyMask()&amp;osgGA::GUIEventAdapter::MODKEY_CTRL) )
+            return false;
+        
+        osgViewer::View* viewer = dynamic_cast&lt;osgViewer::View*&gt;(&amp;aa);
+        if ( viewer )
+        {
+            osg::ref_ptr&lt;osgUtil::LineSegmentIntersector&gt; intersector =
+                new osgUtil::LineSegmentIntersector(osgUtil::Intersector::WINDOW, ea.getX(), ea.getY());
+            osgUtil::IntersectionVisitor iv( intersector.get() );
+            viewer-&gt;getCamera()-&gt;accept( iv );
+            
+            if ( intersector-&gt;containsIntersections() ) // &lt;--- Always returns false
+            {
+                osgUtil::LineSegmentIntersector::Intersection result = *(intersector-&gt;getIntersections().begin());
+                doUserOperations( result ); 
+            }
+        }
+        return false;
+    }
+
+
+
+This is the SelectModelHandler class
+
+Code:
+
+class SelectModelHandler : public osgCookBook::PickHandler
+{
+public:
+    SelectModelHandler() : _selector(0) {}
+    
+    osg::Geode* createFaceSelector()
+    {
+        osg::ref_ptr&lt;osg::Vec4Array&gt; colors = new osg::Vec4Array(1);
+        (*colors)[0] = selectedColor;
+        
+        _selector = new osg::Geometry;
+        _selector-&gt;setDataVariance( osg::Object::DYNAMIC );
+        _selector-&gt;setUseDisplayList( false );
+        _selector-&gt;setUseVertexBufferObjects( true );
+        _selector-&gt;setVertexArray( new osg::Vec3Array(3) );
+        _selector-&gt;setColorArray( colors.get() );
+        _selector-&gt;setColorBinding( osg::Geometry::BIND_OVERALL );
+        _selector-&gt;addPrimitiveSet( new osg::DrawArrays(GL_TRIANGLES, 0, 3) );
+        
+        osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+        geode-&gt;addDrawable( _selector.get() );
+        geode-&gt;getOrCreateStateSet()-&gt;setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+        geode-&gt;getOrCreateStateSet()-&gt;setMode( GL_BLEND, osg::StateAttribute::ON );
+        geode-&gt;getOrCreateStateSet()-&gt;setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
+        return geode.release();
+    }
+    
+    virtual void doUserOperations( osgUtil::LineSegmentIntersector::Intersection&amp; result )
+    {
+        osg::Geometry* geom = dynamic_cast&lt;osg::Geometry*&gt;( result.drawable.get() );
+        if ( !geom || !_selector || geom==_selector ) return;
+        
+        osg::Vec3Array* vertices = dynamic_cast&lt;osg::Vec3Array*&gt;( geom-&gt;getVertexArray() );
+        osg::Vec3Array* selVertices = dynamic_cast&lt;osg::Vec3Array*&gt;( _selector-&gt;getVertexArray() );
+        if ( !vertices || !selVertices ) return;
+        
+        osg::Matrix matrix = osg::computeLocalToWorld( result.nodePath );
+        const std::vector&lt;unsigned int&gt;&amp; selIndices = result.indexList;
+        for ( unsigned int i=0; i&lt;3 &amp;&amp; i&lt;selIndices.size(); ++i )
+        {
+            unsigned int pos = selIndices[i];
+            (*selVertices)[i] = (*vertices)[pos] * matrix;
+        }
+        selVertices-&gt;dirty();
+        _selector-&gt;dirtyBound();
+    }
+    
+protected:
+    osg::ref_ptr&lt;osg::Geometry&gt; _selector;
+};
+
+
+
+
+
+The main method attaches the selector as a child
+
+Code:
+
+int main( int argc, char** argv )
+{
+    osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+    geode-&gt;addDrawable( createSimpleGeometry() );
+    geode-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes( new osg::PolygonOffset(1.0f, 1.0f) );
+    
+    osg::ref_ptr&lt;osg::MatrixTransform&gt; trans = new osg::MatrixTransform;
+    trans-&gt;addChild( geode.get() );
+    trans-&gt;setMatrix( osg::Matrix::translate(0.0f, 0.0f, 1.0f) );
+    
+    osg::ref_ptr&lt;SelectModelHandler&gt; selector = new SelectModelHandler;
+    
+    osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+    root-&gt;addChild( trans.get() );
+    root-&gt;addChild( selector-&gt;createFaceSelector() );  // Caution: It has bound, too
+    
+    osgViewer::Viewer viewer;
+    viewer.addEventHandler( selector.get() );
+    viewer.setSceneData( root.get() );
+    return viewer.run();
+}
+
+
+
+
+Does anyone see something that would cause this PickHandler not to work when used on a 3 monitor setup? 
+
+Thank you!
+
+Cheers,
+Dave[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicb177.php?p=63371#63371">http://forum.openscenegraph.org/viewtopic.php?p=63371#63371</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000075.html">[osg-users] StatsHandler rendering issue
+</A></li>
+	<LI>Next message: <A HREF="000079.html">[osg-users] Noobie Problem of the Day - Cookbook Surface/Object	Picking Not Working
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276301">[ date ]</a>
+              <a href="thread.html#276301">[ thread ]</a>
+              <a href="subject.html#276301">[ subject ]</a>
+              <a href="author.html#276301">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

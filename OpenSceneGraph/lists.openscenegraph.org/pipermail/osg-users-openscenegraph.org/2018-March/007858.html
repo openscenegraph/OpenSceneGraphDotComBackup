@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Render a Scene to texture
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20a%20Scene%20to%20texture&In-Reply-To=%3CCAFN7Y%2BV53eQch4ZfiUTrLmCQLOdUDOQTpD2mR_pYC-DS53H1XA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007856.html">
+   <LINK REL="Next"  HREF="007859.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Render a Scene to texture</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20a%20Scene%20to%20texture&In-Reply-To=%3CCAFN7Y%2BV53eQch4ZfiUTrLmCQLOdUDOQTpD2mR_pYC-DS53H1XA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Render a Scene to texture">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sun Mar 18 07:10:42 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007856.html">[osg-users] Render a Scene to texture
+</A></li>
+        <LI>Next message (by thread): <A HREF="007859.html">[osg-users] Rendering a scene to texture
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7858">[ date ]</a>
+              <a href="thread.html#7858">[ thread ]</a>
+              <a href="subject.html#7858">[ subject ]</a>
+              <a href="author.html#7858">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Jochen,
+
+What you need to do is use a render to texture (RTT) technique, with
+rendering the six scenes to six separate textures or the six scenes to
+the six faces of a cube map texture.  The OSG supports both approaches
+and each approach is essentially the same setup - you create an
+osg::Camera to render each scene to a texture/texture face, the only
+difference is the assignment of the texture(s) to the various Cameras.
+
+Another decision you need to make is how you want to interact with
+each scene - it's a fixed view of each scene, or do you want to treat
+it as a separate View with it's own camera manipulator/event handlers?
+ With a fixed view then you could just set each Camera's View matrix
+at setup time, add the scene as a subgraph to the Camera and then add
+this Camera to the scene graph.  If you want each View to be
+interactive then you could do this using CompositeView with each scene
+having it's own osgViewer::View.
+
+In all these case the Camera set up, whether it's a render to texture
+Camera in the scene graph or a the master Camera of  osgVIewer::View
+will essential be the same - you just assign the texture/texture face
+to each Camera.
+
+Then you'll want to have one last Camera or View (with it's master
+Camera) that renders to the window and use all the results from the
+RTT Camera's.  To ensure that the various RTT Camera's are rendered
+before the main Camera you'll want to use
+Camera::setRenderOrder(osg::Camera::PRE_RENDER);
+
+There aren't any OSG examples that do exactly what you want, but you
+can have a look at the osgprerender, oreprerendercubemap and
+osgdistorion examples to see how RTT can be done in various ways.  The
+osgcompositeviewer will also give an illustrate of using multiple
+Views with multiple Scenes, this example doesn't do an RTT but could
+easily be adapted to do so by adding the appropriate texture
+attachments and render order settings.
+
+Hopefully once you get familiar with RTT osg::Camera usage it'll all
+start to make sense - this part of the OSG is very powerful and
+flexible but can be a bit overwhelming the first time you start to
+dive in.
+
+Robert.
+
+
+
+On 18 March 2018 at 10:12, Jochen Maier &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">franke.jochen at gmx.de</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I want to do something like offscreen rendering.
+</I>&gt;<i> What I want to do exactly:
+</I>&gt;<i> I have one or more scenes (scene graphs) and one final scene.
+</I>&gt;<i> The final scene contains a cube which has 6 different textures.
+</I>&gt;<i> Now I have 6 different scenes (scene graphs).
+</I>&gt;<i> I want to render all these 6 scenes in 6 textures and use this textures for the cube.
+</I>&gt;<i>
+</I>&gt;<i> My problem is:
+</I>&gt;<i> How is it possible to render one scene in a texture without render it in a seperatly window?
+</I>&gt;<i>
+</I>&gt;<i> I hope you can understand my problem... because my english isn't very well^^
+</I>&gt;<i>
+</I>&gt;<i> I've allready checked the compositeview example... but I don't understand it :/
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Jochen
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopice176.php?p=73124#73124">http://forum.openscenegraph.org/viewtopic.php?p=73124#73124</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007856.html">[osg-users] Render a Scene to texture
+</A></li>
+	<LI>Next message (by thread): <A HREF="007859.html">[osg-users] Rendering a scene to texture
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7858">[ date ]</a>
+              <a href="thread.html#7858">[ thread ]</a>
+              <a href="subject.html#7858">[ subject ]</a>
+              <a href="author.html#7858">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

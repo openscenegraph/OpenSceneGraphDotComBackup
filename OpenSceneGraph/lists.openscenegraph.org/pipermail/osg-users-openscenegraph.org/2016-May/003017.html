@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Read back data from a storage buffer object
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Read%20back%20data%20from%20a%20storage%20buffer%20object&In-Reply-To=%3C1462972359.m2f.67074%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003016.html">
+   <LINK REL="Next"  HREF="279242.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Read back data from a storage buffer object</H1>
+<!--htdig_noindex-->
+    <B>Luca Bianconi</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Read%20back%20data%20from%20a%20storage%20buffer%20object&In-Reply-To=%3C1462972359.m2f.67074%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Read back data from a storage buffer object">lucabianco92 at gmail.com
+       </A><BR>
+    <I>Wed May 11 06:12:39 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003016.html">[osg-users] Read back data from a storage buffer object
+</A></li>
+        <LI>Next message: <A HREF="279242.html">[osg-users] Multitouch OSG and Qt
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3017">[ date ]</a>
+              <a href="thread.html#3017">[ thread ]</a>
+              <a href="subject.html#3017">[ subject ]</a>
+              <a href="author.html#3017">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sebastian,
+thank you for your answer.
+
+I'm trying to use ShaderStorageBufferCallback by osgSSBO example in a minimal piece of code which is:
+
+
+Code:
+
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osg/BufferIndexBinding&gt;
+
+using namespace osg;
+
+
+class ShaderStorageBufferCallback : public osg::StateAttributeCallback
+{
+public:
+	void operator() (osg::StateAttribute* attr, osg::NodeVisitor* nv)
+	{
+		//if you need to process the data in your app-code , better leaving it on GPU and processing there, uploading per frame will make it slow
+
+		osg::ShaderStorageBufferBinding* ssbb = static_cast&lt;osg::ShaderStorageBufferBinding*&gt;(attr);
+		osg::ShaderStorageBufferObject* ssbo
+			= static_cast&lt;osg::ShaderStorageBufferObject*&gt;(ssbb-&gt;getBufferObject());
+
+		osg::FloatArray* array = static_cast&lt;osg::FloatArray*&gt;(ssbo-&gt;getBufferData(0));
+
+		float someValue = array-&gt;at(0);
+		osg::notify(INFO) &lt;&lt; &quot;someValue now: &quot; &lt;&lt; someValue &lt;&lt; std::endl;
+
+	}
+};
+
+int mymain(){
+
+	FloatArray * dati = new FloatArray;
+	dati-&gt;resize(10, 1.0);
+
+	ShaderStorageBufferObject *ssbo = new osg::ShaderStorageBufferObject;
+	dati-&gt;setBufferObject(ssbo);
+
+	ShaderStorageBufferBinding * ssbb = new ShaderStorageBufferBinding(2, ssbo, 0, 10 * sizeof(GLfloat));
+	ssbb-&gt;setUpdateCallback(new ShaderStorageBufferCallback);
+
+	Shader * shader = new osg::Shader(osg::Shader::COMPUTE);
+	shader-&gt;loadShaderSourceFromFile(&quot;shaders/lightpixels.cs&quot;);
+	osg::ref_ptr&lt;osg::Program&gt; computeProg = new osg::Program;
+	computeProg-&gt;setComputeGroups(512 / 16, 1, 1);
+	shader-&gt;setType(Shader::COMPUTE);
+	computeProg-&gt;addShader(shader);
+
+	osg::Geometry * geom = createTexturedQuadGeometry(Vec3(-0.5, 0, -0.5), Vec3(1.0, 0, 0.0), Vec3(0, 0, 1.0));
+	geom-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(computeProg, osg::StateAttribute::ON);
+	geom-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(ssbb, osg::StateAttribute::ON);
+
+	osgViewer::Viewer viewer;
+	viewer.setSceneData(geom);
+	viewer.setUpViewInWindow(100, 100, 640, 480);
+	viewer.realize();
+	while (!viewer.done()){
+		viewer.frame();
+	}
+
+	return 0;
+
+}
+
+
+
+
+shader code is
+
+
+Code:
+
+#version 430
+layout (local_size_x = 16, local_size_y = 16) in;
+
+//layout (binding=0, rgba32f) uniform image2D targetImage;
+layout(std140, binding = 2) buffer dati{float dataBuffer[];};
+
+void main() {
+	dataBuffer[0] = 348.0;
+}
+
+
+
+
+The callback is triggered but it print '1' as value. Like if buffer data was not changed. How do i use glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)?
+
+Thank
+Luca
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicd842.php?p=67074#67074">http://forum.openscenegraph.org/viewtopic.php?p=67074#67074</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003016.html">[osg-users] Read back data from a storage buffer object
+</A></li>
+	<LI>Next message: <A HREF="279242.html">[osg-users] Multitouch OSG and Qt
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3017">[ date ]</a>
+              <a href="thread.html#3017">[ thread ]</a>
+              <a href="subject.html#3017">[ subject ]</a>
+              <a href="author.html#3017">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

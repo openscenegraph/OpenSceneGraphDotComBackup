@@ -1,0 +1,245 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OpenThreads, scheduling, etc ... policies
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenThreads%2C%20scheduling%2C%20etc%20...%20policies&In-Reply-To=%3CCAFN7Y%2BUxJ-B7%2BSh%2Bo4TaZBvz_RsyxRVyNkyYGmvriuYQv2zCtQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000302.html">
+   <LINK REL="Next"  HREF="000304.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OpenThreads, scheduling, etc ... policies</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenThreads%2C%20scheduling%2C%20etc%20...%20policies&In-Reply-To=%3CCAFN7Y%2BUxJ-B7%2BSh%2Bo4TaZBvz_RsyxRVyNkyYGmvriuYQv2zCtQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] OpenThreads, scheduling, etc ... policies">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon May  4 07:43:01 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000302.html">[osg-users] OpenThreads, scheduling, etc ... policies
+</A></li>
+        <LI>Next message: <A HREF="000304.html">[osg-users] OpenThreads, scheduling, etc ... policies
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#303">[ date ]</a>
+              <a href="thread.html#303">[ thread ]</a>
+              <a href="subject.html#303">[ subject ]</a>
+              <a href="author.html#303">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Curtis,
+
+There has to be a historical reason for need for the #ifndef __linux__
+around the thread scheduling assignment.  As I'm not the author of
+this block of code I can only check the code and svn log's.  I'm
+currently working on a complex bug fix on another area of the OSG so
+can't dive into a new area of code right now.
+
+Given there has to be a reason for the special handling under Linux we
+can't just remove the block and hope for the best.  It may be possible
+to specialize the #ifndef to allow certain combinations for linux to
+work, but we'd need to track down which combinations we might expect
+to work and which ones might not so we can determine the right type of
+checks to apply.  This is why the history is important.  I'm guessing
+there older versions of Linux didn't fully implement pthreads/pthread
+extensions.  I have to defer to others in this department though, as I
+don't have experience with all variants of pthreads on linux though
+time.
+
+Robert.
+
+On 4 May 2015 at 15:26, Curtis Rubel &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">crubel at compro.net</A>&gt; wrote:
+&gt;<i> Robert,
+</I>&gt;<i>
+</I>&gt;<i> When I mentioned crippled, I did not mean that as a bad or derogatory
+</I>&gt;<i> comment.  Maybe saying something like intentionally disabled would have
+</I>&gt;<i> been a better choice of words, my apologies if my wording offended anyone in any way.
+</I>&gt;<i>
+</I>&gt;<i> Basic threading is working fine under Linux.  If the user however wants to
+</I>&gt;<i> take advantage of all of the available threading policies and priorities now available to them they cannot.  I think that this is just possibly just due to this section of Openthreads not being updated when these features were fully implemented and properly working on the linux platform.
+</I>&gt;<i>
+</I>&gt;<i> Here is a code excerpt of the SetThreadSchedulingParams
+</I>&gt;<i> function call within OpenThreads/phhreads/PThread.cpp
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>     //--------------------------------------------------------------------------
+</I>&gt;<i>     // Set thread scheduling parameters.  Unfortunately on Linux, there's no
+</I>&gt;<i>     // good way to set this, as pthread_setschedparam is mostly a no-op.
+</I>&gt;<i>     //
+</I>&gt;<i>     static int SetThreadSchedulingParams(Thread *thread)
+</I>&gt;<i>     {
+</I>&gt;<i>
+</I>&gt;<i>         int status = 0;
+</I>&gt;<i>
+</I>&gt;<i> #ifdef ALLOW_PRIORITY_SCHEDULING // [
+</I>&gt;<i>
+</I>&gt;<i>         if(sysconf(_POSIX_THREAD_PRIORITY_SCHEDULING))
+</I>&gt;<i>         {
+</I>&gt;<i>
+</I>&gt;<i>             int th_policy;
+</I>&gt;<i>             int max_priority, nominal_priority, min_priority;
+</I>&gt;<i>             sched_param th_param;
+</I>&gt;<i>             pthread_getschedparam(thread-&gt;getProcessId(),
+</I>&gt;<i>                       &amp;th_policy, &amp;th_param);
+</I>&gt;<i>
+</I>&gt;<i> #ifndef __linux__
+</I>&gt;<i>
+</I>&gt;<i>             switch(thread-&gt;getSchedulePolicy())
+</I>&gt;<i>             {
+</I>&gt;<i>
+</I>&gt;<i>                 case Thread::THREAD_SCHEDULE_FIFO:
+</I>&gt;<i>                 th_policy = SCHED_FIFO;
+</I>&gt;<i>                 break;
+</I>&gt;<i>
+</I>&gt;<i>                 case Thread::THREAD_SCHEDULE_ROUND_ROBIN:
+</I>&gt;<i>                 th_policy = SCHED_RR;
+</I>&gt;<i>                 break;
+</I>&gt;<i>
+</I>&gt;<i>                 case Thread::THREAD_SCHEDULE_TIME_SHARE:
+</I>&gt;<i>                 th_policy = SCHED_OTHER;
+</I>&gt;<i>                 break;
+</I>&gt;<i>
+</I>&gt;<i>                 default:
+</I>&gt;<i> #ifdef __sgi
+</I>&gt;<i>                 th_policy = SCHED_RR;
+</I>&gt;<i> #else
+</I>&gt;<i>                 th_policy = SCHED_FIFO;
+</I>&gt;<i> #endif
+</I>&gt;<i>                 break;
+</I>&gt;<i>             };
+</I>&gt;<i>
+</I>&gt;<i> #else
+</I>&gt;<i>             th_policy = SCHED_OTHER;  // Must protect linux from realtime.
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i> #ifdef __linux__
+</I>&gt;<i>
+</I>&gt;<i>             max_priority = 0;
+</I>&gt;<i>             min_priority = 20;
+</I>&gt;<i>             nominal_priority = (max_priority + min_priority)/2;
+</I>&gt;<i>
+</I>&gt;<i> #else
+</I>&gt;<i>
+</I>&gt;<i>             max_priority = sched_get_priority_max(th_policy);
+</I>&gt;<i>             min_priority = sched_get_priority_min(th_policy);
+</I>&gt;<i>             nominal_priority = (max_priority + min_priority)/2;
+</I>&gt;<i>
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i>             switch(thread-&gt;getSchedulePriority())
+</I>&gt;<i>             {
+</I>&gt;<i>
+</I>&gt;<i>                 case Thread::THREAD_PRIORITY_MAX:
+</I>&gt;<i>                     th_param.sched_priority = max_priority;
+</I>&gt;<i>                     break;
+</I>&gt;<i>
+</I>&gt;<i>                 case Thread::THREAD_PRIORITY_HIGH:
+</I>&gt;<i>                     th_param.sched_priority = (max_priority + nominal_priority)/2;
+</I>&gt;<i>                     break;
+</I>&gt;<i>
+</I>&gt;<i>                 case Thread::THREAD_PRIORITY_NOMINAL:
+</I>&gt;<i>                     th_param.sched_priority = nominal_priority;
+</I>&gt;<i>                     break;
+</I>&gt;<i>
+</I>&gt;<i>                 case Thread::THREAD_PRIORITY_LOW:
+</I>&gt;<i>                     th_param.sched_priority = (min_priority + nominal_priority)/2;
+</I>&gt;<i>                     break;
+</I>&gt;<i>
+</I>&gt;<i>                 case Thread::THREAD_PRIORITY_MIN:
+</I>&gt;<i>                     th_param.sched_priority = min_priority;
+</I>&gt;<i>                     break;
+</I>&gt;<i>
+</I>&gt;<i>                 default:
+</I>&gt;<i>                     th_param.sched_priority = max_priority;
+</I>&gt;<i>                     break;
+</I>&gt;<i>
+</I>&gt;<i>             }
+</I>&gt;<i>
+</I>&gt;<i>             status = pthread_setschedparam(thread-&gt;getProcessId(),
+</I>&gt;<i>                            th_policy,
+</I>&gt;<i>                            &amp;th_param);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>             if(getenv(&quot;OUTPUT_THREADLIB_SCHEDULING_INFO&quot;) != 0)
+</I>&gt;<i>             PrintThreadSchedulingInfo(thread);
+</I>&gt;<i>
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i> #endif // ] ALLOW_PRIORITY_SCHEDULING
+</I>&gt;<i>
+</I>&gt;<i>     return status;
+</I>&gt;<i>     };
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> You can see in this excerpt that on Linux platforms the code to allow you to select any of the available threading policies is allowed on all platforms but linux.  Linux is hard-coded to set the SCHED_OTHER policy.
+</I>&gt;<i>
+</I>&gt;<i> The other sections of the code excerpt limit the range of priorities allowed to between 0 and 20, when linux currently has a range of 0 - 99, 99 being the highest priority allowed.  The associated calls to sched_get_priority_max and sched_get_priority_min are not allowed on the linux platform.
+</I>&gt;<i>
+</I>&gt;<i> I will be happy to provide you with a sample application if you still would like to have one, but I think the ifndef's in the code will let you see what I am referring too.
+</I>&gt;<i>
+</I>&gt;<i> Again I apologize if I offended anyone, that was not my intention.
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Curtis
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopica33b.php?p=63627#63627">http://forum.openscenegraph.org/viewtopic.php?p=63627#63627</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000302.html">[osg-users] OpenThreads, scheduling, etc ... policies
+</A></li>
+	<LI>Next message: <A HREF="000304.html">[osg-users] OpenThreads, scheduling, etc ... policies
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#303">[ date ]</a>
+              <a href="thread.html#303">[ thread ]</a>
+              <a href="subject.html#303">[ subject ]</a>
+              <a href="author.html#303">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

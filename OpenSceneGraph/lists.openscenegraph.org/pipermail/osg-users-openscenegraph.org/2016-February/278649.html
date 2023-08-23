@@ -1,0 +1,487 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] can' achieve to make stencil buffer working using	FBORTTexture3D Camera
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20can%27%20achieve%20to%20make%20stencil%20buffer%20working%20using%0A%09FBORTTexture3D%20Camera&In-Reply-To=%3C1456324223.m2f.66407%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002425.html">
+   <LINK REL="Next"  HREF="278652.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] can' achieve to make stencil buffer working using	FBORTTexture3D Camera</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20can%27%20achieve%20to%20make%20stencil%20buffer%20working%20using%0A%09FBORTTexture3D%20Camera&In-Reply-To=%3C1456324223.m2f.66407%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] can' achieve to make stencil buffer working using	FBORTTexture3D Camera">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Wed Feb 24 06:30:23 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002425.html">[osg-users] osgmovie stop playing after long time pause
+</A></li>
+        <LI>Next message: <A HREF="278652.html">[osg-users] Seeking feedback on options new laptop for delivering training/occasional dev work
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278649">[ date ]</a>
+              <a href="thread.html#278649">[ thread ]</a>
+              <a href="subject.html#278649">[ subject ]</a>
+              <a href="author.html#278649">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all
+For test purpose,I'm porting osgpackeddepthstencil example in order to target Texture3D instead of Texture2D.
+For this, i just introduce instancing and a geometry shader to set the targetted gl_Layer.
+Here's the code
+
+
+Code:
+
+
+#include &lt;osg/GLExtensions&gt;
+#include &lt;osg/Depth&gt;
+#include &lt;osg/Node&gt;
+#include &lt;osg/Geometry&gt;
+#include &lt;osg/Notify&gt;
+#include &lt;osg/Texture3D&gt;
+#include &lt;osg/Texture2D&gt;
+#include &lt;osg/Stencil&gt;
+#include &lt;osg/ColorMask&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osg/FrameBufferObject&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+#include &lt;iostream&gt;
+char classic_instancing_vs[] =
+
+    &quot;varying out int instance;\n &quot;
+    &quot;\n&quot;\
+    &quot;void main(void)\n&quot;\
+    &quot;{\n&quot;\
+    &quot;instance= gl_InstanceID; \n&quot;
+    &quot; gl_Position = gl_ModelViewProjectionMatrix *gl_Vertex; \n&quot;
+    &quot;}\n&quot;;
+char instancing_to3Dgs[] = //&quot;#version 330 core\n&quot;\
+    &quot;layout(triangles) in;\n&quot;\
+    &quot;layout(triangle_strip, max_vertices =3) out;\n&quot;\
+    &quot;\n&quot;\
+    &quot;out float slicez;\n&quot;\
+
+    &quot;#extension GL_EXT_geometry_shader4 : enable\n&quot;\
+    &quot;\n&quot;\
+    &quot;\n&quot;\
+    &quot;uniform vec3 rdx;\n&quot;\
+    &quot;varying in int instance[3];\n&quot;\
+    &quot;\n&quot;\
+    &quot;void main(void){\n&quot;\
+
+    &quot;float slicez=(float(instance[0])+0.5)*rdx.z;\n&quot;
+
+    &quot;vec2 minmaxz=vec2(gl_PositionIn[0].z,gl_PositionIn[0].z);\n&quot;
+    &quot;minmaxz.x=min(minmaxz.x,gl_PositionIn[1].z);\n&quot;
+    &quot;minmaxz.x=min(minmaxz.x,gl_PositionIn[2].z);\n&quot;
+    &quot;minmaxz.y=max(minmaxz.y,gl_PositionIn[1].z);\n&quot;
+    &quot;minmaxz.y=max(minmaxz.y,gl_PositionIn[2].z);\n&quot;
+    &quot;minmaxz*=0.5;minmaxz+=vec2(0.5);\n&quot;
+    &quot;if(/*slicez&gt;=minmaxz.x &amp;&amp; slicez&lt;minmaxz.y&amp;&amp;*/true){\n&quot;
+
+    &quot;gl_Layer=instance[0];\n&quot;\
+    &quot;gl_Position = vec4(gl_PositionIn[0].xyz,1);\n&quot;\
+    &quot;EmitVertex();\n&quot;\
+
+
+    &quot;gl_Layer=instance[0];\n&quot;\
+    &quot;gl_Position = vec4(gl_PositionIn[1].xyz,1);\n&quot;\
+    &quot;EmitVertex();\n&quot;\
+
+
+    &quot;gl_Layer=instance[0];\n&quot;\
+    &quot;gl_Position =  vec4(gl_PositionIn[2].xyz,1);\n&quot;\
+    &quot;EmitVertex();\n&quot;\
+    &quot;EndPrimitive();\n&quot;
+    &quot;}\n&quot;
+    &quot;}\n&quot;;
+
+
+char whitefs[]=
+    &quot;void main(){;\n&quot;
+    &quot;gl_FragColor=vec4(1,1,1,1);\n&quot;
+    &quot;};\n&quot;;
+
+
+osg::Geode* createMask()
+{
+    osg::Vec3Array *vertices = new osg::Vec3Array;
+    vertices-&gt;push_back(osg::Vec3(-0.5, -0.5, 0.0));
+    vertices-&gt;push_back(osg::Vec3(0.5, -0.5, 0.0));
+    vertices-&gt;push_back(osg::Vec3(0.5, 0.5, 0.0));
+    vertices-&gt;push_back(osg::Vec3(-0.5, 0.5, 0.0));
+
+    osg::Geometry *geom = new osg::Geometry;
+
+       geom-&gt;setUseDisplayList(false);
+    geom-&gt;setUseVertexBufferObjects(true);
+
+    geom-&gt;setVertexArray(vertices);
+    geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4,128));
+
+
+
+    osg::Geode *geode = new osg::Geode;
+    geode-&gt;addDrawable(geom);
+
+     osg::Stencil* stencil = new osg::Stencil;
+       stencil-&gt;setFunction(osg::Stencil::ALWAYS, 1, ~0u);
+	    stencil-&gt;setOperation(osg::Stencil::KEEP, osg::Stencil::KEEP, osg::Stencil::REPLACE);
+
+    stencil-&gt;setFunction(osg::Stencil::ALWAYS, 1, ~0u);
+    stencil-&gt;setOperation(osg::Stencil::REPLACE, osg::Stencil::REPLACE, osg::Stencil::REPLACE);
+
+    osg::StateSet *ss = geode-&gt;getOrCreateStateSet();
+    ss-&gt;setAttributeAndModes(stencil,                             osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+    ss-&gt;setAttribute(new osg::ColorMask(false, false, false, false),
+                     osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+
+    osg::ref_ptr&lt;osg::Depth&gt; depth  = new osg::Depth;
+    depth-&gt;setWriteMask(false);
+    depth-&gt;setFunction(osg::Depth::ALWAYS);
+    ss-&gt;setAttributeAndModes(depth, osg::StateAttribute::ON);
+
+
+    osg::ref_ptr&lt;osg::Program&gt; prog=new osg::Program;
+    osg::ref_ptr&lt;osg::Shader&gt; fs=new osg::Shader;
+    osg::ref_ptr&lt;osg::Shader&gt; gs=new osg::Shader;
+    osg::ref_ptr&lt;osg::Shader&gt; vs=new osg::Shader;
+
+    vs-&gt;setType(osg::Shader::VERTEX);
+    vs-&gt;setShaderSource(classic_instancing_vs);
+    prog-&gt;addShader(vs);
+
+    gs-&gt;setType(osg::Shader::GEOMETRY);
+    gs-&gt;setShaderSource(instancing_to3Dgs);
+    prog-&gt;addShader(gs);
+
+    fs-&gt;setType(osg::Shader::FRAGMENT);
+    fs-&gt;setShaderSource(whitefs);
+    prog-&gt;addShader(fs);
+
+    prog-&gt;setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 3);
+    prog-&gt;setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
+    prog-&gt;setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
+    ss-&gt;setAttributeAndModes( prog, osg::StateAttribute::ON);
+
+ osg::ref_ptr&lt;osg::Uniform&gt; rdx=new osg::Uniform();
+
+    rdx-&gt;setName(&quot;rdx&quot;);
+    rdx-&gt;setType(osg::Uniform::FLOAT_VEC3);
+    rdx-&gt;set(osg::Vec3f(1.0/128.0,1.0/128.0,1.0/128.0));
+
+    ss-&gt;addUniform(rdx);
+
+    return geode;
+}
+
+osg::Geode* createGeometry()
+{
+    osg::Vec3Array* vertices = new osg::Vec3Array;
+    vertices-&gt;push_back(osg::Vec3(-1.0, -1.0, 0.0));
+    vertices-&gt;push_back(osg::Vec3(1.0, -1.0, 0.0));
+    vertices-&gt;push_back(osg::Vec3(1.0, 1.0, 0.0));
+    vertices-&gt;push_back(osg::Vec3(-1.0, 1.0, 0.0));
+
+    osg::Geometry* geom = new osg::Geometry;
+
+    geom-&gt;setUseDisplayList(false);
+    geom-&gt;setUseVertexBufferObjects(true);
+
+    geom-&gt;setVertexArray(vertices);
+    geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4,128));
+    geom-&gt;getOrCreateVertexBufferObject();
+    osg::Geode* geode = new osg::Geode;
+    geode-&gt;addDrawable(geom);
+
+    osg::ref_ptr&lt;osg::Stencil&gt; stencil = new osg::Stencil;
+   //
+
+    stencil-&gt;setFunction(osg::Stencil::NOTEQUAL, 1, ~0u);
+
+  //  stencil-&gt;setFunction(osg::Stencil::NOTEQUAL, 0, ~0u);
+    //stencil-&gt;setFunction(osg::Stencil::NEVER, 1, ~0u);
+    stencil-&gt;setOperation(osg::Stencil::KEEP, osg::Stencil::KEEP, osg::Stencil::KEEP);
+
+    osg::StateSet *ss = geode-&gt;getOrCreateStateSet();
+    ss-&gt;setAttributeAndModes(stencil,        osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+
+    osg::ref_ptr&lt;osg::Depth&gt; depth = new osg::Depth;
+    depth-&gt;setWriteMask(false);
+    depth-&gt;setFunction(osg::Depth::NEVER);
+   // ss-&gt;setAttributeAndModes(depth, osg::StateAttribute::ON);
+
+
+
+    osg::ref_ptr&lt;osg::Program&gt; prog=new osg::Program;
+    osg::ref_ptr&lt;osg::Shader&gt; fs=new osg::Shader;
+    osg::ref_ptr&lt;osg::Shader&gt; gs=new osg::Shader;
+    osg::ref_ptr&lt;osg::Shader&gt; vs=new osg::Shader;
+
+
+    vs-&gt;setType(osg::Shader::VERTEX);
+    vs-&gt;setShaderSource(classic_instancing_vs);
+    prog-&gt;addShader(vs);
+
+    gs-&gt;setType(osg::Shader::GEOMETRY);
+    gs-&gt;setShaderSource(instancing_to3Dgs);
+    prog-&gt;addShader(gs);
+
+    fs-&gt;setType(osg::Shader::FRAGMENT);
+    fs-&gt;setShaderSource(whitefs);
+    prog-&gt;addShader(fs);
+
+    prog-&gt;setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 3);
+    prog-&gt;setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
+    prog-&gt;setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
+
+    ss-&gt;setAttributeAndModes( prog, osg::StateAttribute::ON);
+
+    osg::ref_ptr&lt;osg::Uniform&gt; rdx=new osg::Uniform();
+    rdx-&gt;setName(&quot;rdx&quot;);
+    rdx-&gt;setType(osg::Uniform::FLOAT_VEC3);
+    rdx-&gt;set(osg::Vec3(1.0/128.0,1.0/128.0,1.0/128.0));
+
+    ss-&gt;addUniform(rdx);
+    return geode;
+}
+
+osg::Geode* createTextureQuad(osg::Texture3D *texture)
+{
+    osg::Vec3Array *vertices = new osg::Vec3Array;
+    vertices-&gt;push_back(osg::Vec3(-0.8, 0.0, -0.8));
+    vertices-&gt;push_back(osg::Vec3(0.8, 0.0, -0.8));
+    vertices-&gt;push_back(osg::Vec3(0.8, 0.0, 0.8));
+    vertices-&gt;push_back(osg::Vec3(-0.8, 0.0, 0.8));
+
+    osg::Vec2Array *texcoord = new osg::Vec2Array;
+    texcoord-&gt;push_back(osg::Vec2(0.0, 0.0));
+    texcoord-&gt;push_back(osg::Vec2(1.0, 0.0));
+    texcoord-&gt;push_back(osg::Vec2(1.0, 1.0));
+    texcoord-&gt;push_back(osg::Vec2(0.0, 1.0));
+
+    osg::Geometry *geom = new osg::Geometry;
+    geom-&gt;setUseDisplayList(false);
+    geom-&gt;setUseVertexBufferObjects(true);
+    geom-&gt;setVertexArray(vertices);
+    geom-&gt;setTexCoordArray(0, texcoord);
+    geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4));
+
+    osg::Geode *geode = new osg::Geode;
+    geode-&gt;addDrawable(geom);
+    geode-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+
+    osg::ref_ptr&lt;osg::Program&gt; prog=new osg::Program;
+    osg::ref_ptr&lt;osg::Shader&gt; fs=new osg::Shader;
+
+    fs-&gt;setType(osg::Shader::FRAGMENT);
+
+    char source[]=&quot;uniform sampler3D stencil;\n&quot;
+                  &quot;void main(){;\n&quot;
+                  &quot;gl_FragColor=texture3D(stencil,vec3(gl_TexCoord[0].st,0));\n&quot;
+                  &quot;};\n&quot;;
+    fs-&gt;setShaderSource(source);
+
+    prog-&gt;addShader(fs);
+
+    geode-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes( prog, osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+
+    return geode;
+}
+
+
+int main( int argc, char **argv )
+{
+    // use an ArgumentParser object to manage the program arguments.
+    osg::ArgumentParser arguments(&amp;argc,argv);
+
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--fbo&quot;,&quot;Use Frame Buffer Object for render to texture, where supported.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--pbuffer-rtt&quot;,&quot;Use Pixel Buffer for render to texture, where supported.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--nopds&quot;, &quot;Don't use packed depth stencil.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--fbo-samples&quot;,&quot;&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--color-samples&quot;, &quot;&quot;);
+
+    // construct the viewer.
+    osgViewer::Viewer viewer(arguments);
+
+    // add stats
+    viewer.addEventHandler( new osgViewer::StatsHandler() );
+
+    // if user request help write it out to cout.
+    if (arguments.read(&quot;-h&quot;) || arguments.read(&quot;--help&quot;))
+    {
+        arguments.getApplicationUsage()-&gt;write(std::cout);
+        return 1;
+    }
+
+    osg::Camera::RenderTargetImplementation renderImplementation = osg::Camera::FRAME_BUFFER_OBJECT;
+    int colorSamples = 0, samples = 0;
+    bool usePDS = true;
+
+    while (arguments.read(&quot;--fbo&quot;))
+    {
+        renderImplementation = osg::Camera::FRAME_BUFFER_OBJECT;
+    }
+    while (arguments.read(&quot;--pbuffer-rtt&quot;))
+    {
+        renderImplementation = osg::Camera::PIXEL_BUFFER_RTT;
+    }
+    while (arguments.read(&quot;--nopds&quot;))
+    {
+        usePDS = false;
+    }
+    while (arguments.read(&quot;--fbo-samples&quot;, samples)) {}
+    while (arguments.read(&quot;--color-samples&quot;, colorSamples)) {}
+
+
+    osg::Group* rootNode = new osg::Group;
+    rootNode-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
+
+    // creates texture to be rendered
+    osg::Texture3D *texture = new osg::Texture3D;
+    osg::ref_ptr&lt;   osg::Texture3D &gt;textureDS;
+
+    texture-&gt;setTextureSize(128, 128,128);
+    texture-&gt;setInternalFormat(GL_RGBA);
+    texture-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+    texture-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+    texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+    texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+    texture-&gt;setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+    texture-&gt;setBorderColor(osg::Vec4(0, 0, 0, 0));
+
+    // creates rtt camera
+    osg::ref_ptr&lt;osg::Camera&gt; rttCamera = new osg::Camera;
+    rttCamera-&gt;setClearMask(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    rttCamera-&gt;setClearColor(osg::Vec4(0.0, 0.4, 0.5, 0.0));
+    rttCamera-&gt;setClearStencil(0);
+    rttCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    rttCamera-&gt;setViewMatrix(osg::Matrixd::identity());
+
+    rttCamera-&gt;setViewport(0, 0, 128, 128);
+    rttCamera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+    rttCamera-&gt;setRenderTargetImplementation(renderImplementation);
+    rttCamera-&gt; setComputeNearFarMode(osg::Camera::DO_NOT_COMPUTE_NEAR_FAR);
+
+    // set the camera to render before the main camera.
+    rttCamera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+    // tell the camera to use OpenGL frame buffer object where supported.
+    rttCamera-&gt; setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+
+
+    rttCamera-&gt;setProjectionResizePolicy(osg::Camera::FIXED);
+    rttCamera-&gt; setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    rttCamera-&gt; setViewMatrix(osg::Matrix::identity());
+
+
+    rttCamera-&gt; setProjectionMatrix(osg::Matrix::ortho2D(-1, 1, -1, 1));
+    if( usePDS)
+    {
+
+     //     rttCamera-&gt;attach(osg::Camera::PACKED_DEPTH_STENCIL_BUFFER, GL_DEPTH_STENCIL_EXT);
+
+        osg::ref_ptr&lt;   osg::Image &gt; im =new osg::Image();
+        //  im-&gt;allocateImage(128, 128, 1, GL_DEPTH_STENCIL_EXT, GL_UNSIGNED_INT_24_8_EXT, 1);
+        textureDS = new osg::Texture3D( );
+        textureDS-&gt;setTextureSize(128, 128,128);
+        textureDS-&gt;setInternalFormat(GL_DEPTH_STENCIL_EXT);
+
+          /* rttCamera-&gt;detach( osg::Camera::DEPTH_BUFFER );
+           rttCamera-&gt;detach( osg::Camera::STENCIL_BUFFER );
+           rttCamera-&gt;attach(osg::Camera::PACKED_DEPTH_STENCIL_BUFFER, textureDS,0, osg::Camera::FACE_CONTROLLED_BY_GEOMETRY_SHADER, false);*/
+    }
+    else
+    {
+        // this doesn't work on NVIDIA/Vista 64bit
+        // FBO status = 0x8cd6 (FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT)
+        rttCamera-&gt;attach(osg::Camera::DEPTH_BUFFER, GL_DEPTH_COMPONENT);
+        rttCamera-&gt;attach(osg::Camera::STENCIL_BUFFER, GL_STENCIL_INDEX8_EXT);
+    }
+
+    rttCamera-&gt;attach(osg::Camera::COLOR_BUFFER, texture,0, osg::Camera::FACE_CONTROLLED_BY_GEOMETRY_SHADER, false);// 0, 0, false, samples, colorSamples);
+    rttCamera-&gt;setCullingMode(osg::Camera::DO_NOT_COMPUTE_NEAR_FAR);
+    //rttCamera-&gt;setImplicitBufferAttachmentMask(osg::Camera::IMPLICIT_COLOR_BUFFER_ATTACHMENT, osg::Camera::IMPLICIT_COLOR_BUFFER_ATTACHMENT);
+    rttCamera-&gt;setImplicitBufferAttachmentMask(
+        osg::Camera::IMPLICIT_COLOR_BUFFER_ATTACHMENT//| osg::Camera::IMPLICIT_DEPTH_BUFFER_ATTACHMENT| osg::Camera::IMPLICIT_STENCIL_BUFFER_ATTACHMENT
+        ,     osg::Camera::USE_DISPLAY_SETTINGS_MASK);//osg::Camera::IMPLICIT_COLOR_BUFFER_ATTACHMENT  | osg::Camera::IMPLICIT_DEPTH_BUFFER_ATTACHMENT);*/
+    // creates rtt subtree
+    osg::Group* g0 = new osg::Group;
+    g0-&gt;addChild(createMask());
+    g0-&gt;addChild(createGeometry());
+    rttCamera-&gt;addChild(g0);
+    rootNode-&gt;addChild(rttCamera.get());
+
+    // creates textured quad with result
+    rootNode-&gt;addChild(createTextureQuad(texture));
+
+    // add model to the viewer.
+    viewer.setSceneData( rootNode );
+
+    return viewer.run();
+}
+
+
+
+
+However, for a few days now, I can't achieve neither to display stencil buffer (via texture attachment), neither to make stencil operation works (even a NEVER Func, it always displays the full white quad).
+Any advice would be welcome
+
+Thank you!
+
+Cheers,
+Julien [/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic60ac.php?p=66407#66407">http://forum.openscenegraph.org/viewtopic.php?p=66407#66407</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osgpackeddepthstencil.cpp
+Type: text/x-c++src
+Size: 14866 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160224/16db425d/attachment-0002.cpp">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160224/16db425d/attachment-0002.cpp</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002425.html">[osg-users] osgmovie stop playing after long time pause
+</A></li>
+	<LI>Next message: <A HREF="278652.html">[osg-users] Seeking feedback on options new laptop for delivering training/occasional dev work
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278649">[ date ]</a>
+              <a href="thread.html#278649">[ thread ]</a>
+              <a href="subject.html#278649">[ subject ]</a>
+              <a href="author.html#278649">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

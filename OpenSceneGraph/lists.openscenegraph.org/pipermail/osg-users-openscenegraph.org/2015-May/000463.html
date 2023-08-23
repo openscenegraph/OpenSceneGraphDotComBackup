@@ -1,0 +1,177 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Android osgPlugins
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20osgPlugins&In-Reply-To=%3C556647EB.108%40gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000464.html">
+   <LINK REL="Next"  HREF="000462.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Android osgPlugins</H1>
+<!--htdig_noindex-->
+    <B>Jan Ciger</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20osgPlugins&In-Reply-To=%3C556647EB.108%40gmail.com%3E"
+       TITLE="[osg-users] Android osgPlugins">jan.ciger at gmail.com
+       </A><BR>
+    <I>Wed May 27 15:40:43 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000464.html">[osg-users] Android osgPlugins
+</A></li>
+        <LI>Next message: <A HREF="000462.html">[osg-users] Android osgPlugins
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#463">[ date ]</a>
+              <a href="thread.html#463">[ thread ]</a>
+              <a href="subject.html#463">[ subject ]</a>
+              <a href="author.html#463">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+On 05/27/2015 11:15 PM, Christian Kehl wrote:
+&gt;<i> Hi Jan,
+</I>&gt;<i> 
+</I>&gt;<i> Your last post suggests we are talking about different
+</I>&gt;<i> repositories. What I did is compile osg 3.3.8 for Android using the
+</I>&gt;<i> cmake command line. Then, I use Rafa's osgAndroid from github. This
+</I>&gt;<i> package includes 4 projects: osgAndroid, osgjni, osgSimple and
+</I>&gt;<i> osgcamera. osgAndroid (at least for me) needs to be build with the
+</I>&gt;<i> NDK from the commandline (within Eclipse it doesn't work for me)
+</I>&gt;<i> using ndk-build. It shall compile a java library (.jar) using the
+</I>&gt;<i> static c++ libraries from osg 3.3.8. The osgSimple has osgAndroid
+</I>&gt;<i> as a dependency and shall hence include the jar in its apk.
+</I>
+Aha, ok, that clarifies things then. I was getting confused, because
+osgSimple isn't included with stock OSG as Android example, there was
+an example like that only for the desktop.
+
+&gt;<i> Until there, it works for me. Thing is: the apk of osgSimple does
+</I>&gt;<i> not include the static osg 3.3.8 c++ libraries, which is why my
+</I>&gt;<i> logcat tells me on execution that it cannot find the libraries ...
+</I>
+That's wrong - apk has no reason to include *static* (.a) libraries,
+those can not be loaded at runtime. Static libraries are only used for
+compilation/linking, never for execution. The apk could contain only
+dynamic libraries (.so) if it is an application with native code.
+
+&gt;<i> 
+</I>&gt;<i> What I hassle to achieve for now 2 months is just to get a working 
+</I>&gt;<i> osg Android render application (preferably from source) that can
+</I>&gt;<i> load an osg/ive file and which I can modify for rendering,
+</I>&gt;<i> interaction and data modification ...
+</I>
+Yeah, I feel your pain. Native Android development can be enormous
+pain the backside, unfortunately.
+
+&gt;<i> 
+</I>&gt;<i> With respect to my environment, I have some shell scripts that 
+</I>&gt;<i> initialize my environment (PATH- and LD_LIBRARY_PATH variable) so 
+</I>&gt;<i> that any linking command takes the right libraries for a
+</I>&gt;<i> particular architecture (web, desktop, android, etc.). Only thing
+</I>&gt;<i> is that eclipse seems to gently ignore these paths when building
+</I>&gt;<i> the apk for osgSimple - or there is a problem with the make files
+</I>&gt;<i> in general.
+</I>
+Those paths are for HOST binaries (PATH) and HOST shared libraries
+(LD_LIBRARY_PATH - Linux doesn't use PATH to look for DLLs, unlike
+Windows), not for Android. It wouldn't make sense for Eclipse/ADT to
+look there, because those libraries wouldn't work on Android anyway
+(different OS/CPU architecture). So that is normal that they are ignored
+.
+
+&gt;<i> Fact stays: the osgSimple application does not include the static
+</I>&gt;<i> osg c++ libraries it needs in order to load files, create a render 
+</I>&gt;<i> context or anything. The apk includes the osgAndroid jar file from 
+</I>&gt;<i> the relative path written in the Android.mk file. That is why 
+</I>&gt;<i> building the apk works fine, because the java functions can be 
+</I>&gt;<i> referred. The jar-file of osgAndroid compiles and links to the
+</I>&gt;<i> static c++ libraries on the computer. For one reason or another, it
+</I>&gt;<i> does not &quot;package&quot; them, so the static c++ libraries are missing
+</I>&gt;<i> when the jar is transmitted to the phone ...
+</I>
+That jar file is actually an archive (it is basically a zip file, you
+can unzip it) and it likely contains the shared libraries that
+implement the JNI &quot;shim&quot; code + any dependencies they may have.
+
+Unless you are not writing an entire Activity/app in native code then
+the native Android apps are always a mixture of Java and C/C++. They
+work in such way that you declare some methods in the Java class as
+&quot;native&quot; and then you must provide a &quot;shim&quot; that implements them in
+C/C++ using the JNI interface. That is then compiled into a shared
+library and loaded from your Java class, you will find something like
+this in the code:
+
+static {
+    System.loadLibrary(&quot;mylib&quot;);
+}
+
+The Java Virtual Machine (or rather Dalvik/ART) loads the shared
+library when this class is instantiated and makes the implementation
+of the class &quot;complete&quot;, so that the native methods can be actually
+called.
+
+The shim code can then call external C/C++ libraries when called from
+Java, such as OSG.
+
+The deal with the OSG static libraries and plugins is that they need
+to be *linked* to the shim code (which becomes a shared/dynamic
+library itself), so that there is no need to dynamically load them in
+runtime. Only the shim will be preloaded by the virtual machine. This
+is why you won't find the static .a files in the jar/apk file - they
+are never deployed to the device, only inside of the shared library.
+
+The reason for this solution was that there were problems to deploy
+the plugins in the correct path so that they are actually found at
+runtime, it was a consequence of how Android deploys applications. It
+is/was basically a workaround for Android behaviour, nothing more. I
+am not sure whether it is still necessary or not, but linking the OSG
+bits statically to the JNI shim is a safe way to avoid runtime issues.
+
+Regards,
+
+jan
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2.0.22 (GNU/Linux)
+
+iD8DBQFVZkfrn11XseNj94gRAkrXAJ471ufs6o1/C1LVwCn3HHIKnH1+YgCcDLar
+s1X+r2ygBtn9xhv4MxXDjKE=
+=cQ73
+-----END PGP SIGNATURE-----
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000464.html">[osg-users] Android osgPlugins
+</A></li>
+	<LI>Next message: <A HREF="000462.html">[osg-users] Android osgPlugins
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#463">[ date ]</a>
+              <a href="thread.html#463">[ thread ]</a>
+              <a href="subject.html#463">[ subject ]</a>
+              <a href="author.html#463">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

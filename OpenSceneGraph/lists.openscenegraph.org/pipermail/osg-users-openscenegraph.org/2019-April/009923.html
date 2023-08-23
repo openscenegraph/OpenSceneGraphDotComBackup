@@ -1,0 +1,155 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Volume Rendering and Depth Buffer
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20Rendering%20and%20Depth%20Buffer&In-Reply-To=%3C1555412795.m2f.75845%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009919.html">
+   <LINK REL="Next"  HREF="009927.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Volume Rendering and Depth Buffer</H1>
+<!--htdig_noindex-->
+    <B>Anna Osvin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20Rendering%20and%20Depth%20Buffer&In-Reply-To=%3C1555412795.m2f.75845%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Volume Rendering and Depth Buffer">osgforum at tevs.eu
+       </A><BR>
+    <I>Tue Apr 16 04:06:35 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009919.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+        <LI>Next message (by thread): <A HREF="009927.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9923">[ date ]</a>
+              <a href="thread.html#9923">[ thread ]</a>
+              <a href="subject.html#9923">[ subject ]</a>
+              <a href="author.html#9923">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>If you mean osgViewer::View::computeIntersections, then we tried it. For some reason it does not check intersections with volume model.
+
+Here is raycast intersection check code:
+
+Code:
+
+bool pickPolygonalSceneIntersection( osgViewer::View&amp; view, const osg::Vec2&amp; point2d, osg::Vec3&amp; pickedPoint )
+{
+    const osg::Camera* camera = view.getCamera();
+    if ( camera == nullptr ) {
+        Q_ASSERT_X( false, &quot;bool pickPolygonalSceneIntersection( ... )&quot;, &quot;View has no camera.&quot; );
+        return false;
+    }
+    
+    osgUtil::LineSegmentIntersector::Intersections intersections;
+
+    if ( view.computeIntersections( camera, osgUtil::Intersector::CoordinateFrame::WINDOW, point2d.x(), point2d.y(), intersections ) )
+    {
+        for (osgUtil::LineSegmentIntersector::Intersections::iterator hitr = intersections.begin();
+            hitr != intersections.end();
+            ++hitr)
+        {
+            if (hitr-&gt;nodePath.size() &gt; 4)
+            {
+                pickedPoint = hitr-&gt;getWorldIntersectPoint();
+                
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
+
+
+
+Chris Hanson wrote:
+&gt;<i> Instead of reading Z depth values, can you simply run an intersection of the click ray-vector against the model data (polygonal and volumetric) when they click to place markdown points?
+</I>&gt;<i> 
+</I>&gt;<i> On Mon, Apr 15, 2019 at 2:34 PM Anna Osvin &lt; ()&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> &gt; We are working on medical software for Dentists. We need to render CBCT and give user possibility to place some markdown points on it, for future diagnostics. Also sometimes it's required to render polygonal jaw models alongside with CBCT. As I said earlier, we nailed down the rendering and even &quot;hit detection&quot;, but there is a nasty bag with Z Buffer values of the background being incorrect, therefore user can place points onto nothing.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; ... 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Thank you!
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Cheers,
+</I>&gt;<i> &gt; Anna
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; ------------------
+</I>&gt;<i> &gt; Read this topic online here:
+</I>&gt;<i> &gt; <A HREF="../../../../forum.openscenegraph.org/viewtopic5f91.php?p=75839#75839">http://forum.openscenegraph.org/viewtopic.php?p=75839#75839</A> (<A HREF="../../../../forum.openscenegraph.org/viewtopic5f91.php?p=75839#75839">http://forum.openscenegraph.org/viewtopic.php?p=75839#75839</A>)
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt;  ()
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A> (<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>)
+</I>&gt;<i> &gt; 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> -- 
+</I>&gt;<i> Chris 'Xenon' Hanson, omo sanza lettere.  <A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A> (<A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>)
+</I>&gt;<i> Training &#8226; Consulting &#8226; Contracting
+</I>&gt;<i> 3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226; GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+</I>&gt;<i> Legal/IP &#8226;&#160;Forensics &#8226;&#160;Imaging&#160;&#8226;&#160;UAVs&#160;&#8226; GIS &#8226; GPS &#8226; osgEarth&#160;&#8226;&#160;Terrain&#160;&#8226;&#160;Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226; iPhone/iPad/iOS &#8226; Android
+</I>&gt;<i> @alphapixel (<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>) facebook.com/alphapixel (<A HREF="http://facebook.com/alphapixel">http://facebook.com/alphapixel</A>)&#160;(775) 623-PIXL [7495]
+</I>&gt;<i> 
+</I>&gt;<i>  ------------------
+</I>&gt;<i> Post generated by Mail2Forum
+</I>[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic9a6c.php?p=75845#75845">http://forum.openscenegraph.org/viewtopic.php?p=75845#75845</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009919.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+	<LI>Next message (by thread): <A HREF="009927.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9923">[ date ]</a>
+              <a href="thread.html#9923">[ thread ]</a>
+              <a href="subject.html#9923">[ subject ]</a>
+              <a href="author.html#9923">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

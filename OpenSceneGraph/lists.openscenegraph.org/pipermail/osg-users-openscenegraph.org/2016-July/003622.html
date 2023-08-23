@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Color Change Question
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Color%20Change%20Question&In-Reply-To=%3C704bb3a7-5d63-ff27-e140-eb4835e63c4b%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279844.html">
+   <LINK REL="Next"  HREF="279847.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Color Change Question</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Color%20Change%20Question&In-Reply-To=%3C704bb3a7-5d63-ff27-e140-eb4835e63c4b%40gmx.de%3E"
+       TITLE="[osg-users] Color Change Question">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Thu Jul  7 00:30:20 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279844.html">[osg-users] Color Change Question
+</A></li>
+        <LI>Next message: <A HREF="279847.html">[osg-users] Why is setTexCoordArray(0,	texcoords) needed if array is modified in-place
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3622">[ date ]</a>
+              <a href="thread.html#3622">[ thread ]</a>
+              <a href="subject.html#3622">[ subject ]</a>
+              <a href="author.html#3622">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Am 07.07.2016 um 00:05 schrieb Daniel Lecklider:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> At my work we use OSG for simulation purposes and I am looking to display a model with each of its individual parts/components displayed in a different color.
+</I>Colors can mean a lot of different things. It can be vertex colors, 
+material colors or textures.
+So basically you need to remove/replace all of them, depending on what 
+you want to achieve.
+&gt;<i>
+</I>&gt;<i>   I am new to OSG so I still dont understand everything yet. But I know I need to remove all of the skins and apply a new color. A co-worker already created a way to give the entire model a color but I need to do it for each sub component.
+</I>A good exampe that you shouldn't always rely on co-worker follows ;-)
+Use the visitor pattern to traverse the scenegraph. There you can 
+override the various apply virtual funtions to change the nodes you want 
+to modify. If you want to remove the textures you should inspect the 
+statesets of the nodes (overwriting apply of osg::Node is sufficient) 
+and remove the texture based attributes. Another way is to set a uniform 
+with the given color to the root of your parts that you want to be 
+colored and and an shader program that simply ignores all other 
+attributes but displays your choosen color instead.
+The OSG has a lot of examples, so you should take a look for 
+osg::NodeVisitor, osg::Material (and if you want to go with the shader, 
+potentially osg::Uniform, osg::Program).
+If you need in-depth support, you can also give me an example model with 
+an description and I might give some in-depth advice.
+&gt;<i>
+</I>&gt;<i> Here is the function my co-worker has used to remove the textures and add the new material.
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void removeTextures(osg::Node* x)
+</I>&gt;<i> {
+</I>&gt;<i>
+</I>&gt;<i> if(x != nullptr)
+</I>&gt;<i>       {
+</I>&gt;<i>            auto state = x-&gt;getOrCreateStateSet();
+</I>&gt;<i>            state-&gt;setAttributeAndModes(this-&gt;material, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+</I>&gt;<i>            state-&gt;setTextureMode(0, GL_TEXTURE_2D, osg::StateAttribute::OVERRIDE | osg::StateAttribute::OFF);
+</I>&gt;<i>            auto group = x-&gt;asGroup();
+</I>&gt;<i>            
+</I>&gt;<i>            if(group != nullptr)
+</I>&gt;<i>            {
+</I>&gt;<i>                 auto numChildren = group-&gt;getNumChildren();
+</I>&gt;<i>                 for(decltype(numChildren) i = 0; i &lt; numChildren; i++)
+</I>&gt;<i>                 {
+</I>&gt;<i>                      this-&gt;removeTextures(group-&gt;getChild(i));
+</I>&gt;<i>                 }
+</I>&gt;<i>            }
+</I>&gt;<i>       }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> How would I go about changing the material of each geode/geometry/drawable and what are the differences between these three classes?
+</I>Geometry is simply what it says: A bunch of vertices with potentially 
+normals etc. A drawable is the base-class for the scenegraph's leafs. 
+Geode is the &quot;old&quot; way of having a group of drawables as a leaf of the 
+graph.
+You should really read a book (OSG Cookbook e.g.) or take a look into 
+the examples.
+
+
+Cheers
+Sebastian
+&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Daniel
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicff3a.php?p=68032#68032">http://forum.openscenegraph.org/viewtopic.php?p=68032#68032</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279844.html">[osg-users] Color Change Question
+</A></li>
+	<LI>Next message: <A HREF="279847.html">[osg-users] Why is setTexCoordArray(0,	texcoords) needed if array is modified in-place
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3622">[ date ]</a>
+              <a href="thread.html#3622">[ thread ]</a>
+              <a href="subject.html#3622">[ subject ]</a>
+              <a href="author.html#3622">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

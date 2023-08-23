@@ -1,0 +1,180 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText on Android
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20on%20Android&In-Reply-To=%3CCAOJFPjEuwCRgCd0vhqxFL_zUMPfg2MXbf5wwzFDCBU%2BUWyGnUg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001789.html">
+   <LINK REL="Next"  HREF="278014.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText on Android</H1>
+<!--htdig_noindex-->
+    <B>Akhtar Shamim</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20on%20Android&In-Reply-To=%3CCAOJFPjEuwCRgCd0vhqxFL_zUMPfg2MXbf5wwzFDCBU%2BUWyGnUg%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgText on Android">shamimz at gmail.com
+       </A><BR>
+    <I>Fri Oct 23 22:18:16 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001789.html">[osg-users] Many lights in OSG - solution
+</A></li>
+        <LI>Next message: <A HREF="278014.html">[osg-users] Culling with custom clip planes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278013">[ date ]</a>
+              <a href="thread.html#278013">[ thread ]</a>
+              <a href="subject.html#278013">[ subject ]</a>
+              <a href="author.html#278013">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Dear All
+
+I am trying to display a simple text on Android device using osgText. No
+matter what I  do I can't get to display the text out on the screen.
+
+I am using GLES2 build.
+
+Attached is the code. I have debugged and verified that the font is loaded.
+The text would just not appear.
+
+
+In the following function i create some 2D text and add that to the
+scenegraph. text &lt;- _overlayGeode &lt;- _overlayCamera &lt;- _rootNode.
+
+
+namespace
+{
+
+static const char gTextVertexShader[] =
+&quot;varying vec4 VertexColor; \n&quot;
+&quot;varying mediump vec2 TexCoord0; \n&quot;
+&quot;uniform vec4 MaterialColor; \n&quot;
+&quot;void main() \n&quot;
+&quot;{ \n&quot;
+&quot;gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex; \n&quot;
+&quot;VertexColor = MaterialColor; \n&quot;
+&quot;TexCoord0 = gl_MultiTexCoord0.xy; \n&quot;
+&quot;} \n&quot;;
+
+static const char gTextFragmentShader[] =
+&quot;varying vec4 VertexColor; \n&quot;
+&quot;varying mediump vec2 TexCoord0; \n&quot;
+&quot;uniform sampler2D GlyphTexture; \n&quot;
+    &quot;void main() {                             \n&quot;
+    &quot; gl_FragColor = texture2D(GlyphTexture,TexCoord0); \n&quot;
+    &quot;}                                         \n&quot;;
+} // end of unnamed namespace
+
+
+void TerrainApp::initTextOverlays()
+{
+    _overlayCamera = new osg::Camera;
+    _rootNode-&gt;addChild(_overlayCamera.get());
+
+    _overlayCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    _overlayCamera-&gt;setProjectionMatrixAsOrtho2D(
+    0, vfui::Global::instance()-&gt;getTrueWidth(),
+    0, vfui::Global::instance()-&gt;getTrueHeight()
+);
+
+    _overlayCamera-&gt;setViewMatrix(osg::Matrix::identity());
+    _overlayCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+
+_overlayCamera-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+    _overlayCamera-&gt;setCullingActive(false);
+    _overlayCamera-&gt;getOrCreateStateSet()-&gt;setAttribute(new
+osg::Depth(osg::Depth::LESS, 0.0f, .0001f));
+
+    _overlayGeode = new osg::Geode;
+    _overlayCamera-&gt;addChild(_overlayGeode.get());
+
+    osg::Shader * vshader = new osg::Shader(osg::Shader::VERTEX,
+gTextVertexShader );
+    osg::Shader * fshader = new osg::Shader(osg::Shader::FRAGMENT,
+gTextFragmentShader );
+
+    osg::Program * prog = new osg::Program;
+    prog-&gt;addShader ( vshader );
+    prog-&gt;addShader ( fshader );
+
+    osg::ref_ptr&lt;osg::Uniform&gt; textColor = new
+osg::Uniform(&quot;MaterialColor&quot;,osg::Vec4(0,1,1,1));
+    osg::ref_ptr&lt;osg::Uniform&gt; textTexture = new
+osg::Uniform(&quot;GlyphTexture&quot;,0);
+
+    //set a sample text overlay.
+osg::ref_ptr&lt;osgText::Text&gt; text =
+TerrainApp::s_createText(osgText::String(&quot;Testing&quot;), _datapath);
+
+    osg::StateSet *ss = text-&gt;getOrCreateStateSet();
+    ss-&gt;addUniform(textColor);
+    ss-&gt;addUniform(textTexture);
+    ss-&gt;setAttributeAndModes(prog, osg::StateAttribute::ON);
+
+_overlayGeode-&gt;addDrawable(text.get());
+}
+
+osgText::Text* TerrainApp::s_createText(const osgText::String&amp; str, const
+std::string&amp; datapath)
+{
+// text geometry
+std::string textStr(&quot;Hello World&quot;); // replace this with str.
+osgText::Text* myText = new osgText::Text;
+
+        std::string font_filename = datapath + &quot;/fonts/androidnation.ttf&quot;;
+        osgText::Font* font = osgText::readFontFile(font_filename);
+
+myText-&gt;setFont(font);
+myText-&gt;setCharacterSize(100.0f);
+myText-&gt;setText(textStr);
+
+myText-&gt;setPosition(osg::Vec3(500.0f, 500.0f, 0.0f));
+return myText;
+
+}
+
+Any thing that I have done that is not correct? I am cracking my head. I
+ found a couple of  examples / tutorials of osgText on Android using GLES2.
+All of them dont seem to work. By right setting up text should be very
+simple. Any help or advice will be greatly appreciated.
+
+regards
+Shamim
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151024/0bbc689d/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151024/0bbc689d/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001789.html">[osg-users] Many lights in OSG - solution
+</A></li>
+	<LI>Next message: <A HREF="278014.html">[osg-users] Culling with custom clip planes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278013">[ date ]</a>
+              <a href="thread.html#278013">[ thread ]</a>
+              <a href="subject.html#278013">[ subject ]</a>
+              <a href="author.html#278013">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

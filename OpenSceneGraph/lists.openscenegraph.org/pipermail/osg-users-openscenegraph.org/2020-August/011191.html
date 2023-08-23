@@ -1,0 +1,173 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] FFmpegImageStream thread safety
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20FFmpegImageStream%20thread%20safety&In-Reply-To=%3Cmailman.8456.1597159267.3539.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011190.html">
+   <LINK REL="Next"  HREF="011192.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] FFmpegImageStream thread safety</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20FFmpegImageStream%20thread%20safety&In-Reply-To=%3Cmailman.8456.1597159267.3539.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] FFmpegImageStream thread safety">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Tue Aug 11 08:21:01 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011190.html">[osg-users] FFmpegImageStream thread safety
+</A></li>
+        <LI>Next message (by thread): <A HREF="011192.html">[osg-users] FFmpegImageStream thread safety
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11191">[ date ]</a>
+              <a href="thread.html#11191">[ thread ]</a>
+              <a href="subject.html#11191">[ subject ]</a>
+              <a href="author.html#11191">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+Sorry, I don't know off hand.&#160; I didn't work much on the code myself.
+
+Rob
+
+On 8/10/20 11:38 PM, Ben Meijering wrote:
+&gt;<i> Hi Rob,
+</I>&gt;<i>
+</I>&gt;<i> Thanks for the link.
+</I>&gt;<i> In this version I also see that m_pImgStream-&gt;setImage is invoked 
+</I>&gt;<i> in&#160;FFmpegRenderThread::run(), another thread.
+</I>&gt;<i> 2015 is a long time ago, but do you perhaps remember why this is safe ?
+</I>&gt;<i>
+</I>&gt;<i> Thanks&#160;in advance.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i>
+</I>&gt;<i> Ben
+</I>&gt;<i>
+</I>&gt;<i> Op ma 10 aug. 2020 om 23:03 schreef Rob Spearman 
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rob at digitaliseducation.com</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rob at digitaliseducation.com</A>&gt;&gt;:
+</I>&gt;<i>
+</I>&gt;<i>     We made changes back in 2015 to fix threading issues with the osg
+</I>&gt;<i>     ffmpeg plugin.&#160; I don't think these changes ever made it into OSG.
+</I>&gt;<i>
+</I>&gt;<i>     Source repo: <A HREF="https://bitbucket.org/digitalis/osg-ffmpeg-plugin/">https://bitbucket.org/digitalis/osg-ffmpeg-plugin/</A>
+</I>&gt;<i>
+</I>&gt;<i>     On Monday, August 10, 2020 at 3:46:32 AM UTC-7 <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">bjs.me... at gmail.com</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">bjs.me... at gmail.com</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;<i>         Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i>         Thanks for your response.
+</I>&gt;<i>
+</I>&gt;<i>         If FFmpegImageStream::publishNewFrame is invoked from a
+</I>&gt;<i>         separate thread.
+</I>&gt;<i>         Is it then somehow guaranteed that (for example)
+</I>&gt;<i>         Texture2D::apply is not using/reading from the image object,
+</I>&gt;<i>         while FFmpegImageStream::publishNewFrame is modifying it ?
+</I>&gt;<i>
+</I>&gt;<i>         Cheers,
+</I>&gt;<i>
+</I>&gt;<i>         Ben
+</I>&gt;<i>
+</I>&gt;<i>         Op vr 31 jul. 2020 om 21:24 schreef Robert Osfield
+</I>&gt;<i>         &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.... at gmail.com</A>&gt;:
+</I>&gt;<i>
+</I>&gt;<i>             Hi Ben,
+</I>&gt;<i>
+</I>&gt;<i>             I'm away from my dev computer so just commenting off the
+</I>&gt;<i>             top of my. FFmpegImageStream should be double buffered so
+</I>&gt;<i>             that the ffmpeg thread writing to the image will be
+</I>&gt;<i>             writing to one part of the data, while the other half is
+</I>&gt;<i>             available to be read by the graphics thread.&#160; This should
+</I>&gt;<i>             avoid threading issues.
+</I>&gt;<i>
+</I>&gt;<i>             The threading used by the ffmpeg plugin is separate from
+</I>&gt;<i>             the viewer threading so settings related to the viewer
+</I>&gt;<i>             won't be important, nor will general settings of the scene
+</I>&gt;<i>             graph.
+</I>&gt;<i>
+</I>&gt;<i>             You should be able to just add the ffmpeg genearted
+</I>&gt;<i>             imagestream to a texture, start the steam going and then
+</I>&gt;<i>             largely forget about it.
+</I>&gt;<i>
+</I>&gt;<i>             Robert.
+</I>&gt;<i>
+</I>&gt;<i>             On Friday, 31 July 2020 at 20:15:45 UTC+1
+</I>&gt;<i>             <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">bjs.me... at gmail.com</A> wrote:
+</I>&gt;<i>
+</I>&gt;<i>                 Hi,
+</I>&gt;<i>
+</I>&gt;<i>                 I was just looking at FFmpegImageStream, I am not very
+</I>&gt;<i>                 familiar with this code, but I have some questions.
+</I>&gt;<i>
+</I>&gt;<i>                 It is not immediately clear to me how
+</I>&gt;<i>                 FFmpegImageStream::publishNewFrame is thread safe.
+</I>&gt;<i>                 It seems like the image data is set (setImage) from
+</I>&gt;<i>                 the video decoder thread.
+</I>&gt;<i>                 The image then uses a pointer to one of the buffers of
+</I>&gt;<i>                 the video decoder (of which the contents might also
+</I>&gt;<i>                 change ?).
+</I>&gt;<i>
+</I>&gt;<i>                 FFmpegImageStream also doesn't seem to override
+</I>&gt;<i>                 requiresUpdateCall, which I believe will result in the
+</I>&gt;<i>                 texture not being dynamic (Texture2D::setImage).
+</I>&gt;<i>                 Which could be used, for example in
+</I>&gt;<i>                 StateSet::computeDataVariance(), to determine whether
+</I>&gt;<i>                 the StateSet should be dynamic (which is needed for
+</I>&gt;<i>                 multithreaded rendering).
+</I>&gt;<i>
+</I>&gt;<i>                 If anyone could shed more light on this subject, it
+</I>&gt;<i>                 would be very much appreciated.
+</I>&gt;<i>
+</I>&gt;<i>                 Thank you.
+</I>&gt;<i>
+</I>&gt;<i>                 Cheers,
+</I>&gt;<i>
+</I>&gt;<i>                 Ben
+</I>&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/6e750bea-6962-0f6c-b161-7e98cbd5c0ce%40digitaliseducation.com.">https://groups.google.com/d/msgid/osg-users/6e750bea-6962-0f6c-b161-7e98cbd5c0ce%40digitaliseducation.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200811/66205e01/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200811/66205e01/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011190.html">[osg-users] FFmpegImageStream thread safety
+</A></li>
+	<LI>Next message (by thread): <A HREF="011192.html">[osg-users] FFmpegImageStream thread safety
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11191">[ date ]</a>
+              <a href="thread.html#11191">[ thread ]</a>
+              <a href="subject.html#11191">[ subject ]</a>
+              <a href="author.html#11191">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

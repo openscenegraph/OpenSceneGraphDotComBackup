@@ -1,0 +1,233 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] EXTERNAL: Re: EXTERNAL: Re: EXTERNAL: Re: Help on multitexturing..
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20EXTERNAL%3A%20Re%3A%20EXTERNAL%3A%20Re%3A%20EXTERNAL%3A%20Re%3A%20Help%20on%0A%20multitexturing..&In-Reply-To=%3C2438722196A70147905EB5B327A5159F2DBB3A%40HDXDSP55.us.lmco.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008034.html">
+   <LINK REL="Next"  HREF="008037.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] EXTERNAL: Re: EXTERNAL: Re: EXTERNAL: Re: Help on multitexturing..</H1>
+<!--htdig_noindex-->
+    <B>Rowley, Marlin R</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20EXTERNAL%3A%20Re%3A%20EXTERNAL%3A%20Re%3A%20EXTERNAL%3A%20Re%3A%20Help%20on%0A%20multitexturing..&In-Reply-To=%3C2438722196A70147905EB5B327A5159F2DBB3A%40HDXDSP55.us.lmco.com%3E"
+       TITLE="[osg-users] EXTERNAL: Re: EXTERNAL: Re: EXTERNAL: Re: Help on multitexturing..">marlin.r.rowley at lmco.com
+       </A><BR>
+    <I>Thu Apr 19 13:54:20 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008034.html">[osg-users] EXTERNAL: Re: EXTERNAL: Re: Help on multitexturing..
+</A></li>
+        <LI>Next message (by thread): <A HREF="008037.html">[osg-users] EXTERNAL: Re: EXTERNAL: Re: EXTERNAL: Re: EXTERNAL: Re: Help on multitexturing..
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8036">[ date ]</a>
+              <a href="thread.html#8036">[ thread ]</a>
+              <a href="subject.html#8036">[ subject ]</a>
+              <a href="author.html#8036">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Robert,
+
+I&#8217;ve investigated further and believe I&#8217;ve found the problem but not sure how to fix it.
+
+I have a constructor for a layered texture class where I pass it an image as the base layer.  I set the texture mode and create a texture in this constructor for the base class.  I also assign BASE_TEXTURE_UNIT to the sampler2D as an id to bind the texture to it for the shader (thanks for this..).
+
+I run a function called updateShaders() (which I&#8217;ve sent snippets of code for) at the bottom of my constructor class.  If I access this base sampler texture in the shader, I get what I expect on the geometry.
+
+Now, when I call a function to create a layer for this layered class (i.e. createLayer(some image, weight, etc..)) from the application, I create a texture from this function and I run the updateShaders() function again binding the BASE_TEXTURE_UNIT + 1 to my second sampler node and trying to bind it to the texture I just created.  THIS is what&#8217;s NOT working properly.  When I run GPUPerf debugger, I see that the texture unit is assigned the correct #2, but the BoundID isn&#8217;t equal to the unit number.  So when I sample from the texture in the shader, it&#8217;s just black because it can&#8217;t see this new binding (assume no blending in the shader just an overwrite).
+
+To test this, I reconfigured my constructor to take 2 images instead of 1 image for the base and I forego the call to createLayer() in my application.  Sure enough, the binding is properly set.  Am I missing some kind of callback that should force a rebind when I call updateShaders()?
+
+-M
+
+----------------------------------------
+Marlin Rowley
+Software Engineer, Staff
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>]
+Missiles and Fire Control
+972-603-1931 (office)
+214-926-0622 (mobile)
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Rowley, Marlin R (US)
+Sent: Thursday, April 19, 2018 3:25 PM
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+Subject: EXTERNAL: Re: [osg-users] EXTERNAL: Re: EXTERNAL: Re: Help on multitexturing..
+
+Robert,
+
+Changing the sampler_2d to an (int) doesn&#8217;t seem to fix the problem.  I still get a black texture in the scene.
+
+Here is my updated code:
+
+mGroupState-&gt;getOrCreateUniform(&quot;MySecondSampler&quot;, osg::Uniform::SAMPLER_2D)-&gt;set(BASE_TEXTURE_UNIT + 1);
+            mGroupState-&gt;setTextureAttributeAndModes(BASE_TEXTURE_UNIT + 1, mSecondColor, osg::StateAttribute::OVERRIDE);
+
+I want to write this second texture to unit 2.  (base_texture_unit = 1 + 1).  I still get a black object.
+
+----------------------------------------
+Marlin Rowley
+Software Engineer, Staff
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>]
+Missiles and Fire Control
+972-603-1931 (office)
+214-926-0622 (mobile)
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Rowley, Marlin R (US)
+Sent: Thursday, April 19, 2018 2:30 PM
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;&gt;
+Subject: EXTERNAL: Re: [osg-users] EXTERNAL: Re: Help on multitexturing..
+
+I thought the sampler value was a pointer to a texture?
+
+I set the texture unit to 1 because we&#8217;ll need the base texture unit 0 later on.  My goal is to turn on up to 10 texture units and blend them all together.
+
+To be more clear, he is some more code:
+
+mGroupState = mBoundGeometry-&gt;getOrCreateStateSet();
+      mGroupState-&gt;getOrCreateUniform(&quot;BaseTexSampler&quot;, osg::Uniform::SAMPLER_2D)-&gt;set(mBaseColor.get());
+      mGroupState-&gt;getOrCreateUniform(&quot;BaseWeight&quot;, osg::Uniform::FLOAT)-&gt;set(mBaseWeight);
+      mGroupState-&gt;setTextureAttributeAndModes(BASE_TEXTURE_UNIT, mBaseColor, osg::StateAttribute::ON);
+
+This sets the base texture unit 1 to be bound to the mBaseColor (which is a osg::ref_ptr&lt;osg::Texture2D&gt;) created before the function call.
+
+Then, I do this right afterwards:
+
+if (mNumLayers)
+      {
+            int indx = 0;
+      osg::ref_ptr&lt;osg::Texture2D&gt; tex = mTextureMap[indx];// iter-&gt;second;
+            mGroupState-&gt;getOrCreateUniform(&quot;TexLayerSampler0&quot;, osg::Uniform::SAMPLER_2D)-&gt;set(tex.get());
+            mGroupState-&gt;setTextureAttributeAndModes(BASE_TEXTURE_UNIT + 1, tex, osg::StateAttribute::OVERRIDE);
+      }
+
+Here I get the texture from a std::map.  And then I set the sampler to be bound to the texture.  I then bind the texture unit 2 to the texture.
+
+-M
+
+----------------------------------------
+Marlin Rowley
+Software Engineer, Staff
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>]
+Missiles and Fire Control
+972-603-1931 (office)
+214-926-0622 (mobile)
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Robert Osfield
+Sent: Thursday, April 19, 2018 2:05 PM
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;&gt;
+Subject: EXTERNAL: Re: [osg-users] Help on multitexturing..
+
+Hi Marlin,
+The sampler value should be an int, so you shouldn't pass a texture pointer to your setting of the TexLayerSampler0 second sampler.  Perhaps this was just a copy and paste error.
+As a general note, normally one would assign a base texture on texture unit 0 rather than 1.
+
+Robert.
+
+
+On 19 April 2018 at 19:06, Rowley, Marlin R &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;&gt; wrote:
+Hello,
+
+I&#8217;ve been wracking my brain all day on trying to figure out how to do this with no clear examples found online.
+
+I have this set of calls in my C++:
+
+mGroupState = mBoundGeometry-&gt;getOrCreateStateSet();
+      mGroupState-&gt;getOrCreateUniform(&quot;BaseTexSampler&quot;, osg::Uniform::SAMPLER_2D)-&gt;set(mBaseColor);
+      mGroupState-&gt;getOrCreateUniform(&quot;BaseWeight&quot;, osg::Uniform::FLOAT)-&gt;set(mBaseWeight);
+      mGroupState-&gt;setTextureAttributeAndModes(BASE_TEXTURE_UNIT, mBaseColor, osg::StateAttribute::ON);
+
+I&#8217;ve bound this base texture to texture unit (BASE_TEXTURE_UNIT = 1).
+
+Later in the code, I have this in another function if I create another layer with another texture:
+
+
+mGroupState-&gt;getOrCreateUniform(&quot;TexLayerSampler0&quot;, osg::Uniform::SAMPLER_2D)-&gt;set(tex);
+
+            mGroupState-&gt;setTextureAttribute(BASE_TEXTURE_UNIT + 1, tex, osg::StateAttribute::ON);
+
+Where I&#8217;ve created a second texture and want it to reside in texture unit 2.
+
+However, in my shader code when indexing the TexLayerSampler0, I only get base texture.
+
+finalColor = texture(TexLayerSampler0, LayeredTexCoords[0].st);
+
+Which is wrong.  I&#8217;m stil trying to figure out OpenGL and how it works along with OSG so sorry for the inexperience.
+
+-M
+
+----------------------------------------
+Marlin Rowley
+Software Engineer, Staff
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>]
+Missiles and Fire Control
+972-603-1931 (office)
+214-926-0622 (mobile)
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180419/97a22bc3/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180419/97a22bc3/attachment-0001.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: image001.jpg
+Type: image/jpeg
+Size: 3114 bytes
+Desc: image001.jpg
+URL: &lt;<A HREF="../attachments/20180419/97a22bc3/attachment-0001.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180419/97a22bc3/attachment-0001.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008034.html">[osg-users] EXTERNAL: Re: EXTERNAL: Re: Help on multitexturing..
+</A></li>
+	<LI>Next message (by thread): <A HREF="008037.html">[osg-users] EXTERNAL: Re: EXTERNAL: Re: EXTERNAL: Re: EXTERNAL: Re: Help on multitexturing..
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8036">[ date ]</a>
+              <a href="thread.html#8036">[ thread ]</a>
+              <a href="subject.html#8036">[ subject ]</a>
+              <a href="author.html#8036">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

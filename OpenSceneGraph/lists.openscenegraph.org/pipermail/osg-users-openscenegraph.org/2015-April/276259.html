@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users]  a question on extension functions convention
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20a%20question%20on%20extension%20functions%20convention&In-Reply-To=%3CCAFVQEu1MQF9tjy-%3D0VRFkZ0FqVToXZhB-wN681L9Aua9E-CB%3DQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="276258.html">
+   <LINK REL="Next"  HREF="000039.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users]  a question on extension functions convention</H1>
+<!--htdig_noindex-->
+    <B>Sergey Kurdakov</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20a%20question%20on%20extension%20functions%20convention&In-Reply-To=%3CCAFVQEu1MQF9tjy-%3D0VRFkZ0FqVToXZhB-wN681L9Aua9E-CB%3DQ%40mail.gmail.com%3E"
+       TITLE="[osg-users]  a question on extension functions convention">sergey.forum at gmail.com
+       </A><BR>
+    <I>Fri Apr 10 08:25:52 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="276258.html">[osg-users] [forum] Questions for my university project &amp;	dissertation
+</A></li>
+        <LI>Next message: <A HREF="000039.html">[osg-users] a question on extension functions convention
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276259">[ date ]</a>
+              <a href="thread.html#276259">[ thread ]</a>
+              <a href="subject.html#276259">[ subject ]</a>
+              <a href="author.html#276259">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+you might notice, that I try to make a port of osg to emscripten
+
+Overall osg 'for  the web'  works, but I found several issues with
+emscripten which require me to keep
+quite a different copy of osg
+
+The main issue are  extensions.
+
+The problem arises from how emscripten translates OpenGL to WebGL calls.
+
+it takes
+
+gl* functions in C code and directly substitutes them  with webgl gl*
+functions.
+
+Now it is clear what the problem is : that emscripten compiler does not
+understand extension functions which are set in the way
+
+setGLExtensionFuncPtr(_gl*
+
+let's take an example:
+
+void Texture2DArray::Extensions::glTexSubImage3D( GLenum target, GLint
+level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei
+height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels)
+const
+{
+    if (_glTexSubImage3D)
+    {
+        _glTexSubImage3D( target, level, xoffset, yoffset, zoffset, width,
+height, depth, format, type, pixels);
+    }
+    else
+    {
+        OSG_WARN&lt;&lt;&quot;Error: glTexSubImage3D not supported by OpenGL
+driver&quot;&lt;&lt;std::endl;
+    }
+}
+
+_glTexSubImage3D function won't be translated ,
+
+There are different ways to keep emscripten happy and use that
+glTexSubImage3D and I have forced it.
+But the ways how i did so far - looks patchy and inconsistent ( lots of
+'#ifdef's where calls to extensions occur )
+
+And I would like to have an osg port which is minimally different from
+stock osg ( just ifdef ed threading functions - there are no threads in
+browser and there will not be any similar threading functions to one used
+in osg for foreseeable future ).
+
+the  solution which will satisfy emscripten with least invasive way seems
+to have
+
+Extensions::_gl
+
+functions everywhere and also
+
+setGLExtensionFuncPtr(gl*  //no _ before gl
+
+approach to set extensions.
+
+and for setGLExtensionFuncPtr - for emscripten there will be a special
+function to deal with what gl functions WebGL has and what not.
+
+of cause I understand - such a change might break quite a bit of user code
+in case I develop a patch for osg which follows  such convention
+
+I have several other ways to deal - to write a special emscripten module
+which will be clever enough to use both gl and _gl functions during
+translation phase, but then - it is hardly possible that it will be
+accepted to emscripten as it will be needed only for my port and any user
+will need to hack emscripten to compile osg for web.
+
+so my question is - how feasible is to ask for _gl gl convention swap for
+extention _gl* functions and their Extensions::gl* wrappers?
+
+Best regards
+Sergey
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150410/44338b70/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150410/44338b70/attachment-0001.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="276258.html">[osg-users] [forum] Questions for my university project &amp;	dissertation
+</A></li>
+	<LI>Next message: <A HREF="000039.html">[osg-users] a question on extension functions convention
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276259">[ date ]</a>
+              <a href="thread.html#276259">[ thread ]</a>
+              <a href="subject.html#276259">[ subject ]</a>
+              <a href="author.html#276259">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

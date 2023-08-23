@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OpenGL Error 'invalid value' when using osg::LineWidth
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenGL%20Error%20%27invalid%20value%27%20when%20using%20osg%3A%3ALineWidth&In-Reply-To=%3C1561594202.m2f.76334%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010153.html">
+   <LINK REL="Next"  HREF="010155.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OpenGL Error 'invalid value' when using osg::LineWidth</H1>
+<!--htdig_noindex-->
+    <B>Brett Sackstein</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenGL%20Error%20%27invalid%20value%27%20when%20using%20osg%3A%3ALineWidth&In-Reply-To=%3C1561594202.m2f.76334%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] OpenGL Error 'invalid value' when using osg::LineWidth">basackstein at hotmail.com
+       </A><BR>
+    <I>Wed Jun 26 17:10:02 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010153.html">[osg-users] Going for 3.6.4 stable release in July
+</A></li>
+        <LI>Next message (by thread): <A HREF="010155.html">[osg-users] OpenGL Error 'invalid value' when using osg::LineWidth
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10154">[ date ]</a>
+              <a href="thread.html#10154">[ thread ]</a>
+              <a href="subject.html#10154">[ subject ]</a>
+              <a href="author.html#10154">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello, I'm using osg and osgEarth to create a program. I try to draw a path that follows another node in the scene such that when I set its position, I add an additional GL_POINT vertex and a pair of LINE_STRIP vertices for a new anchor point for two geodes. However, I'm constantly being spammed in my application output with the invalid value error. 
+
+I have been pulling my hair out because I spent hours figuring out which geometry was causing it. This is the format of my code upon construction:
+
+
+Code:
+PathNode::PathNode(IPathObject *pathObject, osgEarth::MapNode* mapNode) : CommonMapNode(pathObject, mapNode), osg::Group(), m_crossedDateLine(false), m_offset(0.0){
+
+m_lineColorArray = new osg::Vec4Array;
+m_glPointColorArray = new osg::Vec4Array;
+
+m_lineVertexArray = new osg::Vec3Array;
+m_glPointVertexArray = new osg::Vec3Array;
+
+m_lineGeom = new osg::Geometry;
+m_lineGeom-&gt;setUseDisplayList(false);
+m_lineGeom-&gt;setUseVertexArrayObject(true);
+m_lineGeom-&gt;setUseVertexBufferObjects(true);
+m_lineGeom-&gt;setDataVariance(osg::Object::DataVariance::DYNAMIC);
+
+m_glPointGeom = new osg::Geometry;
+m_glPointGeom-&gt;setUseDisplayList(false);
+m_glPointGeom-&gt;setUseVertexArrayObject(true);
+m_glPointGeom-&gt;setUseVertexBufferObjects(true);
+m_glPointGeom-&gt;setDataVariance(osg::Object::DataVariance::DYNAMIC);
+
+m_lineStripGeode = new osg::Geode;
+m_glPointGeode = new osg::Geode;
+
+m_lineStripGeode-&gt;getOrCreateStateSet()-&gt;setRenderBinDetails(0, &quot;RenderBin&quot;, osg::StateSet::OVERRIDE_PROTECTED_RENDERBIN_DETAILS);
+m_glPointGeode-&gt;getOrCreateStateSet()-&gt;setRenderBinDetails(0, &quot;RenderBin&quot;, osg::StateSet::OVERRIDE_PROTECTED_RENDERBIN_DETAILS);
+
+m_lineStripGeode-&gt;getOrCreateStateSet()-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+m_glPointGeode-&gt;getOrCreateStateSet()-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+
+//Line Geometry
+m_lineGeom-&gt;setVertexArray(m_lineVertexArray);
+m_lineGeom-&gt;setDataVariance(osg::Object::DataVariance::DYNAMIC);
+m_lineDrawArray = new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP, 0, m_lineVertexArray-&gt;size());
+m_lineDrawArray-&gt;setDataVariance(osg::Object::DataVariance::DYNAMIC);
+m_lineGeom-&gt;addPrimitiveSet(m_lineDrawArray);
+m_lineWidth = new osg::LineWidth(getHandle()-&gt;getLineWidth());
+m_lineGeom-&gt;getOrCreateStateSet()-&gt;setMode(GL_LINE_SMOOTH, osg::StateAttribute::ON);
+m_lineGeom-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(m_lineWidth, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+m_lineGeom-&gt;setColorArray(m_lineColorArray, osg::Array::BIND_PER_VERTEX);
+
+//Line Geode
+m_lineStripGeode-&gt;addDrawable(m_lineGeom);
+m_lineStripGeode-&gt;setDataVariance(osg::Object::DataVariance::DYNAMIC);
+m_lineStripGeode-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OVERRIDE | osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED);
+m_lineStripGeode-&gt;getOrCreateStateSet()-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+m_lineStripGeode-&gt;getOrCreateStateSet()-&gt;setMode(GL_LINE_SMOOTH, osg::StateAttribute::ON);
+m_lineStripGeode-&gt;addCullCallback(new osgEarth::HorizonCullCallback);
+
+//GL Point Geometry
+m_glPointGeom-&gt;setColorArray(m_glPointColorArray, osg::Array::BIND_OVERALL);
+m_glPointGeom-&gt;setVertexArray(m_glPointVertexArray);
+
+m_glPointsDrawArray = new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, m_glPointVertexArray-&gt;size());
+m_glPointGeom-&gt;addPrimitiveSet(m_glPointsDrawArray);
+m_glPointGeom-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OVERRIDE | osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED);
+osg::ref_ptr&lt;osg::Point&gt; pointAttributes = new osg::Point(5);
+m_glPointGeom-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(pointAttributes, osg::StateAttribute::ON);
+m_glPointGeom-&gt;setColorArray(m_glPointColorArray, osg::Array::BIND_PER_VERTEX);
+
+//GL Point Geode
+m_glPointGeode-&gt;addDrawable(m_glPointGeom);
+
+addChild(m_lineStripGeode);
+addChild(m_glPointGeode);
+}
+
+
+
+
+It turns out the lines:
+
+
+Code:
+m_lineWidth = new osg::LineWidth(getHandle()-&gt;getLineWidth());
+m_lineGeom-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(m_lineWidth, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+
+
+
+
+Is what is causing this error to spam my output. Nothing visually seems incorrect. All colors and points are correct. Nothing is blinking or acting strange. What I don't understand with this &quot;path&quot; that I've created is that I actually have a &quot;line&quot; equivalent class that literally does the same thing, but with only 2 points and not 1 to n points and doesn't use GL_POINT at all for the end points. 
+
+I figured out if I just don't add the osg::LineWidth to the m_lineGeom variable, then the error disappears, but I need the ability to set the line's width. Can anybody explain what may be causing this to print even though nothing about my lines look ill-formed? Thanks for any help.
+
+- Blanky
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic688e.php?p=76334#76334">http://forum.openscenegraph.org/viewtopic.php?p=76334#76334</A>
+
+
+
+
+
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010153.html">[osg-users] Going for 3.6.4 stable release in July
+</A></li>
+	<LI>Next message (by thread): <A HREF="010155.html">[osg-users] OpenGL Error 'invalid value' when using osg::LineWidth
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10154">[ date ]</a>
+              <a href="thread.html#10154">[ thread ]</a>
+              <a href="subject.html#10154">[ subject ]</a>
+              <a href="author.html#10154">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

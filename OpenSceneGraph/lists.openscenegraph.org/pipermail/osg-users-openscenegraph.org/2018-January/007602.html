@@ -1,0 +1,477 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG not drawing CEGUI drawable
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20not%20drawing%20CEGUI%20drawable&In-Reply-To=%3CCANSLJda5Ezdz%3Dq1NWk1Wi2v%2B%2ByY5GJZ4rxm-rpecY9TC%3DCSBpA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007611.html">
+   <LINK REL="Next"  HREF="007613.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG not drawing CEGUI drawable</H1>
+<!--htdig_noindex-->
+    <B>James Carson</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20not%20drawing%20CEGUI%20drawable&In-Reply-To=%3CCANSLJda5Ezdz%3Dq1NWk1Wi2v%2B%2ByY5GJZ4rxm-rpecY9TC%3DCSBpA%40mail.gmail.com%3E"
+       TITLE="[osg-users] OSG not drawing CEGUI drawable">james.carson.direct at gmail.com
+       </A><BR>
+    <I>Sat Jan 20 16:18:47 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007611.html">[osg-users] Shaders with multiple views, possible?
+</A></li>
+        <LI>Next message (by thread): <A HREF="007613.html">[osg-users] Black stains in my rendering?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7602">[ date ]</a>
+              <a href="thread.html#7602">[ thread ]</a>
+              <a href="subject.html#7602">[ subject ]</a>
+              <a href="author.html#7602">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Version Information:
+OSG: 3.4.0
+CEGUI: 0.8.7
+
+Problem: I am unable to get the osg::Drawable for CEGUI to draw. The
+drawImplementation method never even gets called.
+
+What was my starting point: I've been using the two by Rui Wang and Xuelei
+Qian to learn osg. I attempted to run through their example on integrating
+CEGUI, but it is for version 0.7.5. There are considerable differences
+between 0.7.5 and 0.8.7, but I believe that I was able to update the
+example using CEGUI porting tips on their website (
+<A HREF="http://static.cegui.org.uk/docs/0.8.7/porting7to8.html">http://static.cegui.org.uk/docs/0.8.7/porting7to8.html</A>).
+
+Here is my code, please let me know why you think the drawable isn't being
+called.
+
+
+client_master.cpp: This is where I'm calling the code to create the
+drawable object and add it to the scene graph. This is pretty much ripped
+right out of the cookbook. Option 1 is right from the cookbook. Option 2
+was from a forum post somewhere. Option 2 will paint a debugging cow while
+option 1 will not.
+osg::Camera* ClientMaster::create_hud_camera( double left, double right,
+double bottom, double top ){
+    int option = 2;
+
+    osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+    camera-&gt;setReferenceFrame( osg::Transform::ABSOLUTE_RF );
+    camera-&gt;setClearMask( GL_DEPTH_BUFFER_BIT );
+    camera-&gt;setRenderOrder( osg::Camera::POST_RENDER );
+    camera-&gt;setAllowEventFocus( true );
+    camera-&gt;getOrCreateStateSet()-&gt;setMode( GL_LIGHTING,
+osg::StateAttribute::OFF );
+
+    if( option == 1 ){
+        //This option is from the Cookbook. Not even the cow is shown using
+this.
+        camera-&gt;setProjectionMatrix( osg::Matrix::ortho2D(left, right,
+bottom, top) );
+    }
+    else if( option == 2 ){
+        //This option was found online. It shows the side of cow but not
+the gui.
+        osg::Vec3d eye    = osg::Vec3d(0, -1,  0 );  // position of the
+camera
+        osg::Vec3d center = osg::Vec3d(0,  0,  0 );  // where does the
+camera look.
+        osg::Vec3d up     = osg::Vec3d(0,  0,  1 );  // the up vector of
+the camera
+        camera-&gt;setViewMatrixAsLookAt(eye, center, up);
+    }
+    return camera.release();
+}
+
+void ClientMaster::initialize_HUD( void ){
+    bool showing_cow = true;
+
+    osg::ref_ptr&lt;Geode&gt; geode = new osg::Geode;
+    geode-&gt;setCullingActive(false);
+    geode-&gt;addDrawable( new ClientCEGUIDrawable );
+    geode-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes( new osg::BlendFunc
+);
+    geode-&gt;getOrCreateStateSet()-&gt;setRenderingHint(
+osg::StateSet::TRANSPARENT_BIN );
+
+    osg::ref_ptr&lt;osg::Camera&gt; hud_camera = this-&gt;create_hud_camera( 0, 800,
+0, 600 );
+    hud_camera-&gt;addChild( geode.get() );
+
+    if( showing_cow ){
+        //The cow is for debugging purposes. The cow displaying confirms
+that the
+        //children of the hud are being painted to the screen.
+        osg::ref_ptr&lt;osg::Node&gt; hud_model =
+osgDB::readNodeFile(&quot;./cow.osg&quot;);
+        hud_camera-&gt;addChild( hud_model.get() );
+    }
+
+    this-&gt;_root_group-&gt;addChild( hud_camera.get() );
+    this-&gt;_viewer.addEventHandler( new EventHandlerCEGUI( hud_camera.get()
+) );
+    this-&gt;_viewer.addEventHandler( new osgViewer::WindowSizeHandler );
+    this-&gt;_viewer.addEventHandler( new osgViewer::StatsHandler );
+}
+
+client_cegui_drawable.cpp: This is taken from the cookbook and the syntax
+was updated from CEGUI 7 to 8. I also did a little refactoring ( nothing
+drastic though ). I haven't yet updated the window resizing part of the
+code, but that isn't yet an issue because it never gets called. I also put
+some debugging screen outputs into the code. ClientCEGUIDrawable is
+inheritted from osg::Drawable.
+#include &quot;../headers/client_cegui_drawable.hpp&quot;
+
+ClientCEGUIDrawable::ClientCEGUIDrawable() : _lastSimulationTime(0.0),
+_activeContextID(0), _initialized(false) {
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: Initializing&quot; &lt;&lt; endl;
+    setSupportsDisplayList( false );
+    setDataVariance( osg::Object::DYNAMIC );
+    getOrCreateStateSet()-&gt;setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+    getOrCreateStateSet()-&gt;setMode( GL_DEPTH_TEST, osg::StateAttribute::OFF
+);
+
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: Initialized&quot; &lt;&lt; endl;
+}
+
+ClientCEGUIDrawable::ClientCEGUIDrawable( const ClientCEGUIDrawable&amp;
+copy,const osg::CopyOp&amp; copyop ) : osg::Drawable(copy, copyop),
+    _lastSimulationTime( copy._lastSimulationTime ),
+    _activeContextID( copy._activeContextID ),
+    _initialized( copy._initialized )
+{}
+
+void ClientCEGUIDrawable::initialize_resource_provider( void ){
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: Resource Provider: Initializing&quot; &lt;&lt; endl;
+    CEGUI::DefaultResourceProvider* resource_provider =
+        static_cast&lt;CEGUI::DefaultResourceProvider*&gt;(
+CEGUI::System::getSingleton().getResourceProvider() );
+    resource_provider-&gt;setResourceGroupDirectory( &quot;schemes&quot;,
+&quot;./datafiles/gui/schemes/&quot;     );
+    resource_provider-&gt;setResourceGroupDirectory( &quot;imagesets&quot;,
+&quot;./datafiles/gui/imagesets/&quot;   );
+    resource_provider-&gt;setResourceGroupDirectory( &quot;fonts&quot;,
+&quot;./datafiles/gui/fonts/&quot;       );
+    resource_provider-&gt;setResourceGroupDirectory( &quot;layouts&quot;,
+&quot;./datafiles/gui/layouts/&quot;     );
+    resource_provider-&gt;setResourceGroupDirectory( &quot;looknfeel&quot;,
+&quot;./datafiles/gui/looknfeel/&quot;   );
+    resource_provider-&gt;setResourceGroupDirectory( &quot;lua_scripts&quot;,
+&quot;./datafiles/gui/lua_scripts/&quot; );
+
+    CEGUI::ImageManager::setImagesetDefaultResourceGroup( &quot;imagesets&quot;   );
+    CEGUI::Font::setDefaultResourceGroup(                 &quot;fonts&quot;       );
+    CEGUI::Scheme::setDefaultResourceGroup(               &quot;schemes&quot;     );
+    CEGUI::WidgetLookManager::setDefaultResourceGroup(    &quot;looknfeel&quot;   );
+    CEGUI::WindowManager::setDefaultResourceGroup(        &quot;layouts&quot;     );
+    CEGUI::ScriptModule::setDefaultResourceGroup(         &quot;lua_scripts&quot; );
+
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: Resource Provider: Initialized&quot; &lt;&lt; endl;
+}
+
+void ClientCEGUIDrawable::drawImplementation( osg::RenderInfo&amp; renderInfo ){
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: drawImplementation: Started&quot; &lt;&lt; endl;
+    unsigned int contextID = renderInfo.getContextID();
+    if ( !_initialized )
+    {
+        CEGUI::OpenGLRenderer&amp; myRenderer =
+CEGUI::OpenGLRenderer::bootstrapSystem();
+
+        if ( !CEGUI::System::getSingletonPtr() ) return;
+
+        this-&gt;initialize_resource_provider();
+
+        const_cast&lt;ClientCEGUIDrawable*&gt;(this)-&gt;initializeControls();
+        _activeContextID = contextID;
+        _initialized = true;
+    }
+    else if ( contextID==_activeContextID )
+    {
+        osg::State* state = renderInfo.getState();
+        state-&gt;disableAllVertexArrays();
+        state-&gt;disableTexCoordPointer( 0 );
+
+        glPushMatrix();
+        glPushAttrib( GL_ALL_ATTRIB_BITS );
+
+        CEGUI::OpenGLRenderer* renderer =
+static_cast&lt;CEGUI::OpenGLRenderer*&gt;(
+        //CEGUI::OpenGL3Renderer* renderer =
+static_cast&lt;CEGUI::OpenGL3Renderer*&gt;(
+            CEGUI::System::getSingleton().getRenderer() );
+        osg::Viewport* viewport =
+renderInfo.getCurrentCamera()-&gt;getViewport();
+        if ( renderer &amp;&amp; viewport )
+        {
+            //const CEGUI::Size&amp; size = renderer-&gt;getDisplaySize();
+            //if ( size.d_width!=viewport-&gt;width() ||
+size.d_height!=viewport-&gt;height() )
+            //{
+            //    CEGUI::System::getSingleton().notifyDisplaySizeChanged(
+            //        CEGUI::Size(viewport-&gt;width(), viewport-&gt;height()) );
+            //}
+        }
+
+        double currentTime = (state-&gt;getFrameStamp() ?
+state-&gt;getFrameStamp()-&gt;getSimulationTime() : 0.0);
+        CEGUI::System::getSingleton().injectTimePulse( (currentTime -
+_lastSimulationTime)/1000.0 );
+        CEGUI::System::getSingleton().renderAllGUIContexts();
+        _lastSimulationTime = currentTime;
+
+        glPopAttrib();
+        glPopMatrix();
+    }
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: drawImplementation: Completed&quot; &lt;&lt; endl;
+}
+
+void ClientCEGUIDrawable::initializeControls(){
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: Controls: Initializing&quot; &lt;&lt; endl;
+    CEGUI::SchemeManager::getSingleton().createFromFile(
+&quot;TaharezLook.scheme&quot; );
+    CEGUI::FontManager::getSingleton().createFromFile( &quot;DejaVuSans-10.font&quot;
+);
+
+
+CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setDefaultImage(
+&quot;TaharezLook/MouseArrow&quot; );
+
+    // For Tooltips when I'm ready
+    //
+CEGUI::System::getSingleton().getDefaultGUIContext().setDefaultTooltipType(
+&quot;TaharezLook/Tooltip&quot; );
+
+    CEGUI::System::getSingleton().getDefaultGUIContext().setDefaultFont(
+&quot;DejaVuSans-10&quot; );
+
+    // CEGUI::System::getSingleton().getDefaultFont()-&gt;setAutoScaled( false
+);
+
+    CEGUI::WindowManager&amp; wmgr = CEGUI::WindowManager::getSingleton();
+    CEGUI::Window* root_window = wmgr.createWindow( &quot;DefaultWindow&quot;, &quot;root&quot;
+);
+    CEGUI::System::getSingleton().getDefaultGUIContext().setRootWindow(
+root_window );
+
+    CEGUI::FrameWindow* frame_window = static_cast&lt;CEGUI::FrameWindow*&gt;(
+        wmgr.createWindow( &quot;TaharezLook/FrameWindow&quot;, &quot;testWindow&quot; ));
+
+
+    // position a quarter of the way in from the top-left of parent.
+    frame_window-&gt;setPosition( CEGUI::UVector2( CEGUI::UDim( 0.25f, 0.0f ),
+CEGUI::UDim( 0.25f, 0.0f ) ) );
+    // set size to be half the size of the parent
+    frame_window-&gt;setSize( CEGUI::USize( CEGUI::UDim( 0.5f, 0.0f ),
+CEGUI::UDim( 0.5f, 0.0f ) ) );
+
+    //demoWindow-&gt;setMinSize( CEGUI::UVector2(cegui_reldim(0.1f),
+cegui_reldim(0.1f)) );
+    frame_window-&gt;setText( &quot;Example Dialog&quot; );
+
+    CEGUI::PushButton* demoButtonOK = static_cast&lt;CEGUI::PushButton*&gt;(
+
+CEGUI::WindowManager::getSingleton().createWindow(&quot;TaharezLook/Button&quot;,
+&quot;DemoButtonOK&quot;) );
+    demoButtonOK-&gt;setPosition( CEGUI::UVector2(cegui_reldim(0.3f),
+cegui_reldim(0.75f)) );
+    demoButtonOK-&gt;setSize( CEGUI::USize( CEGUI::UDim( 0.1f, 0.1f ),
+CEGUI::UDim( 0.2f, 0.2f ) ) );
+    demoButtonOK-&gt;setText( &quot;OK&quot; );
+
+    frame_window-&gt;subscribeEvent( CEGUI::FrameWindow::EventCloseClicked,
+        CEGUI::Event::Subscriber(&amp;ClientCEGUIDrawable::handleClose, this) );
+    root_window-&gt;addChild( demoButtonOK );
+    root_window-&gt;addChild( frame_window );
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: Controls: Initialized&quot; &lt;&lt; endl;
+}
+
+bool ClientCEGUIDrawable::handleClose( const CEGUI::EventArgs&amp; e ){
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: handleClose: starting&quot; &lt;&lt; endl;
+
+//CEGUI::WindowManager::getSingleton().getWindow(&quot;DemoWindow&quot;)-&gt;setVisible(
+false );
+    CEGUI::System::destroy();
+    //CEGUI::OpenGL3Renderer::destroy(
+    CEGUI::OpenGLRenderer::destroy(
+        static_cast&lt;CEGUI::OpenGLRenderer&amp;&gt;(
+            //Commented out from CEGUI's online tutorial. I just figured it
+was talking
+            //about the renderer.
+            //*d_renderer
+            *(CEGUI::System::getSingleton().getRenderer())
+        )
+    );
+    cout &lt;&lt; &quot;ClientCEGUIDrawable: handleClose: Completed&quot; &lt;&lt; endl;
+    return true;
+}
+
+event_handler_cegui.cpp: This was also taken from the cookbook and updated.
+I have one piece left, but the CEGUI code is deprecated as far as I can
+tell. If this is where my problem is, then I would be grateful for thoughts
+or insights on how to update it since I'm not really sure what it is even
+doing.
+#include &quot;../headers/event_handler_cegui.hpp&quot;
+
+bool EventHandlerCEGUI::handle( const osgGA::GUIEventAdapter&amp; ea,
+osgGA::GUIActionAdapter&amp; aa ) {
+    cout &lt;&lt; &quot;EventHandlerCEGUI: Handle: Handling&quot; &lt;&lt; endl;
+    int x = ea.getX(), y = ea.getY(), width = ea.getWindowWidth(), height =
+ea.getWindowHeight();
+    if (
+ea.getMouseYOrientation()==osgGA::GUIEventAdapter::Y_INCREASING_UPWARDS )
+        cout &lt;&lt; &quot;    EventHandlerCEGUI: Handle: Y Increasing Upwards?&quot; &lt;&lt;
+endl;
+        y = ea.getWindowHeight() - y;
+    if ( !CEGUI::System::getSingletonPtr() )
+        cout &lt;&lt; &quot;    EventHandlerCEGUI: Handle: No CEGUI Singleton&quot; &lt;&lt; endl;
+        return false;
+
+    CEGUI::GUIContext&amp; context =
+CEGUI::System::getSingleton().getDefaultGUIContext();
+
+    switch ( ea.getEventType() )
+    {
+    case osgGA::GUIEventAdapter::PUSH:
+        cout &lt;&lt; &quot;    EventHandlerCEGUI: Handle: PUSH&quot; &lt;&lt; endl;
+        context.injectMousePosition( x, y );
+        context.injectMouseButtonDown( convertMouseButton(ea.getButton()) );
+        break;
+    case osgGA::GUIEventAdapter::RELEASE:
+        cout &lt;&lt; &quot;    EventHandlerCEGUI: Handle: RELEASE&quot; &lt;&lt; endl;
+        context.injectMousePosition( x, y );
+        context.injectMouseButtonUp( convertMouseButton(ea.getButton()) );
+        break;
+    case osgGA::GUIEventAdapter::SCROLL:
+        cout &lt;&lt; &quot;    EventHandlerCEGUI: Handle: SCROLL&quot; &lt;&lt; endl;
+        if ( ea.getScrollingMotion()==osgGA::GUIEventAdapter::SCROLL_DOWN )
+            context.injectMouseWheelChange( -1 );
+        else if (
+ea.getScrollingMotion()==osgGA::GUIEventAdapter::SCROLL_UP )
+            context.injectMouseWheelChange( +1 );
+        break;
+    case osgGA::GUIEventAdapter::DRAG:
+        cout &lt;&lt; &quot;    EventHandlerCEGUI: Handle: DRAG&quot; &lt;&lt; endl;
+    case osgGA::GUIEventAdapter::MOVE:
+        cout &lt;&lt; &quot;    EventHandlerCEGUI: Handle: MOVE&quot; &lt;&lt; endl;
+        context.injectMousePosition( x, y );
+        break;
+    case osgGA::GUIEventAdapter::RESIZE:
+        cout &lt;&lt; &quot;    EventHandlerCEGUI: Handle: RESIZE&quot; &lt;&lt; endl;
+        if ( _camera.valid() )
+        {
+            _camera-&gt;setProjectionMatrix( osg::Matrixd::ortho2D(0.0, width,
+0.0, height) );
+            _camera-&gt;setViewport( 0.0, 0.0, width, height );
+        }
+        break;
+    default:
+        return false;
+    }
+
+    /*
+     * No idea what this would actually do for me.
+     * The code for getting the window is deprecated though.
+     * So, it would take some work.
+     *
+    CEGUI::Window* rootWindow = CEGUI::System::getSingleton().getGUISheet();
+    if ( rootWindow )
+    {
+        CEGUI::Window* anyWindow = rootWindow-&gt;getChildAtPosition(
+CEGUI::Vector2(x, y) );
+        if ( anyWindow ) return true;
+    }*/
+    cout &lt;&lt; &quot;EventHandlerCEGUI: Handle: Not Handled&quot; &lt;&lt; endl;
+    return false;
+}
+
+CEGUI::MouseButton EventHandlerCEGUI::convertMouseButton( int button ){
+    cout &lt;&lt; &quot;EventHandlerCEGUI: Convert Mouse: Converting&quot; &lt;&lt; endl;
+    switch ( button )
+    {
+    case osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON:
+        return CEGUI::LeftButton;
+    case osgGA::GUIEventAdapter::MIDDLE_MOUSE_BUTTON:
+        return CEGUI::MiddleButton;
+    case osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON:
+        return CEGUI::RightButton;
+    default: break;
+    }
+    cout &lt;&lt; &quot;EventHandlerCEGUI: Convert Mouse: Converted&quot; &lt;&lt; endl;
+    return static_cast&lt;CEGUI::MouseButton&gt;(button);
+}
+
+Thank you in advance for your assistance,
+Jay
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180120/3cb418ac/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180120/3cb418ac/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007611.html">[osg-users] Shaders with multiple views, possible?
+</A></li>
+	<LI>Next message (by thread): <A HREF="007613.html">[osg-users] Black stains in my rendering?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7602">[ date ]</a>
+              <a href="thread.html#7602">[ thread ]</a>
+              <a href="subject.html#7602">[ subject ]</a>
+              <a href="author.html#7602">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

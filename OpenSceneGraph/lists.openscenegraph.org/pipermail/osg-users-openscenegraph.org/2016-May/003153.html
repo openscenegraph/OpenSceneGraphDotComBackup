@@ -1,0 +1,275 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] CullVisitor object not getting properly deleted
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CullVisitor%20object%20not%20getting%20properly%20deleted&In-Reply-To=%3CCAFN7Y%2BXWwQf1OTTyBikjZhXL21--raOEoVa1PEsvjBc9CqndYQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003149.html">
+   <LINK REL="Next"  HREF="003154.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] CullVisitor object not getting properly deleted</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CullVisitor%20object%20not%20getting%20properly%20deleted&In-Reply-To=%3CCAFN7Y%2BXWwQf1OTTyBikjZhXL21--raOEoVa1PEsvjBc9CqndYQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] CullVisitor object not getting properly deleted">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri May 27 01:50:14 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003149.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+        <LI>Next message: <A HREF="003154.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3153">[ date ]</a>
+              <a href="thread.html#3153">[ thread ]</a>
+              <a href="subject.html#3153">[ subject ]</a>
+              <a href="author.html#3153">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Rick,
+
+Just tried, static_cast&lt;&gt; isn't usable in this instance thank to the
+use of virtual inheritance.
+
+So the solution I have gone for is refactor the RenderStageCache so
+that it uses a map&lt;Referenced*, ref_ptr&lt;RenderStage&gt;&gt; in place of
+map&lt;CullVisitor*, ref_ptr&lt;RenderStage&gt;&gt;, this means the cast happens
+when the map is set up and no dynamic_cast&lt;&gt; need be done anywhere.
+
+The changes are:
+
+diff --git a/src/osgUtil/CullVisitor.cpp b/src/osgUtil/CullVisitor.cpp
+index d198b78..3112cdf 100644
+--- a/src/osgUtil/CullVisitor.cpp
++++ b/src/osgUtil/CullVisitor.cpp
+@@ -1368,7 +1368,7 @@ class RenderStageCache : public osg::Object,
+public osg::Observer
+ {
+     public:
+
+-        typedef std::map&lt;CullVisitor*, osg::ref_ptr&lt;RenderStage&gt; &gt;
+RenderStageMap;
++        typedef std::map&lt;osg::Referenced*, osg::ref_ptr&lt;RenderStage&gt;
+&gt;<i> RenderStageMap;
+</I>
+         RenderStageCache() {}
+         RenderStageCache(const RenderStageCache&amp;, const osg::CopyOp&amp;) {}
+@@ -1387,18 +1387,17 @@ class RenderStageCache : public osg::Object,
+public osg::Observer
+         virtual void objectDeleted(void* object)
+         {
+             osg::Referenced* ref = reinterpret_cast&lt;osg::Referenced*&gt;(object);
+-            osgUtil::CullVisitor* cv =
+dynamic_cast&lt;osgUtil::CullVisitor*&gt;(ref);
+
+             OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_mutex);
+
+-            RenderStageMap::iterator itr = _renderStageMap.find(cv);
++            RenderStageMap::iterator itr = _renderStageMap.find(ref);
+             if (itr!=_renderStageMap.end())
+             {
+                 _renderStageMap.erase(itr);
+             }
+         }
+
+-        void setRenderStage(CullVisitor* cv, RenderStage* rs)
++        void setRenderStage(osg::Referenced* cv, RenderStage* rs)
+         {
+             OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_mutex);
+             RenderStageMap::iterator itr = _renderStageMap.find(cv);
+@@ -1414,7 +1413,7 @@ class RenderStageCache : public osg::Object,
+public osg::Observer
+
+         }
+
+-        RenderStage* getRenderStage(osgUtil::CullVisitor* cv)
++        RenderStage* getRenderStage(osg::Referenced* cv)
+         {
+             OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_mutex);
+             RenderStageMap::iterator itr = _renderStageMap.find(cv);
+
+
+I have checked this fix into OSG master and 3.4 branch.  Commit is
+110cf56..31592d2
+
+Could you let me know how this works out, if it fails I'm afraid I'll
+need a small test example to reproduce it as the osgoi and
+osgprerender examples I'm using are working 100% OK.
+
+Robert.
+
+On 27 May 2016 at 09:01, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt; wrote:
+&gt;<i> Hi Rick,
+</I>&gt;<i>
+</I>&gt;<i> As general note, use of a C pointer to scene graph objects include the
+</I>&gt;<i> CullVisitor should generally be avoided, it's only safe for small
+</I>&gt;<i> blocks of code where you know that the objects will remain in memory
+</I>&gt;<i> at all times during the block.  Instead you should use ref_ptr&lt;&gt; to
+</I>&gt;<i> make sure it's lifetime is correct - if in doubt use ref_ptr&lt;&gt;.
+</I>&gt;<i>
+</I>&gt;<i> I will have a look at the use of dynamic_cast&lt;&gt; again.  I had to keep
+</I>&gt;<i> it in there because the pointer to the Referenced base class isn't
+</I>&gt;<i> castable directly to a CullVsititor as CullVisitor uses virtual
+</I>&gt;<i> inheritance.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 26 May 2016 at 22:04, Rick Irons &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Rick.Irons at mathworks.com</A>&gt; wrote:
+</I>&gt;&gt;<i> Hi Robert,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Unfortunately the fix didn't address the crash I am encountering.  The issue
+</I>&gt;&gt;<i> of the dynamic cast in objectDeleted()
+</I>&gt;&gt;<i> (\openscenegraph\src\osgUtil\CullVisitor.cpp) failing remains...
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>         virtual void objectDeleted(void* object)
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>         {
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>             osg::Referenced* ref =
+</I>&gt;&gt;<i> reinterpret_cast&lt;osg::Referenced*&gt;(object);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>             osgUtil::CullVisitor* cv =
+</I>&gt;&gt;<i> dynamic_cast&lt;osgUtil::CullVisitor*&gt;(ref);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>             OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_mutex);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>             RenderStageMap::iterator itr = _renderStageMap.find(cv);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>             if (itr!=_renderStageMap.end())
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>             {
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>                 _renderStageMap.erase(itr);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>             }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>         }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I was going to define our object that inherits from the CullVisitor as an
+</I>&gt;&gt;<i> osg::ref_ptr.  Perhaps doing so will delay the freeing of the CullVisitor
+</I>&gt;&gt;<i> object long enough within the CullVisitor destructor so that the problematic
+</I>&gt;&gt;<i> dynamic cast will succeed.  I am open to any other suggestions as well.  I
+</I>&gt;&gt;<i> may have to resort to just creating a small example program that reproduces
+</I>&gt;&gt;<i> the issue.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Rick
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> -----Original Message-----
+</I>&gt;&gt;<i> From: Rick Irons
+</I>&gt;&gt;<i> Sent: Wednesday, May 25, 2016 5:56 AM
+</I>&gt;&gt;<i> To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;&gt;<i> Subject: Re: [osg-users] CullVisitor object not getting properly deleted
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi Robert,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks for the update.   I will try out the fix.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Rick
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> On May 24, 2016, at 3:53 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;&gt;&gt;<i> wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Hi Rick,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> After a preplexing day looking at how the osgUtiil::CullVisitor,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> osg::Camera and RenderStageCache were all interacting via the
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> osg::Observer system I finally fixed the problem with the crash that
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I've see with the osgoit and osgprerender examples.   As the crash
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> looks similar to what you saw there is reasonable chance that the
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> changes should work for you too.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I have checked my fix into master and OpenSceneGraph-3.4.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph-3.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> org
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003149.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+	<LI>Next message: <A HREF="003154.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3153">[ date ]</a>
+              <a href="thread.html#3153">[ thread ]</a>
+              <a href="subject.html#3153">[ subject ]</a>
+              <a href="author.html#3153">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

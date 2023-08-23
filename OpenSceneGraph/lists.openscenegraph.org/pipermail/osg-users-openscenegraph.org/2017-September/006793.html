@@ -1,0 +1,186 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Cloning text
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Cloning%20text&In-Reply-To=%3C8fdbfa80-5fde-9a84-d181-e007bbcf54b9%40remograph.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006875.html">
+   <LINK REL="Next"  HREF="006796.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Cloning text</H1>
+<!--htdig_noindex-->
+    <B>Andreas Ekstrand</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Cloning%20text&In-Reply-To=%3C8fdbfa80-5fde-9a84-d181-e007bbcf54b9%40remograph.com%3E"
+       TITLE="[osg-users] Cloning text">andreas.ekstrand at remograph.com
+       </A><BR>
+    <I>Fri Sep  8 06:18:03 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="006875.html">[osg-users] Display one scene, pick from another one
+</A></li>
+        <LI>Next message (by thread): <A HREF="006796.html">[osg-users] Cloning text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6793">[ date ]</a>
+              <a href="thread.html#6793">[ thread ]</a>
+              <a href="subject.html#6793">[ subject ]</a>
+              <a href="author.html#6793">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I revisited my osgText performance issue by measuring the time for 
+copying text.
+
+With some 150,000 copies of my VertexNumber class inheriting from 
+osgText::Text, I ended up with roughly the following figures using OSG 
+3.5.6, compared to my previous solution using OSG 3.2.1, calling the 
+osgText::TextBase copy constructor from my copy constructor (skipping 
+over osgText::Text copy constructor) and copying the 
+_textureGlyphQuadMap instead of calling the slower 
+computeGlyphRepresentation.
+
+3.2.1 without the &quot;trick&quot; above:
+40 - 70% slower compared to 3.2.1 with trick
+
+3.5.6 (obviously without the trick):
+50 - 90% slower compared to 3.2.1 with trick
+10 - 30% slower compared to plain 3.2.1 without trick
+
+Furthermore, in 3.5.6 my application requires about 37% more RAM with 
+this number of texts, compared to 3.2.1 (both with and without the 
+trick), but only about 4% more without the texts created.
+
+I'm creating and caching new text instances per vertex number in the 
+model. Since there are mostly triangles, I'm getting 0,1,2 but also 
+occasional other numbers up to 7 for special polygons. For a situation 
+like this, with a large number of texts from a small number of cached 
+originals, what would be the recommended approach? Maybe osgText isn't 
+suitable at all?
+
+Regards,
+Andreas
+
+
+On 2017-08-18 11:38, Robert Osfield wrote:
+&gt;<i> Hi Andreas,
+</I>&gt;<i>
+</I>&gt;<i> In my rewrite of osgText my approach was that the internal 
+</I>&gt;<i> implementation details aren't meant to be something that users need to 
+</I>&gt;<i> meddle with.
+</I>&gt;<i>
+</I>&gt;<i> The fact that you are needing to meddle with the internal details to 
+</I>&gt;<i> workaorund performance issues in your usage case suggest an issue with 
+</I>&gt;<i> basic performance/flexibility,&#160; The new implementation might change 
+</I>&gt;<i> this performance/flexibility side so perhaps your local changes might 
+</I>&gt;<i> not be needed.
+</I>&gt;<i>
+</I>&gt;<i> If the new osgText doesn't provide the performance you need for your 
+</I>&gt;<i> usage case perhaps it could be optimized to handle them.&#160; Creating an 
+</I>&gt;<i> example that illustrates the usage case which highlights the issues 
+</I>&gt;<i> would be a good first step if you feel this approach has promise.
+</I>&gt;<i>
+</I>&gt;<i> Finally, I'm open to small tweaks to the API allow easier subclassing. 
+</I>&gt;<i> However, this isn't my preferred approach as any changes to the 
+</I>&gt;<i> internals later would then break end user code that relies upon it - 
+</I>&gt;<i> exactly the problem you are facing now...
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 18 August 2017 at 09:14, Andreas Ekstrand 
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andreas.ekstrand at remograph.com</A> 
+</I>&gt;<i> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andreas.ekstrand at remograph.com</A>&gt;&gt; wrote:
+</I>&gt;<i>
+</I>&gt;<i>     Hi,
+</I>&gt;<i>
+</I>&gt;<i>     With OSG 3.2.1 I have been able to do fast shallow cloning of
+</I>&gt;<i>     osgText::Text in my own subclass, copying the _textureGlyphQuadMap
+</I>&gt;<i>     instead of calling computeGlyphRepresentation, since the latter is
+</I>&gt;<i>     a slow operation for my thousands of texts.
+</I>&gt;<i>
+</I>&gt;<i>     In OSG 3.5.6 this isn't possible, I guess due to a private
+</I>&gt;<i>     GlyphQuads::operator=. So I'm looping through _textureGlyphQuadMap
+</I>&gt;<i>     in my copy constructor and copy its glyphs and primitives
+</I>&gt;<i>     separately instead. But I can't see my copied text at all! If I
+</I>&gt;<i>     save it out to an .osg or .osgt file it's visible in osgviewer.
+</I>&gt;<i>
+</I>&gt;<i>     I guess setting GlyphQuads::operator= private was deliberate, so
+</I>&gt;<i>     can someone explain how I can accomplish fast text cloning in OSG
+</I>&gt;<i>     3.5.6 or optimize it somehow?
+</I>&gt;<i>
+</I>&gt;<i>     Regards,
+</I>&gt;<i>     Andreas
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     _______________________________________________
+</I>&gt;<i>     osg-users mailing list
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>&gt;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170908/da868a5d/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170908/da868a5d/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="006875.html">[osg-users] Display one scene, pick from another one
+</A></li>
+	<LI>Next message (by thread): <A HREF="006796.html">[osg-users] Cloning text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6793">[ date ]</a>
+              <a href="thread.html#6793">[ thread ]</a>
+              <a href="subject.html#6793">[ subject ]</a>
+              <a href="author.html#6793">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

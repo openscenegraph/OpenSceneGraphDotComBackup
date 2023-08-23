@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Update node color on demand
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Update%20node%20color%20on%20demand&In-Reply-To=%3C1543128663.m2f.75241%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009415.html">
+   <LINK REL="Next"  HREF="009418.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Update node color on demand</H1>
+<!--htdig_noindex-->
+    <B>Eran Cohen</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Update%20node%20color%20on%20demand&In-Reply-To=%3C1543128663.m2f.75241%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Update node color on demand">ceranco at gmail.com
+       </A><BR>
+    <I>Sat Nov 24 22:51:03 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009415.html">[osg-users] Update node color on demand
+</A></li>
+        <LI>Next message (by thread): <A HREF="009418.html">[osg-users] Update node color on demand
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9416">[ date ]</a>
+              <a href="thread.html#9416">[ thread ]</a>
+              <a href="subject.html#9416">[ subject ]</a>
+              <a href="author.html#9416">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Diego,
+
+You can pass user events to the viewer (and thus to its Event Handlers):
+
+Code:
+
+// This struct will be passed to the event handler with the relevant parameters (for example, the node you want to affect and the color to change it to)
+struct ChangeColorEvent : public osg::Referenced
+{
+  ChangeColorEvent(float r, float g, float b, osg::Node* node)
+  {
+    this-&gt;r = r;
+    this-&gt;g = g;
+    this-&gt;b = b;
+    this-&gt;node = node;
+  }
+
+  float r;
+  float g;
+  float b;
+  osg::Node* node;
+}
+
+// When you want to call the event (on a button click in QT for example)
+viewer-&gt;getEventQueue()-&gt;userEvent(new ChangeColorEvent{ 1.0, 0.3, 0.4, node }, 0);
+
+
+
+
+To handle said event in your EventHandler:
+
+Code:
+
+class ColorHandler : public osgGA::GUIEventHandler 
+{ 
+   virtual bool handle(const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; aa) override 
+   { 
+      if (ea.getEventType() == ea.USER) 
+      { 
+         auto changeColorEvent = dynamic_cast&lt;const ChangeColorEvent*&gt;(ea.getUserData());
+         if (changeColorEvent != nullptr)
+         {
+           // do whatever you want here, for example run the visitor on the node
+           return true;
+         }
+      } 
+      return false;
+   } 
+}; 
+
+
+
+
+
+Cheers,
+Eran
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic6641.php?p=75241#75241">http://forum.openscenegraph.org/viewtopic.php?p=75241#75241</A>
+
+
+
+
+
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009415.html">[osg-users] Update node color on demand
+</A></li>
+	<LI>Next message (by thread): <A HREF="009418.html">[osg-users] Update node color on demand
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9416">[ date ]</a>
+              <a href="thread.html#9416">[ thread ]</a>
+              <a href="subject.html#9416">[ subject ]</a>
+              <a href="author.html#9416">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

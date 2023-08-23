@@ -1,0 +1,327 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText::Text dissapears when reparent container window on qt
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%3A%3AText%20dissapears%20when%20reparent%20container%20window%0A%20on%20qt&In-Reply-To=%3C1553694553.m2f.75733%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009821.html">
+   <LINK REL="Next"  HREF="009824.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText::Text dissapears when reparent container window on qt</H1>
+<!--htdig_noindex-->
+    <B>Diego Mancilla</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%3A%3AText%20dissapears%20when%20reparent%20container%20window%0A%20on%20qt&In-Reply-To=%3C1553694553.m2f.75733%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osgText::Text dissapears when reparent container window on qt">dmancillac at gmail.com
+       </A><BR>
+    <I>Wed Mar 27 06:49:13 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009821.html">[osg-users] [build] Particular Build Problems with OSG.
+</A></li>
+        <LI>Next message (by thread): <A HREF="009824.html">[osg-users] First Person Camera disable inertial rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9816">[ date ]</a>
+              <a href="thread.html#9816">[ thread ]</a>
+              <a href="subject.html#9816">[ subject ]</a>
+              <a href="author.html#9816">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+
+ This is a mixed OSG/Qt question. I asked first here due to previous experiences with the community. 
+
+ I'm following a minimal example of embedding OSG into a Qt5 application from <A HREF="https://gist.github.com/vicrucann/874ec3c0a7ba4a814bd84756447bc798.">https://gist.github.com/vicrucann/874ec3c0a7ba4a814bd84756447bc798.</A> When I modify that example, and add a simple osgText::Text to the base Geode everything works as expected. But If I ,additionally, encapsulate the OSG Widget (a widget derived from QOpenGLWidget) on a QDockWidget and undock it, the text dissapears.
+
+ Can someone point me out what could be the problem?
+
+The code:
+
+
+Code:
+#include&lt;QApplication&gt;
+#include&lt;QMainWindow&gt;
+#include&lt;QOpenGLWidget&gt;
+#include&lt;QMouseEvent&gt;
+#include&lt;QWheelEvent&gt;
+#include&lt;QDesktopWidget&gt;
+#include&lt;QScreen&gt;
+#include&lt;QtGlobal&gt;
+#include&lt;QWindow&gt;
+#include&lt;QWidget&gt;
+#include&lt;QDockWidget&gt;
+#include&lt;QVBoxLayout&gt;
+
+#include&lt;osg/ref_ptr&gt;
+#include&lt;osgViewer/GraphicsWindow&gt;
+#include&lt;osgText/Text&gt;
+#include&lt;osgViewer/Viewer&gt;
+#include&lt;osg/Camera&gt;
+#include&lt;osg/ShapeDrawable&gt;
+#include&lt;osg/StateSet&gt;
+#include&lt;osg/Material&gt;
+#include&lt;osgGA/EventQueue&gt;
+#include&lt;osgGA/TrackballManipulator&gt;
+
+#include &lt;iostream&gt;
+#include &lt;stdio.h&gt;
+
+class QtOSGWidget : public QOpenGLWidget
+{
+public:
+  QtOSGWidget(qreal scaleX, qreal scaleY, QWidget* parent = 0)
+      : QOpenGLWidget(parent)
+        , _mGraphicsWindow(new osgViewer::GraphicsWindowEmbedded( this-&gt;x(), this-&gt;y(),
+                                                                 this-&gt;width(), this-&gt;height() ) )
+        , _mViewer(new osgViewer::Viewer)
+      , m_scaleX(scaleX)
+      , m_scaleY(scaleY)
+      {
+        osg::Cylinder* cylinder    = new osg::Cylinder( osg::Vec3( 0.f, 0.f, 0.f ), 0.25f, 0.5f );
+        osg::ShapeDrawable* sd = new osg::ShapeDrawable( cylinder );
+        sd-&gt;setColor( osg::Vec4( 0.8f, 0.5f, 0.2f, 1.f ) );
+        osg::Geode* geode = new osg::Geode;
+        geode-&gt;addDrawable(sd);
+
+		// adding text to the visualization
+		osgText::Text * test = new osgText::Text();
+		test-&gt;setDataVariance(osg::Object::DYNAMIC);
+		
+		test-&gt;setCharacterSize(1.0);
+		test-&gt;setColor(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+		test-&gt;setAlignment(osgText::Text::CENTER_BOTTOM);
+		test-&gt;setAxisAlignment(osgText::TextBase::SCREEN);
+		test-&gt;setCharacterSizeMode(osgText::Text::OBJECT_COORDS);
+		test-&gt;setText(&quot;CYLINDER&quot;);
+		geode-&gt;addDrawable(test);
+		// end adding text
+
+        osg::Camera* camera = new osg::Camera;
+        camera-&gt;setViewport( 0, 0, this-&gt;width(), this-&gt;height() );
+        camera-&gt;setClearColor( osg::Vec4( 0.9f, 0.9f, 1.f, 1.f ) );
+        float aspectRatio = static_cast&lt;float&gt;( this-&gt;width()) / static_cast&lt;float&gt;( this-&gt;height() );
+        camera-&gt;setProjectionMatrixAsPerspective( 30.f, aspectRatio, 1.f, 1000.f );
+        camera-&gt;setGraphicsContext( _mGraphicsWindow );
+
+        _mViewer-&gt;setCamera(camera);
+        _mViewer-&gt;setSceneData(geode);
+        osgGA::TrackballManipulator* manipulator = new osgGA::TrackballManipulator;
+        manipulator-&gt;setAllowThrow( false );
+        this-&gt;setMouseTracking(true);
+        _mViewer-&gt;setCameraManipulator(manipulator);
+        _mViewer-&gt;setThreadingModel(osgViewer::Viewer::SingleThreaded);
+       // _mViewer-&gt;realize();
+      }
+
+
+  virtual ~QtOSGWidget(){}
+
+  void setScale(qreal X, qreal Y)
+  {
+      m_scaleX = X;
+      m_scaleY = Y;
+      this-&gt;resizeGL(this-&gt;width(), this-&gt;height());
+  }
+
+protected:
+
+  virtual void paintGL() {
+    _mViewer-&gt;frame();
+  }
+
+  virtual void resizeGL( int width, int height ) 
+  {
+      this-&gt;getEventQueue()-&gt;windowResize(this-&gt;x()*m_scaleX, this-&gt;y() * m_scaleY, width*m_scaleX, height*m_scaleY);
+      _mGraphicsWindow-&gt;resized(this-&gt;x()*m_scaleX, this-&gt;y() * m_scaleY, width*m_scaleX, height*m_scaleY);
+      osg::Camera* camera = _mViewer-&gt;getCamera();
+      camera-&gt;setViewport(0, 0, this-&gt;width()*m_scaleX, this-&gt;height()* m_scaleY);
+  }
+
+  virtual void initializeGL(){
+      osg::Geode* geode = dynamic_cast&lt;osg::Geode*&gt;(_mViewer-&gt;getSceneData());
+      osg::StateSet* stateSet = geode-&gt;getOrCreateStateSet();
+      osg::Material* material = new osg::Material;
+      material-&gt;setColorMode( osg::Material::AMBIENT_AND_DIFFUSE );
+      stateSet-&gt;setAttributeAndModes( material, osg::StateAttribute::ON );
+      stateSet-&gt;setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
+  }
+
+  virtual void mouseMoveEvent(QMouseEvent* event)
+  {
+      this-&gt;getEventQueue()-&gt;mouseMotion(event-&gt;x()*m_scaleX, event-&gt;y()*m_scaleY);
+  }
+
+  virtual void mousePressEvent(QMouseEvent* event)
+  {
+      unsigned int button = 0;
+      switch (event-&gt;button()){
+      case Qt::LeftButton:
+          button = 1;
+          break;
+      case Qt::MiddleButton:
+          button = 2;
+          break;
+      case Qt::RightButton:
+          button = 3;
+          break;
+      default:
+          break;
+      }
+      this-&gt;getEventQueue()-&gt;mouseButtonPress(event-&gt;x()*m_scaleX, event-&gt;y()*m_scaleY, button);
+  }
+
+  virtual void mouseReleaseEvent(QMouseEvent* event)
+  {
+      unsigned int button = 0;
+      switch (event-&gt;button()){
+      case Qt::LeftButton:
+          button = 1;
+          break;
+      case Qt::MiddleButton:
+          button = 2;
+          break;
+      case Qt::RightButton:
+          button = 3;
+          break;
+      default:
+          break;
+      }
+      this-&gt;getEventQueue()-&gt;mouseButtonRelease(event-&gt;x()*m_scaleX, event-&gt;y()*m_scaleY, button);
+  }
+
+  virtual void wheelEvent(QWheelEvent* event)
+  {
+      int delta = event-&gt;delta();
+      osgGA::GUIEventAdapter::ScrollingMotion motion = delta &gt; 0 ?
+                  osgGA::GUIEventAdapter::SCROLL_UP : osgGA::GUIEventAdapter::SCROLL_DOWN;
+      this-&gt;getEventQueue()-&gt;mouseScroll(motion);
+  }
+
+  virtual bool event(QEvent* event)
+  {
+      bool handled = QOpenGLWidget::event(event);
+      this-&gt;update();
+      return handled;
+  }
+
+private:
+
+  osgGA::EventQueue* getEventQueue() const {
+    osgGA::EventQueue* eventQueue = _mGraphicsWindow-&gt;getEventQueue();
+    return eventQueue;
+  }
+
+  osg::ref_ptr&lt;osgViewer::GraphicsWindowEmbedded&gt; _mGraphicsWindow;
+  osg::ref_ptr&lt;osgViewer::Viewer&gt; _mViewer;
+  qreal m_scaleX, m_scaleY;
+};
+
+int main(int argc, char** argv)
+{
+	// This was necessary for keeping the context when undocking
+	QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+
+    QApplication qapp(argc, argv);
+
+    QMainWindow window;
+
+	// Here starts code to put the QtOSGWidget inside a dock area
+	QDockWidget * visDock = new QDockWidget(&amp;window);
+	visDock-&gt;setFloating(false);
+	visDock-&gt;setFeatures(QDockWidget::DockWidgetFloatable | QDockWidget::DockWidgetMovable);
+	visDock-&gt;setAllowedAreas(Qt::TopDockWidgetArea);
+
+	QWidget * dockWidgetContent = new QWidget();
+
+	QVBoxLayout * verticalLayout = new QVBoxLayout(dockWidgetContent);
+	verticalLayout-&gt;setSpacing(6);
+	verticalLayout-&gt;setContentsMargins(11, 11, 11, 11);
+
+	QWidget * containerWidget = new QWidget(dockWidgetContent);
+	QHBoxLayout * horizontalLayout = new QHBoxLayout(containerWidget);
+	horizontalLayout-&gt;setSpacing(0);
+	horizontalLayout-&gt;setContentsMargins(11, 11, 11, 11);
+	horizontalLayout-&gt;setContentsMargins(0, 0, 0, 0);
+	
+	
+	QtOSGWidget* widget = new QtOSGWidget(1, 1, containerWidget);
+
+	horizontalLayout-&gt;addWidget(widget);
+
+
+	verticalLayout-&gt;addWidget(containerWidget);
+
+	visDock-&gt;setWidget(dockWidgetContent);
+		
+	window.addDockWidget(static_cast&lt;Qt::DockWidgetArea&gt;(4), visDock);
+
+	// No central widget is used for the example
+    window.setCentralWidget(Q_NULLPTR);
+    window.show();
+
+    return qapp.exec();
+}
+
+
+
+
+
+Thank you!
+
+Cheers,
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic1af1.php?p=75733#75733">http://forum.openscenegraph.org/viewtopic.php?p=75733#75733</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009821.html">[osg-users] [build] Particular Build Problems with OSG.
+</A></li>
+	<LI>Next message (by thread): <A HREF="009824.html">[osg-users] First Person Camera disable inertial rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9816">[ date ]</a>
+              <a href="thread.html#9816">[ thread ]</a>
+              <a href="subject.html#9816">[ subject ]</a>
+              <a href="author.html#9816">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

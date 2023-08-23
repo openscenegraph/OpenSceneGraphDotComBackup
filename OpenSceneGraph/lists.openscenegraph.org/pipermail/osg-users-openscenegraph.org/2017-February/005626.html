@@ -1,0 +1,266 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Viewer slaves and RTTs
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Viewer%20slaves%20and%20RTTs&In-Reply-To=%3CCAFN7Y%2BU7pox2e0OLH%2B7AvW%3DjFcjoGMb0z_me%3DQD1yo9qN-5CJg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005623.html">
+   <LINK REL="Next"  HREF="005628.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Viewer slaves and RTTs</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Viewer%20slaves%20and%20RTTs&In-Reply-To=%3CCAFN7Y%2BU7pox2e0OLH%2B7AvW%3DjFcjoGMb0z_me%3DQD1yo9qN-5CJg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Viewer slaves and RTTs">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Feb 18 09:12:01 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005623.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+        <LI>Next message: <A HREF="005628.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5626">[ date ]</a>
+              <a href="thread.html#5626">[ thread ]</a>
+              <a href="subject.html#5626">[ subject ]</a>
+              <a href="author.html#5626">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Johny,
+
+It's a bit painful to ready example code that mixes global C pointers
+with reference counting objects.  There is very strong chance that'll
+you be leaking objects or end up with dangling pointers.  I strongly
+recommend against doing this even in an example as it not only sets a
+bad example to yourself and potential problems down the line, it also
+gives others in the community, who might read your code looking for
+inspiration, and poor start as they might not realize that it's a
+really bad programming practice.
+
+As for you problem, reviewing the code the item that jumps out at me
+is setting osg::State to use uniforms for the modelview and project
+matrix and aliasing of the vertex attributes but you never provide any
+shaders to utilize them., so you are disabling part of the fixed
+function pipeline but not privide any replacement, so if you don;t see
+what you are expecting it's not too surprising  The OSG doesn't
+provide these shaders for you and will be default use the fixed
+function pipeline.  These setting in osg::State are only appropriate
+for GLES2 or GL3 core profile where shaders are required and no built
+in uniform or vertex attributes are provided.
+
+I would recommend you remove these lines of code and just rely upon
+the fixed function pipeline.  Once you've got a bit further with you
+leaning about OpenGL/shaders/OSG then you can start thinking about
+re-enabling them.
+
+Robert
+
+
+
+On 18 February 2017 at 14:36, Johny Canes &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">psijsma at gmail.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> Here is a test. It loads the image but I can't get either the mainCamera color buffer (gTexture) to render on the quad or the OpenSceneGraph-Data\Images\forestRoof.png.
+</I>&gt;<i>
+</I>&gt;<i> Ideally, what I wanted is for mainCamera to not(!) draw on the screen, only inside of gTexture. However, in other tests setting the rendertargetimp. to FBO will produce black everything.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> #include &quot;stdafx.h&quot;
+</I>&gt;<i>
+</I>&gt;<i> #include &lt;osgViewer/Viewer&gt; // includes a lot of things for us
+</I>&gt;<i> #include &lt;osg/Texture2D&gt;
+</I>&gt;<i> #include &lt;osgDB/ReadFile&gt;
+</I>&gt;<i> #include &lt;osg/Material&gt;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::GraphicsContext&gt; gGc;
+</I>&gt;<i> osgViewer::Viewer* gViewer;
+</I>&gt;<i> osg::Camera* gCamera;
+</I>&gt;<i> osg::Texture* gTexture;
+</I>&gt;<i>
+</I>&gt;<i> osg::Camera* gOrtho;
+</I>&gt;<i> osg::ref_ptr&lt;osg::Geode&gt; gQuad;
+</I>&gt;<i>
+</I>&gt;<i> osg::Group* gRoot;
+</I>&gt;<i>
+</I>&gt;<i> void funcSlave() {
+</I>&gt;<i>         osg::Texture2D* texture2D = new osg::Texture2D;
+</I>&gt;<i>         texture2D-&gt;setTextureSize(1024, 1024);
+</I>&gt;<i>         texture2D-&gt;setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR);
+</I>&gt;<i>         texture2D-&gt;setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
+</I>&gt;<i>         gTexture = texture2D;
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+</I>&gt;<i>         traits-&gt;x = 300;
+</I>&gt;<i>         traits-&gt;y = 100;
+</I>&gt;<i>         traits-&gt;width = 1024;
+</I>&gt;<i>         traits-&gt;height = 768;
+</I>&gt;<i>         traits-&gt;windowDecoration = true;
+</I>&gt;<i>         traits-&gt;doubleBuffer = true;
+</I>&gt;<i>         traits-&gt;sharedContext = 0;
+</I>&gt;<i>         traits-&gt;samples = 4; // MSAA
+</I>&gt;<i>         traits-&gt;vsync = false;
+</I>&gt;<i>
+</I>&gt;<i>         gGc = osg::GraphicsContext::createGraphicsContext( traits.get() );
+</I>&gt;<i>         gGc-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms( true );
+</I>&gt;<i>         gGc-&gt;getState()-&gt;setUseVertexAttributeAliasing( true );
+</I>&gt;<i>
+</I>&gt;<i>         GLenum buffer = traits-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+</I>&gt;<i>
+</I>&gt;<i>         osg::Camera* camera = gViewer-&gt;getCamera(); // alternatively: new osg::Camera( viewer-&gt;getCamera() );
+</I>&gt;<i>         camera-&gt;setName( &quot;Main&quot; );
+</I>&gt;<i>         camera-&gt;setGraphicsContext( gGc.get() );
+</I>&gt;<i>
+</I>&gt;<i>         camera-&gt;setClearColor( osg::Vec4f(1, 0, 0, 1) );
+</I>&gt;<i>         camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+</I>&gt;<i>
+</I>&gt;<i>         camera-&gt;setViewport( new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height) );
+</I>&gt;<i>
+</I>&gt;<i>         camera-&gt;setDrawBuffer( buffer );
+</I>&gt;<i>         camera-&gt;setReadBuffer( buffer );
+</I>&gt;<i>         camera-&gt;setRenderOrder( osg::Camera::RenderOrder::PRE_RENDER );
+</I>&gt;<i>         //camera-&gt;setRenderTargetImplementation( osg::Camera::FRAME_BUFFER_OBJECT );
+</I>&gt;<i>
+</I>&gt;<i>         camera-&gt;attach( osg::Camera::COLOR_BUFFER, gTexture );
+</I>&gt;<i>
+</I>&gt;<i>         gCamera = camera;
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void funcOrtho() {
+</I>&gt;<i>         int Width = 512, Height = 512;
+</I>&gt;<i>
+</I>&gt;<i>         osg::Camera* ortho = gOrtho = new osg::Camera;
+</I>&gt;<i>         ortho-&gt;setName( &quot;Ortho&quot; );
+</I>&gt;<i>
+</I>&gt;<i>         ortho-&gt;setGraphicsContext( gGc.get() );
+</I>&gt;<i>
+</I>&gt;<i>         ortho-&gt;setClearColor( osg::Vec4f(1,0,1,1) );
+</I>&gt;<i>         ortho-&gt;setClearMask( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+</I>&gt;<i>
+</I>&gt;<i>         ortho-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0, Width, 0, Height));
+</I>&gt;<i>
+</I>&gt;<i>         //ortho-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0,1,0,1));
+</I>&gt;<i>
+</I>&gt;<i>         ortho-&gt;setReferenceFrame( osg::Transform::ABSOLUTE_RF );
+</I>&gt;<i>         ortho-&gt;setViewMatrix( osg::Matrix::identity() );
+</I>&gt;<i>         ortho-&gt;setRenderOrder( osg::Camera::POST_RENDER );
+</I>&gt;<i>
+</I>&gt;<i>         ortho-&gt;setViewport(0, 0, Width, Height);
+</I>&gt;<i>
+</I>&gt;<i>         auto qaud = osg::createTexturedQuadGeometry(osg::Vec3(), osg::Vec3(Width, 0.0, 0.0), osg::Vec3(0.0, Height, 0.0));
+</I>&gt;<i>
+</I>&gt;<i>         auto quad = gQuad = new osg::Geode;
+</I>&gt;<i>         quad-&gt;addDrawable( qaud );
+</I>&gt;<i>
+</I>&gt;<i>         auto image = osgDB::readImageFile(&quot;Images/forestRoof.png&quot;);
+</I>&gt;<i>         if (!image)
+</I>&gt;<i>                 OSG_NOTICE&lt;&lt;&quot;no image&quot;;
+</I>&gt;<i>
+</I>&gt;<i>         auto texture = new osg::Texture2D( image );
+</I>&gt;<i>
+</I>&gt;<i>         quad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes( 0, texture );
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Material&gt; m = new osg::Material;
+</I>&gt;<i>         m-&gt;setColorMode(osg::Material::DIFFUSE);
+</I>&gt;<i>         m-&gt;setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(1, 1, 1, 1));
+</I>&gt;<i>
+</I>&gt;<i>         quad-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes( m.get(), osg::StateAttribute::ON);
+</I>&gt;<i>
+</I>&gt;<i>         // Can't get it to brighten up...
+</I>&gt;<i>
+</I>&gt;<i>         ortho-&gt;addChild( quad );
+</I>&gt;<i>
+</I>&gt;<i>         gViewer-&gt;addSlave(ortho, osg::Matrix(), osg::Matrix(), false);
+</I>&gt;<i>
+</I>&gt;<i>         // ortho-&gt;setPreDrawCallback( new Postprocesser( texture ) );
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> int main(int argc, char **argv) {
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>         gViewer = new osgViewer::Viewer;
+</I>&gt;<i>         gRoot = new osg::Group;
+</I>&gt;<i>
+</I>&gt;<i>         funcSlave();
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Node&gt; cessna = osgDB::readRefNodeFile(&quot;cessna.osgt&quot;);
+</I>&gt;<i>
+</I>&gt;<i>         if (!cessna) {
+</I>&gt;<i>         OSG_NOTICE&lt;&lt;&quot;Cannot not find model 'cessna.osg' to render&quot;&lt;&lt;std::endl;
+</I>&gt;<i>         return 404;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>         gRoot-&gt;addChild( cessna.get() );
+</I>&gt;<i>
+</I>&gt;<i>         funcOrtho();
+</I>&gt;<i>
+</I>&gt;<i>         //gViewer-&gt;getLight()-&gt;setLightNum(0);
+</I>&gt;<i>         //gViewer-&gt;setLightingMode(osgViewer::View::LightingMode::NO_LIGHT);
+</I>&gt;<i>
+</I>&gt;<i>         gViewer-&gt;setSceneData( gRoot );
+</I>&gt;<i>
+</I>&gt;<i>     //gRoot-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, false);
+</I>&gt;<i>
+</I>&gt;<i>         gViewer-&gt;realize();
+</I>&gt;<i>
+</I>&gt;<i>         gViewer-&gt;run();
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Johny
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic701b.php?p=70253#70253">http://forum.openscenegraph.org/viewtopic.php?p=70253#70253</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005623.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+	<LI>Next message: <A HREF="005628.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5626">[ date ]</a>
+              <a href="thread.html#5626">[ thread ]</a>
+              <a href="subject.html#5626">[ subject ]</a>
+              <a href="author.html#5626">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,166 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Best practices for dealing with complex scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Best%20practices%20for%20dealing%20with%20complex%20scene%20graph&In-Reply-To=%3Cmailman.73905.1583126749.7167.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010873.html">
+   <LINK REL="Next"  HREF="010875.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Best practices for dealing with complex scene graph</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Best%20practices%20for%20dealing%20with%20complex%20scene%20graph&In-Reply-To=%3Cmailman.73905.1583126749.7167.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Best practices for dealing with complex scene graph">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Sun Mar  1 21:25:46 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010873.html">[osg-users] Best practices for dealing with complex scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="010875.html">[osg-users] Best practices for dealing with complex scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10874">[ date ]</a>
+              <a href="thread.html#10874">[ thread ]</a>
+              <a href="subject.html#10874">[ subject ]</a>
+              <a href="author.html#10874">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Armin,
+Essentially the scene graph is a one-for-one representation of my DOM. Each 
+individual object can be edited, or its attributes changed. 
+The DOM can be a small number of geometrically &quot;complex&quot; objects  - this 
+causes no performance problems as the geometry &quot;leafs&quot; are large 
+geometrically, or the DOM might have a large number of simple objects.
+
+A KD tree would be useful for removing &quot;not visible&quot; nodes, but in general 
+they are all visible.
+
+In &quot;theory&quot; the  whole scene graph geometry was flattened to one set of 
+vertex, colors and normals for maximum efficiency - of course, updates to 
+the scene graph would require this structure to be partially or fully 
+rebuilt.
+
+That's a bit of overkill for me, as I &quot;know&quot; the parent Group node in the 
+scene graph that I want to make more efficient. Typically the objects under 
+this node have the same attributes. 
+
+I could flatten my nodes &quot;manually&quot;, but flattening the scene graph seems a 
+typical &quot;use-case&quot; that OSG users would want to do.
+
+I have done some tests with osg::Optimizer with the MERGE_GEOMETRY option 
+after collecting all the osg::Geometry nodes into a temporary group -  this 
+does not do exactly what I want, as it only collects the 
+osg::PrimitiveSets. Not merging the sets themselves.
+Weirdly calling &quot;optimize&quot; also causes my scene graph to stop drawing for 
+some unknown and very frustrating reason.
+
+There is a lot of code in the OSG GLES plugin code that looks promising, 
+but it's quite undocumented and I am having to guess about it's 
+functionality.
+
+
+Andrew
+
+On Sunday, March 1, 2020 at 6:14:07 PM UTC-8, Armin Samii wrote:
+&gt;<i>
+</I>&gt;<i> Iterating over the 5000 children would be pretty slow - what if you could 
+</I>&gt;<i> discard some of these children without even looking at them? A hierarchy of 
+</I>&gt;<i> sorts, where you can ignore large swaths of those children, would help...
+</I>&gt;<i> Consider, for example, using a k-d tree: 
+</I>&gt;<i> <A HREF="../../../../www.openscenegraph.com/index.php/documentation/user-guides/107-kdtrees.html">http://www.openscenegraph.org/index.php/documentation/user-guides/107-kdtrees</A>
+</I>&gt;<i>
+</I>&gt;<i> Or you can do this on your own, if you like, by grouping nearby nodes into 
+</I>&gt;<i> their own osg::Group. Depends what your underlying data looks like.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I would not recommend combining the geometry into a single drawable unless 
+</I>&gt;<i> you expect all of them to be visible at once, and that each piece of 
+</I>&gt;<i> geometry is fairly small.
+</I>&gt;<i>
+</I>&gt;<i> On Sun, Mar 1, 2020 at 9:07 AM AndrewC &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ad... at a-cunningham.com</A> 
+</I>&gt;<i> &lt;javascript:&gt;&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi,
+</I>&gt;&gt;<i> I was wondering what the best practices are for dealing with a complex 
+</I>&gt;&gt;<i> scene graph where a single osg::Group might have , say, 5000 children where 
+</I>&gt;&gt;<i> each child is fairly simple osg::Geom geometry. Clearly, this is 
+</I>&gt;&gt;<i> inefficient and draws slowly.
+</I>&gt;&gt;<i> So obviously, compiling/collecting the geometry into one drawable would 
+</I>&gt;&gt;<i> be much more efficient. osgUtil::Optimizer does not seem to do this for me, 
+</I>&gt;&gt;<i> or am I missing something?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Andrew
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> -- 
+</I>&gt;&gt;<i> You received this message because you are subscribed to the Google Groups 
+</I>&gt;&gt;<i> &quot;OpenSceneGraph Users&quot; group.
+</I>&gt;&gt;<i> To unsubscribe from this group and stop receiving emails from it, send an 
+</I>&gt;&gt;<i> email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at googlegroups.com</A> &lt;javascript:&gt;.
+</I>&gt;&gt;<i> To view this discussion on the web visit 
+</I>&gt;&gt;<i> <A HREF="https://groups.google.com/d/msgid/osg-users/19df5325-01d5-4fa7-94d2-9c9560c92956%40googlegroups.com">https://groups.google.com/d/msgid/osg-users/19df5325-01d5-4fa7-94d2-9c9560c92956%40googlegroups.com</A> 
+</I>&gt;&gt;<i> &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/19df5325-01d5-4fa7-94d2-9c9560c92956%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/19df5325-01d5-4fa7-94d2-9c9560c92956%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt;
+</I>&gt;&gt;<i> .
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> -- 
+</I>&gt;<i>
+</I>&gt;<i> Armin Samii
+</I>&gt;<i>
+</I>&gt;<i> Visualization Software Engineer, Argo AI &lt;<A HREF="http://argo.ai/">http://argo.ai/</A>&gt;
+</I>&gt;<i> CONFIDENTIALITY NOTICE: This e-mail and any files transmitted with it are 
+</I>&gt;<i> confidential and designated solely for use of the individual(s) or entity 
+</I>&gt;<i> to whom they are addressed. If you are not the named addressee, you are 
+</I>&gt;<i> notified that disseminating, copying, disclosing or taking any action in 
+</I>&gt;<i> reliance on its contents is strictly prohibited and could subject you to 
+</I>&gt;<i> legal action by the sender. Please notify the sender immediately if you 
+</I>&gt;<i> have received this e-mail in error and delete it from your system. Thanks 
+</I>&gt;<i> for your cooperation.
+</I>&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/a98e70fb-9a0b-4925-a526-1371d294b5af%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/a98e70fb-9a0b-4925-a526-1371d294b5af%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200301/c2ffa651/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200301/c2ffa651/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010873.html">[osg-users] Best practices for dealing with complex scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="010875.html">[osg-users] Best practices for dealing with complex scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10874">[ date ]</a>
+              <a href="thread.html#10874">[ thread ]</a>
+              <a href="subject.html#10874">[ subject ]</a>
+              <a href="author.html#10874">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

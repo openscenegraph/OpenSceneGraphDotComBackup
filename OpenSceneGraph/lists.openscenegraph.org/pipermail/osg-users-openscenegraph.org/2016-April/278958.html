@@ -1,0 +1,299 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to pick the ShapDrawable in a HUD
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20pick%20the%20ShapDrawable%20in%20a%20HUD&In-Reply-To=%3CCADd-UhPyCW-FA%3DpandZ6sME%3Dox5iWesVEQ4MJK-z98eAmGzx%2BQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002751.html">
+   <LINK REL="Next"  HREF="278959.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to pick the ShapDrawable in a HUD</H1>
+<!--htdig_noindex-->
+    <B>GeeKer Wang</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20pick%20the%20ShapDrawable%20in%20a%20HUD&In-Reply-To=%3CCADd-UhPyCW-FA%3DpandZ6sME%3Dox5iWesVEQ4MJK-z98eAmGzx%2BQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to pick the ShapDrawable in a HUD">wwthunan at gmail.com
+       </A><BR>
+    <I>Sat Apr  9 08:18:25 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002751.html">[osg-users] Drawing a textured cube
+</A></li>
+        <LI>Next message: <A HREF="278959.html">[osg-users] [forum] help,	how to update text on model 3d loaded from file
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278958">[ date ]</a>
+              <a href="thread.html#278958">[ thread ]</a>
+              <a href="subject.html#278958">[ subject ]</a>
+              <a href="author.html#278958">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, all,
+
+I noticed in osgpick.cpp that  osgText::Text and osg::Geometry could be
+picked, but when I add an osg::Geode with osg::ShapeDrawable into the HUD
+camera, the picking does not work anymore.
+
+I list the code as follows. It will be appreciated if anyone can point out
+where the problem is or provide the correct way.  Thanks in advance.
+
+// g++ osgpick.cpp -Wall -O3 -W   -I/usr/include  -losgDB -losgGA
+-losgViewer -losg -losgUtil -losgText -lOpenThreads  -losgWidget  -o
+osgpick.out
+#include &lt;osgViewer/Viewer&gt;
+
+#include &lt;osg/Geode&gt;
+#include &lt;osg/MatrixTransform&gt;
+#include &lt;osg/Camera&gt;
+#include &lt;osg/io_utils&gt;
+#include &lt;osg/ShapeDrawable&gt;
+
+#include &lt;osgText/Text&gt;
+
+#include &lt;sstream&gt;
+
+// class to handle events with a pick
+class PickHandler : public osgGA::GUIEventHandler {
+public:
+
+    PickHandler(osgText::Text* updateText):
+        _updateText(updateText) {}
+    ~PickHandler() {}
+    bool handle(const osgGA::GUIEventAdapter&amp; ea,osgGA::GUIActionAdapter&amp;
+aa);
+    virtual void pick(osgViewer::View* view, const osgGA::GUIEventAdapter&amp;
+ea);
+    void setLabel(const std::string&amp; name)
+    {
+        if (_updateText.get()) _updateText-&gt;setText(name);
+    }
+protected:
+    osg::ref_ptr&lt;osgText::Text&gt;  _updateText;
+};
+
+bool PickHandler::handle(const osgGA::GUIEventAdapter&amp;
+ea,osgGA::GUIActionAdapter&amp; aa)
+{
+    switch(ea.getEventType())
+    {
+        case(osgGA::GUIEventAdapter::PUSH):
+        {
+            osgViewer::View* view = dynamic_cast&lt;osgViewer::View*&gt;(&amp;aa);
+            if (view) pick(view,ea);
+            return false;
+        }
+        case(osgGA::GUIEventAdapter::KEYDOWN):
+        {
+            if (ea.getKey()=='c')
+            {
+                osgViewer::View* view = dynamic_cast&lt;osgViewer::View*&gt;(&amp;aa);
+                osg::ref_ptr&lt;osgGA::GUIEventAdapter&gt; event = new
+osgGA::GUIEventAdapter(ea);
+                event-&gt;setX((ea.getXmin()+ea.getXmax())*0.5);
+                event-&gt;setY((ea.getYmin()+ea.getYmax())*0.5);
+                if (view) pick(view,*event);
+            }
+            return false;
+        }
+        default:
+            return false;
+    }
+}
+
+void PickHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapter&amp;
+ea)
+{
+    osgUtil::LineSegmentIntersector::Intersections intersections;
+
+    std::string gdlist=&quot;&quot;;
+
+    if (view-&gt;computeIntersections(ea,intersections))
+    {
+        for(osgUtil::LineSegmentIntersector::Intersections::iterator hitr =
+intersections.begin();
+            hitr != intersections.end();
+            ++hitr)
+        {
+            std::ostringstream os;
+            if (!hitr-&gt;nodePath.empty() &amp;&amp;
+!(hitr-&gt;nodePath.back()-&gt;getName().empty()))
+            {
+                // the geodes are identified by name.
+                os&lt;&lt;&quot;Object
+\&quot;&quot;&lt;&lt;hitr-&gt;nodePath.back()-&gt;getName()&lt;&lt;&quot;\&quot;&quot;&lt;&lt;std::endl;
+            }
+            else if (hitr-&gt;drawable.valid())
+            {
+                os&lt;&lt;&quot;Object
+\&quot;&quot;&lt;&lt;hitr-&gt;drawable-&gt;className()&lt;&lt;&quot;\&quot;&quot;&lt;&lt;std::endl;
+            }
+
+            os&lt;&lt;&quot;        local coords vertex(&quot;&lt;&lt;
+hitr-&gt;getLocalIntersectPoint()&lt;&lt;&quot;)&quot;&lt;&lt;&quot;
+ normal(&quot;&lt;&lt;hitr-&gt;getLocalIntersectNormal()&lt;&lt;&quot;)&quot;&lt;&lt;std::endl;
+            os&lt;&lt;&quot;        world coords vertex(&quot;&lt;&lt;
+hitr-&gt;getWorldIntersectPoint()&lt;&lt;&quot;)&quot;&lt;&lt;&quot;
+ normal(&quot;&lt;&lt;hitr-&gt;getWorldIntersectNormal()&lt;&lt;&quot;)&quot;&lt;&lt;std::endl;
+            const osgUtil::LineSegmentIntersector::Intersection::IndexList&amp;
+vil = hitr-&gt;indexList;
+            for(unsigned int i=0;i&lt;vil.size();++i)
+            {
+                os&lt;&lt;&quot;        vertex indices [&quot;&lt;&lt;i&lt;&lt;&quot;] =
+&quot;&lt;&lt;vil[i]&lt;&lt;std::endl;
+            }
+
+            gdlist += os.str();
+        }
+    }
+    setLabel(gdlist);
+}
+
+osg::Camera* createHUD(osgText::Text* updateText)
+{
+    osg::Camera* hudCamera = new osg::Camera;
+    hudCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    hudCamera-&gt;setProjectionMatrixAsOrtho2D(0,1280,0,1024);
+    hudCamera-&gt;setViewMatrix(osg::Matrix::identity());
+    hudCamera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+    hudCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+
+    std::string timesFont(&quot;fonts/times.ttf&quot;);
+
+    osg::Vec3 position(150.0f,800.0f,0.0f);
+    osg::Vec3 delta(0.0f,-60.0f,0.0f);
+
+    {
+        osg::Geode* geode = new osg::Geode();
+        osg::StateSet* stateset = geode-&gt;getOrCreateStateSet();
+        stateset-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+        stateset-&gt;setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+        geode-&gt;setName(&quot;simple&quot;);
+        hudCamera-&gt;addChild(geode);
+
+        osgText::Text* text = new  osgText::Text;
+        geode-&gt;addDrawable( text );
+
+        text-&gt;setFont(timesFont);
+        text-&gt;setText(&quot;Picking in Head Up Displays is simple!&quot;);
+        text-&gt;setPosition(position);
+
+        position += delta;
+    }
+
+
+    for (int i=0; i&lt;5; i++) {
+        osg::Vec3 dy(0.0f,-30.0f,0.0f);
+        osg::Vec3 dx(120.0f,0.0f,0.0f);
+        osg::Geode* geode = new osg::Geode();
+        osg::StateSet* stateset = geode-&gt;getOrCreateStateSet();
+        const char *opts[]={&quot;One&quot;, &quot;Two&quot;, &quot;Three&quot;, &quot;January&quot;, &quot;Feb&quot;,
+&quot;2003&quot;};
+        osg::Geometry *quad=new osg::Geometry;
+        stateset-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+        stateset-&gt;setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+        std::string name=&quot;subOption&quot;;
+        name += &quot; &quot;;
+        name += std::string(opts[i]);
+        geode-&gt;setName(name);
+        osg::Vec3Array* vertices = new osg::Vec3Array(4); // 1 quad
+        osg::Vec4Array* colors = new osg::Vec4Array;
+        colors = new osg::Vec4Array;
+        colors-&gt;push_back(osg::Vec4(0.8-0.1*i,0.1*i,0.2*i, 1.0));
+        quad-&gt;setColorArray(colors, osg::Array::BIND_OVERALL);
+        (*vertices)[0]=position;
+        (*vertices)[1]=position+dx;
+        (*vertices)[2]=position+dx+dy;
+        (*vertices)[3]=position+dy;
+        quad-&gt;setVertexArray(vertices);
+        quad-&gt;addPrimitiveSet(new
+osg::DrawArrays(osg::PrimitiveSet::QUADS,0,4));
+        geode-&gt;addDrawable(quad);
+        hudCamera-&gt;addChild(geode);
+
+        position += delta;
+    }
+
+    { // this displays what has been selected
+        osg::Geode* geode = new osg::Geode();
+        osg::StateSet* stateset = geode-&gt;getOrCreateStateSet();
+        stateset-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+        stateset-&gt;setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+        geode-&gt;setName(&quot;The text label&quot;);
+        geode-&gt;addDrawable( updateText );
+        hudCamera-&gt;addChild(geode);
+
+        updateText-&gt;setCharacterSize(20.0f);
+        updateText-&gt;setFont(timesFont);
+        updateText-&gt;setColor(osg::Vec4(1.0f,1.0f,0.0f,1.0f));
+        updateText-&gt;setText(&quot;&quot;);
+        updateText-&gt;setPosition(position);
+        updateText-&gt;setDataVariance(osg::Object::DYNAMIC);
+
+        position += delta;
+    }
+    return hudCamera;
+}
+
+osg::Node* createScene() {
+osg::ref_ptr&lt;osg::Geode&gt; node = new osg::Geode;
+osg::ref_ptr&lt;osg::ShapeDrawable&gt; sphere = new osg::ShapeDrawable(new
+osg::Sphere(osg::Vec3(500,300,0), 100));
+node-&gt;addDrawable(sphere.get());
+return node.release();
+}
+
+int main( int argc, char **argv )
+{
+    osg::ref_ptr&lt;osg::Node&gt; scene = createScene();
+    osg::ref_ptr&lt;osg::Group&gt; group = new osg::Group;
+    osg::ref_ptr&lt;osgText::Text&gt; updateText = new osgText::Text;
+osg::ref_ptr&lt;osg::Camera&gt; hud = createHUD(updateText.get());
+hud-&gt;addChild(scene.get());
+//group-&gt;addChild(scene.get());
+    group-&gt;addChild(hud.get());
+osgViewer::Viewer viewer;
+viewer.addEventHandler(new PickHandler(updateText.get()));
+viewer.setSceneData(group.get());
+return viewer.run();
+}
+
+
+-- 
+Martin
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160409/6dda34fb/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160409/6dda34fb/attachment-0001.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002751.html">[osg-users] Drawing a textured cube
+</A></li>
+	<LI>Next message: <A HREF="278959.html">[osg-users] [forum] help,	how to update text on model 3d loaded from file
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278958">[ date ]</a>
+              <a href="thread.html#278958">[ thread ]</a>
+              <a href="subject.html#278958">[ subject ]</a>
+              <a href="author.html#278958">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

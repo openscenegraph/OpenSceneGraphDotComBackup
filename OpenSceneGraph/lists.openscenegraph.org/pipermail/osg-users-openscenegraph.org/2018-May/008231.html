@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText: problem with SCREEN_COORDS mode
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%3A%20problem%20with%20SCREEN_COORDS%20mode&In-Reply-To=%3CCAFN7Y%2BWZC3g%2BGt66u-hWvNYc9hUoKFz3jGxtohkg%2B6AKfnkOYw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008230.html">
+   <LINK REL="Next"  HREF="008233.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText: problem with SCREEN_COORDS mode</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%3A%20problem%20with%20SCREEN_COORDS%20mode&In-Reply-To=%3CCAFN7Y%2BWZC3g%2BGt66u-hWvNYc9hUoKFz3jGxtohkg%2B6AKfnkOYw%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgText: problem with SCREEN_COORDS mode">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat May 19 04:11:01 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008230.html">[osg-users] osgText: problem with SCREEN_COORDS mode
+</A></li>
+        <LI>Next message (by thread): <A HREF="008233.html">[osg-users] osgText: problem with SCREEN_COORDS mode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8231">[ date ]</a>
+              <a href="thread.html#8231">[ thread ]</a>
+              <a href="subject.html#8231">[ subject ]</a>
+              <a href="author.html#8231">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Glenn,
+
+While I haven't got to the bottom of the change in behaviour, I am not sure
+that SCREEN_COORDS scaling is wholly appropriate for you usage case, the
+originally behaviour might have worked OK for you but I know it wasn't
+working 100% correct w.r.t scaling.
+
+If I could rewrite osgText without worrying about backwards compatibility I
+most like wouldn't push scaling and auto rotation functionality in the
+basic osgText, rather I'd leave this to AutoTransform/Billboard type
+nodes.  As we are trying to walk the tightrope of retaining backwards
+compatibility and fixing bugs we have less wriggle room.
+
+At this point in time I don't know if the new SCREEN_COORDS should behave
+how you are wanting it to behave as strictly you can't have it scaling in
+screen coords if the text isn't aligned to the screen.  What you are
+probably after is uniform scaling of the text based on it's center, but not
+clear on how one would encode that into an actual function to get the exact
+behaviour you want.   This is where making it a custom behaviour would
+allow users to resolve this.  Subclassing from osgText is possible so
+perhaps this is an avenue.
+
+Robert.
+
+On 18 May 2018 at 18:01, Glenn Waldron &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">gwaldron at gmail.com</A>&gt; wrote:
+
+&gt;<i> Robert,
+</I>&gt;<i> Thank you for look into this. Indeed, my use case is an earth graticule
+</I>&gt;<i> with labels in the grid cells.
+</I>&gt;<i>
+</I>&gt;<i> As the labels become more rotated away from the camera, things begin to
+</I>&gt;<i> break down:
+</I>&gt;<i>
+</I>&gt;<i> [image: 2018-05-18_125340.jpg]
+</I>&gt;<i>
+</I>&gt;<i> Removing the rotational elements yields a better result:
+</I>&gt;<i>
+</I>&gt;<i> [image: 2018-05-18_125144.jpg]
+</I>&gt;<i>
+</I>&gt;<i> I understand that just removing rotations might cause other side effects
+</I>&gt;<i> so maybe there's a better approach.
+</I>&gt;<i>
+</I>&gt;<i> Even if this is not a bug, it is a regression relative to OSG 3.4.1. Let
+</I>&gt;<i> me know if you want me to do any further testing.
+</I>&gt;<i>
+</I>&gt;<i> Glenn Waldron
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Fri, May 18, 2018 at 6:27 AM Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi Glenn,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I have now looked at your test program and can reproduce the stretched
+</I>&gt;&gt;<i> text.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The example is a bit unusual in that you have text size set to
+</I>&gt;&gt;<i> SCREEN_COORDS but the orientation of the text is free to move with the
+</I>&gt;&gt;<i> scene as it gets rotated by the viewer's camera,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> What I'd normally expect is that if you are using:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     text-&gt;setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Then it would be normal to also us:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     text-&gt;setAxisAlignment(osgText::Text::SCREEN);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Adding this to your test example fixes the issue.  So I'm curious, do you
+</I>&gt;&gt;<i> have an instance where the character size should be scaled to SCREEN_COORDS
+</I>&gt;&gt;<i> but with the AxisAlignment set to SCREEN.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> As a general comment, if you are scaling the text to screen coords the
+</I>&gt;&gt;<i> rotation of the text will be important to take into account as the aspect
+</I>&gt;&gt;<i> ratio of the window can be altered so required the horizontal and vertical
+</I>&gt;&gt;<i> scaling can be different, which will be affected by the rotation of the
+</I>&gt;&gt;<i> text.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> At this point I don't think we are looking at a bug, rather just an odd
+</I>&gt;&gt;<i> behaviour when using text is an odd way.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180519/3b29f3fa/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180519/3b29f3fa/attachment-0001.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: 2018-05-18_125144.jpg
+Type: image/jpeg
+Size: 291374 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180519/3b29f3fa/attachment-0002.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180519/3b29f3fa/attachment-0002.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: 2018-05-18_125340.jpg
+Type: image/jpeg
+Size: 306838 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180519/3b29f3fa/attachment-0003.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180519/3b29f3fa/attachment-0003.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008230.html">[osg-users] osgText: problem with SCREEN_COORDS mode
+</A></li>
+	<LI>Next message (by thread): <A HREF="008233.html">[osg-users] osgText: problem with SCREEN_COORDS mode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8231">[ date ]</a>
+              <a href="thread.html#8231">[ thread ]</a>
+              <a href="subject.html#8231">[ subject ]</a>
+              <a href="author.html#8231">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

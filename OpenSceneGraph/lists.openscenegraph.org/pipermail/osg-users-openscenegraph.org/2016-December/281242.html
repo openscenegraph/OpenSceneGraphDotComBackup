@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Upon Clicking the mouse left button the model should	appear there
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Upon%20Clicking%20the%20mouse%20left%20button%20the%20model%20should%0A%09appear%20there&In-Reply-To=%3C1480923308.m2f.69593%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005023.html">
+   <LINK REL="Next"  HREF="005021.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Upon Clicking the mouse left button the model should	appear there</H1>
+<!--htdig_noindex-->
+    <B>Rambabu Repaka</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Upon%20Clicking%20the%20mouse%20left%20button%20the%20model%20should%0A%09appear%20there&In-Reply-To=%3C1480923308.m2f.69593%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Upon Clicking the mouse left button the model should	appear there">ramboram488 at gmail.com
+       </A><BR>
+    <I>Sun Dec  4 23:35:08 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005023.html">[osg-users] [forum] Lat &amp; Lons
+</A></li>
+        <LI>Next message: <A HREF="005021.html">[osg-users] Upon Clicking the mouse left button the model should appear there
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281242">[ date ]</a>
+              <a href="thread.html#281242">[ thread ]</a>
+              <a href="subject.html#281242">[ subject ]</a>
+              <a href="author.html#281242">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+float CenLat = 12.0, CenLon = 77.0;
+float MinLat, MaxLat,MinLon,MaxLon;
+float Width = 1280, Height = 1024;
+float DifLat, DifLon,scale;
+float x,y,PrevX,PrevY;
+class ModelController : public osgGA::GUIEventHandler
+{
+public:
+	ModelController(osg::MatrixTransform* node) : _model(node) {}
+	virtual bool handle(const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; aa);
+protected:
+	osg::ref_ptr&lt;osg::MatrixTransform&gt; _model;
+	
+};
+
+bool ModelController::handle( const osgGA::GUIEventAdapter&amp; ea,osgGA::GUIActionAdapter&amp; aa )
+{
+	if ( !_model ) return false;
+	float msePreLon = MinLon + ((ea.getX())/scale);
+	float msePresLt = MinLat + ((ea.getY())/ scale);
+	if (msePreLon &gt; 180)	{
+		msePreLon = 180;
+	}
+	else if (msePreLon &lt; -180)	{
+		msePreLon = -180.0;
+	}
+	if (msePresLt &gt; 90)	{
+		msePresLt = 90;
+	}
+	else if (msePresLt &lt; -90)	{
+		msePresLt = -90;
+	}
+	osg::Matrix matrix   =  _model-&gt;getMatrix();
+	switch ( ea.getEventType() )
+	{
+	case osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON:
+	{
+		CenLon = msePreLon;
+		CenLat = msePresLt ;
+		if ((CenLon - (DifLon / 2.0)) &lt; -180)       { CenLon = -180 + (DifLon / 2.0); }
+		else if ((CenLon + (DifLon / 2.0)) &gt; 180)   { CenLon =  180 - (DifLon / 2.0); }
+		if ((CenLat - (DifLat / 2.0)) &lt; -90)        { CenLat =  -90 + (DifLat / 2.0); }
+		else if ((CenLat + (DifLat / 2.0)) &gt; 90)    { CenLat =   90 - (DifLat / 2.0); }
+		MinLon = CenLon - (DifLon / 2.0);
+		MinLat = CenLat - (DifLat / 2.0);
+		MaxLon = CenLon + (DifLon / 2.0);
+		MaxLat = CenLat + (DifLat / 2.0);
+		//matrix *= osg::Matrix::scale(scale,scale,0.0);
+		matrix *= osg::Matrix::translate(CenLon, 0.0, CenLat);
+	}
+	_model-&gt;setMatrix( matrix );
+		
+	}
+	return false;
+}
+int main(int argc, char **argv)
+{
+	osg::DisplaySettings::instance()-&gt;setNumMultiSamples(4);
+	scale = Width;
+	osg::ref_ptr&lt;osg::Node&gt; model = osgDB::readNodeFile(&quot;D:/RamFolder/OSG/OSG_Binary/OpenSceneGraph-3.0.1-VS9.0.30729-x86-debug-12741/data/cessna.osg&quot;);
+	osg::ref_ptr&lt;osg::MatrixTransform &gt; mt = new osg::MatrixTransform;
+	mt-&gt;addChild(model.get());
+	osg::ref_ptr&lt;osg::Projection&gt; projection = new osg::Projection;
+	projection-&gt;setMatrix(osg::Matrix::ortho2D(-Width/2, Width / 2, -Height/2, Height / 2));
+	projection-&gt;addChild(mt.get());
+	if (scale &lt; Width / 2)	{
+		scale = Width / 2;
+	}
+	if (scale &gt; Width * 100)	{
+		scale = Width * 100;
+	}
+	DifLat = Width / scale;
+	DifLon = Height / scale;
+
+	if ((CenLon - (DifLon / 2.0)) &lt; -180)       { CenLon = -180 + (DifLon / 2.0); }
+	else if ((CenLon + (DifLon / 2.0)) &gt; 180)   { CenLon = 180 - (DifLon / 2.0); }
+	if ((CenLat - (DifLat / 2.0)) &lt; -90)        { CenLat = -90 + (DifLat / 2.0); }
+	else if ((CenLat + (DifLat / 2.0)) &gt; 90)    { CenLat = 90 - (DifLat / 2.0); }
+	MinLon = CenLon - (DifLon / 2.0);
+	MinLat = CenLat - (DifLat / 2.0);
+	MaxLon = CenLon + (DifLon / 2.0);
+	MaxLat = CenLat + (DifLat / 2.0);
+
+	osg::ref_ptr&lt;ModelController&gt; ctrler = new ModelController(mt.get());
+
+	osgViewer::Viewer viewer;
+	viewer.setSceneData(projection.get());
+	viewer.addEventHandler(ctrler.get());
+	viewer.setUpViewInWindow(500, 500, 500, 500);
+	return viewer.run();
+}
+
+Upon clicking the mouse left button the model should appear there.But it is not happening.can anyone help me in finding the solution?
+
+... 
+
+Thank you!
+
+Cheers,
+Rambabu
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicb97d.php?p=69593#69593">http://forum.openscenegraph.org/viewtopic.php?p=69593#69593</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005023.html">[osg-users] [forum] Lat &amp; Lons
+</A></li>
+	<LI>Next message: <A HREF="005021.html">[osg-users] Upon Clicking the mouse left button the model should appear there
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281242">[ date ]</a>
+              <a href="thread.html#281242">[ thread ]</a>
+              <a href="subject.html#281242">[ subject ]</a>
+              <a href="author.html#281242">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

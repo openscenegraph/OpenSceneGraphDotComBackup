@@ -1,0 +1,262 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Deleting still referenced object
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3CCAFN7Y%2BUMMtH6Wi8LeOgJCBuwntWRZJGfHbg%2ByucQu9y_%2BTOqdw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009630.html">
+   <LINK REL="Next"  HREF="009633.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Deleting still referenced object</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3CCAFN7Y%2BUMMtH6Wi8LeOgJCBuwntWRZJGfHbg%2ByucQu9y_%2BTOqdw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Deleting still referenced object">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Jan 22 12:42:01 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009630.html">[osg-users] Deleting still referenced object
+</A></li>
+        <LI>Next message (by thread): <A HREF="009633.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9631">[ date ]</a>
+              <a href="thread.html#9631">[ thread ]</a>
+              <a href="subject.html#9631">[ subject ]</a>
+              <a href="author.html#9631">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Richard,
+
+Sorry to hear your are battling this issue.  I've read through, and
+had a quick look at simgear master but could find the
+loadUsingReaderWriter() implementation in ModelRegistry.cxx that you
+mention.  Are you working on a branch or not checked something in yet?
+
+As a general comment, if you could use the OpenSceneGraph-3.6 branch
+rather than master it should give you a more stable and tested OSG
+base to work from.  I'd also recommend checking the whole model
+loading/processing path to make sure all the methods are taking and
+passing back ref_ptr&lt;&gt; rather than C pointer.  In my quick check I
+spotted a osg::Node* OptimizeModelPolicy::optimize() method that be
+something could be the type of thing to convert across to ref_ptr&lt;&gt;.
+
+Robert.
+
+On Tue, 22 Jan 2019 at 17:58, Richard Harrison &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rjh at zaretto.com</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> I've just got another of these problems.
+</I>&gt;<i>
+</I>&gt;<i> This is after changing all of the osgDB::read into osgDB::readRef
+</I>&gt;<i> (simgear commit cb024dd82d4c384df0b599640a98e762fbf66688) and 5days of
+</I>&gt;<i> flight time testing (not all the same run, FG was restarted many
+</I>&gt;<i> times) I've hit what looks like a the same problem as I originally
+</I>&gt;<i> reported; i.e. the expiry appears to be something that has just been
+</I>&gt;<i> loaded and expired at the same time. I'm keeping my debug session open
+</I>&gt;<i> to allow further investigation in case questions.
+</I>&gt;<i>
+</I>&gt;<i> I'm surprised that the fixes didn't work as they looked to me as
+</I>&gt;<i> though they should fix the problem I'm immediately suspecting that
+</I>&gt;<i> maybe there are other things that we're doing that are interfering
+</I>&gt;<i> with the thread safety mechanisms.
+</I>&gt;<i>
+</I>&gt;<i> Having dug into what's happening; the DatabasePager is currently
+</I>&gt;<i> loading Models/Airport/cargoim.xml; which is defined in
+</I>&gt;<i> project3000/Objects/w010n50/w002n52/2925458.stg; and the ObjectCache
+</I>&gt;<i> is expiring Models/Aircraft/Cessna172_red.ac; Looking at the pertinent
+</I>&gt;<i> part of the .stg it is a fair conclusion that the DatabasePager has
+</I>&gt;<i> just loaded two Cessna172_red.ac models
+</I>&gt;<i>
+</I>&gt;<i> OBJECT_SHARED Models/Aircraft/Cessna172_red.ac -1.47630 52.37373 82.02
+</I>&gt;<i> 223.53
+</I>&gt;<i> OBJECT_SHARED Models/Aircraft/Cessna172_red.ac -1.47560 52.37443 81.34 345.5
+</I>&gt;<i> OBJECT_SHARED Models/lib/trailer-fedex.ac -1.48893 52.36957 84.13 314.01
+</I>&gt;<i> OBJECT_SHARED Models/Airport/cargoim.xml -1.47436 52.36886 79.91 188.47
+</I>&gt;<i>
+</I>&gt;<i> The actual .ac model load is happening in SGReaderWriteXML.cxx line 341
+</I>&gt;<i>
+</I>&gt;<i>      modelResult = osgDB::readRefNodeFile(modelpath.local8BitStr(),
+</I>&gt;<i> options.get());
+</I>&gt;<i>
+</I>&gt;<i> which will end up in ModelRegistry.cxx line 866
+</I>&gt;<i>
+</I>&gt;<i>      loadUsingReaderWriter(const std::string&amp; fileName,
+</I>&gt;<i>                            const osgDB::Options* opt)
+</I>&gt;<i>      {
+</I>&gt;<i>          using namespace osgDB;
+</I>&gt;<i>          ReaderWriter* rw =
+</I>&gt;<i>              Registry::instance()
+</I>&gt;<i>              -&gt;getReaderWriterForExtension
+</I>&gt;<i>                (osgDB::getFileExtension(fileName));
+</I>&gt;<i>          if (!rw)
+</I>&gt;<i>              return ReaderWriter::ReadResult(); // FILE_NOT_HANDLED
+</I>&gt;<i>          return rw-&gt;readNode(fileName, opt);
+</I>&gt;<i>      }
+</I>&gt;<i>
+</I>&gt;<i> I think it is correct in this instance to use the (ac3d) via the
+</I>&gt;<i> registry and readNode.
+</I>&gt;<i>
+</I>&gt;<i> The only other thing that looks a bit odd is the way we are requesting
+</I>&gt;<i> the same .stg file multiple times; maybe that is tripping something up
+</I>&gt;<i> in our code; but I don't think that's the cause of the deleting whilst
+</I>&gt;<i> still in use.
+</I>&gt;<i>
+</I>&gt;<i>    [0..162] i:/flightgear/project3000/Objects/w010n50/w002n52/2925458.stg
+</I>&gt;<i>    [163..178] i:/flightgear/project3000/Objects/w010n50/w002n52/2925458.stg
+</I>&gt;<i>    [179..] i:/flightgear/terrasync/Terrain/w010n50/w002n52/2925458.stg
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> -------------------
+</I>&gt;<i> On 17/01/2019 14:39, Voerman, L. wrote the following questions:
+</I>&gt;<i>
+</I>&gt;<i>  &gt; - did the problematic node come out of the cache, or did it come
+</I>&gt;<i> fresh from disk?
+</I>&gt;<i>
+</I>&gt;<i> It's hard to tell because as far as I can tell the problematic load has
+</I>&gt;<i> finished and the pager has moved onto the next item.
+</I>&gt;<i>
+</I>&gt;<i>  &gt; - Is the parent group (and it's _children vector) still sane?
+</I>&gt;<i>
+</I>&gt;<i> Looking at the node that is being expired it all looks good; the
+</I>&gt;<i> reference count is 3; so there remains the mystery of how this can
+</I>&gt;<i> happen.
+</I>&gt;<i>
+</I>&gt;<i>          oitr (
+</I>&gt;<i>                  (&quot;Models/Aircraft/Cessna172_red.ac&quot;,
+</I>&gt;<i>                  {_ptr=0x0 &lt;NULL&gt; }),
+</I>&gt;<i>                  ({_ptr=0x2441e8bc800 {_children={ size=0x5 } } },
+</I>&gt;<i>                  5002.8604968999998))
+</I>&gt;<i>          first   &quot;Models/Aircraft/Cessna172_red.ac&quot;
+</I>&gt;<i>          second  {_ptr=0x0 &lt;NULL&gt; }
+</I>&gt;<i>          second  ({_ptr=0x2441e8bc800 {_children={ size=0x5 } } },
+</I>&gt;<i>                   5002.8604968999998)
+</I>&gt;<i>              first   {_ptr=0x2441e8bc800 {_children={ size=0x5 } } } o
+</I>&gt;<i>                       sg::ref_ptr&lt;osg::Object&gt;
+</I>&gt;<i>              _ptr    0x2441e8bc800 {_children={ size=0x5 } }
+</I>&gt;<i>                      osg::Object * {osg160-osg.dll!osg::Group}
+</I>&gt;<i>          [osg::Group]
+</I>&gt;<i>              {_children={ size=0x5 } } osg160-osg.dll!osg::Group
+</I>&gt;<i>                  osg::Node   {...}
+</I>&gt;<i>                      osg::Object
+</I>&gt;<i>                      {
+</I>&gt;<i> _name=&quot;I:\flightgear\terrasync\Models\Aircraft\Cessna172_red.ac&quot;
+</I>&gt;<i>            _dataVariance=STATIC (0x1) ...
+</I>&gt;<i>                      }
+</I>&gt;<i>              _initialBound
+</I>&gt;<i>              {_center={_v=0x2441e8bc848 {0.0, 0.0, 0.0} } _radius=-1.0 }
+</I>&gt;<i>              _boundingSphere {
+</I>&gt;<i>                  _center={_v=0x2441e8bc860 {0.0, 0.0, 0.0} }
+</I>&gt;<i>                  _radius=-1.0 }
+</I>&gt;<i>              _boundingSphereComputed false   bool
+</I>&gt;<i>              _parents    { size=0x2 }
+</I>&gt;<i>              _numChildrenRequiringUpdateTraversal
+</I>&gt;<i>              _cullingActive  true
+</I>&gt;<i>              _nodeMask   0xffffdfff
+</I>&gt;<i>              _children   { size=0x5 }
+</I>&gt;<i>              osg::Referenced {_observerSet={_ptr=0x0 }
+</I>&gt;<i>              _refCount={_value=0x3 } }
+</I>&gt;<i>              _dataVariance   STATIC (0x1)
+</I>&gt;<i>              _userDataContainer  0x0
+</I>&gt;<i>          second  5002.8604968999998
+</I>&gt;<i>
+</I>&gt;<i>  &gt; - If the parent node is still sane, can you match it to the file on
+</I>&gt;<i>  &gt; disk and possibly tell what sort of node the problem appears in?  -
+</I>&gt;<i>  &gt; What is the file format of the file on disk? Do you have (use)
+</I>&gt;<i>  &gt; multiple pager threads? Could the file loader have a multithreading
+</I>&gt;<i>  &gt; problem?
+</I>&gt;<i>
+</I>&gt;<i> It's a .ac format node; we're using a single DatabasePager thread (as
+</I>&gt;<i> there are other loading problems within FG that almost prevent it from
+</I>&gt;<i> running at all)
+</I>&gt;<i>
+</I>&gt;<i> --------------------------
+</I>&gt;<i> Stack dumps are as follows:
+</I>&gt;<i>
+</I>&gt;<i> Main thread;
+</I>&gt;<i>      fgfs.exe!NotifyLogger::notify
+</I>&gt;<i>      osg160-osg.dll!osg::NotifyStreamBuffer::sync L:92
+</I>&gt;<i>      msvcp140.dll!00007ffabb8a27f2
+</I>&gt;<i>      osg160-osg.dll!std::endl
+</I>&gt;<i>      osg160-osg.dll!osg::Referenced::~Referenced() L:205
+</I>&gt;<i>      osgdb_ac.dll!osg::Group::`scalar deleting destructor'
+</I>&gt;<i>      osg160-osg.dll!osg::Referenced::signalObserversAndDelete() L:294
+</I>&gt;<i>      osg160-osg.dll!osg::Referenced::unref() L:203
+</I>&gt;<i>      osg160-osgDB.dll!std::erase L:1431
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::ObjectCache::removeExpiredObjectsInCache L:171
+</I>&gt;<i>      osg160-osgViewer.dll!osgViewer::Viewer::updateTraversal() L:1161
+</I>&gt;<i>      osg160-osgViewer.dll!osgViewer::ViewerBase::frame L:748
+</I>&gt;<i>      fgfs.exe!fgOSMainLoop() L:339
+</I>&gt;<i>      fgfs.exe!fgMainInit(int argc, char * * argv) L:619
+</I>&gt;<i>      fgfs.exe!main(int argc, char * * argv) L:339
+</I>&gt;<i>      fgfs.exe!__scrt_common_main_seh() L:253
+</I>&gt;<i>
+</I>&gt;<i> DatabasePager thread
+</I>&gt;<i>
+</I>&gt;<i>      ntdll.dll!00007ffaefd51db4
+</I>&gt;<i>      KernelBase.dll!00007ffaec855834
+</I>&gt;<i>      KernelBase.dll!00007ffaec855bcc
+</I>&gt;<i>      kernel32.dll!00007ffaef606413
+</I>&gt;<i>      kernel32.dll!00007ffaef642d42
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::getRealPath
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::findFileInPath
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::findFileInPath
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::Registry::findDataFileImplementation
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::Registry::findDataFile
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::findDataFile
+</I>&gt;<i>      fgfs.exe!simgear::SGReaderWriterXML::readNode
+</I>&gt;<i> fgfs.exe!simgear::ModelRegistryCallback&lt;&gt;::loadUsingReaderWriter
+</I>&gt;<i>      fgfs.exe!simgear::ModelRegistryCallback&lt;&gt;::readNode
+</I>&gt;<i>      fgfs.exe!simgear::ModelRegistry::readNode
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::Registry::readNode
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::readRefNodeFile
+</I>&gt;<i> fgfs.exe!simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback
+</I>&gt;<i>                                      ::AddModelLOD::operator
+</I>&gt;<i>      fgfs.exe!simgear::QuadTreeBuilder&lt;&gt;::addNode
+</I>&gt;<i>      fgfs.exe!simgear::QuadTreeBuilder&lt;&gt;::buildQuadTree
+</I>&gt;<i>      fgfs.exe!simgear::ReaderWriterSTG::_ModelBin
+</I>&gt;<i> ::DelayLoadReadFileCallback::readNode
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::Registry::readNode
+</I>&gt;<i>      osg160-osgDB.dll!osgDB::DatabasePager::DatabaseThread::run
+</I>&gt;<i> ot21-OpenThreads.dll!OpenThreads::ThreadPrivateActions::StartThread
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009630.html">[osg-users] Deleting still referenced object
+</A></li>
+	<LI>Next message (by thread): <A HREF="009633.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9631">[ date ]</a>
+              <a href="thread.html#9631">[ thread ]</a>
+              <a href="subject.html#9631">[ subject ]</a>
+              <a href="author.html#9631">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

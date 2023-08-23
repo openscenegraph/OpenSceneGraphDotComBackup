@@ -1,0 +1,195 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] request for small change in StandardShadowMap.cpp
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20request%20for%20small%20change%20in%20StandardShadowMap.cpp&In-Reply-To=%3CCAO-%2Bzin4qYHKcvvJueynGnyXU%2ByZSvNr2na7Qqx8ABdsJ1fqFQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000273.html">
+   <LINK REL="Next"  HREF="000276.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] request for small change in StandardShadowMap.cpp</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20request%20for%20small%20change%20in%20StandardShadowMap.cpp&In-Reply-To=%3CCAO-%2Bzin4qYHKcvvJueynGnyXU%2ByZSvNr2na7Qqx8ABdsJ1fqFQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] request for small change in StandardShadowMap.cpp">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Fri May  1 11:11:30 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000273.html">[osg-users] request for small change in StandardShadowMap.cpp
+</A></li>
+        <LI>Next message: <A HREF="000276.html">[osg-users] request for small change in StandardShadowMap.cpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#275">[ date ]</a>
+              <a href="thread.html#275">[ thread ]</a>
+              <a href="subject.html#275">[ subject ]</a>
+              <a href="author.html#275">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi again Robert,
+
+I took a closer look into ShadowedScene::traverse and you are right. The
+reason to force osg::Group::traverse is to allow to call this from the
+ShadowedTechnique, to avoid recursive calls of the same.
+
+So I am going to ask if you can expose the local osg::Program through an
+interface, that is easier .. What you think?
+
+Nick
+
+On Fri, May 1, 2015 at 7:24 PM, Trajce Nikolov NICK &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> thanks for the reply. Well, I spent quite a good amount of time to
+</I>&gt;<i> understand how it works and it all points to the StandardShadowMap, the
+</I>&gt;<i> call I posted. This shadowmap technique allows you to attach shaders to it
+</I>&gt;<i> through the interface, but the program is set localy again for a local
+</I>&gt;<i> _stateset that is pushed through the CullVisitor in a cull stage. All I
+</I>&gt;<i> need is reference to this local instance of the Program. Perhaps, maybe
+</I>&gt;<i> introduce a method getProgram() which again will not hurt anyone.
+</I>&gt;<i>
+</I>&gt;<i> Also, I can not think of any special reason to specialize the traverse
+</I>&gt;<i> call to osg::Group then forbid the extension ....
+</I>&gt;<i>
+</I>&gt;<i> Any further thoughts?
+</I>&gt;<i>
+</I>&gt;<i> Nick
+</I>&gt;<i>
+</I>&gt;<i> On Fri, May 1, 2015 at 6:50 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi Nick,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I haven't worked with osgShadow for over a year so it's not fresh in
+</I>&gt;&gt;<i> my mind.  There are mechanisms for override the state management in
+</I>&gt;&gt;<i> osgShadow but I don't recall how widely they are implemented amongst
+</I>&gt;&gt;<i> the shadow techniques.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> With the proposed change, with the explicit osg::Group::traverse()
+</I>&gt;&gt;<i> method there must be a reason why this was done but without a code
+</I>&gt;&gt;<i> review and trawl through the svn logs I can't provide the answer.  In
+</I>&gt;&gt;<i> general overriding the management of osg::Program and other
+</I>&gt;&gt;<i> osg::StateSet setting shouldn't require lots of hacks, so if a
+</I>&gt;&gt;<i> particular ShadowTechnique is failing in this respect then perhaps
+</I>&gt;&gt;<i> this needs looking at.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 1 May 2015 at 17:15, Trajce Nikolov NICK
+</I>&gt;&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;&gt;<i> &gt; Hi Robert,
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; I posted a while ago a question how to get the osg::Program associated
+</I>&gt;&gt;<i> with
+</I>&gt;&gt;<i> &gt; the shaders from the StandardShadowMap in order to extend. And it is
+</I>&gt;&gt;<i> localy
+</I>&gt;&gt;<i> &gt; defined as you can see in the code. However I found a workaround, by
+</I>&gt;&gt;<i> &gt; extending the ShadowingScene and catch the StateSet from the Cull
+</I>&gt;&gt;<i> traversal.
+</I>&gt;&gt;<i> &gt; But, this will not work since the line below. Here is my proposed
+</I>&gt;&gt;<i> change, it
+</I>&gt;&gt;<i> &gt; will not hurt anyone I think - these ShadowMap* classes are
+</I>&gt;&gt;<i> &gt; over-encapsulated in my opinion.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; void StandardShadowMap::ViewData::cullShadowReceivingScene( )
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; {
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;     _cv-&gt;pushStateSet( _stateset.get() );
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; #if 0
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;     _st-&gt;getShadowedScene()-&gt;osg::Group::traverse( *_cv );
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; #else
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;     _st-&gt;getShadowedScene()-&gt;traverse( *_cv );
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; #endif
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;     _cv-&gt;popStateSet();
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; }
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; It will be nice if this forcing of osg::Group::traverse is replaced by
+</I>&gt;&gt;<i> &gt; ordinary traverse thus anyone can re-write and extend. What you think?
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Please let me know and thanks a bunch as always!
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Nick
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; --
+</I>&gt;&gt;<i> &gt; trajce nikolov nick
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; _______________________________________________
+</I>&gt;&gt;<i> &gt; osg-users mailing list
+</I>&gt;&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> trajce nikolov nick
+</I>&gt;<i>
+</I>
+
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150501/d47182e1/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150501/d47182e1/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000273.html">[osg-users] request for small change in StandardShadowMap.cpp
+</A></li>
+	<LI>Next message: <A HREF="000276.html">[osg-users] request for small change in StandardShadowMap.cpp
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#275">[ date ]</a>
+              <a href="thread.html#275">[ thread ]</a>
+              <a href="subject.html#275">[ subject ]</a>
+              <a href="author.html#275">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

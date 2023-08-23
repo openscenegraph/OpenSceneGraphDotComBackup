@@ -1,0 +1,44 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Kouichi,&lt;br&gt;&lt;br&gt;&lt;/div&gt;In&nbsp;general&nbsp;I&nbsp;would&nbsp;discourage&nbsp;use&nbsp;of&nbsp;compile&nbsp;contexts&nbsp;except&nbsp;for&nbsp;very&nbsp;narrow&nbsp;usage&nbsp;models. &nbsp;The&nbsp;main&nbsp;issue&nbsp;comes&nbsp;down&nbsp;to&nbsp;shadred&nbsp;contexts&nbsp;having&nbsp;the&nbsp;potential&nbsp;for&nbsp;conflicts&nbsp;when&nbsp;reading/writing&nbsp;to&nbsp;shared&nbsp;GL&nbsp;objects. &nbsp;The&nbsp;OSG&nbsp;doesn&#39;t&nbsp;have&nbsp;mutexes&nbsp;built&nbsp;into&nbsp;access&nbsp;of&nbsp;GL&nbsp;objects&nbsp;so&nbsp;can&nbsp;only&nbsp;do&nbsp;shared&nbsp;context/compile&nbsp;context&nbsp;if&nbsp;no&nbsp;GL&nbsp;objects&nbsp;will&nbsp;be&nbsp;accessed&nbsp;by&nbsp;the&nbsp;two&nbsp;contexts&nbsp;concurrently. &nbsp;Adding&nbsp;such&nbsp;mutexes&nbsp;would&nbsp;add&nbsp;a&nbsp;huge&nbsp;burden&nbsp;on&nbsp;all&nbsp;OSG&nbsp;applications.&lt;br&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;7&nbsp;November&nbsp;2015&nbsp;at&nbsp;23:29,&nbsp;Kouichi&nbsp;Yoshizawa&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:kouichi.yoshizawa23@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;kouichi.yoshizawa23@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hello,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;would&nbsp;like&nbsp;to&nbsp;learn&nbsp;the&nbsp;status&nbsp;of&nbsp;shared&nbsp;compile&nbsp;context&nbsp;threads&nbsp;in&nbsp;OpenSceneGraph,&nbsp;as&nbsp;I&nbsp;would&nbsp;like&nbsp;to&nbsp;make&nbsp;use&nbsp;of&nbsp;them&nbsp;for&nbsp;performance&nbsp;reasons. &nbsp;My&nbsp;platform&nbsp;is&nbsp;Linux&nbsp;with&nbsp;Nvidia&nbsp;Quadro&nbsp;GPUs&nbsp;that&nbsp;should&nbsp;have&nbsp;good&nbsp;support&nbsp;for&nbsp;shared&nbsp;contexts&nbsp;for&nbsp;GPU&nbsp;transfers.&lt;br&gt;<br>
+&lt;br&gt;<br>
+In&nbsp;2010&nbsp;Robert&nbsp;Osfield&nbsp;seems&nbsp;to&nbsp;suggest&nbsp;that&nbsp;shared&nbsp;compile&nbsp;contexts&nbsp;are&nbsp;indeed&nbsp;supported&nbsp;by&nbsp;OSG,&nbsp;although&nbsp;GPU&nbsp;hardware/driver&nbsp;support&nbsp;might&nbsp;be&nbsp;lacking:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&gt;&nbsp;I&nbsp;implemented&nbsp;them&nbsp;[ie&nbsp;shared&nbsp;compile&nbsp;contexts]&nbsp;under&nbsp;Linux&nbsp;with&nbsp;NVidia&nbsp;drivers&nbsp;and&nbsp;they&nbsp;worked&nbsp;as&nbsp;expected,&nbsp;but&nbsp;with&nbsp;other&nbsp;drivers&nbsp;and&nbsp;other&nbsp;OS&#39;s&nbsp;reports&nbsp;back&nbsp;from&nbsp;the&nbsp;community&nbsp;haven&#39;t&nbsp;been&nbsp;so&nbsp;positive,&nbsp;so&nbsp;it&nbsp;looks&nbsp;like&nbsp;it&#39;s&nbsp;a&nbsp;feature&nbsp;that&nbsp;driver&nbsp;developers&nbsp;don&#39;t&nbsp;put&nbsp;much&nbsp;effort&nbsp;in&nbsp;to&nbsp;make&nbsp;sure&nbsp;it&#39;s&nbsp;solid.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+However,&nbsp;in&nbsp;2014&nbsp;he&nbsp;seems&nbsp;to&nbsp;be&nbsp;discouraging&nbsp;their&nbsp;use,&nbsp;maybe&nbsp;due&nbsp;to&nbsp;thread&nbsp;safety&nbsp;issues&nbsp;in&nbsp;OSG,&nbsp;or&nbsp;am&nbsp;I&nbsp;reading&nbsp;this&nbsp;wrong?&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&gt;&nbsp;The&nbsp;OSG&#39;s&nbsp;is&nbsp;written&nbsp;to&nbsp;handling&nbsp;multi-theading&nbsp;of&nbsp;shared&nbsp;contexts&nbsp;as&lt;br&gt;<br>
+&gt;&nbsp;handling&nbsp;this&nbsp;special&nbsp;case&nbsp;would&nbsp;require&nbsp;us&nbsp;to&nbsp;add&nbsp;lots&nbsp;of&nbsp;mutex&nbsp;locks&lt;br&gt;<br>
+&gt;&nbsp;to&nbsp;all&nbsp;OpenGL&nbsp;code&nbsp;that&nbsp;is&nbsp;setting&nbsp;or&nbsp;using&nbsp;OpenGL&nbsp;objects.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;It&#39;s&nbsp;better&nbsp;to&nbsp;avoid&nbsp;shared&nbsp;contexts.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Inspecting&nbsp;the&nbsp;source&nbsp;code,&nbsp;of&nbsp;particular&nbsp;concern&nbsp;to&nbsp;me&nbsp;is&nbsp;the&nbsp;creation/deletion&nbsp;of&nbsp;GL&nbsp;objects. &nbsp;It&nbsp;appears&nbsp;that&nbsp;the&nbsp;GL&nbsp;object&nbsp;orphan&nbsp;list&nbsp;is&nbsp;accessed&nbsp;without&nbsp;mutual&nbsp;exclusion,&nbsp;from&nbsp;the&nbsp;flush&nbsp;functions&nbsp;as&nbsp;well&nbsp;as&nbsp;the&nbsp;orphan&nbsp;reuse&nbsp;functions&nbsp;during&nbsp;object&nbsp;creation. &nbsp;Therefore&nbsp;these&nbsp;two&nbsp;operations&nbsp;must&nbsp;then&nbsp;never&nbsp;be&nbsp;performed&nbsp;in&nbsp;different&nbsp;threads,&nbsp;but&nbsp;if&nbsp;they&nbsp;are&nbsp;only&nbsp;called&nbsp;from&nbsp;the&nbsp;same&nbsp;thread&nbsp;(the&nbsp;compile&nbsp;context&nbsp;thread&nbsp;in&nbsp;my&nbsp;case)&nbsp;is&nbsp;thread&nbsp;safety&nbsp;then&nbsp;guaranteed? &nbsp;I&nbsp;would&nbsp;be&nbsp;very&nbsp;grateful&nbsp;for&nbsp;clarifications&nbsp;regarding&nbsp;this.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Kouichi[/quote]&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=65576#65576&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=65576#65576&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

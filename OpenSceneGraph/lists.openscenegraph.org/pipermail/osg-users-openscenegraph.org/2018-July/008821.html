@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Unbounded growth in OpenFlight ReaderWriter
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Unbounded%20growth%20in%20OpenFlight%20ReaderWriter&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827F6C09F%40tewdmx.enews.nrl.navy.mil%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008819.html">
+   <LINK REL="Next"  HREF="008823.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Unbounded growth in OpenFlight ReaderWriter</H1>
+<!--htdig_noindex-->
+    <B>Daniel Emminizer, Code 5773</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Unbounded%20growth%20in%20OpenFlight%20ReaderWriter&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827F6C09F%40tewdmx.enews.nrl.navy.mil%3E"
+       TITLE="[osg-users] Unbounded growth in OpenFlight ReaderWriter">dan.emminizer at nrl.navy.mil
+       </A><BR>
+    <I>Tue Jul 31 08:48:09 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008819.html">[osg-users] Unbounded growth in OpenFlight ReaderWriter
+</A></li>
+        <LI>Next message (by thread): <A HREF="008823.html">[osg-users] Unbounded growth in OpenFlight ReaderWriter
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8821">[ date ]</a>
+              <a href="thread.html#8821">[ thread ]</a>
+              <a href="subject.html#8821">[ subject ]</a>
+              <a href="author.html#8821">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chris,
+
+I think that would be good.  I have some modifications following Robert&#8217;s advice and after more testing I will be posting a PR.  Yes, all of the object caching in OpenFlight plugin is the original code from Brede.  It all dates back to 2006.
+
+I was able to swap to use osgDB::Registry&#8217;s object cache with no complications on my end.  I also got to learn more about the object caching system and how it clears out old values.  Thanks Robert for the suggestion to look in this direction.
+
+I ended up posting a PR at <A HREF="https://github.com/openscenegraph/OpenSceneGraph/pull/583">https://github.com/openscenegraph/OpenSceneGraph/pull/583</A> -  It&#8217;s low priority since it&#8217;s a 12 year old issue, and because it takes a lot of work to get large enough images to crash an app from the problem on modern systems.
+
+Thanks,
+
+- Dan
+
+
+
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Chris Hanson
+Sent: Tuesday, July 31, 2018 10:40 AM
+To: OpenSceneGraph Users
+Subject: Re: [osg-users] Unbounded growth in OpenFlight ReaderWriter
+
+I think Brede Johansson wrote that loader once upon a time. I'm hoping to connect with him in Oslo this week. Maybe I'll ask him about this if I do.
+
+On Tue, Jul 31, 2018 at 11:54 AM Daniel Emminizer, Code 5773 &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dan.emminizer at nrl.navy.mil</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dan.emminizer at nrl.navy.mil</A>&gt;&gt; wrote:
+Hello All,
+
+I've found what appears to be unbounded growth in the OpenFlight loader.  I have a work-around but wanted to run it past the community since there are many here who are more familiar with the format and the loader than me.
+
+I'm seeing uncontrolled memory growth when using the std::istream version of readNode.  It appears to populate the local cache with new images, but never clears out the local cache.  The filename-based version of readNode() does clear out the cache before it returns.
+
+Does it make sense to add in:
+
+        flt::Registry::instance()-&gt;clearLocalCache();
+
+... before the return of the ReadResult at the bottom of this method at <A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/master/src/osgPlugins/OpenFlight/ReaderWriterFLT.cpp#L533">https://github.com/openscenegraph/OpenSceneGraph/blob/master/src/osgPlugins/OpenFlight/ReaderWriterFLT.cpp#L533</A> ?
+
+
+If that's not a good path forward, do you have any suggestions on how to clear the cache on demand?
+
+Thanks,
+
+ - Dan
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+
+
+--
+Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A> <A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+Training &#8226; Consulting &#8226; Contracting
+3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226; GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+Legal/IP &#8226; Forensics &#8226; Imaging &#8226; UAVs &#8226; GIS &#8226; GPS &#8226; osgEarth &#8226; Terrain &#8226; Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226; iPhone/iPad/iOS &#8226; Android
+@alphapixel&lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt; facebook.com/alphapixel&lt;<A HREF="http://facebook.com/alphapixel">http://facebook.com/alphapixel</A>&gt; (775) 623-PIXL [7495]
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180731/c6a85c25/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180731/c6a85c25/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008819.html">[osg-users] Unbounded growth in OpenFlight ReaderWriter
+</A></li>
+	<LI>Next message (by thread): <A HREF="008823.html">[osg-users] Unbounded growth in OpenFlight ReaderWriter
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8821">[ date ]</a>
+              <a href="thread.html#8821">[ thread ]</a>
+              <a href="subject.html#8821">[ subject ]</a>
+              <a href="author.html#8821">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

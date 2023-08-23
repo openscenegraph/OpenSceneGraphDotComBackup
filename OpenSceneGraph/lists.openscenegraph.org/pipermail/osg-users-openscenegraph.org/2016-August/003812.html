@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText and OpenGL ES 3
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20and%20OpenGL%20ES%203&In-Reply-To=%3C1470147616.m2f.68255%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003810.html">
+   <LINK REL="Next"  HREF="003813.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText and OpenGL ES 3</H1>
+<!--htdig_noindex-->
+    <B>Benjamin Rollet</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20and%20OpenGL%20ES%203&In-Reply-To=%3C1470147616.m2f.68255%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osgText and OpenGL ES 3">benjamin.rollet at sogeti.com
+       </A><BR>
+    <I>Tue Aug  2 07:20:16 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003810.html">[osg-users] osgText and OpenGL ES 3
+</A></li>
+        <LI>Next message: <A HREF="003813.html">[osg-users] osgText and OpenGL ES 3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3812">[ date ]</a>
+              <a href="thread.html#3812">[ thread ]</a>
+              <a href="subject.html#3812">[ subject ]</a>
+              <a href="author.html#3812">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks for your answer Sebastian.
+
+I am using the gl3TextVertexShader and gl3TextFragmentShader shaders from the example, juste modifying the version to be GLES 3 compatible: #version 300 es
+
+Here is the code:
+
+Code:
+
+static const char *gl3TextVertexShader = {
+    &quot;#version 300 es\n&quot;
+    &quot;in vec4 osg_Vertex;\n&quot;
+    &quot;in vec4 osg_Color;\n&quot;
+    &quot;in vec4 osg_MultiTexCoord0;\n&quot;
+    &quot;uniform mat4 osg_ModelViewProjectionMatrix;\n&quot;
+    &quot;out vec2 texCoord;\n&quot;
+    &quot;out vec4 vertexColor;\n&quot;
+    &quot;void main(void)\n&quot;
+    &quot;{\n&quot;
+    &quot;    gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;\n&quot;
+    &quot;    texCoord = osg_MultiTexCoord0.xy;\n&quot;
+    &quot;    vertexColor = osg_Color; \n&quot;
+    &quot;}\n&quot;
+};
+
+static const char *gl3TextFragmentShader = {
+    &quot;#version 300 es\n&quot;
+    &quot;uniform sampler2D GlyphTexture;\n&quot;
+    &quot;in vec2 texCoord;\n&quot;
+    &quot;in vec4 vertexColor;\n&quot;
+    &quot;out vec4 color;\n&quot;
+    &quot;void main(void)\n&quot;
+    &quot;{\n&quot;
+    &quot;    color = vertexColor * texture(GlyphTexture, texCoord).rrrr;\n&quot;
+    &quot;}\n&quot;
+};
+
+
+
+
+Following the example and your recommendation, I specified the uniform (not present in the original example):
+
+Code:
+
+osg::Group* rootNode = new osg::Group;
+
+    osgText::Font* font = osgText::readFontFile(&quot;fonts/ArialMT.ttf&quot;);
+
+    //osg::setNotifyLevel(osg::INFO);
+
+    osg::Geode* geode  = new osg::Geode;
+    rootNode-&gt;addChild(geode);
+
+    bool useVBOs = true;
+    osg::Program* program = new osg::Program;
+    program-&gt;addShader(new osg::Shader(osg::Shader::VERTEX, gl3TextVertexShader));
+    program-&gt;addShader(new osg::Shader(osg::Shader::FRAGMENT, gl3TextFragmentShader));
+    
+    osg::ref_ptr&lt;osg::Uniform&gt; textTexture = new osg::Uniform(&quot;GlyphTexture&quot;,0);
+
+    osg::StateSet* ss = geode-&gt;getOrCreateStateSet();
+    ss-&gt;addUniform(textTexture);
+    ss-&gt;setAttributeAndModes(program, osg::StateAttribute::ON);
+
+
+
+
+But the result is the same.
+What I am doing wrong?
+
+Cheers,
+Benjamin
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4019.php?p=68255#68255">http://forum.openscenegraph.org/viewtopic.php?p=68255#68255</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003810.html">[osg-users] osgText and OpenGL ES 3
+</A></li>
+	<LI>Next message: <A HREF="003813.html">[osg-users] osgText and OpenGL ES 3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3812">[ date ]</a>
+              <a href="thread.html#3812">[ thread ]</a>
+              <a href="subject.html#3812">[ subject ]</a>
+              <a href="author.html#3812">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,77 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;Hi,&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;I&nbsp;think&nbsp;internal&nbsp;format&nbsp;GL_RGBA16&nbsp;normalizes&nbsp;your&nbsp;float&nbsp;values&nbsp;to&nbsp;0..1&nbsp;range.&nbsp;Try&nbsp;GL_RGBA16F_ARB&nbsp;instead. &lt;div&gt;&lt;br&gt;&lt;div&gt;Cheers,&lt;/div&gt;&lt;div&gt;Wojtek&nbsp;Lewandowski&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;2016-10-04&nbsp;17:00&nbsp;GMT+02:00&nbsp;liu&nbsp;ming&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:81792534@qq.com&quot;&nbsp;target=&quot;_blank&quot;&gt;81792534@qq.com&lt;/a&gt;&gt;&lt;/span&gt;:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;I&nbsp;want&nbsp;to&nbsp;send&nbsp;a&nbsp;set&nbsp;of&nbsp;data&nbsp;to&nbsp;geometry&nbsp;shader&nbsp;with&nbsp;osg::texture,I&#39;ve&nbsp;got&nbsp;a&nbsp;problem:in&nbsp;the&nbsp;geometry&nbsp;shader,I&nbsp;can&nbsp;use&nbsp;glsl &nbsp;function&quot;texelFetch&quot;to&nbsp;get&nbsp;the&nbsp;texel&#39;s&nbsp;values,and&nbsp;use&nbsp;the&nbsp;values&nbsp;to&nbsp;draw&nbsp;a&nbsp;triangle,But&nbsp;the&nbsp;values&nbsp;is&nbsp;not&nbsp;correct. &nbsp;the&nbsp;values&nbsp;always&nbsp;are&nbsp;&quot;0&quot;&nbsp;or&nbsp;&quot;1&quot;,not&nbsp;the&nbsp;original&nbsp;input.It&nbsp;make&nbsp;me&nbsp;confused.&nbsp;whether&nbsp;the&nbsp;code&quot;&nbsp;texture0-&gt;setInternalFormat(&lt;wbr&gt;GL_RGBA16);&quot; &nbsp;wrong?How&nbsp;can&nbsp;I&nbsp;get&nbsp;the&nbsp;correctly&nbsp;texel&#39;s&nbsp;values?&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+ &nbsp;//.....&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;&nbsp;osg::StateSet&nbsp;&gt;&nbsp;ss&nbsp;=&nbsp;new&nbsp;osg::StateSet;&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Texture1D&nbsp;*&nbsp;texture0&nbsp;=&nbsp;new&nbsp;osg::Texture1D;&lt;br&gt;<br>
+ &nbsp; &nbsp;texture0-&gt;setDataVariance(osg:&lt;wbr&gt;:Object::DYNAMIC);&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osg::Image&gt;&nbsp;image&nbsp;=&nbsp;new&nbsp;osg::Image;&lt;br&gt;<br>
+ &nbsp; &nbsp;image-&gt;allocateImage(&nbsp;4,&nbsp;1,&nbsp;1, &nbsp;GL_RGB,&nbsp;GL_FLOAT&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp;//write&nbsp;data&nbsp;to&nbsp;the&nbsp;image&lt;br&gt;<br>
+ &nbsp; osg::Vec3*&nbsp;ptr1&nbsp;=&nbsp;(osg::Vec3*)image-&gt;data();&lt;br&gt;<br>
+ &nbsp; *ptr1=osg::Vec3(&nbsp;0.0,0.0,0.0);&lt;br&gt;<br>
+ &nbsp; *ptr1++;&lt;br&gt;<br>
+ &nbsp; *ptr1=&nbsp;osg::Vec3(&nbsp;40.0,0.0,0.0);&lt;br&gt;<br>
+ &nbsp; *ptr1++;&lt;br&gt;<br>
+ &nbsp; *ptr1=osg::Vec3(&nbsp;20.0,0.0,20.0);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; texture0-&gt;setImage(image);&lt;br&gt;<br>
+ &nbsp; &nbsp; texture0-&gt;setInternalFormat(&lt;wbr&gt;GL_RGBA16);&lt;br&gt;<br>
+ &nbsp; &nbsp;//&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;&nbsp;osg::Uniform&nbsp;&gt;&nbsp;sample0&nbsp;=&nbsp;new&nbsp;osg::Uniform(&nbsp;&quot;data&quot;,&nbsp;0&nbsp;);&lt;br&gt;<br>
+ &nbsp; ss-&gt;addUniform(sample0);&lt;br&gt;<br>
+ &nbsp; &nbsp;ss-&gt;&lt;wbr&gt;setTextureAttributeAndModes(0,&lt;br&gt;<br>
+texture0,osg::StateAttribute::&lt;wbr&gt;ON);&lt;br&gt;<br>
+ &nbsp; //&nbsp;....&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;//--------------------------&lt;br&gt;<br>
+ &nbsp;//geometyr&nbsp;shader&nbsp;code&lt;br&gt;<br>
+ &nbsp;//----------------------------&lt;wbr&gt;--&lt;br&gt;<br>
+ &nbsp;//.....&lt;br&gt;<br>
+ &nbsp;uniform&nbsp;sampler1D&nbsp;data;&lt;br&gt;<br>
+ &nbsp;void&nbsp;main()&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//get&nbsp;the&nbsp;texel&#39;s&nbsp;value,but&nbsp;the&nbsp;value&nbsp;is&nbsp;wrong&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vec4&nbsp;C0=vec4(texelFetch(data,0,0).&lt;wbr&gt;xyz,1.0);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vec4&nbsp;C1=vec4(texelFetch(data,1,0).&lt;wbr&gt;xyz,1.0);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vec4&nbsp;C2=vec4(texelFetch(data,2,0).&lt;wbr&gt;xyz,1.0);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//use&nbsp;value&nbsp;to&nbsp;draw&nbsp;a&nbsp;triangle&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;gl_Position=osg_&lt;wbr&gt;ModelViewProjectionMatrix*C0;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;EmitVertex();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;gl_Position=osg_&lt;wbr&gt;ModelViewProjectionMatrix*C1;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;EmitVertex();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;gl_Position=osg_&lt;wbr&gt;ModelViewProjectionMatrix*C2;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;EmitVertex();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;EndPrimitive();&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&nbsp;My&nbsp;english&nbsp;is&nbsp;poor&nbsp;,sorry.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+liu&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=68848#68848&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.&lt;wbr&gt;org/viewtopic.php?p=68848#&lt;wbr&gt;68848&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

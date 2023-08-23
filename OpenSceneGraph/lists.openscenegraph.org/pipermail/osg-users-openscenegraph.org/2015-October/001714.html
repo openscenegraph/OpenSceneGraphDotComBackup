@@ -1,0 +1,185 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Stencil and render to texture
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Stencil%20and%20render%20to%20texture&In-Reply-To=%3C56178E9A.9070101%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277936.html">
+   <LINK REL="Next"  HREF="001722.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Stencil and render to texture</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Stencil%20and%20render%20to%20texture&In-Reply-To=%3C56178E9A.9070101%40gmx.de%3E"
+       TITLE="[osg-users] Stencil and render to texture">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Fri Oct  9 02:53:30 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277936.html">[osg-users] Stencil and render to texture
+</A></li>
+        <LI>Next message: <A HREF="001722.html">[osg-users] Stencil and render to texture
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1714">[ date ]</a>
+              <a href="thread.html#1714">[ thread ]</a>
+              <a href="subject.html#1714">[ subject ]</a>
+              <a href="author.html#1714">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello Nicolas,
+
+ From what I see, you are simply using two different depth- and stencil 
+buffers.
+Try to share the depth buffer between the cameras by explicitly ataching 
+a depth texture. This should also share the stencil.
+Is the depth buffer working as expected? Could you try if writing to the 
+depth buffer in the &quot;stencil&quot; pass actually is visible in the second pass.
+
+cheers
+Sebastian
+
+&gt;<i> Hello everyone.
+</I>&gt;<i>
+</I>&gt;<i> I'm having trouble using the stencil buffer while doing a render to texture. My purpose is to apply a black mask in front of my scene, as if I was looking at the world through a crack in a wall. I managed to achieve this effect using the stencil before. But back then I was doing direct rendering on the screen. Now I'm trying to render to a texture and it doesn't work any more.
+</I>&gt;<i>
+</I>&gt;<i> Here is what I do:
+</I>&gt;<i> First I create the mask I want to draw into the stencil buffer. Here it's a simple quad. I set a stencil function on it so it writes 1 into the stencil buffer for each pixel.
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::Vec3Array *vertices = new osg::Vec3Array();
+</I>&gt;<i> vertices-&gt;push_back(osg::Vec3(0.25, 0.25, 0.0));
+</I>&gt;<i> vertices-&gt;push_back(osg::Vec3(0.75, 0.25, 0.0));
+</I>&gt;<i> vertices-&gt;push_back(osg::Vec3(0.75, 0.75, 0.0));
+</I>&gt;<i> vertices-&gt;push_back(osg::Vec3(0.25, 0.75, 0.0));
+</I>&gt;<i> _stencil_geometry = new osg::Geometry();
+</I>&gt;<i> _stencil_geometry-&gt;setVertexArray(vertices);
+</I>&gt;<i> _stencil_geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4));
+</I>&gt;<i> _stencil_node = new osg::Geode();
+</I>&gt;<i> _stencil_node-&gt;addDrawable(_stencil_geometry);
+</I>&gt;<i> _stencil_node-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+</I>&gt;<i> _stencil_node-&gt;getOrCreateStateSet()-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+</I>&gt;<i> osg::Stencil* stencilSet = new osg::Stencil();
+</I>&gt;<i> stencilSet-&gt;setFunction(osg::Stencil::ALWAYS, 1, ~0u);
+</I>&gt;<i> stencilSet-&gt;setOperation(osg::Stencil::REPLACE, osg::Stencil::REPLACE, osg::Stencil::REPLACE);
+</I>&gt;<i> _stencil_node-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(stencilSet, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Then I create a camera to render my mask into the stencil buffer. I make it so that this camera clears the whole stencil to 0 before rendering.
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> _stencil_camera = new osg::Camera();
+</I>&gt;<i> _stencil_camera-&gt;setViewport(0, 0, _w, _h);
+</I>&gt;<i> _stencil_camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER, 1);
+</I>&gt;<i> _stencil_camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+</I>&gt;<i> _stencil_camera-&gt;setClearColor(Color(0., 0., 0., 1.));
+</I>&gt;<i> _stencil_camera-&gt;setClearStencil(0);
+</I>&gt;<i> _stencil_camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+</I>&gt;<i> _stencil_camera-&gt;setProjectionMatrixAsOrtho2D(0., 1., 0., 1.);
+</I>&gt;<i> _stencil_camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+</I>&gt;<i> _stencil_camera-&gt;attach(osg::Camera::PACKED_DEPTH_STENCIL_BUFFER, GL_DEPTH_STENCIL_EXT);
+</I>&gt;<i> _stencil_camera-&gt;addChild(_stencil_node);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Finally I create the camera that will render my scene and I attach the stencil camera to it as a child. I set the render order so that this camera is rendered after the stencil camera. I configure this camera to render into a texture and I add it to the view.
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> _display_buffer = new osg::Texture2D();
+</I>&gt;<i> _display_buffer-&gt;setTextureSize(_w, _h);
+</I>&gt;<i> _display_buffer-&gt;setInternalFormat(GL_RGB);
+</I>&gt;<i> _display_buffer-&gt;setFilter(osg::Texture2D::MIN_FILTER, _min_filter_mode);
+</I>&gt;<i> _display_buffer-&gt;setFilter(osg::Texture2D::MAG_FILTER, _mag_filter_mode);
+</I>&gt;<i>
+</I>&gt;<i> _display_camera = new osg::Camera();
+</I>&gt;<i> _display_camera-&gt;setGraphicsContext(context);
+</I>&gt;<i> _display_camera-&gt;setViewport(0, 0, _w, _h);
+</I>&gt;<i> _display_camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER, 2);
+</I>&gt;<i> _display_camera-&gt;setClearColor(Color(0., 0., 0., 1.));
+</I>&gt;<i> _display_camera-&gt;setClearMask(0);
+</I>&gt;<i> _display_camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+</I>&gt;<i> _display_camera-&gt;addChild(_stencil_camera);
+</I>&gt;<i> _display_camera-&gt;addChild(_my_scene_root_node);
+</I>&gt;<i> _display_camera-&gt;setProjectionMatrixAsOrtho2D(0., 1., 0., 1.);
+</I>&gt;<i> _display_camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+</I>&gt;<i> _display_camera-&gt;attach(osg::Camera::COLOR_BUFFER, _display_buffer);
+</I>&gt;<i> _display_camera-&gt;attach(osg::Camera::PACKED_DEPTH_STENCIL_BUFFER, GL_DEPTH_STENCIL_EXT);
+</I>&gt;<i> _view-&gt;addSlave(_display_camera, false);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Finally I set a stencil test on the whole scene. The scene shall only be drawn on pixels where the stencil is not 0 (so whereever my mask was drawn).
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::Stencil* stencilTest = new osg::Stencil();
+</I>&gt;<i> stencilTest-&gt;setFunction(osg::Stencil::NOTEQUAL, 0, ~0u);
+</I>&gt;<i> stencilTest-&gt;setOperation(osg::Stencil::KEEP, osg::Stencil::KEEP, osg::Stencil::KEEP);
+</I>&gt;<i> _my_scene_root_node-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(stencilTest, osg::StateAttribute::ON);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Well, this doesn't work. All I get is a black texture (or whatever clear color I set on my display camera). When I do the very same thing without the render to texture part it works. But with the render to texture, it's as if my mask was never drawn into the stencil buffer. What's weird is that if I configure my stencil camera to clear the stencil buffer to a value different that 0 then my scene is rendered to the texture. So it proves that the stencil works. But for some reasons I don't understand my mask seems to never be drawn into it.
+</I>&gt;<i>
+</I>&gt;<i> Could someone please tell me what I did wrong ?
+</I>&gt;<i>
+</I>&gt;<i> Regards,
+</I>&gt;<i> Nicolas
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicf849.php?p=65335#65335">http://forum.openscenegraph.org/viewtopic.php?p=65335#65335</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277936.html">[osg-users] Stencil and render to texture
+</A></li>
+	<LI>Next message: <A HREF="001722.html">[osg-users] Stencil and render to texture
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1714">[ date ]</a>
+              <a href="thread.html#1714">[ thread ]</a>
+              <a href="subject.html#1714">[ subject ]</a>
+              <a href="author.html#1714">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

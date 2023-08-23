@@ -1,0 +1,163 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText::Text display issue (only white boxes rendered)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%3A%3AText%20display%20issue%20%28only%20white%20boxes%0A%20rendered%29&In-Reply-To=%3C1514500488.m2f.72649%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007444.html">
+   <LINK REL="Next"  HREF="007460.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText::Text display issue (only white boxes rendered)</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%3A%3AText%20display%20issue%20%28only%20white%20boxes%0A%20rendered%29&In-Reply-To=%3C1514500488.m2f.72649%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osgText::Text display issue (only white boxes rendered)">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Thu Dec 28 14:34:48 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007444.html">[osg-users] osgText::Text display isse
+</A></li>
+        <LI>Next message (by thread): <A HREF="007460.html">[osg-users] osgText::Text display issue (only white boxes rendered)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7453">[ date ]</a>
+              <a href="thread.html#7453">[ thread ]</a>
+              <a href="subject.html#7453">[ subject ]</a>
+              <a href="author.html#7453">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+I think you should make a simple example to track where the bug is:
+Personnaly I experienced a lot of conflicts between osg and qt renderer especially since I use qml for gui and embed osg rendering in a QQuickViewport (both qt and osg changed GL state leading to conflicts)
+
+Try to reproduce the bug without Qt, if the problem persists, it's an osg bug. Only then, you'll can give us a simple cpp example (in attachment) to diagnose easily the issue.
+
+Cheers
+
+
+eskay187 wrote:
+&gt;<i> Hi,
+</I>&gt;<i>   for whatever reason I can not get correct correct 2D text display method working. My code is based on the osghud example, in the background I render a osgEarth map. The text is displayed, but always looks like only the &quot;background&quot; of each character is rendered, please see the attached screenshot.
+</I>&gt;<i> 
+</I>&gt;<i> I am using OSG 3.4.0 release on Ubuntu 17.10 with an NVIDIA GTX 1080 driver 384.90, also using osgEarth 2.8 and the osgEarthQt::Viewer to integrate into Qt5.
+</I>&gt;<i> 
+</I>&gt;<i> The following code should create the HUD:
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> void setup ()
+</I>&gt;<i> {
+</I>&gt;<i> ...
+</I>&gt;<i>     font_ = osgText::readFontFile(HOME_DATA_DIRECTORY+&quot;fonts/arial.ttf&quot;);
+</I>&gt;<i> 
+</I>&gt;<i>     osgViewer::Viewer::Windows windows;
+</I>&gt;<i>     osg_viewer_-&gt;getWindows(windows);
+</I>&gt;<i> 
+</I>&gt;<i>     assert (!windows.empty());
+</I>&gt;<i> 
+</I>&gt;<i>     osg::Camera* hud_camera = createHUDCamera(0,windows[0]-&gt;getTraits()-&gt;width, 0, windows[0]-&gt;getTraits()-&gt;height);
+</I>&gt;<i>     hud_camera-&gt;setGraphicsContext(windows[0]);
+</I>&gt;<i> 
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Geode&gt; textGeode = new osg::Geode;
+</I>&gt;<i>     textGeode-&gt;addDrawable (createText(osg::Vec3(150.0f, 300.0f, 0.0f),  &quot;The Cessna monoplane&quot;, 10.0f));
+</I>&gt;<i>     textGeode-&gt;addDrawable (createText(osg::Vec3(150.0f, 400.0f, 0.0f),  &quot;Six-seat, low-wing and twin-engined&quot;, 15.0f));
+</I>&gt;<i> 
+</I>&gt;<i>     hud_camera-&gt;addChild(textGeode);
+</I>&gt;<i> 
+</I>&gt;<i>     root_node_-&gt;addChild(hud_camera);
+</I>&gt;<i> ...
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> osg::Camera* OSGViewDataWidget::createHUDCamera (double left, double right, double bottom, double top)
+</I>&gt;<i> {
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+</I>&gt;<i>     //camera-&gt;getOrCreateStateSet()-&gt;setGlobalDefaults();
+</I>&gt;<i>     camera-&gt;setReferenceFrame (osg::Transform::ABSOLUTE_RF);
+</I>&gt;<i>     camera-&gt;setClearMask (GL_DEPTH_BUFFER_BIT);
+</I>&gt;<i>     camera-&gt;setRenderOrder (osg::Camera::POST_RENDER);
+</I>&gt;<i>     camera-&gt;setAllowEventFocus (false);
+</I>&gt;<i>     camera-&gt;setProjectionMatrix (osg::Matrix::ortho2D (left, right, bottom, top));
+</I>&gt;<i>     camera-&gt;setViewMatrix(osg::Matrix::identity());
+</I>&gt;<i>     camera-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+</I>&gt;<i>     return camera.release();
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> osgText::Text* OSGViewDataWidget::createText (const osg::Vec3&amp; pos, const std::string&amp; content, float size)
+</I>&gt;<i> {
+</I>&gt;<i>     osg::ref_ptr&lt;osgText::Text&gt; text = new osgText::Text;
+</I>&gt;<i>     //text-&gt;setColor(osg::Vec4(0.0f, 1.0f, 1.0f, 1.0f));
+</I>&gt;<i>     text-&gt;setFontResolution (50,50);
+</I>&gt;<i>     text-&gt;setFont (font_.get());
+</I>&gt;<i>     text-&gt;setCharacterSize (size);
+</I>&gt;<i>     text-&gt;setAxisAlignment (osgText::TextBase::XY_PLANE);
+</I>&gt;<i>     text-&gt;setPosition (pos);
+</I>&gt;<i>     text-&gt;setText (content);
+</I>&gt;<i>     text-&gt;setDrawMode (osgText::TextBase::DrawModeMask::FILLEDBOUNDINGBOX | osgText::TextBase::DrawModeMask::TEXT);
+</I>&gt;<i>     text-&gt;setBoundingBoxColor (osg::Vec4(0.0f, 0.0f, 0.2f, 0.25f));
+</I>&gt;<i>     text-&gt;setBoundingBoxMargin (2.0f);
+</I>&gt;<i>     return text.release();
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> I have tried several implementations but can for the life of me can not figure out what the issue is. If I change the font, the displayed white boxes change as well, so at least something happens ...
+</I>&gt;<i> 
+</I>&gt;<i> Can someone point me in the right direction? Any help would be appreciated.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Thank you!
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Helmut
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic8974.php?p=72649#72649">http://forum.openscenegraph.org/viewtopic.php?p=72649#72649</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007444.html">[osg-users] osgText::Text display isse
+</A></li>
+	<LI>Next message (by thread): <A HREF="007460.html">[osg-users] osgText::Text display issue (only white boxes rendered)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7453">[ date ]</a>
+              <a href="thread.html#7453">[ thread ]</a>
+              <a href="subject.html#7453">[ subject ]</a>
+              <a href="author.html#7453">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

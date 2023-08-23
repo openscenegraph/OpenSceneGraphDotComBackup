@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Removing objects with shared GL state from scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1566601374.m2f.76605%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010331.html">
+   <LINK REL="Next"  HREF="010334.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Removing objects with shared GL state from scene graph</H1>
+<!--htdig_noindex-->
+    <B>Chris Djali</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1566601374.m2f.76605%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Removing objects with shared GL state from scene graph">krizdjali at gmail.com
+       </A><BR>
+    <I>Fri Aug 23 16:02:54 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010331.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="010334.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10333">[ date ]</a>
+              <a href="thread.html#10333">[ thread ]</a>
+              <a href="subject.html#10333">[ subject ]</a>
+              <a href="author.html#10333">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+As we've discussed, that only occasionally helps. In the boring single-viewer, single-view case, it works, but no one would notice there was a problem there anyway as nothing would actually render incorrectly.
+
+My application just uses the camera created for it by OSG when an osgViewer::View is created, and I think it's reasonable to expect OSG to clear up things it's created itself. I'm under the impression that you do, too.
+
+I've been having a poke around, and it seems to me that one possible option would be to call releaseGLObjects on a camera being removed from an osg::GraphicsContext when it's the only one attached. In such a situation, we already call it on the camera's non-shared child nodes (which is all of them) and its rendering cache, so this only adds the renderer and callbacks as extra things being released. It's my belief that this could only cause unwanted releasing in the case where all the cameras were removed from a context and then new ones were added. I think such a situation is probably unlikely (but you'd know better) and not much would be different to how things are now, as any attached nodes are already being released. There's also an added bonus that the function can return early as there'd be no need to work out which child nodes may or may not be shared.
+
+The diff that fixes my use case is
+
+Code:
+
+diff --git a/src/osg/GraphicsContext.cpp b/src/osg/GraphicsContext.cpp
+index 1a35497d0..e6113eb9a 100644
+--- a/src/osg/GraphicsContext.cpp
++++ b/src/osg/GraphicsContext.cpp
+@@ -741,6 +741,12 @@ void GraphicsContext::addCamera(osg::Camera* camera)
+
+ void GraphicsContext::removeCamera(osg::Camera* camera)
+ {
++    if (_cameras.size() == 1 &amp;&amp; camera == _cameras.front())
++    {
++        _cameras.clear();
++        camera-&gt;releaseGLObjects(_state.get());
++        return;
++    }
+     Cameras::iterator itr = std::find(_cameras.begin(), _cameras.end(), camera);
+     if (itr != _cameras.end())
+     {
+
+
+
+
+How does this look to you?
+
+Cheers,
+Chris
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4855.php?p=76605#76605">http://forum.openscenegraph.org/viewtopic.php?p=76605#76605</A>
+
+
+
+
+
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010331.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="010334.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10333">[ date ]</a>
+              <a href="thread.html#10333">[ thread ]</a>
+              <a href="subject.html#10333">[ subject ]</a>
+              <a href="author.html#10333">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

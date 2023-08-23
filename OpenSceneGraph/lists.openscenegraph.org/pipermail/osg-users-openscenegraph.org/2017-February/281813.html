@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Vertex Buffer Object used inside display list
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vertex%20Buffer%20Object%20used%20inside%20display%20list&In-Reply-To=%3C1487279683.m2f.70219%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005651.html">
+   <LINK REL="Next"  HREF="005591.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Vertex Buffer Object used inside display list</H1>
+<!--htdig_noindex-->
+    <B>Jannik Heller</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vertex%20Buffer%20Object%20used%20inside%20display%20list&In-Reply-To=%3C1487279683.m2f.70219%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Vertex Buffer Object used inside display list">scrawl at baseoftrash.de
+       </A><BR>
+    <I>Thu Feb 16 13:14:43 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005651.html">[osg-users] intersection tests
+</A></li>
+        <LI>Next message: <A HREF="005591.html">[osg-users] Vertex Buffer Object used inside display list
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281813">[ date ]</a>
+              <a href="thread.html#281813">[ thread ]</a>
+              <a href="subject.html#281813">[ subject ]</a>
+              <a href="author.html#281813">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I've noticed some odd API usage in the OSG that seems to have started with the VAO support changes in OSG 3.5. Vertex buffer objects are being used inside a display list. This happens on a standard Geometry with default settings. Example:
+
+glNewList(6, GL_COMPILE)
+glGenBuffers(1, [5])
+glBindBuffer(GL_ARRAY_BUFFER, 5)
+glBufferData(...)
+glBufferSubData(...) x4
+glVertexPointer(3, GL_FLOAT, 0, NULL)
+glNormalPointer(GL_FLOAT, 0, 0x90)
+glColorPointer(4, GL_FLOAT, 0x180)
+glTexCoordPointer(2, GL_FLOAT, 0, 0x120)
+glDrawElements(...)
+glBindBuffer(GL_ARRAY_BUFFER, 0)
+glEndList()
+
+The source of this change in behavior is here: <A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/master/src/osg/Geometry.cpp#L187">https://github.com/openscenegraph/OpenSceneGraph/blob/master/src/osg/Geometry.cpp#L187</A> OSG will now always assign VBOs, even if they weren't requested.
+
+First off all I find this usage very odd. The GL standard doesn't actually specify what is supposed to happen to VBOs in a display list - is the VBO simply ignored or could that cause a new VBO to be created with every call to the display list? Even if this works, the calls are completely redundant and could be removed.
+
+More importantly, though, and the reason I'm bringing it up, is that this usage seems to be causing a crash with some versions of Mesa drivers, and the crash goes away when I disable display lists.
+
+Ubuntu 14.04 - Nvidia: works
+Ubuntu 14.04 - Intel HD: broken
+Ubuntu 16.04 - Intel HD: broken
+
+I've attached a minimal-ish apitrace you can use to see if your driver is affected - run it with 'apitrace replay &lt;file&gt;' , if you get 'caught signal 11' that means the driver has crashed.
+
+Cheers,
+Jannik
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4015.php?p=70219#70219">http://forum.openscenegraph.org/viewtopic.php?p=70219#70219</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: vbo_displaylist.trace.zip
+Type: application/zip
+Size: 68526 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20170216/8dabefb6/attachment-0002.zip">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170216/8dabefb6/attachment-0002.zip</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005651.html">[osg-users] intersection tests
+</A></li>
+	<LI>Next message: <A HREF="005591.html">[osg-users] Vertex Buffer Object used inside display list
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281813">[ date ]</a>
+              <a href="thread.html#281813">[ thread ]</a>
+              <a href="subject.html#281813">[ subject ]</a>
+              <a href="author.html#281813">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

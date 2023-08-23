@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] GLSL plugin static linking issue (recent master branch)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GLSL%20plugin%20static%20linking%20issue%20%28recent%20master%0A%20branch%29&In-Reply-To=%3CCAG7xrZeRH4NNCjp-ntyPZAr_X3LsRqbRaxzpK3c8Z0CD3kMZJA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010347.html">
+   <LINK REL="Next"  HREF="010352.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] GLSL plugin static linking issue (recent master branch)</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GLSL%20plugin%20static%20linking%20issue%20%28recent%20master%0A%20branch%29&In-Reply-To=%3CCAG7xrZeRH4NNCjp-ntyPZAr_X3LsRqbRaxzpK3c8Z0CD3kMZJA%40mail.gmail.com%3E"
+       TITLE="[osg-users] GLSL plugin static linking issue (recent master branch)">l.voerman at rug.nl
+       </A><BR>
+    <I>Thu Aug 29 07:31:39 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010347.html">[osg-users] GLSL plugin static linking issue (recent master branch)
+</A></li>
+        <LI>Next message (by thread): <A HREF="010352.html">[osg-users] GLSL plugin static linking issue (recent master branch)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10351">[ date ]</a>
+              <a href="thread.html#10351">[ thread ]</a>
+              <a href="subject.html#10351">[ subject ]</a>
+              <a href="author.html#10351">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Andrew,
+the options should not influence the library loading, it's the datafiles
+that can be cached.
+I'm just guessing here, but are you trying to load a file named
+&quot;filename.glsl&quot;? that would match the problem you see.
+the glsl plugin is strange in that it does not support *.glsl files.
+rename your datafile .vert , .frag or .geom as appropriate for the type of
+shader it contains.
+Laurens.
+
+On Wed, Aug 28, 2019 at 11:10 PM Andrew Poltavets &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">apoltavets at yahoo.com</A>&gt;
+wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> First of all I pretty new to engine thus I may sound silly.
+</I>&gt;<i>
+</I>&gt;<i> In my case OSG tends to load glsl dynamic library despite I wrote
+</I>&gt;<i> USE_OSGPLUGIN(glsl) and linked with libosgdb_glsld.a.
+</I>&gt;<i>
+</I>&gt;<i> As I had stuck with this I decided to get to the debug. So please let me
+</I>&gt;<i> show what I have found so far and what feels suspiciosly for me:
+</I>&gt;<i> In function
+</I>&gt;<i> Code:
+</I>&gt;<i> ReaderWriter::ReadResult Registry::readImplementation(const ReadFunctor&amp;
+</I>&gt;<i> readFunctor,Options::CacheHintOptions cacheHint)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> value of
+</I>&gt;<i> Code:
+</I>&gt;<i> useObjectCache= options ? (options-&gt;getObjectCacheHint()&amp;cacheHint)!=0:
+</I>&gt;<i> false;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> becomes equal true for FreeType plugin but false for GLSL plugin due to
+</I>&gt;<i> missed options in very first debug frame for GLSL plugin:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> inline osg::ref_ptr&lt;osg::Shader&gt;
+</I>&gt;<i> readRefShaderFileWithFallback(osg::Shader::Type type, const std::string&amp;
+</I>&gt;<i> filename, const char* fallback)
+</I>&gt;<i> {
+</I>&gt;<i>    return osgDB::readRefShaderFileWithFallback(type, filename,
+</I>&gt;<i> Registry::instance()-&gt;getOptions(), fallback);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> If I got it right having useObjectCache as false ends up with search of
+</I>&gt;<i> dynamic library.
+</I>&gt;<i>
+</I>&gt;<i> That could be incorrect observations... So if I wrong here - could
+</I>&gt;<i> somebody please help me getting GLSL thing to work properly?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Configuration:
+</I>&gt;<i> Recent `master`: bd50af117bed340b14b5bf13da6a8efe893f4ce7
+</I>&gt;<i> MacOS 10.14.6
+</I>&gt;<i>
+</I>&gt;<i> -DAPPLE:BOOL=&quot;1&quot;
+</I>&gt;<i> -DCMAKE_BUILD_TYPE:STRING=&quot;Debug&quot;
+</I>&gt;<i> -DDYNAMIC_OPENTHREADS:BOOL=&quot;0&quot;
+</I>&gt;<i> -DBUILD_OSG_EXAMPLES:BOOL=&quot;1&quot;
+</I>&gt;<i> -DDYNAMIC_OPENSCENEGRAPH:BOOL=&quot;0&quot;
+</I>&gt;<i> -DBUILD_OSG_APPLICATIONS:BOOL=&quot;0&quot;
+</I>&gt;<i> -DOSG_GL3_AVAILABLE:BOOL=&quot;1&quot;
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Andrew
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic3e10.php?p=76618#76618">http://forum.openscenegraph.org/viewtopic.php?p=76618#76618</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190829/78d33437/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190829/78d33437/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010347.html">[osg-users] GLSL plugin static linking issue (recent master branch)
+</A></li>
+	<LI>Next message (by thread): <A HREF="010352.html">[osg-users] GLSL plugin static linking issue (recent master branch)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10351">[ date ]</a>
+              <a href="thread.html#10351">[ thread ]</a>
+              <a href="subject.html#10351">[ subject ]</a>
+              <a href="author.html#10351">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

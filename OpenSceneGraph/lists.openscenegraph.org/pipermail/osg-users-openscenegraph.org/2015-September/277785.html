@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgDB::DynamicLibrary::getLibraryHandle - Crash due to calling dlopen with RTLD_GLOBAL
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgDB%3A%3ADynamicLibrary%3A%3AgetLibraryHandle%20-%20Crash%20due%20to%0A%20calling%20dlopen%20with%20RTLD_GLOBAL&In-Reply-To=%3CCAEKysgRmzC78M73CtWnS9t56vWJWEVtTSkpC_HQMiR%2BZhte0zg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277784.html">
+   <LINK REL="Next"  HREF="001563.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgDB::DynamicLibrary::getLibraryHandle - Crash due to calling dlopen with RTLD_GLOBAL</H1>
+<!--htdig_noindex-->
+    <B>Gareth Francis</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgDB%3A%3ADynamicLibrary%3A%3AgetLibraryHandle%20-%20Crash%20due%20to%0A%20calling%20dlopen%20with%20RTLD_GLOBAL&In-Reply-To=%3CCAEKysgRmzC78M73CtWnS9t56vWJWEVtTSkpC_HQMiR%2BZhte0zg%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgDB::DynamicLibrary::getLibraryHandle - Crash due to calling dlopen with RTLD_GLOBAL">gfrancis.dev at gmail.com
+       </A><BR>
+    <I>Mon Sep 21 03:15:21 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277784.html">[osg-users] OcclusionQueryNode iOS Crash
+</A></li>
+        <LI>Next message: <A HREF="001563.html">[osg-users] osgDB::DynamicLibrary::getLibraryHandle - Crash due to calling dlopen with RTLD_GLOBAL
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277785">[ date ]</a>
+              <a href="thread.html#277785">[ thread ]</a>
+              <a href="subject.html#277785">[ subject ]</a>
+              <a href="author.html#277785">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I believe I found a bug in getLibraryHandle.
+
+This was encountered when writing an osgEarth application, using the
+osgEarthQt widgets (Qt 4.8.6).
+
+A segfault was encountered shortly after starting the application, when
+pressing 's' (To bring up the standard set of rendering stats).
+
+I traced this to the dlopen( localLibraryName.c_str(), RTLD_LAZY |
+RTLD_GLOBAL) call in osg/src/osgDB/DynamicLibrary.cpp
+
+According to the dlopen manpage:
+
+As at glibc 2.21, specifying the *RTLD_GLOBAL *flag when calling
+       *dlmopen*() generates an error.  Furthermore, specifying *RTLD_GLOBAL*
+       when calling *dlopen*() results in a program crash (*SIGSEGV*) if the
+       call is made from any object loaded in a namespace other than the
+       initial namespace.
+
+
+Changing osg to use RTLD_LOCAL avoids the crash, and doesn't seem to break
+anything else as far as I can tell.
+
+Is there a specific reason why RTLD_GLOBAL is used? This doesn't make much
+sense given the plugin architecture..
+
+
+I've attached a minimal patch including the fix.
+
+
+Thanks
+Gareth Francis
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150921/67cece67/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150921/67cece67/attachment-0001.htm</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: RTLD_GLOBAL.patch
+Type: text/x-patch
+Size: 468 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20150921/67cece67/attachment-0002.bin">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150921/67cece67/attachment-0002.bin</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277784.html">[osg-users] OcclusionQueryNode iOS Crash
+</A></li>
+	<LI>Next message: <A HREF="001563.html">[osg-users] osgDB::DynamicLibrary::getLibraryHandle - Crash due to calling dlopen with RTLD_GLOBAL
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277785">[ date ]</a>
+              <a href="thread.html#277785">[ thread ]</a>
+              <a href="subject.html#277785">[ subject ]</a>
+              <a href="author.html#277785">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] PagedLOD and page in/out detection
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20PagedLOD%20and%20page%20in/out%20detection&In-Reply-To=%3CCAO-%2Bzino0i9whOwHXh4O8_vWcKFrrGASmAPo71C7b-vB_qejgA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003215.html">
+   <LINK REL="Next"  HREF="003217.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] PagedLOD and page in/out detection</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20PagedLOD%20and%20page%20in/out%20detection&In-Reply-To=%3CCAO-%2Bzino0i9whOwHXh4O8_vWcKFrrGASmAPo71C7b-vB_qejgA%40mail.gmail.com%3E"
+       TITLE="[osg-users] PagedLOD and page in/out detection">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Fri Jun  3 10:28:16 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003215.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+        <LI>Next message: <A HREF="003217.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3216">[ date ]</a>
+              <a href="thread.html#3216">[ thread ]</a>
+              <a href="subject.html#3216">[ subject ]</a>
+              <a href="author.html#3216">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+this is my update callback .. And I know for sure it was working. I just
+did a clean app (modified osgviewer with only this callback installed in
+the root PagedLODs) and I never see a Paged Out tile ... I am limited to
+not having the possibility to make a custom DatabasePager or it will go
+really complicated. The root PagedLOD can have only one or zero children
+(that is the test database I am testing it against)
+
+struct UpdateCallback : public osg::NodeCallback
+{
+UpdateCallback()
+:<i> _numChildren(0)
+</I>{
+
+}
+virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+{
+osg::PagedLOD* plod = dynamic_cast&lt;osg::PagedLOD*&gt;(node);
+if (plod)
+{
+if (plod-&gt;getNumChildren() != _numChildren)
+{
+_numChildren = plod-&gt;getNumChildren();
+
+if (_numChildren)
+std::cout &lt;&lt; &quot;Paged in&quot; &lt;&lt; std::endl;
+else
+std::cout &lt;&lt; &quot;Paged out&quot; &lt;&lt; std::endl;
+
+}
+}
+traverse(node, nv);
+}
+protected:
+int _numChildren;
+};
+
+On Fri, Jun 3, 2016 at 6:49 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Nick,
+</I>&gt;<i>
+</I>&gt;<i> There isn't a feature directly built into osg::PageLOD or
+</I>&gt;<i> DatabasePager for this.
+</I>&gt;<i>
+</I>&gt;<i> What you could do is look at the  creating a custom DatabasePager that
+</I>&gt;<i> overrides the following method:
+</I>&gt;<i>
+</I>&gt;<i>        /** Merge the changes to the scene graph by calling calling
+</I>&gt;<i> removeExpiredSubgraphs then addLoadedDataToSceneGraph.
+</I>&gt;<i>           * Note, must only be called from single thread update phase. */
+</I>&gt;<i>         virtual void updateSceneGraph(const osg::FrameStamp&amp; frameStamp);
+</I>&gt;<i>
+</I>&gt;<i> Within this you could add your own tracking of when things are merge or
+</I>&gt;<i> removed.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 3 June 2016 at 17:15, Trajce Nikolov NICK
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Hi Community,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I was looking for a way to detect when PagedLOD gets its children paged
+</I>&gt;<i> &gt; in/out. So I installed an update callback and based on a difference in
+</I>&gt;<i> the
+</I>&gt;<i> &gt; children number I was able to know when such change occurred. And this
+</I>&gt;<i> was
+</I>&gt;<i> &gt; working with a code an year ago.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Now it doesn't .. Any clue or hint how to detect such changes?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Thanks a bunch as always!
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Cheers,
+</I>&gt;<i> &gt; Nick
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; --
+</I>&gt;<i> &gt; trajce nikolov nick
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160603/d077eec3/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160603/d077eec3/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003215.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+	<LI>Next message: <A HREF="003217.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3216">[ date ]</a>
+              <a href="thread.html#3216">[ thread ]</a>
+              <a href="subject.html#3216">[ subject ]</a>
+              <a href="author.html#3216">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

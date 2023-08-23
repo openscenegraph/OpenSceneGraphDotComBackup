@@ -1,0 +1,253 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Update node color on demand
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Update%20node%20color%20on%20demand&In-Reply-To=%3CCAO-%2Bzi%3DP9Qzwb9i83KNF87GYTkoLYXgahnc2FwBfT%2BSwu1vMBg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009422.html">
+   <LINK REL="Next"  HREF="009417.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Update node color on demand</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Update%20node%20color%20on%20demand&In-Reply-To=%3CCAO-%2Bzi%3DP9Qzwb9i83KNF87GYTkoLYXgahnc2FwBfT%2BSwu1vMBg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Update node color on demand">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Mon Nov 26 23:47:00 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009422.html">[osg-users] Update node color on demand
+</A></li>
+        <LI>Next message (by thread): <A HREF="009417.html">[osg-users] osgEarth often crashes in multi-display extension mode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9426">[ date ]</a>
+              <a href="thread.html#9426">[ thread ]</a>
+              <a href="subject.html#9426">[ subject ]</a>
+              <a href="author.html#9426">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+try in void ColorVisitor::apply(osg::Geode &amp;geode) {
+.....
+if (colorArrays) {
+                for (unsigned int i = 0; i &lt; colorArrays-&gt;size(); i++)
+                {
+                    osg::Vec4 *color = &amp;colorArrays-&gt;operator [](i);
+                    //
+                    // could also use *color = m_color
+                    //
+                    color-&gt;set(m_color._v[0], m_color._v[1], m_color._v[2],
+m_color._v[3]);
+                }
+colorArrays-&gt;dirty() or -&gt;dirtyBufferObject() I am not sure what was the
+right call. Please look it up. It is not enough only to change the color,
+you have to dirty the array to be updated
+            }
+
+On Tue, Nov 27, 2018 at 2:10 AM Diego Mancilla &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dmancillac at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hello Trajce,
+</I>&gt;<i>
+</I>&gt;<i>  The visitor class implementation is on my previous post on this thread. I
+</I>&gt;<i> took that code from Gordon Tomlison's OSG Samples, and it works when is
+</I>&gt;<i> used previous to the rendering as you can see on my initial post (other
+</I>&gt;<i> thread: <A HREF="../../../../forum.openscenegraph.org/viewtopic68ee.php?p=75209#75209">http://forum.openscenegraph.org/viewtopic.php?p=75209#75209</A>).
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>  As I said everything gets called when it should, but on runtime, the
+</I>&gt;<i> lines wont change color. I you look at the code snippet of my main:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> _lines = osgDB::readNodeFile(&quot;lines.dxf&quot;);
+</I>&gt;<i> _topo-&gt;setDataVariance(osg::Object::DYNAMIC);
+</I>&gt;<i> osg::Geode* geode = new osg::Geode;
+</I>&gt;<i>
+</I>&gt;<i> _mViewer-&gt;addEventHandler(new ColorHandler);
+</I>&gt;<i>
+</I>&gt;<i> ColorVisitor newColor;
+</I>&gt;<i> newColor.setColor( 1.0f, 0.0f, 0.0f );
+</I>&gt;<i> _lines-&gt;accept(newColor);
+</I>&gt;<i> geode-&gt;addChild(_lines);
+</I>&gt;<i> _mViewer-&gt;realize();
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The color of the lines turns red on start. But then, when I try to change
+</I>&gt;<i> it to another color on runetime, nothing happens.
+</I>&gt;<i>
+</I>&gt;<i> Anyway, here is the visitor implementation (.cpp):
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> ColorVisitor::ColorVisitor():
+</I>&gt;<i> osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
+</I>&gt;<i> {
+</I>&gt;<i>     m_color.set(1.0, 1.0, 1.0, 1.0);
+</I>&gt;<i>     m_colorArrays = new osg::Vec4Array;
+</I>&gt;<i>     m_colorArrays-&gt;push_back(m_color);
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> ColorVisitor::ColorVisitor(const osg::Vec4 &amp;color):
+</I>&gt;<i> osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
+</I>&gt;<i> {
+</I>&gt;<i>     m_color = color;
+</I>&gt;<i>     m_colorArrays = new osg::Vec4Array;
+</I>&gt;<i>     m_colorArrays-&gt;push_back(m_color);
+</I>&gt;<i>
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> ColorVisitor::~ColorVisitor()
+</I>&gt;<i> {
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> void ColorVisitor::apply(osg::Node &amp;node) {
+</I>&gt;<i>     // --------------------------------------------
+</I>&gt;<i>     //
+</I>&gt;<i>     //  Handle traversal of osg::Node node types
+</I>&gt;<i>     //
+</I>&gt;<i>     // --------------------------------------------
+</I>&gt;<i>     traverse(node);
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> void ColorVisitor::apply(osg::Geode &amp;geode) {
+</I>&gt;<i>     // ------------------------------------------------
+</I>&gt;<i>     //
+</I>&gt;<i>     //  Handle traversal of osg::Geode node types
+</I>&gt;<i>     //
+</I>&gt;<i>     // ------------------------------------------------
+</I>&gt;<i>
+</I>&gt;<i>     osg::StateSet *state = NULL;
+</I>&gt;<i>     unsigned int    vertNum = 0;
+</I>&gt;<i>     //
+</I>&gt;<i>     //  We need to iterate through all the drawables check if
+</I>&gt;<i>     //  the contain any geometry that we will need to process
+</I>&gt;<i>     //
+</I>&gt;<i>
+</I>&gt;<i>     unsigned int numGeoms = geode.getNumDrawables();
+</I>&gt;<i>
+</I>&gt;<i>     for (unsigned int geodeIdx = 0; geodeIdx &lt; numGeoms; geodeIdx++)
+</I>&gt;<i>     {
+</I>&gt;<i>         //
+</I>&gt;<i>         // Use 'asGeometry' as its supposed to be faster than a
+</I>&gt;<i> dynamic_cast
+</I>&gt;<i>         // every little saving counts
+</I>&gt;<i>         //
+</I>&gt;<i>         osg::Geometry *curGeom =
+</I>&gt;<i> geode.getDrawable(geodeIdx)-&gt;asGeometry();
+</I>&gt;<i>         //
+</I>&gt;<i>         // Only process if the drawable is geometry
+</I>&gt;<i>         //
+</I>&gt;<i>         if (curGeom)
+</I>&gt;<i>         {
+</I>&gt;<i>             osg::Vec4Array *colorArrays = dynamic_cast&lt;osg::Vec4Array
+</I>&gt;<i> *&gt;(curGeom-&gt;getColorArray());
+</I>&gt;<i>             if (colorArrays) {
+</I>&gt;<i>                 for (unsigned int i = 0; i &lt; colorArrays-&gt;size(); i++)
+</I>&gt;<i>                 {
+</I>&gt;<i>                     osg::Vec4 *color = &amp;colorArrays-&gt;operator [](i);
+</I>&gt;<i>                     //
+</I>&gt;<i>                     // could also use *color = m_color
+</I>&gt;<i>                     //
+</I>&gt;<i>                     color-&gt;set(m_color._v[0], m_color._v[1],
+</I>&gt;<i> m_color._v[2], m_color._v[3]);
+</I>&gt;<i>                 }
+</I>&gt;<i>
+</I>&gt;<i>             }
+</I>&gt;<i>             else
+</I>&gt;<i>             {
+</I>&gt;<i>                 curGeom-&gt;setColorArray(m_colorArrays.get());
+</I>&gt;<i>                 curGeom-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+</I>&gt;<i>             }
+</I>&gt;<i>         }
+</I>&gt;<i>     }
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> void ColorVisitor::setColor(const float r, const float g, const float b,
+</I>&gt;<i> const float a)
+</I>&gt;<i> {
+</I>&gt;<i>     // -------------------------------------------------------------------
+</I>&gt;<i>     //
+</I>&gt;<i>     // Set the color to change apply to the nodes geometry
+</I>&gt;<i>     //
+</I>&gt;<i>     // -------------------------------------------------------------------
+</I>&gt;<i>     osg::Vec4 *c = &amp;m_colorArrays-&gt;operator [](0);
+</I>&gt;<i>     m_color.set(r, g, b, a);
+</I>&gt;<i>     *c = m_color;
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> void ColorVisitor::setColor(const osg::Vec4 &amp;color) {
+</I>&gt;<i>     // -------------------------------------------------------------------
+</I>&gt;<i>     //
+</I>&gt;<i>     // Set the color to change apply to the nodes geometry
+</I>&gt;<i>     //
+</I>&gt;<i>     // -------------------------------------------------------------------
+</I>&gt;<i>     osg::Vec4 *c = &amp;m_colorArrays-&gt;operator [](0);
+</I>&gt;<i>     m_color = color;
+</I>&gt;<i>     *c = m_color;
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicce17.php?p=75248#75248">http://forum.openscenegraph.org/viewtopic.php?p=75248#75248</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20181127/ab581b0c/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20181127/ab581b0c/attachment.html</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009422.html">[osg-users] Update node color on demand
+</A></li>
+	<LI>Next message (by thread): <A HREF="009417.html">[osg-users] osgEarth often crashes in multi-display extension mode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9426">[ date ]</a>
+              <a href="thread.html#9426">[ thread ]</a>
+              <a href="subject.html#9426">[ subject ]</a>
+              <a href="author.html#9426">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

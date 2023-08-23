@@ -1,0 +1,177 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgQt + OSG 3.6.2 Status
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20%2B%20OSG%203.6.2%20Status&In-Reply-To=%3CCAHhtjQZqGYOQ9Q0uAWzAF6vbTbUqCPEAwWcjgmLyCPyzEm%2BhCA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008788.html">
+   <LINK REL="Next"  HREF="008791.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgQt + OSG 3.6.2 Status</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20%2B%20OSG%203.6.2%20Status&In-Reply-To=%3CCAHhtjQZqGYOQ9Q0uAWzAF6vbTbUqCPEAwWcjgmLyCPyzEm%2BhCA%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgQt + OSG 3.6.2 Status">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Sat Jul 28 06:13:24 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008788.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+        <LI>Next message (by thread): <A HREF="008791.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8789">[ date ]</a>
+              <a href="thread.html#8789">[ thread ]</a>
+              <a href="subject.html#8789">[ subject ]</a>
+              <a href="author.html#8789">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I have just investigated the issue with OSG view set in QT window and
+osgEarth REX engine which resulted in completely black screen. This was
+probably different problem, but it sounds bit like yours so I decided I
+will share my observations. Maybe it will help someone. What I found to be
+an issue in our case was a missing call when setting our main view camera :
+
+main_camera-&gt;setDrawBuffer( GL_BACK )
+
+This call makes sure the glDrawBuffer is set to main window BACK buffer
+before drawing main view frames. In my case REX engine was setting up RTT
+camera (without Color attachment) which swtiched DrawBuffer to GL_NONE. And
+main window was not restoring it before drawing the frame. So the effect
+was a completely black screen. I suspect similar problem may happen not
+only with osgEearth REX but with any RTT camera (without color attachments
+like shadowmap cameras). When I added above line while setting main camera
+problem vanished. I hope this may help somebody.
+
+With classic OSG Viewer this call is made inside SceneView ctor when
+setting up the camera. I believe our app also set up SceneView with QT
+window at startup but somehow DrawBuffer setting was later
+reverted/discarded. You may check if this hints helps you.
+
+Cheers,
+Wojtek Lewandowski
+
+sob., 28 lip 2018 o 11:51 Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+napisa&#322;(a):
+
+&gt;<i> ?!?! gmail just sent the email mid sentence....
+</I>&gt;<i>
+</I>&gt;<i> &gt; That exactly the same can be said for the OSG.  Doesn't mean
+</I>&gt;<i>
+</I>&gt;<i> Mean't to say:
+</I>&gt;<i>
+</I>&gt;<i> On Sat, 28 Jul 2018 at 10:20, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i> &gt; &gt; Now, there are huge firms that adopted Qt for decades and run multi
+</I>&gt;<i> billion dollars systems on it.
+</I>&gt;<i>
+</I>&gt;<i> The exactly the same can be said about the OSG.  It's widely used for
+</I>&gt;<i> decades on serious extensive kit.
+</I>&gt;<i>
+</I>&gt;<i> However, this doesn't mean that OSG isn't flawless and can't be improved
+</I>&gt;<i> upon.
+</I>&gt;<i>
+</I>&gt;<i> With modern C++ with have opportunities to do a number of things far
+</I>&gt;<i> more cleanly that previously possible.  This applies to the scene
+</I>&gt;<i> graphs just as much UI's.
+</I>&gt;<i>
+</I>&gt;<i> The future of C++ application development will be better served by
+</I>&gt;<i> successors to the OSG and Qt.
+</I>&gt;<i>
+</I>&gt;<i> Right now such successors are just embryonic ideas, or nuggets of
+</I>&gt;<i> prototypes.  For current application development which need cross
+</I>&gt;<i> platform widgets may be best served by Qt, same as the graphics
+</I>&gt;<i> application development may be bested served by the OSG.  Current
+</I>&gt;<i> applications will be around for many years to come so Qt and OSG will
+</I>&gt;<i> need to be maintained.
+</I>&gt;<i>
+</I>&gt;<i> For my own part I'm committed to maintaining the OSG.  For 3.6.x I
+</I>&gt;<i> moved osgQt out of the core to allow members of the OSG community who
+</I>&gt;<i> have the need for Qt support and the expertise to know how to maintain
+</I>&gt;<i> it the ability to make decisions, implementation solutions and provide
+</I>&gt;<i> proper maintenance for it - something I can't do personally as I don't
+</I>&gt;<i> have the Qt expertise, nor the time.
+</I>&gt;<i>
+</I>&gt;<i> This thread is a bit worrying as despite me handing the keys over to
+</I>&gt;<i> osgQt development to the community doesn't yet seem to be able to
+</I>&gt;<i> resolve all the problems by themselves.  Yes the source code to both
+</I>&gt;<i> Qt, osgQt and the OSG are all available, but unless developers step up
+</I>&gt;<i> things don't happen.  This suggest perhaps we need a bit more
+</I>&gt;<i> motivated manpower from the Qt/OSG community to help push osgQt
+</I>&gt;<i> forward.  So if you feel passionate about Qt then please step forward
+</I>&gt;<i> and help out.
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i>
+</I>&gt;<i> As a little prod for the long term future.  With UI's and 2D rendering
+</I>&gt;<i> API adopting scene graph internally (by this I don't mean Qt3D) and
+</I>&gt;<i> more UI/2D rendering being done down on the GPU there is a possible
+</I>&gt;<i> convergence.  Could one have a scene graph that is general purpose
+</I>&gt;<i> enough to be used directly to do 2D UI's as well as 3D real-time
+</I>&gt;<i> graphics?  Could one implement the UI as an add on to the core scene
+</I>&gt;<i> graph, just a you'd made a game engine or image generator that builds
+</I>&gt;<i> ontop of a scene graph??
+</I>&gt;<i>
+</I>&gt;<i> So... I'm writing a new scene graph, yes I'm focused on it being used
+</I>&gt;<i> for 3D, but I'm aware that Vulkan does compute just as nicely as it
+</I>&gt;<i> does 3D, and it also works just fine for 2D too.  If you can have a
+</I>&gt;<i> scene graph just work as a compute graph, as well as 3D rendering
+</I>&gt;<i> graph then 2D rendering is also just another subset.  Could an
+</I>&gt;<i> enterprising engineer build a fully function UI ontop of it?  Maybe.
+</I>&gt;<i>
+</I>&gt;<i> Even if it doesn't come to pass for my VSG work, this is how I feel we
+</I>&gt;<i> should all be thinking about the future - we should be thinking out of
+</I>&gt;<i> the box, thinking about where we could get it if we strive for it,
+</I>&gt;<i> rather than settling for the status quo.  Yes yes the OSG and Qt are
+</I>&gt;<i> impressive in a number of ways, but they have but of all encompassing
+</I>&gt;<i> monsters that are at there peak.  Better solutions will follow on, if
+</I>&gt;<i> they don't the computer industry is failing to progress as it should.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180728/b3ac6c36/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180728/b3ac6c36/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008788.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+	<LI>Next message (by thread): <A HREF="008791.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8789">[ date ]</a>
+              <a href="thread.html#8789">[ thread ]</a>
+              <a href="subject.html#8789">[ subject ]</a>
+              <a href="author.html#8789">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

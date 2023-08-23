@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OpenGL 4.4 and ARB_buffer_storage
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenGL%204.4%20and%20ARB_buffer_storage&In-Reply-To=%3CCAO-%2BzikihaEGND7eCLXL2ijotk3YRO7FL6v%2BvQETR2gLObQ8nQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010580.html">
+   <LINK REL="Next"  HREF="010585.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OpenGL 4.4 and ARB_buffer_storage</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenGL%204.4%20and%20ARB_buffer_storage&In-Reply-To=%3CCAO-%2BzikihaEGND7eCLXL2ijotk3YRO7FL6v%2BvQETR2gLObQ8nQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] OpenGL 4.4 and ARB_buffer_storage">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Tue Nov  5 09:11:30 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010580.html">[osg-users] Setting a monochrome 2d texture from byte array
+</A></li>
+        <LI>Next message (by thread): <A HREF="010585.html">[osg-users] Keyboard event: Remove time between key down events
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10578">[ date ]</a>
+              <a href="thread.html#10578">[ thread ]</a>
+              <a href="subject.html#10578">[ subject ]</a>
+              <a href="author.html#10578">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Community,
+
+I am trying to implement 4.4 Persistent Mapping Streaming, within the
+context  of OSG. Bellow is from the spec. I am struggling at the moment
+with making the buffer object sections, with the current OSG implementation
+and not sure if it is possible so I am asking here for hints if any of you
+have done something similar. Thanks a bunch as always!
+
+Persistent mapped streaming
+
+Given the availability of OpenGL 4.4 or ARB_buffer_storage
+&lt;<A HREF="http://www.opengl.org/registry/specs/ARB/buffer_storage.txt">http://www.opengl.org/registry/specs/ARB/buffer_storage.txt</A>&gt;, the use of
+persistent mapping of buffers becomes a possibility.
+
+The idea here is to allocate an immutable buffer 2-3x the size you need,
+and while you're executing operations from one region of the buffer while
+you are writing to a different region. The difference between the prior
+mapping scheme is that you are not frequently mapping and unmapping the
+buffer. You map it persistently when you create the buffer, and keep it
+mapped until it's time to delete the buffer.
+
+This requires using glBufferStorage
+&lt;<A HREF="https://www.khronos.org/opengl/wiki/GLAPI/glBufferStorage">https://www.khronos.org/opengl/wiki/GLAPI/glBufferStorage</A>&gt; with the
+GL_MAP_WRITE and GL_PERSISTENT_BITs. It also requires using glMapBufferRange
+&lt;<A HREF="https://www.khronos.org/opengl/wiki/GLAPI/glMapBufferRange">https://www.khronos.org/opengl/wiki/GLAPI/glMapBufferRange</A>&gt; with those
+same bits when mapping it.
+
+The general algorithm is as follows. The buffer is logically divided into 3
+sections: the section you're writing to, and two sections that could
+currently be in use.
+
+The first step is to write to section 1 of the buffer. Once you have
+finished writing, you must make this range of data visible to OpenGL by
+flushing it (if you aren't mapping coherently). Then, you do whatever you
+need to in order to ensure that this data is visible to OpenGL
+&lt;<A HREF="https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming#Persistent_visibility">https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming#Persistent_visibility</A>&gt;.
+Once the data is visible, you issue some number of Rendering Commands
+&lt;<A HREF="https://www.khronos.org/opengl/wiki/Rendering_Command">https://www.khronos.org/opengl/wiki/Rendering_Command</A>&gt; that read from that
+section of the buffer. After issuing all of the commands that read from the
+buffer, you create a fence sync object
+&lt;<A HREF="https://www.khronos.org/opengl/wiki/Sync_Object">https://www.khronos.org/opengl/wiki/Sync_Object</A>&gt;.
+
+Next frame, you start writing to buffer section 2. You do all of the above,
+and create a new fence sync object. Keep each buffer section's sync objects
+separate.
+
+You do the same with buffer section 3 on the next frame.
+
+On the fourth frame, you want to start using section 1 again. However, you
+need to check section 1's sync object to see if it has completed *before* you
+can start. You can only start writing to a section if that section's sync
+object has completed.
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191105/3d587ef9/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191105/3d587ef9/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010580.html">[osg-users] Setting a monochrome 2d texture from byte array
+</A></li>
+	<LI>Next message (by thread): <A HREF="010585.html">[osg-users] Keyboard event: Remove time between key down events
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10578">[ date ]</a>
+              <a href="thread.html#10578">[ thread ]</a>
+              <a href="subject.html#10578">[ subject ]</a>
+              <a href="author.html#10578">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

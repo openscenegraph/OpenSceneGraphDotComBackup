@@ -1,0 +1,205 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] SingleThreaded leading to whole application just running on one core
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3CCAFN7Y%2BWb2iEobgiG7HBE3ojd35SmBO3g%3D-RgSEk1uE%3DRv%2B639g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004250.html">
+   <LINK REL="Next"  HREF="004253.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] SingleThreaded leading to whole application just running on one core</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3CCAFN7Y%2BWb2iEobgiG7HBE3ojd35SmBO3g%3D-RgSEk1uE%3DRv%2B639g%40mail.gmail.com%3E"
+       TITLE="[osg-users] SingleThreaded leading to whole application just running on one core">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Sep 26 03:39:45 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004250.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+        <LI>Next message: <A HREF="004253.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4251">[ date ]</a>
+              <a href="thread.html#4251">[ thread ]</a>
+              <a href="subject.html#4251">[ subject ]</a>
+              <a href="author.html#4251">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi All,
+
+I have taken Christoph's test problem and reproduced the affinity
+issue on my Kubuntu 16.04, so this is useful first step.
+
+I've also reviewed the OpenThreads code, so have a better idea of the
+code in question.  Please note that I'm not the author of OpenThreads,
+the project just fell on my shoulders to maintain.  Some of the code
+in OpenThreads pthread side made me curious so I modified Christoph's
+code to added a code path using OpenThreads rather than C++11 threads
+used in Christoph's code and command line options to toggle between
+the two, toggle beteween viewer running SingleThreaded or with
+defaults (will be DrawThreadPerContext).  Attached is a CmakeLists.txt
+file and main.cpp.
+
+For the OpenThreads pathway I get the exactly the same performance
+when running the viewer single theaded or multi-threaded.
+
+ time ./threadtest --ot --SingleThreaded
+Thread 0x142df50 done
+Thread 0x1427750 done
+Thread 0x1427690 done
+Thread 0x142dcf0 done
+Thread 0x142e1f0 done
+Thread 0x142e0a0 done
+Thread 0x142edc0 done
+Thread 0x142e5e0 done
+Thread 0x142ec70 done
+Thread 0x142e9d0 done
+Thread 0x142e340 done
+Thread 0x142e490 done
+Thread 0x142de20 done
+Thread 0x142e880 done
+Thread 0x142e730 done
+Thread 0x142eb20 done
+
+real    0m15.463s
+user    1m59.612s
+sys     0m0.044s
+
+
+For the C++11 threads I get far worse performance when running single
+theaded vs multi-threaded:
+
+$ time ./threadtest --SingleThreaded
+Thread 7 done
+Thread 11 done
+Thread 10 done
+Thread 13 done
+Thread 12 done
+Thread 6 done
+Thread 9 done
+Thread 8 done
+Thread 14 done
+Thread 15 done
+Thread 5 done
+Thread 4 done
+Thread 3 done
+Thread 2 done
+Thread 1 done
+Thread 0 done
+
+real    1m22.315s
+user    1m22.064s
+sys     0m0.044s
+
+
+So the code in OpenThreads to set the affinity mask by default for
+it's own threads resolve the issue completely (note, the
+OpenThreads::Thread that I created above don't set affinity, so they
+are free for the OS to place them.)  This may also be why most users
+don't see these issues.
+
+This isolates the issues to users who use non OpenThreads threads when
+these threads are created after the viewer has been realized and don't
+set thread affinity for there threads themselves.  That's three sets
+of conditions that any one be changed and the problem will be entirely
+resolved.
+
+While not ideal that this issue exists at all at least we now have a
+handle on it.  Given the issue only occurs with a very specific set of
+usage I don't think there is any reason for sweeping changes to the
+core OSG, or changes to the defaults.
+
+Robert.
+-------------- next part --------------
+cmake_minimum_required(VERSION 2.6)
+
+SET(PROJECT_NAME test)
+PROJECT(${PROJECT_NAME})
+
+FIND_PACKAGE(OpenThreads)
+FIND_PACKAGE(osg)
+FIND_PACKAGE(osgDB)
+FIND_PACKAGE(osgUtil)
+FIND_PACKAGE(osgGA)
+FIND_PACKAGE(osgViewer)
+
+set(CMAKE_CXX_FLAGS &quot;${CMAKE_CXX_FLAGS} -std=c++11&quot;)
+
+SET(SOURCES
+    main.cpp
+)
+
+INCLUDE_DIRECTORIES(${OPENTHREADS_INCLUDE_DIR} ${OSG_INCLUDE_DIR})
+
+LINK_DIRECTORIES(${OSG_LIB_DIR})
+
+ADD_EXECUTABLE(${PROJECT_NAME} ${SOURCES})
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+    ${OSG_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGVIEWER_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGGA_LIBRARIES}
+    ${OPENTHREADS_LIBRARIES})
+-------------- next part --------------
+cmake_minimum_required(VERSION 2.6)
+
+SET(PROJECT_NAME test)
+PROJECT(${PROJECT_NAME})
+
+FIND_PACKAGE(OpenThreads)
+FIND_PACKAGE(osg)
+FIND_PACKAGE(osgDB)
+FIND_PACKAGE(osgUtil)
+FIND_PACKAGE(osgGA)
+FIND_PACKAGE(osgViewer)
+
+set(CMAKE_CXX_FLAGS &quot;${CMAKE_CXX_FLAGS} -std=c++11&quot;)
+
+SET(SOURCES
+    main.cpp
+)
+
+INCLUDE_DIRECTORIES(${OPENTHREADS_INCLUDE_DIR} ${OSG_INCLUDE_DIR})
+
+LINK_DIRECTORIES(${OSG_LIB_DIR})
+
+ADD_EXECUTABLE(${PROJECT_NAME} ${SOURCES})
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+    ${OSG_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGVIEWER_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGGA_LIBRARIES}
+    ${OPENTHREADS_LIBRARIES})
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004250.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+	<LI>Next message: <A HREF="004253.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4251">[ date ]</a>
+              <a href="thread.html#4251">[ thread ]</a>
+              <a href="subject.html#4251">[ subject ]</a>
+              <a href="author.html#4251">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

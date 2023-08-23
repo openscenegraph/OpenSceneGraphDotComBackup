@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users]  How to query calczulated zNear zFar?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20How%20to%20query%20calczulated%20zNear%20zFar%3F&In-Reply-To=%3C3f298f78-1244-62c0-c18e-5c5c7cfa49c8%40texion.eu%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008211.html">
+   <LINK REL="Next"  HREF="008209.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users]  How to query calczulated zNear zFar?</H1>
+<!--htdig_noindex-->
+    <B>Werner Modenbach</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20How%20to%20query%20calczulated%20zNear%20zFar%3F&In-Reply-To=%3C3f298f78-1244-62c0-c18e-5c5c7cfa49c8%40texion.eu%3E"
+       TITLE="[osg-users]  How to query calczulated zNear zFar?">Werner.Modenbach at texion.eu
+       </A><BR>
+    <I>Fri May 18 05:21:21 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008211.html">[osg-users] How to query calczulated zNear zFar?
+</A></li>
+        <LI>Next message (by thread): <A HREF="008209.html">[osg-users] osgText: problem with SCREEN_COORDS mode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8221">[ date ]</a>
+              <a href="thread.html#8221">[ thread ]</a>
+              <a href="subject.html#8221">[ subject ]</a>
+              <a href="author.html#8221">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Sorry, I forgot something:
+As I found out in debugging cullVisitor, the projectionMatrix of the
+child camera gets updated shortly before leaving the apply() method of
+the camera. Where does this modified matrix go? I can't find it in the
+camera later.
+
+============================
+
+Hi Robert,
+
+thanks for your answer and your willingness for doing some addition to
+the software for helping me.
+
+I do not really understand, why the main camera having a scene gets its
+projection Matrix updated
+from cullVisitor (to conform to calculated zNear and zFar) but if I move
+the scene from main camera
+to a child camera I have no chance to get zNear/zFar form anywhere.
+These values are very useful and/or necessary in many cases ambient
+shadow, DoF and others.
+The complete deferred shading idea is based on this scheme.
+I cruised the Internet for a solution and discovered that many people
+are having the same problem like me.
+Even in your examples you always calculate the scenes bounding sphere
+and derive zNear/zFar from there
+which is far from optimal bounds calculated by the cull visitor in
+various display situations.
+
+So, yes, having a callback giving me the chance to retrieve those values
+would be great. And I think not just for me.
+
+Many thanks in advance.
+
+- Werner -
+
+Am 17.05.2018 um 18:49 schrieb Robert Osfield:
+&gt;<i> Hi Werner,
+</I>&gt;<i>
+</I>&gt;<i> You have a complicated enough scheme that just reading a general
+</I>&gt;<i> description really isn't sufficient to understand what is being down
+</I>&gt;<i> when etc.  So best I can is provide general suggests.
+</I>&gt;<i>
+</I>&gt;<i> Would a CullSettings::ClampProjectionMatrixCallback help?  Might
+</I>&gt;<i> enable you to intercept or set the values and do what you want with
+</I>&gt;<i> them.  This will be called in Cull traversal at the appropriate time.
+</I>&gt;<i> I don't recall the details, it's probably well over a decade since I
+</I>&gt;<i> looked at this code.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 17 May 2018 at 15:11, Werner Modenbach &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Werner.Modenbach at texion.eu</A>&gt; wrote:
+</I>&gt;&gt;<i> Dear all,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I hope someone can help me.
+</I>&gt;&gt;<i> I'm really desperate. I can't find the right way retrieving zNear and zFar
+</I>&gt;&gt;<i> values
+</I>&gt;&gt;<i> from a child camera.
+</I>&gt;&gt;<i> I'm debugging now since many days already without success.
+</I>&gt;&gt;<i> I have a deferred rendering scene. The main camera doesn't have my scane as
+</I>&gt;&gt;<i> child but the rtt-camera.
+</I>&gt;&gt;<i> rtt-camera is set RELATIVE_RF, so it is controlled by the camera manipulator
+</I>&gt;&gt;<i> of the main camera.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> What I found out so far:
+</I>&gt;&gt;<i> - The viewer calls &quot;renderingTraversals()&quot;
+</I>&gt;&gt;<i> - The renderer calls &quot;cull()&quot; which starts a cullVisitor.
+</I>&gt;&gt;<i> - When the cullVisitor reaches my child camera it multiplies view and
+</I>&gt;&gt;<i> projection matrices and collects correct
+</I>&gt;&gt;<i>    zNear and zFar values from the cameras child = my scene.
+</I>&gt;&gt;<i> - at the and of apply(const osg::Camera&amp;) the method &quot;popProjectionMatrix()&quot;
+</I>&gt;&gt;<i> is called which cals &quot;clampProJectionMatrix(...)&quot;
+</I>&gt;&gt;<i> - There the projection matrix is modified the correct way according to zNear
+</I>&gt;&gt;<i> and zFar.
+</I>&gt;&gt;<i> - I have set a CullCallback and a PreDrawCallback at my child camera but
+</I>&gt;&gt;<i> none of them can extract zNear and zFar from the cameras ProjectionMatrix.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Is there any other way to get these values which get obviously calculated
+</I>&gt;&gt;<i> the correct way?
+</I>&gt;&gt;<i> I can't find anything in the Internet or in the examples.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Many thanks for any hint.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> - Werner -
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+
+</PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008211.html">[osg-users] How to query calczulated zNear zFar?
+</A></li>
+	<LI>Next message (by thread): <A HREF="008209.html">[osg-users] osgText: problem with SCREEN_COORDS mode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8221">[ date ]</a>
+              <a href="thread.html#8221">[ thread ]</a>
+              <a href="subject.html#8221">[ subject ]</a>
+              <a href="author.html#8221">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

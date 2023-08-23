@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Deleting still referenced object
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3CCAFN7Y%2BWpRp56rd_22BBvuVteM7QzkGwfp_ujLMdC81Kcy_yW0g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009595.html">
+   <LINK REL="Next"  HREF="009597.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Deleting still referenced object</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3CCAFN7Y%2BWpRp56rd_22BBvuVteM7QzkGwfp_ujLMdC81Kcy_yW0g%40mail.gmail.com%3E"
+       TITLE="[osg-users] Deleting still referenced object">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Jan 14 03:45:33 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009595.html">[osg-users] Deleting still referenced object
+</A></li>
+        <LI>Next message (by thread): <A HREF="009597.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9596">[ date ]</a>
+              <a href="thread.html#9596">[ thread ]</a>
+              <a href="subject.html#9596">[ subject ]</a>
+              <a href="author.html#9596">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks for chipping in Laurens.  I have just had a look at simgear and
+the DefaultCachePolicy::find(const string&amp; fileName, const Options*
+opt) that calls registry-&gt;getFromObjectCache(fileName) is definitely
+problematic.  the getFromObjectCache() method only passes back a C
+pointer, not a ref_ptr&lt;&gt; and has been proven to cause threading
+issues.  The ObjectCache::getRefFromObjectCache() is the replacement
+for this unsafe method and should always be used in threaded
+applications.
+
+The DefaultCachePolicy::find(..) method is also problematic as it
+passes back a C pointer as well, so it should be changed to pass back
+a ref_ptr&lt;&gt; so that every step of the way the subgraph that is being
+passed around remains with a positive ref count.
+
+The recent PR for the OSG just shifts the timing so make the crash
+less common, but the bugs are still there.  From 3.4 onwards the OSG
+has the tools to prevent these problems, but with the old unsafe API's
+still around for compatibility unfortunately users aren't forced to do
+the right thing.
+
+I did a quick checkout of simgear and had a bash at fixing this issue
+but am getting compile errors on unrelated code. The code I would
+change though would be:
+
+// original and thread unsafe ModelRegistry.cxx :
+osg::Node* DefaultCachePolicy::find(const string&amp; fileName,
+                                    const Options* opt)
+{
+    Registry* registry = Registry::instance();
+    osg::Node* cached
+        = dynamic_cast&lt;Node*&gt;(registry-&gt;getFromObjectCache(fileName));
+    if (cached)
+        SG_LOG(SG_IO, SG_BULK, &quot;Got cached model \&quot;&quot;
+               &lt;&lt; fileName &lt;&lt; &quot;\&quot;&quot;);
+    else
+        SG_LOG(SG_IO, SG_BULK, &quot;Reading model \&quot;&quot;
+               &lt;&lt; fileName &lt;&lt; &quot;\&quot;&quot;);
+    return cached;
+}
+
+Suggested improvement:
+osg::ref_ptr&lt;osg::Node&gt; DefaultCachePolicy::find(const string&amp; fileName,
+                                    const Options* opt)
+{
+#if OSG_VERSION_LESS_THAN(3,4,0)
+    osg::ref_ptr&lt;osg::Object&gt; cachedObject =
+registry-&gt;getFromObjectCache(fileName);
+#else
+    osg::ref_ptr&lt;osg::Object&gt; cachedObject =
+registry-&gt;getRefFromObjectCache(fileName);
+#endif
+
+    ref_ptr&lt;osg::Node&gt; cachedNode =
+dynamic_cast&lt;osg::Node*&gt;(cachedObject.get());
+    if (cached.valid())
+        SG_LOG(SG_IO, SG_BULK, &quot;Got cached model \&quot;&quot;
+               &lt;&lt; fileName &lt;&lt; &quot;\&quot;&quot;);
+    else
+        SG_LOG(SG_IO, SG_BULK, &quot;Reading model \&quot;&quot;
+               &lt;&lt; fileName &lt;&lt; &quot;\&quot;&quot;);
+    return cached;
+}
+
+Not the change to use ref_ptr&lt;&gt; where ownership is explicitly handled
+and the use of ObjectCache::getRefFromObjectCache().
+
+I will add a comment to the ObjectCache about getFromObjectCache()
+being deprecated and not thread safe and give the recommendation of
+changing to getRefFromObjectCache().
+
+I would also recommend changing instances of
+readNodeFile/readImageFile/readObjectFile() to readRefNodeFile() etc.
+In the case of the SGReaderWRiterXML.cxx I'd change the line:
+
+        modelResult = osgDB::readNodeFile(modelpath.local8BitStr(),
+options.get());
+
+To:
+
+        modelResult =
+osgDB::Registry::instance()-&gt;readNode(modelpath.local8BitStr(),
+options.get());
+
+As the ReadResult already has ref_ptr&lt;&gt; usage internally and is thread
+safe already.
+
+All these Ref version for file loading and cache came in existence to
+address threading issues.  In hindsight the OSG should never have
+provided the non ref_ptr&lt;&gt; versions.
+
+Cheers,
+Robert.
+
+On Mon, 14 Jan 2019 at 10:55, Voerman, L. &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">l.voerman at rug.nl</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi Richard,
+</I>&gt;<i> sorry to drop into the discussion so late, I think the problem is that you should call
+</I>&gt;<i> getRefFromObjectCache
+</I>&gt;<i> instead of
+</I>&gt;<i> getFromObjectCache
+</I>&gt;<i>
+</I>&gt;<i> available in osg versions above 3.3.4, this should close the gap where the refCount can touch zero.
+</I>&gt;<i> From your stack trace the call seems to come from the flightgear code:
+</I>&gt;<i>
+</I>&gt;<i> ot21-OpenThreads.dll!OpenThreads::Mutex::lock() Line 115 C++
+</I>&gt;<i> osg160-osgDB.dll!osgDB::ObjectCache::getFromObjectCache(const std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; fileName, const osgDB::Options * options) Line 99 C++
+</I>&gt;<i> fgfs.exe!simgear::DefaultCachePolicy::find(const std::basic_string&lt;char,std::char_traits&lt;char&gt;,std::allocator&lt;char&gt; &gt; &amp; fileName, const osgDB::Options * opt) Line 724 C++
+</I>&gt;<i>
+</I>&gt;<i> Regards, Laurens.
+</I>&gt;<i>
+</I>&gt;<i> On Mon, Jan 14, 2019 at 8:28 AM Richard Harrison &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rjh at zaretto.com</A>&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 11/01/2019 07:38, Robert Osfield wrote:
+</I>&gt;&gt;<i> &gt; If you are able to characterise what is going on then let me know and
+</I>&gt;&gt;<i> &gt; I may be able to help spot a solution.  Having a small example that
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> For some reason my last message doesn't seem to have made it to this
+</I>&gt;&gt;<i> list; it's on the forum[1]
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I've diagnosed what I think is the problem, I've got a solution and I've
+</I>&gt;&gt;<i> tested it; what I'm really after is confirmation that I haven't missed
+</I>&gt;&gt;<i> something.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> This relates to pull request
+</I>&gt;&gt;<i> <A HREF="https://github.com/openscenegraph/OpenSceneGraph/pull/690">https://github.com/openscenegraph/OpenSceneGraph/pull/690</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> -------------------
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> [1]
+</I>&gt;&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic7c23.php?p=75443&amp;sid=f9ec59f5127e4760f6694c56b925f54a#75443">http://forum.openscenegraph.org/viewtopic.php?p=75443&amp;sid=f9ec59f5127e4760f6694c56b925f54a#75443</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009595.html">[osg-users] Deleting still referenced object
+</A></li>
+	<LI>Next message (by thread): <A HREF="009597.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9596">[ date ]</a>
+              <a href="thread.html#9596">[ thread ]</a>
+              <a href="subject.html#9596">[ subject ]</a>
+              <a href="author.html#9596">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

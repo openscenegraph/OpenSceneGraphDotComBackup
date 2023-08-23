@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [A standardized way to mod scene graph during runtime?]
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BA%20standardized%20way%20to%20mod%20scene%20graph%20during%0A%20runtime%3F%5D&In-Reply-To=%3CCAFN7Y%2BVhnw17iYc7JHU%3DFr_A9fbDHsi7zxwF0UNbmAaSq8Tj3w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007705.html">
+   <LINK REL="Next"  HREF="007716.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [A standardized way to mod scene graph during runtime?]</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BA%20standardized%20way%20to%20mod%20scene%20graph%20during%0A%20runtime%3F%5D&In-Reply-To=%3CCAFN7Y%2BVhnw17iYc7JHU%3DFr_A9fbDHsi7zxwF0UNbmAaSq8Tj3w%40mail.gmail.com%3E"
+       TITLE="[osg-users] [A standardized way to mod scene graph during runtime?]">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Feb 10 09:09:52 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007705.html">[osg-users] [A standardized way to mod scene graph during runtime?]
+</A></li>
+        <LI>Next message (by thread): <A HREF="007716.html">[osg-users] [A standardized way to mod scene graph during runtime?]
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7714">[ date ]</a>
+              <a href="thread.html#7714">[ thread ]</a>
+              <a href="subject.html#7714">[ subject ]</a>
+              <a href="author.html#7714">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Julien,
+
+On 7 February 2018 at 18:16, Julien Valentin &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">julienvalentin51 at gmail.com</A>&gt; wrote:
+&gt;<i> Perhaps my brain bugs,
+</I>&gt;<i> but AFAIK there's no way to mod a scenegraph at runtime because it's shared among threads.
+</I>
+What do you mean by this, as it's really just a vague statement that
+could have so many different interpretations.
+
+Most OSG applications modify the scene graph during the update or
+event phases of the frameloop.  Some even modify it during cull and
+draw, but these just need to be more careful to handle the possibility
+of multi-threaded draw.
+
+
+&gt;<i> Do you think a mutual exclusion &quot;zone&quot; should be defined in the main loop could be a good  way to proceed?
+</I>&gt;<i> We'd then could define a standard way to mod sg executed in the &quot;zone&quot;
+</I>
+The &quot;zone&quot; for the OSG is between the viewer.advance() and
+viewer.renderingTraversals(), the viewer by design runs the main frame
+loop single threaded and these traversals are all single threaded,
+except when the DRAW_THREAD_PER_CONTEXT or
+CULL_THREAD_PER_CAMERA_DRAW_THREAD_PER_CONTEXT are used, in which case
+you need to set the DataVariance of the StateSet and Drawable that
+contain dynamic data so that draw dispatch can hold back the main
+thread till all the dynamic objects have been dispatched into the
+OpenGL FIFO.
+
+The OSG is design to multi-thread cull and draw traversals.
+
+The OSG also is designed to have a DatabasePager for dynamically
+loaded/computed new scene graph elements that are prepared in separate
+background threads.
+
+You can also create your own threads and have them do work in the
+background, you just need to make sure you are modifying bits of the
+main scene graph that is being rendered.
+
+If you want some generic mechanism to allow you to modify any part of
+the scene graph at any time you need to take a step back and wonder
+what you are really asking for.  Any scene graph, not just the OSG,
+has to create a world and capture that world that is static for the
+instance in time you take the picture of it, this means that the cull
+and draw traversals really need to work on a static representation
+during their traversals, for this instance in time all the operations
+done need to be done with a single time stamp, otherwise you'd get
+different objects all moving at different points and ended up with an
+unholly mess on screen.
+
+This means that there is natural rhythm to what is done when, which is
+why the OSG has a single FrameStamp that is updated by
+viewer.advance() and all the update, event, cull and draw traversals
+all share this same FrameStamp.  You might have multiple threads
+reading or writing, by they need to be synchronized. The osgViewer
+itself will provide much of this threading and high level
+synchronization for you.
+
+It's not a general purpose do whatever you want when ever you want
+free for all, but it's a scene graph so it has to have this syncronity
+to it.  There are exceptions that some applications might need but for
+these they need to decide exactly what they need to do and when and
+use their own multi-buffering or mutexing to manage it.  Since what
+these exception are is completely open ended there is no way the OSG
+can provide an API for it.
+
+Robert.
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007705.html">[osg-users] [A standardized way to mod scene graph during runtime?]
+</A></li>
+	<LI>Next message (by thread): <A HREF="007716.html">[osg-users] [A standardized way to mod scene graph during runtime?]
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7714">[ date ]</a>
+              <a href="thread.html#7714">[ thread ]</a>
+              <a href="subject.html#7714">[ subject ]</a>
+              <a href="author.html#7714">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

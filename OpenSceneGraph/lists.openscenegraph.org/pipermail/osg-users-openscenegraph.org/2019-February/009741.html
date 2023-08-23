@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Nvidia RTX
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Nvidia%20RTX&In-Reply-To=%3Ccd32f7ca-9c6e-f38e-a110-ece527922f25%40oktal-se.fr%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009740.html">
+   <LINK REL="Next"  HREF="009742.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Nvidia RTX</H1>
+<!--htdig_noindex-->
+    <B>Lionel Lagarde</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Nvidia%20RTX&In-Reply-To=%3Ccd32f7ca-9c6e-f38e-a110-ece527922f25%40oktal-se.fr%3E"
+       TITLE="[osg-users] Nvidia RTX">lionel.lagarde at oktal-se.fr
+       </A><BR>
+    <I>Thu Feb 21 08:28:37 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009740.html">[osg-users] Nvidia RTX
+</A></li>
+        <LI>Next message (by thread): <A HREF="009742.html">[osg-users] Nvidia RTX
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9741">[ date ]</a>
+              <a href="thread.html#9741">[ thread ]</a>
+              <a href="subject.html#9741">[ subject ]</a>
+              <a href="author.html#9741">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>The RTX examples I found (like 
+<A HREF="https://iorange.github.io/p01/HappyTriangle.html">https://iorange.github.io/p01/HappyTriangle.html</A>) use a VK command 
+(similar to a compute dispatch) to trigger the ray tracing:
+
+|<i>void vkCmdTraceRaysNVX(VkCommandBuffer commandBuffer, VkBuffer 
+</I>raygenShaderBindingTableBuffer, VkDeviceSize raygenShaderBindingOffset, 
+VkBuffer missShaderBindingTableBuffer, VkDeviceSize 
+missShaderBindingOffset, VkDeviceSize missShaderBindingStride, VkBuffer 
+hitShaderBindingTableBuffer, VkDeviceSize hitShaderBindingOffset, 
+VkDeviceSize hitShaderBindingStride, uint32_t width, uint32_t height); |
+
+This function posts the ray tracing command to a VK command queue. 
+Finally, the main ray tracing shader &quot;stores&quot; the ray tracing result in 
+an image using imageStore.
+
+I don't know about mixing an OpenGL context and the VK counterpart 
+(device, physical device, command queue, images...). It is maybe 
+possible but like the CUDA /GL interoperability, it may require 
+expansive synchronization mechanisms.
+
+
+On 21/02/2019 15:19, Chris Hanson wrote:
+&gt;<i> So, you'd need a shared GL/Vk context in order to Vk load the data and 
+</I>&gt;<i> then GL trace it, if I understand correctly?
+</I>&gt;<i>
+</I>&gt;<i> We could probably bring VSG into play to load the data. I think 
+</I>&gt;<i> there's enough working code there already to do so. Or, really, we 
+</I>&gt;<i> could just us what VSG has already and compose and execute the RTX 
+</I>&gt;<i> commands without&#160;OSG, but copying already-composed scene data over 
+</I>&gt;<i> from the OSG side.
+</I>&gt;<i>
+</I>&gt;<i> On Thu, Feb 21, 2019 at 3:15 PM Lionel Lagarde 
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">lionel.lagarde at oktal-se.fr</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">lionel.lagarde at oktal-se.fr</A>&gt;&gt; wrote:
+</I>&gt;<i>
+</I>&gt;<i>     Hi,
+</I>&gt;<i>
+</I>&gt;<i>     It is a GLSL extension, the ray tracing functions use some input
+</I>&gt;<i>     data (like the acceleration structure) that can only be
+</I>&gt;<i>     constructed and uploaded using the vk API.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     On 21/02/2019 13:34, Chris Hanson wrote:
+</I>&gt;&gt;<i>     One of my guys pointed out this recent addition:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     <A HREF="https://github.com/KhronosGroup/GLSL/blob/master/extensions/nv/GLSL_NV_ray_tracing.txt">https://github.com/KhronosGroup/GLSL/blob/master/extensions/nv/GLSL_NV_ray_tracing.txt</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     On Wed, Feb 20, 2019 at 9:47 PM Chris Hanson
+</I>&gt;&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">xenon at alphapixel.com</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">xenon at alphapixel.com</A>&gt;&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>         Well, I was wondering if there was an OpenGL RTX API
+</I>&gt;&gt;<i>         anywhere, but it doesn't seem there is.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>         Vulkan would appear to be the way to go for the future, but
+</I>&gt;&gt;<i>         since that's not ready for the oven yet (don't even have all
+</I>&gt;&gt;<i>         the mise en place), it might be we just have to make a
+</I>&gt;&gt;<i>         utility library to shovel OSG data into OptiX and let it do
+</I>&gt;&gt;<i>         the work for now. There's always going to have to be some
+</I>&gt;&gt;<i>         kind of bridge from OSG to either Vulkan or something else if
+</I>&gt;&gt;<i>         no OpenGL support extension ever appears.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     -- 
+</I>&gt;&gt;<i>     Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>
+</I>&gt;&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>&gt; <A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+</I>&gt;&gt;<i>     Training &#8226; Consulting &#8226; Contracting
+</I>&gt;&gt;<i>     3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226;
+</I>&gt;&gt;<i>     OpenGL 4 &#8226; GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+</I>&gt;&gt;<i>     Legal/IP &#8226;Forensics &#8226;Imaging &#8226;UAVs &#8226; GIS &#8226; GPS &#8226;
+</I>&gt;&gt;<i>     osgEarth&#160;&#8226;&#160;Terrain&#160;&#8226;&#160;Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded
+</I>&gt;&gt;<i>     &#8226; Mobile &#8226; iPhone/iPad/iOS &#8226; Android
+</I>&gt;&gt;<i>     @alphapixel &lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt;
+</I>&gt;&gt;<i>     facebook.com/alphapixel &lt;<A HREF="http://facebook.com/alphapixel">http://facebook.com/alphapixel</A>&gt;&#160;(775)
+</I>&gt;&gt;<i>     623-PIXL [7495]
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     _______________________________________________
+</I>&gt;&gt;<i>     osg-users mailing list
+</I>&gt;&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>  &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>     _______________________________________________
+</I>&gt;<i>     osg-users mailing list
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> -- 
+</I>&gt;<i> Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A> 
+</I>&gt;<i> <A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+</I>&gt;<i> Training &#8226; Consulting &#8226; Contracting
+</I>&gt;<i> 3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; 
+</I>&gt;<i> OpenGL 4 &#8226; GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+</I>&gt;<i> Legal/IP &#8226;Forensics &#8226;Imaging &#8226;UAVs &#8226; GIS &#8226; GPS &#8226; 
+</I>&gt;<i> osgEarth&#160;&#8226;&#160;Terrain&#160;&#8226;&#160;Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; 
+</I>&gt;<i> Mobile &#8226; iPhone/iPad/iOS &#8226; Android
+</I>&gt;<i> @alphapixel &lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt; facebook.com/alphapixel 
+</I>&gt;<i> &lt;<A HREF="http://facebook.com/alphapixel">http://facebook.com/alphapixel</A>&gt;&#160;(775) 623-PIXL [7495]
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190221/2a177a0d/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190221/2a177a0d/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009740.html">[osg-users] Nvidia RTX
+</A></li>
+	<LI>Next message (by thread): <A HREF="009742.html">[osg-users] Nvidia RTX
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9741">[ date ]</a>
+              <a href="thread.html#9741">[ thread ]</a>
+              <a href="subject.html#9741">[ subject ]</a>
+              <a href="author.html#9741">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

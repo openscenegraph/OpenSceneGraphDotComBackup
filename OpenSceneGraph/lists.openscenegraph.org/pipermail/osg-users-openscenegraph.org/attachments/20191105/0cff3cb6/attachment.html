@@ -1,0 +1,69 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Sandy,&lt;div&gt;Try&nbsp;this&nbsp;instead.&nbsp;You&nbsp;probably&nbsp;want&nbsp;normalized&nbsp;[0..1]&nbsp;data&nbsp;on&nbsp;the&nbsp;GPU,&nbsp;not&nbsp;[0..255]&nbsp;integers.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt; img-&gt;setImage(w,&nbsp;h,&nbsp;1,&nbsp;GL_R8,&nbsp;GL_RED,&nbsp;GL_UNSIGNED_BYTE,&nbsp;data,&nbsp;osg::Image::USE_MALLOC_FREE); &lt;/div&gt;&lt;div&gt; &lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_signature&quot;&nbsp;data-smartmail=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;Glenn&nbsp;Waldron&nbsp;/&nbsp;osgEarth&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Tue,&nbsp;Nov&nbsp;5,&nbsp;2019&nbsp;at&nbsp;2:14&nbsp;AM&nbsp;Steve&nbsp;Hardy&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:osgforum@tevs.eu&quot;&gt;osgforum@tevs.eu&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;am&nbsp;trying&nbsp;to&nbsp;render&nbsp;a&nbsp;monochrome&nbsp;camera&nbsp;image&nbsp;to&nbsp;a&nbsp;2d&nbsp;texture,&nbsp;but&nbsp;without&nbsp;success&nbsp;unless&nbsp;I&nbsp;first&nbsp;convert&nbsp;it&nbsp;to&nbsp;BGR.&lt;br&gt;<br>
+&lt;br&gt;<br>
+After&nbsp;reading&nbsp;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?t=16236&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?t=16236&lt;/a&gt;&lt;br&gt;<br>
+I&nbsp;got&nbsp;closer,&nbsp;but&nbsp;still&nbsp;no&nbsp;cigar&nbsp;as&nbsp;the&nbsp;result&nbsp;is&nbsp;a&nbsp;boring&nbsp;uniform&nbsp;black. &nbsp;Here&nbsp;is&nbsp;some&nbsp;code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+void&nbsp;VSGeode::setImageParameters(bool&nbsp;linear)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(getNumDrawables()&nbsp;&lt;&nbsp;1)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;throw&nbsp;OSGWrapException(&quot;No&nbsp;drawables&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp;quad&nbsp;=&nbsp;dynamic_cast&lt;osg::Geometry*&gt;(getDrawable(0));&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(!quad)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;throw&nbsp;OSGWrapException(&quot;No&nbsp;geometry&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::StateSet*&nbsp;state&nbsp;=&nbsp;quad-&gt;getStateSet();&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(!state)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;throw&nbsp;OSGWrapException(&quot;No&nbsp;state&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp;tex&nbsp;=&nbsp;state-&gt;getTextureAttribute(0,&nbsp;osg::StateAttribute::TEXTURE)-&gt;asTexture();&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(!tex)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;throw&nbsp;OSGWrapException(&quot;No&nbsp;texture&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp;tex-&gt;setFilter(osg::Texture::MIN_FILTER,linear&nbsp;?&nbsp;osg::Texture::LINEAR&nbsp;:&nbsp;osg::Texture::NEAREST);&lt;br&gt;<br>
+ &nbsp; &nbsp;tex-&gt;setFilter(osg::Texture::MAG_FILTER,linear&nbsp;?&nbsp;osg::Texture::LINEAR&nbsp;:&nbsp;osg::Texture::NEAREST);&nbsp;//&nbsp;NEAREST&nbsp;for&nbsp;pixelated&nbsp;look,&nbsp;LINEAR&nbsp;for&nbsp;smooth.&lt;br&gt;<br>
+ &nbsp; &nbsp;img&nbsp;=&nbsp;tex-&gt;getImage(0);&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;VSGeode::setImageBGR(int&nbsp;w,&nbsp;int&nbsp;h,&nbsp;unsigned&nbsp;char&nbsp;*&nbsp;data)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;img-&gt;setImage(w,&nbsp;h,&nbsp;1,&nbsp;3,&nbsp;GL_BGR,&nbsp;GL_UNSIGNED_BYTE,&nbsp;data,&nbsp;osg::Image::USE_MALLOC_FREE);&lt;br&gt;<br>
+ &nbsp; &nbsp;quad-&gt;dirtyDisplayList();&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;VSGeode::setImageMono8(int&nbsp;w,&nbsp;int&nbsp;h,&nbsp;unsigned&nbsp;char&nbsp;*&nbsp;data)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;img-&gt;setImage(w,&nbsp;h,&nbsp;1,&nbsp;GL_R8UI,&nbsp;GL_RED_INTEGER,&nbsp;GL_UNSIGNED_BYTE,&nbsp;data,&nbsp;osg::Image::USE_MALLOC_FREE); &nbsp; &nbsp; //&nbsp;black&lt;br&gt;<br>
+ &nbsp; &nbsp;quad-&gt;dirtyDisplayList();&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+SetImageBGR()&nbsp;works&nbsp;fine,&nbsp;but&nbsp;as&nbsp;mentioned,&nbsp;setImageMono8()&nbsp;does&nbsp;not.&lt;br&gt;<br>
+&lt;br&gt;<br>
+What&nbsp;happens&nbsp;is&nbsp;that&nbsp;the&nbsp;image&nbsp;comes&nbsp;in&nbsp;from&nbsp;a&nbsp;hi-res&nbsp;GigE&nbsp;camera,&nbsp;and&nbsp;it&nbsp;is&nbsp;a&nbsp;monochrome&nbsp;byte&nbsp;array. &nbsp;Because&nbsp;this&nbsp;is&nbsp;already&nbsp;fairly&nbsp;CPU&nbsp;intensive,&nbsp;I&nbsp;wish&nbsp;to&nbsp;avoid&nbsp;another&nbsp;copy&nbsp;to&nbsp;expand&nbsp;into&nbsp;a&nbsp;BGR&nbsp;array. &nbsp;But&nbsp;for&nbsp;the&nbsp;life&nbsp;of&nbsp;me&nbsp;I&nbsp;can&#39;t&nbsp;work&nbsp;out&nbsp;a&nbsp;magic&nbsp;combo&nbsp;of&nbsp;parameters&nbsp;that&nbsp;actually&nbsp;works. &nbsp;The&nbsp;data&nbsp;really&nbsp;is&nbsp;there,&nbsp;since&nbsp;I&nbsp;can&nbsp;fake&nbsp;it&nbsp;and&nbsp;just&nbsp;call&nbsp;setImageBGR()&nbsp;and&nbsp;it&nbsp;comes&nbsp;up&nbsp;with&nbsp;something,&nbsp;albeit&nbsp;like&nbsp;a&nbsp;Degas&nbsp;painting.&lt;br&gt;<br>
+&lt;br&gt;<br>
+So&nbsp;what&nbsp;is&nbsp;the&nbsp;most&nbsp;efficient&nbsp;way&nbsp;of&nbsp;getting&nbsp;a&nbsp;grey-scale&nbsp;image&nbsp;in&nbsp;a&nbsp;texture,&nbsp;from&nbsp;a&nbsp;2D&nbsp;byte&nbsp;array&nbsp;in&nbsp;memory?&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Steve&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=76871#76871&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=76871#76871&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;<br>
+
+</tt>

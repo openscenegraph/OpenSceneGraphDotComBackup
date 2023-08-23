@@ -1,0 +1,199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Trouble with a simple shader program.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Trouble%20with%20a%20simple%20shader%20program.&In-Reply-To=%3CCAFN7Y%2BVUvQ7tMYppW64%3Du6cDaSQ-9CVqZRDcmg%2BWihL5KYRE%2Bw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000052.html">
+   <LINK REL="Next"  HREF="276270.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Trouble with a simple shader program.</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Trouble%20with%20a%20simple%20shader%20program.&In-Reply-To=%3CCAFN7Y%2BVUvQ7tMYppW64%3Du6cDaSQ-9CVqZRDcmg%2BWihL5KYRE%2Bw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Trouble with a simple shader program.">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sun Apr 12 04:48:51 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000052.html">[osg-users] Trouble with a simple shader program.
+</A></li>
+        <LI>Next message: <A HREF="276270.html">[osg-users] Trouble with a simple shader program.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#53">[ date ]</a>
+              <a href="thread.html#53">[ thread ]</a>
+              <a href="subject.html#53">[ subject ]</a>
+              <a href="author.html#53">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Alexander,
+
+If you want to use the osg_ModelViewMatrix then you need to enable it via
+the osg::State object for the graphics context.  See the osgsimplegl3
+example, it has:
+
+    // for non GL3/GL4 and non GLES2 platforms we need enable the osg_
+uniforms that the shaders will use,
+    // you don't need thse two lines on GL3/GL4 and GLES2 specific builds
+as these will be enable by default.
+    gc-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true);
+    gc-&gt;getState()-&gt;setUseVertexAttributeAliasing(true);
+
+If you don't need to use GL3 or GL4 core profile, then you can just use GL2
+profile which is the default for the OSG, here you can happily use
+gl_ModelViewMatrix etc.  Most of the other OSG shader examples use this
+approach.  Just do a search for osg::Shader in the OSG code base and you'll
+find plenty of the examples to learn from.
+
+Robert.
+
+
+
+On 11 April 2015 at 18:21, Alexander Wieser &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">alexander.wieser at crystalbyte.de</A>
+&gt;<i> wrote:
+</I>
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I am currently working on my bachelor thesis using which involves the
+</I>&gt;<i> OpenSceneGraph. One task is to apply a distortion Shader to a rendered
+</I>&gt;<i> texture.
+</I>&gt;<i>
+</I>&gt;<i> Unfortunately I am failing in getting any Shader to work at all.
+</I>&gt;<i> After spending the last couple of days researching and reading books, I
+</I>&gt;<i> managed to get several shaders running in other libraries, be it online
+</I>&gt;<i> using WebGL or directly using OpenGL. I simply can't get it running using
+</I>&gt;<i> OSG.
+</I>&gt;<i>
+</I>&gt;<i> The code initializing the program is this.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> // A simple 4 vertex rectangular geometry drawable.
+</I>&gt;<i> Plane* plane = new Plane(40);
+</I>&gt;<i> this-&gt;addDrawable(plane);
+</I>&gt;<i>
+</I>&gt;<i> osg::Program* program = new osg::Program();
+</I>&gt;<i> program-&gt;setName(&quot;Debug Shader&quot;);
+</I>&gt;<i>
+</I>&gt;<i> // This refers to a Geode.
+</I>&gt;<i> osg::StateSet&amp; state = *this-&gt;getOrCreateStateSet();
+</I>&gt;<i> state.setAttributeAndModes(program, osg::StateAttribute::ON);
+</I>&gt;<i>
+</I>&gt;<i> boost::filesystem::path currentPath(boost::filesystem::current_path());
+</I>&gt;<i>
+</I>&gt;<i> // Init vertex shader.
+</I>&gt;<i> RTT::log(RTT::Debug) &lt;&lt; &quot;Loading vertex shader.&quot;&lt;&lt; RTT::endlog();
+</I>&gt;<i> osg::Shader* vertexShader = new osg::Shader(osg::Shader::VERTEX);
+</I>&gt;<i> vertexShader-&gt;loadShaderSourceFromFile(currentPath.string() +
+</I>&gt;<i> &quot;/../resources/shaders/debug.vert&quot;);
+</I>&gt;<i> program-&gt;addShader(vertexShader);
+</I>&gt;<i>
+</I>&gt;<i> // Init fragment shader.
+</I>&gt;<i> RTT::log(RTT::Debug) &lt;&lt; &quot;Loading fragment shader.&quot;&lt;&lt; RTT::endlog();
+</I>&gt;<i> osg::Shader* fragmentShader = new osg::Shader(osg::Shader::FRAGMENT);
+</I>&gt;<i> fragmentShader-&gt;loadShaderSourceFromFile(currentPath.string() +
+</I>&gt;<i> &quot;/../resources/shaders/debug.frag&quot;);
+</I>&gt;<i> program-&gt;addShader(fragmentShader);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Vertex Shader
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> #version 430
+</I>&gt;<i>
+</I>&gt;<i> uniform mat4 osg_ModelViewProjectionMatrix;
+</I>&gt;<i> in vec4 osg_Vertex;
+</I>&gt;<i>
+</I>&gt;<i> void main() {
+</I>&gt;<i> gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Fragment Shader
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> #version 430
+</I>&gt;<i>
+</I>&gt;<i> layout(location = 0) out vec4 FragColor;
+</I>&gt;<i>
+</I>&gt;<i> void main() {
+</I>&gt;<i> FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> As you can see, the program is not that complicated and does compile fine.
+</I>&gt;<i> Unfortunately I don't see anything on the screen. There is no model.
+</I>&gt;<i> If I remove the program and simply use the built in lighting, coloring and
+</I>&gt;<i> texturing support it renders fine.
+</I>&gt;<i>
+</I>&gt;<i> Any help is greatly appreciated.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Alexander
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic3f25.php?p=63328#63328">http://forum.openscenegraph.org/viewtopic.php?p=63328#63328</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150412/20604c80/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150412/20604c80/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000052.html">[osg-users] Trouble with a simple shader program.
+</A></li>
+	<LI>Next message: <A HREF="276270.html">[osg-users] Trouble with a simple shader program.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#53">[ date ]</a>
+              <a href="thread.html#53">[ thread ]</a>
+              <a href="subject.html#53">[ subject ]</a>
+              <a href="author.html#53">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20bug%3A%20osgText%20doesn%27t%20work%20on%20MacOSX%20GL4.x%20with%20VAO&In-Reply-To=%3C1485525588.m2f.70061%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005419.html">
+   <LINK REL="Next"  HREF="005444.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO</H1>
+<!--htdig_noindex-->
+    <B>Remo Eichenberger</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20bug%3A%20osgText%20doesn%27t%20work%20on%20MacOSX%20GL4.x%20with%20VAO&In-Reply-To=%3C1485525588.m2f.70061%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO">osgforum at tevs.eu
+       </A><BR>
+    <I>Fri Jan 27 05:59:48 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005419.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+        <LI>Next message: <A HREF="005444.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5443">[ date ]</a>
+              <a href="thread.html#5443">[ thread ]</a>
+              <a href="subject.html#5443">[ subject ]</a>
+              <a href="author.html#5443">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi (Robert :)
+
+I've tried a lot of things to get osgText working on MacOSX with VAO. GL3 on OSX Core Profile requires VAOs.
+
+osgText doesn't setup the VAO path correctly on MacOSX. I can show glyphs when I use a osg::Geometry as a Wrapper to draw geometries from text glyphs like so:
+
+
+Code:
+    
+class ExtText : public Text {
+    friend class VAOText;
+};
+
+class VAOText : public osg::Geometry
+{
+private:
+    osg::ref_ptr&lt;ExtText&gt; _t;
+
+...
+    void redraw()
+    {
+        unsigned int contextID = 0; // renderInfo.getState()-&gt;getContextID();
+        
+        if ( !_t-&gt;_textureGlyphQuadMap.empty() )
+        {
+            const ExtText::GlyphQuads&amp; glyphquad = (_t-&gt;_textureGlyphQuadMap.begin())-&gt;second;
+            if (!glyphquad._transformedCoords[contextID].valid() || glyphquad._transformedCoords[contextID]-&gt;empty() )
+            {
+                _t-&gt;computePositions(contextID);
+            }
+        }
+        
+        for(ExtText::TextureGlyphQuadMap::iterator titr=_t-&gt;_textureGlyphQuadMap.begin();
+            titr!=_t-&gt;_textureGlyphQuadMap.end();
+            ++titr)
+        {
+            const ExtText::GlyphQuads&amp; glyphquad = titr-&gt;second;
+            const ExtText::GlyphQuads::Coords3&amp; transformedCoords = glyphquad._transformedCoords[contextID];
+            if (transformedCoords.valid() &amp;&amp; !transformedCoords-&gt;empty())
+            {
+                
+                setVertexArray(transformedCoords.get());
+                setTexCoordArray(0, glyphquad._texcoords.get());
+                
+                getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, titr-&gt;first.get(),osg::StateAttribute::ON);
+                addPrimitiveSet(glyphquad._quadIndices);
+            }
+        }
+    }
+
+
+
+
+But it doesn't work with plain osgText. So something is wrong in osgText / VAO.
+
+Cheers,
+Remo
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc369.php?p=70061#70061">http://forum.openscenegraph.org/viewtopic.php?p=70061#70061</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005419.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+	<LI>Next message: <A HREF="005444.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5443">[ date ]</a>
+              <a href="thread.html#5443">[ thread ]</a>
+              <a href="subject.html#5443">[ subject ]</a>
+              <a href="author.html#5443">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

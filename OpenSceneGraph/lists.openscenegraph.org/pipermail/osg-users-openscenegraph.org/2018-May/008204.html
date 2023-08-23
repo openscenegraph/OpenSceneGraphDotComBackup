@@ -1,0 +1,218 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problems with MRT
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20with%20MRT&In-Reply-To=%3C1526426822.m2f.73644%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008197.html">
+   <LINK REL="Next"  HREF="008205.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problems with MRT</H1>
+<!--htdig_noindex-->
+    <B>R&#195;&#180;mulo Cerqueira</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20with%20MRT&In-Reply-To=%3C1526426822.m2f.73644%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Problems with MRT">romulogcerqueira at gmail.com
+       </A><BR>
+    <I>Tue May 15 16:27:02 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008197.html">[osg-users] Problems with MRT
+</A></li>
+        <LI>Next message (by thread): <A HREF="008205.html">[osg-users] Problems with MRT
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8204">[ date ]</a>
+              <a href="thread.html#8204">[ thread ]</a>
+              <a href="subject.html#8204">[ subject ]</a>
+              <a href="author.html#8204">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+just updating my progress:
+
+What have I got so far? 
+[ &#10003; ] Allow rendering for color or depth buffers on the same camera;
+[ &#10003; ] Display only the color buffer in the post render camera;
+[ &#10003; ] Read color or depth buffer in the final draw callback;
+[ &#10007; ] Write collected image (color or depth) in disk - only images as GL_UNSIGNED_BYTE, instead of GL_FLOAT.
+
+I changed the buffer reader in my callback (readImageFromCurrentTexture() instead of readPixels()), however I still got problems when I render floating textures...
+
+This is my current code:
+
+
+Code:
+// OSG includes
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgDB/WriteFile&gt;
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osg/Camera&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osg/Geometry&gt;
+#include &lt;osg/Texture2D&gt;
+
+struct SnapImage : public osg::Camera::DrawCallback {
+    SnapImage(osg::GraphicsContext* gc, osg::Texture2D* tex1, osg::Texture2D* tex2 ) {
+        if (gc-&gt;getTraits()) {
+            _texColor = tex1;
+            _texDepth = tex2;
+        }
+    }
+
+    virtual void operator () (osg::RenderInfo&amp; renderInfo) const {
+        // color buffer
+        renderInfo.getState()-&gt;applyTextureAttribute(0, _texColor);
+        osg::ref_ptr&lt;osg::Image&gt; mColor = new osg::Image();
+        mColor-&gt;readImageFromCurrentTexture(renderInfo.getContextID(), true, GL_UNSIGNED_BYTE);
+        osgDB::ReaderWriter::WriteResult wrColor = osgDB::Registry::instance()-&gt;writeImage(*mColor, &quot;./Test-color.png&quot;, NULL);
+        if (!wrColor.success()) {
+            osg::notify(osg::WARN) &lt;&lt; &quot;Color image: failed! (&quot; &lt;&lt; wrColor.message() &lt;&lt; &quot;)&quot; &lt;&lt; std::endl;
+        }
+
+        // depth buffer
+        renderInfo.getState()-&gt;applyTextureAttribute(0, _texDepth);
+        osg::ref_ptr&lt;osg::Image&gt; mDepth = new osg::Image();
+        mDepth-&gt;readImageFromCurrentTexture(renderInfo.getContextID(), true, GL_UNSIGNED_BYTE);
+        osgDB::ReaderWriter::WriteResult wrDepth = osgDB::Registry::instance()-&gt;writeImage(*mDepth, &quot;./Test-depth.png&quot;, NULL);
+        if (!wrDepth.success()) {
+            osg::notify(osg::WARN) &lt;&lt; &quot;Depth image: failed! (&quot; &lt;&lt; wrDepth.message() &lt;&lt; &quot;)&quot; &lt;&lt; std::endl;
+        }
+    }
+    osg::ref_ptr&lt;osg::Texture2D&gt; _texColor;
+    osg::ref_ptr&lt;osg::Texture2D&gt; _texDepth;
+};
+
+osg::Camera* setupMRTCamera( osg::ref_ptr&lt;osg::Camera&gt; camera, std::vector&lt;osg::Texture2D*&gt;&amp; attachedTextures, int w, int h ) {
+    camera-&gt;setClearColor( osg::Vec4() );
+    camera-&gt;setClearMask( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    camera-&gt;setRenderTargetImplementation( osg::Camera::FRAME_BUFFER_OBJECT );
+    camera-&gt;setRenderOrder( osg::Camera::PRE_RENDER, 0 );
+    camera-&gt;setViewport( 0, 0, w, h );
+
+    osg::Texture2D* tex = new osg::Texture2D;
+    tex-&gt;setTextureSize( w, h );
+    tex-&gt;setInternalFormat( GL_RGB );
+    tex-&gt;setSourceFormat( GL_RGBA );
+    tex-&gt;setSourceType( GL_UNSIGNED_BYTE );
+    tex-&gt;setResizeNonPowerOfTwoHint( false );
+    tex-&gt;setFilter( osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR );
+    tex-&gt;setFilter( osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR );
+    attachedTextures.push_back( tex );
+    camera-&gt;attach( osg::Camera::COLOR_BUFFER, tex );
+
+    tex = new osg::Texture2D;
+    tex-&gt;setTextureSize(w,h);
+    tex-&gt;setSourceFormat(GL_DEPTH_COMPONENT);
+    tex-&gt;setInternalFormat(GL_DEPTH_COMPONENT);
+    tex-&gt;setSourceType(GL_UNSIGNED_BYTE);
+    attachedTextures.push_back( tex );
+    camera-&gt;attach( osg::Camera::DEPTH_BUFFER, tex );
+
+    return camera.release();
+}
+
+
+int main() {
+    osg::ref_ptr&lt; osg::Group &gt; root( new osg::Group );
+    root-&gt;addChild( osgDB::readNodeFile( &quot;/home/romulo/Tools/OpenSceneGraph-Data/cow.osg&quot; ) );
+    unsigned int winW = 800;
+    unsigned int winH = 600;
+
+    osgViewer::Viewer viewer;
+    viewer.setUpViewInWindow( 0, 0, winW, winH );
+    viewer.setSceneData( root.get() );
+    viewer.realize();
+
+    // setup MRT camera
+    std::vector&lt;osg::Texture2D*&gt; attachedTextures;
+    osg::Camera* mrtCamera ( viewer.getCamera() );
+    setupMRTCamera( mrtCamera, attachedTextures, winW, winH );
+
+    // set RTT textures to quad
+    osg::Geode* geode( new osg::Geode );
+    geode-&gt;addDrawable( osg::createTexturedQuadGeometry(
+        osg::Vec3(-1,-1,0), osg::Vec3(2.0,0.0,0.0), osg::Vec3(0.0,2.0,0.0)) );
+    geode-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes( 0, attachedTextures[0] );
+    geode-&gt;getOrCreateStateSet()-&gt;setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+    geode-&gt;getOrCreateStateSet()-&gt;setMode( GL_DEPTH_TEST, osg::StateAttribute::OFF );
+
+    // configure postRenderCamera to draw fullscreen textured quad
+    osg::Camera* postRenderCamera( new osg::Camera );
+    postRenderCamera-&gt;setClearMask( 0 );
+    postRenderCamera-&gt;setRenderTargetImplementation( osg::Camera::FRAME_BUFFER, osg::Camera::FRAME_BUFFER );
+    postRenderCamera-&gt;setReferenceFrame( osg::Camera::ABSOLUTE_RF );
+    postRenderCamera-&gt;setRenderOrder( osg::Camera::POST_RENDER );
+    // postRenderCamera-&gt;setViewMatrix( osg::Matrixd::identity() );
+    // postRenderCamera-&gt;setProjectionMatrix( osg::Matrixd::identity() );
+    postRenderCamera-&gt;addChild( geode );
+    root-&gt;addChild(postRenderCamera);
+
+    // setup the callback
+    SnapImage* finalDrawCallback = new SnapImage(viewer.getCamera()-&gt;getGraphicsContext(), attachedTextures[0], attachedTextures[1]);
+    mrtCamera-&gt;setFinalDrawCallback(finalDrawCallback);
+
+    return (viewer.run());
+}
+
+
+
+... 
+
+Thank you!
+
+Cheers,
+R&#244;mulo[/code][/i]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicdf16.php?p=73644#73644">http://forum.openscenegraph.org/viewtopic.php?p=73644#73644</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008197.html">[osg-users] Problems with MRT
+</A></li>
+	<LI>Next message (by thread): <A HREF="008205.html">[osg-users] Problems with MRT
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8204">[ date ]</a>
+              <a href="thread.html#8204">[ thread ]</a>
+              <a href="subject.html#8204">[ subject ]</a>
+              <a href="author.html#8204">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

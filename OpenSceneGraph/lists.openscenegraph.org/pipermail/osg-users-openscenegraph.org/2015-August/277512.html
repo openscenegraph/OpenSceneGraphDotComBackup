@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] &quot;Error: Not able to create requested visual.&quot; for osg application utilizing multi-sampling, ran with optirun.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%22Error%3A%20Not%20able%20to%20create%20requested%20visual.%22%20for%20osg%0A%20application%20utilizing%20multi-sampling%2C%20ran%20with%20optirun.&In-Reply-To=%3CBAY180-W26037DD3939483354A046DBC660%40phx.gbl%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001287.html">
+   <LINK REL="Next"  HREF="001291.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] &quot;Error: Not able to create requested visual.&quot; for osg application utilizing multi-sampling, ran with optirun.</H1>
+<!--htdig_noindex-->
+    <B>Hamza Alloush</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%22Error%3A%20Not%20able%20to%20create%20requested%20visual.%22%20for%20osg%0A%20application%20utilizing%20multi-sampling%2C%20ran%20with%20optirun.&In-Reply-To=%3CBAY180-W26037DD3939483354A046DBC660%40phx.gbl%3E"
+       TITLE="[osg-users] &quot;Error: Not able to create requested visual.&quot; for osg application utilizing multi-sampling, ran with optirun.">hamzaalloush at live.com
+       </A><BR>
+    <I>Thu Aug 20 12:43:06 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001287.html">[osg-users] Vec3Array Deep Copy
+</A></li>
+        <LI>Next message: <A HREF="001291.html">[osg-users] &quot;Error: Not able to create requested visual.&quot; for	osg application utilizing multi-sampling, ran with optirun.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277512">[ date ]</a>
+              <a href="thread.html#277512">[ thread ]</a>
+              <a href="subject.html#277512">[ subject ]</a>
+              <a href="author.html#277512">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+
+I'v been having trouble using optirun with the virtualgl rendering bridge, and an osg app utilizing multi-sampling.
+
+using this simple example(attached also):
+
+
+
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osg/ShapeDrawable&gt;
+&#160;
+osg::Node* createScene()
+{
+&#160;&#160;&#160; osg::Geode* geode = new osg::Geode();
+
+&#160;&#160;&#160; geode-&gt;addDrawable( new osg::ShapeDrawable( new osg::Cylinder(osg::Vec3(-2.0f,0.0f,-2.0f),1.5f,2.0f) ) );
+&#160;&#160; &#160;geode-&gt;addDrawable( new osg::ShapeDrawable( new osg::Cylinder(osg::Vec3(2.0f,0.0f,-2.0f),1.5f,2.0f) ) );
+&#160;&#160; &#160;geode-&gt;addDrawable( new osg::ShapeDrawable( new osg::Cylinder(osg::Vec3(2.0f,0.0f,2.0f),1.5f,2.0f) ) );
+&#160;&#160; &#160;geode-&gt;addDrawable( new osg::ShapeDrawable( new osg::Cylinder(osg::Vec3(-2.0f,0.0f,2.0f),1.5f,2.0f) ) );
+
+&#160;&#160;&#160; return geode;
+}
+
+int main(int argc, char* argv[])
+{
+&#160;&#160;&#160; // construct the viewer
+&#160;&#160;&#160; osg::ref_ptr&lt;osgViewer::Viewer&gt; viewer = new osgViewer::Viewer;
+
+&#160;&#160; &#160;// full screen antialiasing (if supported)
+&#160;&#160; &#160;osg::DisplaySettings::instance()-&gt;setNumMultiSamples( 4 );
+
+&#160;&#160;&#160; // make the viewer create a 512x512 window and position it at 32, 32
+&#160;&#160;&#160; viewer-&gt;setUpViewInWindow( 32, 32, 512, 512 );
+
+&#160;&#160;&#160; // set the scene-graph data the viewer will render
+&#160;&#160;&#160; viewer-&gt;setSceneData( createScene() );
+
+&#160;&#160;&#160; // execute main loop
+&#160;&#160;&#160; return viewer-&gt;run();
+}
+
+
+
+, as well as an actual app, like Flight Gear with multi-sampling enabled, would trigger an error such as:
+
+Error: Not able to create requested visual.
+&#160; GraphicsWindow has not been created successfully.
+
+if i used a primus rendering bridge(/usr/bin/optirun -b primus), or actually used the Nvidia driver without Optimus technology, the problem does not show. it only does show if i used an osg multi-sampled application using virtualgl as a rendering bridge for optirun, which is the default.
+
+i used GDB to troubleshoot the built example, the problem is that the main function is considered one &quot;frame&quot;, so a backtrace was useless, but i was able to narrow it down:
+
+breakpoint at line 27:
+
+(gdb) b 27
+Breakpoint 1 at 0x40102d: file mutlisample.cpp, line 27.
+(gdb) run
+Starting program: /home/hamza/build/fgbuild/openscenegraph/src/multitest 
+Traceback (most recent call last):
+&#160; File &quot;/usr/share/gdb/auto-load/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19-gdb.py&quot;, line 63, in &lt;module&gt;
+&#160;&#160;&#160; from libstdcxx.v6.printers import register_libstdcxx_printers
+ImportError: No module named 'libstdcxx'
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library &quot;/lib/x86_64-linux-gnu/libthread_db.so.1&quot;.
+
+Breakpoint 1, main (argc=1, argv=0x7fffffffdd48) at mutlisample.cpp:27
+27&#160;&#160; &#160;&#160;&#160;&#160; viewer-&gt;setUpViewInWindow( 32, 32, 512, 512 );
+(gdb) bt
+#0&#160; main (argc=1, argv=0x7fffffffdd48) at mutlisample.cpp:27
+
+breakpoint at line 28:
+
+(gdb) b 28
+Breakpoint 2 at 0x401060: file mutlisample.cpp, line 28.
+(gdb) run
+Starting program: /home/hamza/build/fgbuild/openscenegraph/src/multitest 
+Traceback (most recent call last):
+&#160; File &quot;/usr/share/gdb/auto-load/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19-gdb.py&quot;, line 63, in &lt;module&gt;
+&#160;&#160;&#160; from libstdcxx.v6.printers import register_libstdcxx_printers
+ImportError: No module named 'libstdcxx'
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library &quot;/lib/x86_64-linux-gnu/libthread_db.so.1&quot;.
+Error: Not able to create requested visual.
+&#160; GraphicsWindow has not been created successfully.
+
+Breakpoint 2, main (argc=1, argv=0x7fffffffdd48) at mutlisample.cpp:30
+30&#160;&#160; &#160;&#160;&#160;&#160; viewer-&gt;setSceneData( createScene() );
+(gdb) bt
+#0&#160; main (argc=1, argv=0x7fffffffdd48) at mutlisample.cpp:30
+
+
+
+any tips would be appreciated
+
+Thanks
+Hamza 		 	   		  
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: mutlisample.cpp
+Type: text/x-c
+Size: 1131 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20150820/1bfd0567/attachment-0002.bin">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150820/1bfd0567/attachment-0002.bin</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001287.html">[osg-users] Vec3Array Deep Copy
+</A></li>
+	<LI>Next message: <A HREF="001291.html">[osg-users] &quot;Error: Not able to create requested visual.&quot; for	osg application utilizing multi-sampling, ran with optirun.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277512">[ date ]</a>
+              <a href="thread.html#277512">[ thread ]</a>
+              <a href="subject.html#277512">[ subject ]</a>
+              <a href="author.html#277512">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

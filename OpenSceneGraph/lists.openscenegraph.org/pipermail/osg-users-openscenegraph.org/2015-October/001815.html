@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSGNode VBO Control
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSGNode%20VBO%20Control&In-Reply-To=%3CCAFN7Y%2BWMDGim0R-taX3kzrfx63Ea%3DN1_eaDXTE%2BVH-0C%2BauYZw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278037.html">
+   <LINK REL="Next"  HREF="001816.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSGNode VBO Control</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSGNode%20VBO%20Control&In-Reply-To=%3CCAFN7Y%2BWMDGim0R-taX3kzrfx63Ea%3DN1_eaDXTE%2BVH-0C%2BauYZw%40mail.gmail.com%3E"
+       TITLE="[osg-users] OSGNode VBO Control">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Oct 27 07:54:45 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278037.html">[osg-users] OSGNode VBO Control
+</A></li>
+        <LI>Next message: <A HREF="001816.html">[osg-users] OSGNode VBO Control
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1815">[ date ]</a>
+              <a href="thread.html#1815">[ thread ]</a>
+              <a href="subject.html#1815">[ subject ]</a>
+              <a href="author.html#1815">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Ignitus,
+
+I can't help feel that you are diving into low level stuff way you've
+established that it's required.
+
+The OSG can manage update's to VBO's for you, it doesn't current support
+updating parts of osg::Array, potentially you can implement this yourself
+with a custom draw callback or custom Drawable, but personally I'd
+recommend not attempting anything like this early in your project.
+
+My recommendation would be to implement what you need just using standard
+OSG components and once you have what you want rendered onscreen then do
+performance profiling (with an optimized build) on the target platforms to
+see whether you have the performance you are after.  If you have the
+performance you need, job done, not need to waste any more time.  If you
+don't have the performance you need then start looking at what the
+bottleneck is.  Only once you've established what the bottleneck is should
+you start considering looking at re-organizing your scene graph. Using
+custom custom VBO management would the amongst the last things I'd try.
+
+Robert.
+
+On 27 October 2015 at 14:40, Ignitus Boyone &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">IgnitusBoyone at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I'm starting to work my way through the source for Geometry and Drawable,
+</I>&gt;<i> but more experienced minds might be able to point me in the right
+</I>&gt;<i> directions sooner.
+</I>&gt;<i>
+</I>&gt;<i> I'm working on a AR HUD and because a later point in the project might
+</I>&gt;<i> require the  loading of complex models to represent avatars or vehicles
+</I>&gt;<i> inside the AR space we have chosen to use OSG as a starting point. The
+</I>&gt;<i> current UI is currently relatively primitive and basically consist entirely
+</I>&gt;<i> of billboards of varying textures with minor text glyphs to indicate
+</I>&gt;<i> various properties.
+</I>&gt;<i>
+</I>&gt;<i> I've implemented most of the billboards in a single VBO based Geometry
+</I>&gt;<i> node.  Because the target hardware is lacking I wanted to play with partial
+</I>&gt;<i> updates to the VBO contents based on our current draw performance.  First
+</I>&gt;<i> pass I simply created a post function for manually controlling where in the
+</I>&gt;<i> draw thread buffer transfers occur, but it has become apparent to me from
+</I>&gt;<i> profiling that this might only be marking the VBO as dirty and the actual
+</I>&gt;<i> upload occurring during the next draw frame.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>         void OSGVboMarker::post()
+</I>&gt;<i>    {
+</I>&gt;<i>                 if (m_frontVBO.isInitialized &amp;&amp; m_bDirtyBit)
+</I>&gt;<i>                 {
+</I>&gt;<i>                         m_swapLock.lock();
+</I>&gt;<i>                         int count = m_frontVBO.vertices-&gt;size();
+</I>&gt;<i>                         m_pGeometry-&gt;setVertexArray( m_frontVBO.vertices );
+</I>&gt;<i>
+</I>&gt;<i>                         m_pGeometry-&gt;setNormalArray(m_frontVBO.normal,
+</I>&gt;<i> osg::Array::BIND_OVERALL);
+</I>&gt;<i>                         m_pGeometry-&gt;setColorArray(m_frontVBO.color,
+</I>&gt;<i> osg::Array::BIND_OVERALL);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> m_pGeometry-&gt;setTexCoordArray(0,m_frontVBO.texCoords,
+</I>&gt;<i> osg::Array::BIND_PER_VERTEX);
+</I>&gt;<i>
+</I>&gt;<i>                         m_pGeometry-&gt;setVertexAttribArray(5,
+</I>&gt;<i> m_frontVBO.centers, osg::Array::BIND_PER_VERTEX);
+</I>&gt;<i>                         m_pGeometry-&gt;setVertexAttribArray(6,
+</I>&gt;<i> m_frontVBO.scaleValues, osg::Array::BIND_PER_VERTEX);
+</I>&gt;<i>
+</I>&gt;<i>                         m_pDrawArrays-&gt;setCount(count);
+</I>&gt;<i>                         m_pDrawArrays-&gt;set(osg::PrimitiveSet::QUADS, 0,
+</I>&gt;<i> count);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> So, I have two questions related to the above.
+</I>&gt;<i>
+</I>&gt;<i> 1. When do modified VBO nodes push memory to the card.
+</I>&gt;<i> 2. Is it possible to manually control this operation and possibly do sub
+</I>&gt;<i> buffer updates.
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Ignitus
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicad51.php?p=65456#65456">http://forum.openscenegraph.org/viewtopic.php?p=65456#65456</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151027/359211f7/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151027/359211f7/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278037.html">[osg-users] OSGNode VBO Control
+</A></li>
+	<LI>Next message: <A HREF="001816.html">[osg-users] OSGNode VBO Control
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1815">[ date ]</a>
+              <a href="thread.html#1815">[ thread ]</a>
+              <a href="subject.html#1815">[ subject ]</a>
+              <a href="author.html#1815">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

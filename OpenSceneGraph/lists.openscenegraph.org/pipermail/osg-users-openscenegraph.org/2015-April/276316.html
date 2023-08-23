@@ -1,0 +1,89 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Best practice for dynamic StateSets &amp; Geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Best%20practice%20for%20dynamic%20StateSets%20%26%20Geometry&In-Reply-To=%3C1429032524.m2f.63390%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000114.html">
+   <LINK REL="Next"  HREF="000108.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Best practice for dynamic StateSets &amp; Geometry</H1>
+<!--htdig_noindex-->
+    <B>Jannik Heller</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Best%20practice%20for%20dynamic%20StateSets%20%26%20Geometry&In-Reply-To=%3C1429032524.m2f.63390%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Best practice for dynamic StateSets &amp; Geometry">scrawl at baseoftrash.de
+       </A><BR>
+    <I>Tue Apr 14 10:28:44 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000114.html">[osg-users] RTT Camera does not render anything
+</A></li>
+        <LI>Next message: <A HREF="000108.html">[osg-users] Best practice for dynamic StateSets &amp; Geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276316">[ date ]</a>
+              <a href="thread.html#276316">[ thread ]</a>
+              <a href="subject.html#276316">[ subject ]</a>
+              <a href="author.html#276316">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi OSG friends,
+
+A common challenge for OSG users are the implications of the viewer threading model - by default the viewer.frame() will return before the draw dispatch is complete, meaning users (and the OSG) can start preparing the next frame before the current frame has completed. However, if you attempt to change a StateSet or Drawable in the frame update, you run the risk of modifying data that the OSG is still working with in a background thread, resulting in crashes.
+Often times you will see code dealing with this by setting the DataVariance of the object to DYNAMIC. Unfortunately as result the draw dispatch has to complete before the frame() returns, for me this dropped the frame rate in half. 
+Recently I developed a more efficient solution for dealing with this and would like to hear your thoughts.
+The idea is similar to &quot;double buffering&quot; with the framebuffer - you create two copies of the data on start, one copy is write only, another copy is read only, and when the frame completes the roles are swapped. You can implement this idea for both Drawables and StateSets:
+- Dynamic Drawables (RigGeometry, MorphGeometry, etc): create a deep copy of the Drawable, decorate both Drawables with a FrameSwitch node. A FrameSwitch node is a variant of Group that only traverses even or non-even children based on the current FrameStamp. Code (<A HREF="https://github.com/OpenMW/openmw/blob/f7da9796692e14c79632cb85fa75a90b082cd863/components/nifosg/nifloader.cpp#L179">https://github.com/OpenMW/openmw/blob/f7da9796692e14c79632cb85fa75a90b082cd863/components/nifosg/nifloader.cpp#L179</A>) 
+- Dynamic StateSets: Create two copies of the StateSet on start, then every frame in a NodeCallback swap the roles of these StateSets, apply changes to the first StateSet, then set the currently active StateSet on the Node. Code (<A HREF="https://github.com/scrawl/openmw/blob/osg/components/sceneutil/statesetupdater.cpp#L8">https://github.com/scrawl/openmw/blob/osg/components/sceneutil/statesetupdater.cpp#L8</A>)
+
+There are some downsides to this approach (mostly that for data that is just rarely changing, you have to apply every change twice), but other than that it works beautifully and now I've got 2x the framerate again.
+
+I'm curious how the OSG veterans are dealing with this. Anything I've missed?
+
+Cheers
+Jannik
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopica72a.php?p=63390#63390">http://forum.openscenegraph.org/viewtopic.php?p=63390#63390</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000114.html">[osg-users] RTT Camera does not render anything
+</A></li>
+	<LI>Next message: <A HREF="000108.html">[osg-users] Best practice for dynamic StateSets &amp; Geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276316">[ date ]</a>
+              <a href="thread.html#276316">[ thread ]</a>
+              <a href="subject.html#276316">[ subject ]</a>
+              <a href="author.html#276316">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

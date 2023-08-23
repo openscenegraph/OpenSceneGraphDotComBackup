@@ -1,0 +1,362 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-gb" lang="en-gb">
+
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
+<head>
+    <script type="text/javascript">
+var siteurl='../../../../index.html';
+var tmplurl='../../../../templates/ja_purity_ii/index.html';
+var isRTL = false;
+</script>
+
+<base  />
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content="scene graph
+OpenGL
+realtime graphics
+OpenGL ES" />
+	<meta name="author" content="openscenegraph" />
+	<meta name="robots" content="noindex, nofollow" />
+	<meta name="description" content="Project website for OpenSceneGraph" />
+	<meta name="generator" content="Joomla! - Open Source Content Management" />
+	<title>Shadows</title>
+	<link href="../../../../index4adc.css?jat3action=gzip&amp;jat3type=css&amp;jat3file=t3-assets%2Fcss_4ca7c.css" rel="stylesheet" type="text/css" />
+	<script type="application/json" class="joomla-script-options new">{"csrf.token":"23bec26cc03510f450694fb403a05734","system.paths":{"root":"","base":""}}</script>
+	<script src="../../../../indexa945.php?jat3action=gzip&amp;jat3type=js&amp;jat3file=t3-assets%2Fjs_a0ffa.js" type="text/javascript"></script>
+	<script type="text/javascript">
+jQuery(window).on('load',  function() {
+				new JCaption('img.caption');
+			});
+	</script>
+
+<!--[if ie]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/templates/ja_purity_ii/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+
+
+
+
+<link href="../../../../plugins/system/jat3/jat3/base-themes/default/images/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+
+
+<!--[if IE 7.0]>
+<style>
+.clearfix { display: inline-block; } /* IE7xhtml*/
+</style>
+<![endif]-->
+
+<script language="javascript" type="text/javascript">
+var rightCollapseDefault='show';
+var excludeModules='38';
+</script>
+<script language="javascript" type="text/javascript" src="../../../../templates/ja_purity_ii/js/ja.rightcol.js"></script>
+
+<style type="text/css">
+#ja-header .main {
+	background-image: url(../../../../templates/ja_purity_ii/images/header/header1.jpg);
+}
+</style></head>
+
+<body id="bd" class="fs3 com_content contentpane">
+    <div id="system-message-container">
+	</div>
+
+    <div class="item-page clearfix">
+	<h1 class="componentheading">
+	Programming Guides	</h1>
+	<h2 class="contentheading">
+			<a href="108-shadows.html">
+		Shadows</a>
+		</h2>
+
+	
+<div class="article-tools clearfix">
+	<ul class="actions">
+			<li>
+		<a href="#" onclick="window.print();return false;">			<span class="icon-print" aria-hidden="true"></span>
+		Print	</a>		</li>
+		
+	</ul>
+
+
+
+	<dl class="article-info">
+	<dt class="article-info-term">Details</dt>
+	<dd class="category-name">
+				Category: <span><a href="../programming-guides.html">Programming Guides</a></span>		</dd>
+	<dd class="published">
+	Published: <span>05 February 2013</span>	</dd>
+	<dd class="createdby"> 
+				Written by <span>openscenegraph</span>	
+	</dd>
+	
+	<dd class="hits">
+	Hits: <span>23376</span>	</dd>
+	</dl>
+</div>
+
+
+	<div class="wikipage searchable">
+<p>The osgShadow nodekit is a powerful collection of classes for adding shadows to your scene. Thanks to this powerful nodekit, you don't need to learn the complex calculations, multi-texturing units and programmable shaders involved in creating shadows. Just add these nodes to your scene graph, and the work is done for you.</p>
+<p>The c<span class="ext-link"><span class="icon">lass documentation for osgShadow</span></span> shows the classes and methods. This document describes how to use them.</p>
+<h2 id="SimpleCase">Simple Case</h2>
+<p>In the simplest case, there is a single light enabled in your scene. You create a <strong><span class="missing wiki">ShadowedScene</span></strong> node (a subclass of osg::Group), and add children to it. A <strong><span class="missing wiki">ShadowTechnique</span></strong> is chosen and assigned to the ShadowedScene. The children of ShadowedScene can have the <strong><span class="missing wiki">CastsShadow</span></strong> bit set in their node mask, and/or the <strong><span class="missing wiki">ReceivesShadow</span></strong> bit. As the scene is rendered, ShadowedScene calls the methods of its ShadowTechnique to compute the shadows and decorate the scene graph with StateSets to render them:</p>
+<p> </p>
+<p><img src="../../../../images/community/shadows1.png" border="0" alt="" style="display: block; margin-left: auto; margin-right: auto;" /></p>
+<p> </p>
+<h2 id="TheTechniques">The Techniques</h2>
+<p>As of OSG 2.4, there are five different shadow techniques available. All of them have varying requirements on the capabilities of your 3D card. If your card's shader engine and driver does not support certain commands, then it will not be capable of using some of these techniques.</p>
+<ul>
+<li><strong><span class="missing wiki">ShadowMap</span></strong>.
+<ul>
+<li>This is the most frequently used option and most mature and stable implementation.</li>
+<li>It uses a fragment shader (osg::Shader).</li>
+<li>It basically does a render to texture from the light source's point of view (which is the so-called shadow map) and then, when rendering the final scene, checks the fragment's depth against the shadow map to decide whether it is in shadow or not. It works whether you have shader support or not, but the shadows will be opaque black when using the fixed pipeline (ATI cards have an extension to control this, but it is not standard). Also, some older cards have very poor render-to-texture performance (whether FBO or pbuffer) so you should turn off shadows completely in that case.</li>
+<li>Option AmbientBias, see below.</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><strong><span class="missing wiki">ShadowVolume</span></strong>
+<ul>
+<li>As of OSG 2.4, this is still experimental and may not produce shadows on some graphics cards. (JSG - in fact, I have not seen it work correctly at all, there are always inverted shadows where two shadows overlap)</li>
+<li>This technique does not use either texturing or shaders. It does make heavy use of stencils.</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><strong><span class="missing wiki">ShadowTexture</span></strong>.
+<ul>
+<li>This is the simplest technique. It does not use a shader.</li>
+<li>It's fixed-function only, so it should run on anything that supports RTT through either FBOs or pbuffers (so almost anything). One users reports: "On my hardware (ATI mobility X300), only ShadowTexture works".</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><strong><span class="missing wiki">SoftShadowMap</span></strong>.
+<ul>
+<li>As of OSG 2.4, this is still experimental and may not produce shadows on some graphics cards.</li>
+<li>It has quite complex shaders.</li>
+<li>The original idea for this technique was published in <a class="ext-link" href="http://developer.nvidia.com/object/gpu_gems_2_home.html"><span class="icon">GPU Gems 2</span></a> presumably the article "Efficient Soft-Edged Shadows Using Pixel Shader Branching".</li>
+<li>Option AmbientBias, see below.</li>
+<li>Options Bias, SoftnessWidth, and JitteringScale are documented in the API docs.</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><strong><span class="missing wiki">ParallelSplitShadowMap</span></strong>.
+<ul>
+<li>The idea for this technique is based on <span class="ext-link"><span class="icon">Parallel-split shadow maps for large-scale virtual environments</span></span> or GPU Gems 3 / Chapter 10 <a class="ext-link" href="http://my.safaribooksonline.com/9780321545428/ch10"><span class="icon">preview </span></a>.</li>
+<li>Instead of one single texture and it's discretisation bugs, this technique tries to reduce small shadow artifacts with upto 7 textures. Each shadow texture (depth map) has a camera distance range, in with the depth map will be active. In the active range, the shadow will be calculated based on the correct depth map. By default we assume that close points (near to the camera) should be more robust , less artefacts compared to far points. So we will split not linearly the viewing frustum. This technique should be quite similar to the Lispsm or view shadow map, if we use only one texture.</li>
+<li>This is the most complex and potentially powerful algorithm, with many more options that can be set:</li>
+<li>PolygonOffset</li>
+<li>MaxFarDistance : to reduce the shadowing artefacts and increase the frame rate you could define the range from camera to the distance where the shadow should disappear</li>
+<li>MoveVCamBehindRCamFactor : if you have need objects casting shadows behind the camera, may this option will solve some problems: it moves the camera virtually behind the real camera</li>
+<li>MinNearDistanceForSplits : put the light camera closer to scene (frustum split)</li>
+<li>forceFrontCullFace : activate front culling</li>
+<li>useLinearSplit : by default the splits are located non-linear, if you set the flag you will get linear distances between the textures, starting at the camera position to the farest frustum point</li>
+<li>If filtering is enabled (by default set) and GLSL is supported then the PSSM will filter the shadow with a 3x3 filter</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>There is a method to activate a debug mode: It will display the active range of each texture (r=1,g=2,b=3,...)</li>
+<li>It still has some problems and will need some work before being production-ready.</li>
+</ul>
+<ul>
+<li><strong>Light space perspective shadow maps (Lispsm)</strong>.</li>
+</ul>
+<p>To summarize:</p>
+<table class="withborder">
+<tbody>
+<tr>
+<td>Method</td>
+<td>uses textures</td>
+<td>uses osg::Shader</td>
+<td>respects CastsShadow</td>
+<td>respects ReceivesShadow</td>
+<td>notes</td>
+</tr>
+<tr>
+<td>ShadowMap</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>no</td>
+<td>Can work fixed-function too without any changes, just call clearShaderList() after init() but before first frame</td>
+</tr>
+<tr>
+<td>ShadowVolume</td>
+<td>no</td>
+<td>no</td>
+<td>no?</td>
+<td>no</td>
+<td> </td>
+</tr>
+<tr>
+<td>ShadowTexture</td>
+<td>yes</td>
+<td>no</td>
+<td>yes</td>
+<td>no</td>
+<td>Can't do self-shadowing, so setting a node's CastsShadow bit means that node won't receive shadows.</td>
+</tr>
+<tr>
+<td>SoftShadowMap</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>no</td>
+<td> </td>
+</tr>
+<tr>
+<td>ParallelSplitShadowMap</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+<td>no</td>
+<td> </td>
+</tr>
+</tbody>
+</table>
+<h2 id="Filter3x3implementedinPSSM">Filter 3x3 implemented in PSSM</h2>
+<p>Filter 3x3 Matrix:</p>
+<table class="withborder">
+<tbody>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr>
+<td>0</td>
+<td>2</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>Filter divisor: 6.0</p>
+<table class="withborder">
+<tbody>
+<tr>
+<td>original</td>
+<td>filtered</td>
+</tr>
+<tr>
+<td><img src="../../../../images/test.png" border="0" alt="" /></td>
+<td><img src="../../../../images/community/test_3x3.png" border="0" alt="" /></td>
+</tr>
+</tbody>
+</table>
+<h3 id="AmbientBias">Ambient Bias</h3>
+<p>The AmbientBias option on ShadowMap and SoftShadowMap is used to define how much shadows darken the scene. Its usually used to set up lower bound for shadowing factor, in the range [0..1]. If such shadow factor was used directly, shadowed areas would be completely black. Sometimes we want to make them to be only a bit darker than lit areas. By setting AmbientBias.x to some value from range 0..1 one limits minimal shadow value (hence AmbientBias because shadowed areas are lit only by ambient component). AmbientBias.y is usually set up to 1 - AmbientBias.x but it may be also set bit larger or smaller values used to make shadow range more dynamic or flat.</p>
+<h3 id="TextureResolution">Texture Resolution</h3>
+<p>Generally speaking, a projected texture is used to render the shadow. This means that if your shadow casting geometry is very large, then the texture resolution must be spread over a large area. This can produce blocky aliasing in the shadow. Therefore, it is advisable to keep the bounding sphere of your shadow casting geometry as small as possible. Just placing a ShadowedScene above a large scene graph, where everything casts a shadow, is not likely to produce good results. You should very deliberately choose which nodes will cast shadows.</p>
+<p>You can also increase the resolution of the texture with the <span class="missing wiki">ShadowTechnique</span>'s <em>setTextureResolution</em> method, but this is not a long term solution but rather just hides the problem. More advanced shadow techniques like PSSM (Parallel-Split Shadow Maps) or LiSPSM (Light-Space Perspective Shadow Maps) can help in those cases. (note: for now only PSSM is integrated into osgShadow and it does not work in all cases).</p>
+<h2 id="ExampleCode">Example Code</h2>
+<p>This code loads two cessnas, offset from each other. The first cessna casts a shadow on the second. In fact, because ShadowMap treats everything as shadowed, the first cessna also self-shadows.</p>
+<pre>  const int ReceivesShadowTraversalMask = 0x1;
+  const int CastsShadowTraversalMask = 0x2;
+  osg::ref_ptr shadowedScene = new osgShadow::ShadowedScene;
+
+  shadowedScene-&gt;setReceivesShadowTraversalMask(ReceivesShadowTraversalMask);
+  shadowedScene-&gt;setCastsShadowTraversalMask(CastsShadowTraversalMask);
+
+  osg::ref_ptr sm = new osgShadow::ShadowMap;
+  shadowedScene-&gt;setShadowTechnique(sm.get());
+
+  int mapres = 1024;
+  sm-&gt;setTextureSize(osg::Vec2s(mapres,mapres));
+
+  osg::Group* cessna1 = (osg::Group*) osgDB::readNodeFile("cessna.osg");
+  cessna1-&gt;getChild(0)-&gt;setNodeMask(CastsShadowTraversalMask);
+
+  osg::Group* cessna2 = (osg::Group*) osgDB::readNodeFile("cessna.osg");
+  cessna2-&gt;getChild(0)-&gt;setNodeMask(ReceivesShadowTraversalMask);
+
+  osg::MatrixTransform* positioned = new osg::MatrixTransform;
+  positioned-&gt;setMatrix(osg::Matrix::translate(40,0,0));
+  positioned-&gt;addChild(cessna1);
+
+  shadowedScene-&gt;addChild(positioned);
+  shadowedScene-&gt;addChild(cessna2);
+</pre>
+<h2 id="CastsShadowandReceivesShadow">CastsShadow and ReceivesShadow</h2>
+<p>The two ShadowedScene masks are there to help the ShadowTechnique implementations differentiate where appropriate between different types of objects in the scene - with some techniques like ShadowTexture this is essential, with others it doesn't make so much sense and actually can be rather awkward to implement. osgShadow library itself is also still quite young with the various implementations still not fully ground out, so some areas that they don't currently implement fully will hopefully be filled out in the future.</p>
+<p>For example, with OSG 2.4, ShadowMap respects the CastsShadow bit (only objects with that bit will casts a shadow) but ignores the ReceivesShadow bit (all objects in the shadow scene graph receive shadows - there are technical reasons for this).</p>
+<p>Keep in mind that the default node mask in OSG has all bits set: 0xffffffff. This means that every node under a ShadowedScene is set to both case and receive shadows, by default, unless you tell it otherwise. You should be careful when inserting a ShadowedScene into an existing application's scenegraph, as you might have a lot more objects casting shadows than you need, which can spread the shadow resolution very roughly. To solve the problem, disable casting by turning off the bit:</p>
+<div class="code">node-&gt;setNodeMask(node-&gt;getNodeMask() &amp; ~CastsShadowTraversalMask);</div>
+<h2 id="CommonQuestions">Common Questions</h2>
+<ul>
+<li>Where in the scene graph does ShadowedScene go? Does it have to be at the root?
+<ul>
+<li>You can put your ShadowedScene node anywhere in the scene graph.</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>What if the shadower and shadowed nodes are far apart in the scene graph, should the ShadowedScene be inserted above their mutual parent?
+<ul>
+<li>Yes. The root node of the subgraph which you want to have shadows should be an osgShadow::ShadowedScene</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>Do the ReceivesShadow and CastsShadow mask bits need to be set to 0 for all the other nodes in the tree under ShadowedScene, to omit them from the shadow computation?
+<ul>
+<li>Yes. You will have to iterate through the entire scene graph to change the node mask for every node from its default (0xffffffff) to turn those bits off (use ~<span class="ext-link"><span class="icon">shadowedScene-&gt;getCastsShadowTraversalMask()</span></span> and ~<span class="ext-link"><span class="icon">getReceivesShadowTraversalMask()</span></span> to toggle the right bits off - the tilde means logical NOT). However, remember that some shadow techniques will ignore some bits in some cases, so you may not be able to omit nodes in all cases.</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>Does the Light need to be present in the graph under the ShadowedScene?
+<ul>
+<li>No, you don't need to add light to shadowed scene nor it does not need to be present in fixed location in viewer scene hierarchy. In case of many lights, it would be helpful if you point out the Light source that must be used to generate shadows. See !ShadowMap::setLight function.</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>Does ShadowedScene always rerender the shadow every frame?
+<ul>
+<li>Yes.</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>If I know that the light and geometry are not moving, can I avoid the shadows being constantly re-rendered?
+<ul>
+<li>Possibly. See the mailing list thread <span class="ext-link"><span class="icon">osgShadow one shot shadow map</span></span></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>What if my objects already have a shader applied to them?
+<ul>
+<li>That shader also needs to implement shadow mapping. See <a href="../../../../../trac.openscenegraph.org/projects/osg/browser/OpenSceneGraph/trunk/src/osgShadow/ShadowMap.cpp">the top of src/osgShadow/ShadowMap.cpp</a> for the basic shader, and use that in your shader (keep the same names for the variables too).</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li>Can osgShadow be combined with osg::Fog?
+<ul>
+<li>Most of the ShadowTechniques use shaders. osg::Fog wraps up glFog, which is part of OpenGL's fixed pipeline. As soon as you enable shaders you lose the fixed pipeline functionality for that stage (vertex and/or fragment) and must implement the features you want yourself in the shader.</li>
+</ul>
+</li>
+</ul>
+<h2 id="Exampleosgshadow">Example osgshadow</h2>
+<p>The OSG examples include an application called osgshadow, which gives a very simple demonstration of how to call the osgShadow nodekit.</p>
+</div> 
+			
+				
+
+	</div>
+</body>
+
+</html>

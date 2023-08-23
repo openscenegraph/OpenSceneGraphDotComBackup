@@ -1,0 +1,305 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Creating a glowing sun in scene
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Creating%20a%20glowing%20sun%20in%20scene&In-Reply-To=%3C890ffcff-0fb5-553a-bdb9-b5e1ec4370d7%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="281903.html">
+   <LINK REL="Next"  HREF="281908.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Creating a glowing sun in scene</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Creating%20a%20glowing%20sun%20in%20scene&In-Reply-To=%3C890ffcff-0fb5-553a-bdb9-b5e1ec4370d7%40gmx.de%3E"
+       TITLE="[osg-users] Creating a glowing sun in scene">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Wed Feb 22 03:41:10 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="281903.html">[osg-users] Creating a glowing sun in scene
+</A></li>
+        <LI>Next message: <A HREF="281908.html">[osg-users] How to improve frame rate when loading multiple	buildings ??
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5681">[ date ]</a>
+              <a href="thread.html#5681">[ thread ]</a>
+              <a href="subject.html#5681">[ subject ]</a>
+              <a href="author.html#5681">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Suraj,
+
+
+&gt;<i> Hi All,
+</I>&gt;<i>
+</I>&gt;<i> As i had posted previously, I could obtain the following results attached in the screen short in my attempt to create a glowing sun in the scene.
+</I>&gt;<i>
+</I>&gt;<i> I am also attaching the source code.
+</I>&gt;<i>
+</I>&gt;<i> As I am taking the baby-steps in doing shaders programming in OSG, i am having a really bad time. My problem is :
+</I>&gt;<i>
+</I>&gt;<i> 1)
+</I>&gt;<i> I am not able to display the scene with both the glowing sun and cessna.osg in it. In the present form of the code it only displays me the blurred sphere( suppose to be the glowing sun).  How to get bnoth the blurred sphere and cessna displayed together?
+</I>&gt;<i>
+</I>&gt;<i> 2) After referring to online resources as previously suggested replies i could not implement a Bloom pass using shader? Any code snippet to do this?
+</I>&gt;<i> Basically i am not able to understand how to use the output of one fragment shader &quot;combineFragSource&quot;into another fragment shader that would make the HDR effect...
+</I>
+Basically you want postprocessing on rendered scene. Since you already 
+have a RTT-Pass: You need another pass that binds the RTT-pass input 
+texture and use it inside your second pass.
+It sounds as like to have the blur on the sun only, so I guess you have 
+to do the blur first and the rest of the scene on-top of that.
+Take a look at osgPPU, it is great for learning how to do multipass 
+rendering with shaders and FBO.
+In general it boils down to have RTT-passes that either draw from the 
+main-camera's perspective (like multiple scene passes) or to have a 
+fullscreen-pass that renders on FBO-attached textures from other passes.
+
+Cheers
+Sebastian
+
+
+&gt;<i>
+</I>&gt;<i> I know, its a novice question to ask but after putting efforts from my end  i am really stalled! Please help, community.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Suraj
+</I>&gt;<i>
+</I>&gt;<i> /* -*-c++-*- OpenSceneGraph Cookbook
+</I>&gt;<i>   * Chapter 6 Recipe 6
+</I>&gt;<i>   *
+</I>&gt;<i> */
+</I>&gt;<i>
+</I>&gt;<i> #include &lt;osg/Texture2D&gt;
+</I>&gt;<i> #include &lt;osg/Group&gt;
+</I>&gt;<i> #include &lt;osgDB/ReadFile&gt;
+</I>&gt;<i> #include &lt;osgViewer/Viewer&gt;
+</I>&gt;<i> #include &lt;osg/ShapeDrawable&gt;
+</I>&gt;<i> #include &quot;CommonFunctions&quot;
+</I>&gt;<i> #include &lt;osg/MatrixTransform&gt;
+</I>&gt;<i> #include &lt;iostream&gt;
+</I>&gt;<i> #include &lt;osg/Node&gt;
+</I>&gt;<i> #define texsize 512
+</I>&gt;<i> //uniform float weight[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> static const char* vertSource = {
+</I>&gt;<i>      &quot;void main(void)\n&quot;
+</I>&gt;<i>      &quot;{\n&quot;
+</I>&gt;<i>      &quot;   gl_Position = ftransform();\n&quot;
+</I>&gt;<i>      &quot;   gl_TexCoord[0] = gl_MultiTexCoord0;\n&quot;
+</I>&gt;<i>      &quot;}\n&quot;
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> static const char* blurFragSource = {
+</I>&gt;<i>      &quot;uniform sampler2D inputTex;\n&quot;
+</I>&gt;<i>      &quot;uniform vec2 blurDir;\n&quot;
+</I>&gt;<i>      &quot;void main(void)\n&quot;
+</I>&gt;<i>      &quot;{\n&quot;
+</I>&gt;<i>      &quot;   vec2 uv = gl_TexCoord[0].st;\n&quot;
+</I>&gt;<i>      &quot;   vec2 offset = vec2(0.02*blurDir.x, 0.02*blurDir.y);\n&quot;
+</I>&gt;<i>      &quot;   vec4 color = texture2D(inputTex, uv) * 0.3;\n&quot;
+</I>&gt;<i>      &quot;   color += texture2D(inputTex, uv - offset*3.0) * 0.15;\n&quot;
+</I>&gt;<i>      &quot;   color += texture2D(inputTex, uv - offset*2.0) * 0.15;\n&quot;
+</I>&gt;<i>      &quot;   color += texture2D(inputTex, uv - offset) * 0.25;\n&quot;
+</I>&gt;<i>      &quot;   color += texture2D(inputTex, uv + offset) * 0.25;\n&quot;
+</I>&gt;<i>      &quot;   color += texture2D(inputTex, uv + offset*2.0) * 0.1;\n&quot;
+</I>&gt;<i>      &quot;   color += texture2D(inputTex, uv + offset*3.0) * 0.15;\n&quot;
+</I>&gt;<i>      &quot;   gl_FragColor = color;\n&quot;
+</I>&gt;<i>      &quot;}\n&quot;
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> static const char* combineFragSource = {
+</I>&gt;<i>      &quot;uniform sampler2D sceneTex;\n&quot;
+</I>&gt;<i>      &quot;uniform sampler2D blurTex;\n&quot;
+</I>&gt;<i>     
+</I>&gt;<i>      &quot;void main(void)\n&quot;
+</I>&gt;<i>      &quot;{\n&quot;
+</I>&gt;<i>      &quot;   vec2 uv = gl_TexCoord[0].st;\n&quot;
+</I>&gt;<i>      &quot;   vec4 fullColor = texture2D(sceneTex, uv);\n&quot;
+</I>&gt;<i>      &quot;   vec4 blurColor = texture2D(blurTex, uv);\n&quot;
+</I>&gt;<i>      &quot;   float mod_color = fullColor + 1.5* (blurColor + fullColor);\n&quot;
+</I>&gt;<i>      &quot;   gl_FragColor = mod_color;\n&quot;
+</I>&gt;<i>      &quot;}\n&quot;
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> typedef std::pair&lt;osg::Camera*, osg::Texture*&gt; RTTPair;
+</I>&gt;<i>
+</I>&gt;<i> RTTPair createColorInput( osg::Node* scene )
+</I>&gt;<i> {
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Texture2D&gt; tex2D = new osg::Texture2D;
+</I>&gt;<i>      tex2D-&gt;setTextureSize( texsize, texsize );
+</I>&gt;<i>      tex2D-&gt;setInternalFormat( GL_RGBA );
+</I>&gt;<i>      
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Camera&gt; camera = osgCookBook::createRTTCamera(osg::Camera::COLOR_BUFFER, tex2D.get());
+</I>&gt;<i>      camera-&gt;addChild( scene );
+</I>&gt;<i>      return RTTPair(camera.release(), tex2D.get());
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> RTTPair createDepthInput( osg::Node* scene )
+</I>&gt;<i> {
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Texture2D&gt; tex2D = new osg::Texture2D;
+</I>&gt;<i>      tex2D-&gt;setTextureSize( texsize, texsize );
+</I>&gt;<i>      tex2D-&gt;setInternalFormat( GL_DEPTH_COMPONENT24 );
+</I>&gt;<i>      tex2D-&gt;setSourceFormat( GL_DEPTH_COMPONENT );
+</I>&gt;<i>      tex2D-&gt;setSourceType( GL_FLOAT );
+</I>&gt;<i>      
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Camera&gt; camera = osgCookBook::createRTTCamera(osg::Camera::DEPTH_BUFFER, tex2D.get());
+</I>&gt;<i>      camera-&gt;addChild( scene );
+</I>&gt;<i>      return RTTPair(camera.release(), tex2D.get());
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> RTTPair createBlurPass( osg::Texture* inputTex, const osg::Vec2&amp; dir )
+</I>&gt;<i> {
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Texture2D&gt; tex2D = new osg::Texture2D;
+</I>&gt;<i>      tex2D-&gt;setTextureSize( texsize, texsize );
+</I>&gt;<i>      tex2D-&gt;setInternalFormat( GL_RGBA );
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Camera&gt; camera = osgCookBook::createRTTCamera( osg::Camera::COLOR_BUFFER, tex2D.get(), true);
+</I>&gt;<i>      
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Program&gt; blurProg = new osg::Program;
+</I>&gt;<i>      blurProg-&gt;addShader( new osg::Shader(osg::Shader::VERTEX, vertSource) );
+</I>&gt;<i>      blurProg-&gt;addShader( new osg::Shader(osg::Shader::FRAGMENT, blurFragSource) );
+</I>&gt;<i>      
+</I>&gt;<i>      osg::StateSet* ss = camera-&gt;getOrCreateStateSet();
+</I>&gt;<i>      ss-&gt;setTextureAttributeAndModes( 0, inputTex );
+</I>&gt;<i>      ss-&gt;setAttributeAndModes( blurProg.get(), osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE );
+</I>&gt;<i>      ss-&gt;addUniform( new osg::Uniform(&quot;sceneTex&quot;, 0) );
+</I>&gt;<i>      ss-&gt;addUniform( new osg::Uniform(&quot;blurDir&quot;, dir) );
+</I>&gt;<i>      return RTTPair(camera.release(), tex2D.get());
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> int main( int argc, char** argv )
+</I>&gt;<i> {
+</I>&gt;<i>      osg::ArgumentParser arguments( &amp;argc, argv );
+</I>&gt;<i>      //osg::ref_ptr&lt;osg::Node&gt; scene = osgDB::readNodeFiles( arguments );
+</I>&gt;<i>      osg::Node* scene = osgDB::readNodeFiles( arguments );
+</I>&gt;<i>      osg::Group* mygroup = new osg::Group;
+</I>&gt;<i> 	osg::Node* cessna = osgDB::readNodeFile(&quot;/home/suraj/osgex/ex_cam/cessna.osg&quot;);
+</I>&gt;<i>      osg::MatrixTransform * mt_cessna = new osg::MatrixTransform;
+</I>&gt;<i>      mt_cessna-&gt;setMatrix(osg::Matrix::translate(0,0, 2));
+</I>&gt;<i>      mt_cessna-&gt;addChild(cessna);
+</I>&gt;<i>     
+</I>&gt;<i>      if ( !scene )
+</I>&gt;<i>       {//scene = osgDB::readNodeFile(&quot;lz.osg&quot;);
+</I>&gt;<i>
+</I>&gt;<i> //Model drawing
+</I>&gt;<i> osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode();
+</I>&gt;<i> osg::ref_ptr&lt;osg::ShapeDrawable&gt; sh1 = new osg::ShapeDrawable;
+</I>&gt;<i> sh1-&gt;setShape(new osg::Sphere(osg::Vec3(0.0f,0.0f,0.0f),10.0f ) );
+</I>&gt;<i> sh1-&gt;setColor(osg::Vec4(1.0,1.0,1.0,0.5));
+</I>&gt;<i> geode-&gt;addDrawable(sh1.get() );
+</I>&gt;<i> mygroup-&gt;addChild(geode);
+</I>&gt;<i> scene=dynamic_cast &lt;osg::Node*&gt;(mygroup);
+</I>&gt;<i>      }
+</I>&gt;<i>      // The first pass: color
+</I>&gt;<i>      RTTPair pass0_color = createColorInput( scene );
+</I>&gt;<i>      
+</I>&gt;<i>      // The first pass: depth
+</I>&gt;<i>      RTTPair pass0_depth = createDepthInput( scene );
+</I>&gt;<i>      
+</I>&gt;<i>      // The horizonal blur pass
+</I>&gt;<i>      RTTPair pass1 = createBlurPass( pass0_color.second, osg::Vec2(1, 0) );
+</I>&gt;<i>      
+</I>&gt;<i>      // The vertical blur pass
+</I>&gt;<i>      RTTPair pass2 = createBlurPass( pass1.second, osg::Vec2(0, 1) );
+</I>&gt;<i>
+</I>&gt;<i>      // The final pass
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Camera&gt; hudCamera = osgCookBook::createHUDCamera(0.0, 1.0, 0.0, 1.0);
+</I>&gt;<i>       hudCamera-&gt;addChild( osgCookBook::createScreenQuad(1.0f, 1.0f, 1.) );
+</I>&gt;<i>      // hudCamera-&gt;addChild( mt_cessna );
+</I>&gt;<i>      
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Program&gt; finalProg = new osg::Program;
+</I>&gt;<i>      finalProg-&gt;addShader( new osg::Shader(osg::Shader::VERTEX, vertSource) );
+</I>&gt;<i>      finalProg-&gt;addShader( new osg::Shader(osg::Shader::FRAGMENT, combineFragSource) );
+</I>&gt;<i>      
+</I>&gt;<i>       
+</I>&gt;<i>      osg::StateSet* stateset = hudCamera-&gt;getOrCreateStateSet();
+</I>&gt;<i>      stateset-&gt;setTextureAttributeAndModes( 0, pass0_color.second );
+</I>&gt;<i>      stateset-&gt;setTextureAttributeAndModes( 1, pass2.second );
+</I>&gt;<i>      stateset-&gt;setTextureAttributeAndModes( 2, pass0_depth.second );
+</I>&gt;<i>      //stateset-&gt;setTextureAttributeAndModes( 3, pass3.second );
+</I>&gt;<i>      stateset-&gt;setAttributeAndModes( finalProg.get() );
+</I>&gt;<i>      stateset-&gt;addUniform( new osg::Uniform(&quot;sceneTex&quot;, 0) );
+</I>&gt;<i>      stateset-&gt;addUniform( new osg::Uniform(&quot;blurTex&quot;, 1) );
+</I>&gt;<i>         // Build the scene graph
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+</I>&gt;<i>      root-&gt;addChild(mt_cessna);
+</I>&gt;<i>      root-&gt;addChild( pass0_color.first );
+</I>&gt;<i>      //root-&gt;addChild( pass0_depth.first );
+</I>&gt;<i>      root-&gt;addChild( pass1.first );
+</I>&gt;<i>      root-&gt;addChild( pass2.first );
+</I>&gt;<i>      root-&gt;addChild( hudCamera.get() );
+</I>&gt;<i>      
+</I>&gt;<i>      osgViewer::Viewer viewer;
+</I>&gt;<i>      viewer.getCamera()-&gt;setComputeNearFarMode( osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR );
+</I>&gt;<i>      viewer.setSceneData( root.get() );
+</I>&gt;<i>      return viewer.run();
+</I>&gt;<i> }
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Suraj
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic71d1.php?p=70310#70310">http://forum.openscenegraph.org/viewtopic.php?p=70310#70310</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Attachments:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/files/screenshot_1_514.png">http://forum.openscenegraph.org//files/screenshot_1_514.png</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="281903.html">[osg-users] Creating a glowing sun in scene
+</A></li>
+	<LI>Next message: <A HREF="281908.html">[osg-users] How to improve frame rate when loading multiple	buildings ??
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5681">[ date ]</a>
+              <a href="thread.html#5681">[ thread ]</a>
+              <a href="subject.html#5681">[ subject ]</a>
+              <a href="author.html#5681">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

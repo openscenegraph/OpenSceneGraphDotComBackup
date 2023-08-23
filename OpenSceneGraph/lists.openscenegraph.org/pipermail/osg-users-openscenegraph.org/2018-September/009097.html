@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText 3.6.3 crash
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%203.6.3%20crash&In-Reply-To=%3CCAO-%2BzinMyHv8obZXzJuYAp1tW-RaT4B0TL_LWP29TpTd2H47Eg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009093.html">
+   <LINK REL="Next"  HREF="009094.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText 3.6.3 crash</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%203.6.3%20crash&In-Reply-To=%3CCAO-%2BzinMyHv8obZXzJuYAp1tW-RaT4B0TL_LWP29TpTd2H47Eg%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgText 3.6.3 crash">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Wed Sep 12 09:56:21 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009093.html">[osg-users] osgText 3.6.3 crash
+</A></li>
+        <LI>Next message (by thread): <A HREF="009094.html">[osg-users] problems with osg-3.4.0 port to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9097">[ date ]</a>
+              <a href="thread.html#9097">[ thread ]</a>
+              <a href="subject.html#9097">[ subject ]</a>
+              <a href="author.html#9097">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+That was the right hint and I must admit that I always forget it :-).
+Setting the datavaraiance to osg::Object::DYNAMIC fixed the crash! As for
+the other hints re performance, this is for sort of DEBUG mode for the sim
+so we are ok, but thanks for these as well!
+
+On Wed, Sep 12, 2018 at 4:09 PM Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Nick,
+</I>&gt;<i>
+</I>&gt;<i> There are plenty of ways mutlti-thread setting of Text labels could
+</I>&gt;<i> cause problems if the threads reading from the Text are running in
+</I>&gt;<i> parallel to the ones setting it.  A mutex &quot;might&quot; help but it could
+</I>&gt;<i> easily be done in the wrong way.  If you are modifying text
+</I>&gt;<i> dynamically then you should set the DataVariance to DYNAMIC.  However,
+</I>&gt;<i> adding mutex and using DataVariance of DYNAMIC might protect things if
+</I>&gt;<i> you do it all right but performance issues can easily become dominant
+</I>&gt;<i> as it can easily stall the various threads.
+</I>&gt;<i>
+</I>&gt;<i> It may be that trying to dynamically update Text is simply the wrong
+</I>&gt;<i> solution for your application.  It might be that writing your own
+</I>&gt;<i> custom shader to implement text is the better thing to do.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Wed, 12 Sep 2018 at 13:24, Trajce Nikolov NICK
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Hi Robert,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; we are experiencing some crashes in our sim software. And I know you
+</I>&gt;<i> will not like this post since I can not produce minimal case exercising
+</I>&gt;<i> this issue - I tried to mimic the sim code into one simple app but in this
+</I>&gt;<i> minimal app all works just great. So I will try to explain and count on you
+</I>&gt;<i> with hints
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The environment is multithreaded:
+</I>&gt;<i> &gt; - high res thread updating labels guarded by mutex
+</I>&gt;<i> &gt; - the osg threads with update callbacks on osgText::Text that is setting
+</I>&gt;<i> the labels with setText(...) guarded  by mutex
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The env is XUbuntu 18, NVIDIA GTX 1080
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; And the crash happens at
+</I>&gt;<i> &gt; Text::drawImplementationSinglePass ln: 1151
+</I>&gt;<i> glyphquad._primitives-&gt;draw(state, usingVertexBufferObjects);
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; which furthers
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; DrawElementsUShort::draw ln: 266
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; if (_numInstances&gt;=1) state.glDrawElementsInstanced(mode, size(),
+</I>&gt;<i> GL_UNSIGNED_SHORT, (const GLvoid *)(ebo-&gt;getOffset(getBufferIndex())),
+</I>&gt;<i> _numInstances);
+</I>&gt;<i> &gt;             else glDrawElements(mode, size(), GL_UNSIGNED_SHORT, (const
+</I>&gt;<i> GLvoid *)(ebo-&gt;getOffset(getBufferIndex())));
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _numInstances is 0 when the crash happens so the crash happens here:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; glDrawElements(mode, size(), GL_UNSIGNED_SHORT, (const GLvoid
+</I>&gt;<i> *)(ebo-&gt;getOffset(getBufferIndex())));
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Any clue or at least a thought when this can happen? Mean while I will
+</I>&gt;<i> continue testing and will really try again to make a small app reproducing
+</I>&gt;<i> this behavior
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Thanks a bunch as always!
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Cheers,
+</I>&gt;<i> &gt; Nick
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; --
+</I>&gt;<i> &gt; trajce nikolov nick
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180912/12a6db55/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180912/12a6db55/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009093.html">[osg-users] osgText 3.6.3 crash
+</A></li>
+	<LI>Next message (by thread): <A HREF="009094.html">[osg-users] problems with osg-3.4.0 port to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9097">[ date ]</a>
+              <a href="thread.html#9097">[ thread ]</a>
+              <a href="subject.html#9097">[ subject ]</a>
+              <a href="author.html#9097">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

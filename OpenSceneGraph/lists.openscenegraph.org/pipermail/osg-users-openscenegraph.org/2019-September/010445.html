@@ -1,0 +1,191 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [osgPlugins] Lua: deterministic destruction of the script engine / leaks caused by circular references
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BosgPlugins%5D%20Lua%3A%20deterministic%20destruction%20of%20the%0A%20script%20engine%20/%20leaks%20caused%20by%20circular%20references&In-Reply-To=%3CCAFN7Y%2BXVRgkdKEC8hs4qFmpy7kEqUKcqR2aYpLbQs8qyXcMJLQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010443.html">
+   <LINK REL="Next"  HREF="010435.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [osgPlugins] Lua: deterministic destruction of the script engine / leaks caused by circular references</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BosgPlugins%5D%20Lua%3A%20deterministic%20destruction%20of%20the%0A%20script%20engine%20/%20leaks%20caused%20by%20circular%20references&In-Reply-To=%3CCAFN7Y%2BXVRgkdKEC8hs4qFmpy7kEqUKcqR2aYpLbQs8qyXcMJLQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] [osgPlugins] Lua: deterministic destruction of the script engine / leaks caused by circular references">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Sep 20 01:12:53 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010443.html">[osg-users] [osgPlugins] Lua: deterministic destruction of the script engine / leaks caused by circular references
+</A></li>
+        <LI>Next message (by thread): <A HREF="010435.html">[osg-users] glClampColor with GL CORE profile
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10445">[ date ]</a>
+              <a href="thread.html#10445">[ thread ]</a>
+              <a href="subject.html#10445">[ subject ]</a>
+              <a href="author.html#10445">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Hannes,
+
+Thanks for detailing the issue so clearly.  On a first pass it would seem
+like your suggesting of changing to observer_ptr&lt;&gt; would be appropriate.
+I'll need to properly review it, though I'm working flat out on the VSG
+right now so can't jump in right away.  Could you make a PR for your fix,
+then once I get a breather from the VSG work can jump in a test out the
+issue and the solution.
+
+Cheers,
+Robert.
+
+On Thu, 19 Sep 2019 at 22:29, Hannes Pabst &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">johannes.pabst at ocilion.com</A>&gt;
+wrote:
+
+&gt;<i> Consider the following Lua script&#058;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> function makeObjectWithCallback()
+</I>&gt;<i>    local object = new &quot;osg::Object&quot;
+</I>&gt;<i>
+</I>&gt;<i>    function object:process()
+</I>&gt;<i>          print &quot;Hello&quot;
+</I>&gt;<i>    end
+</I>&gt;<i>
+</I>&gt;<i>    return object
+</I>&gt;<i> end
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The function makeObjectWithCallback will create an osg::Object which has a
+</I>&gt;<i> LuaCallbackObject named &quot;process&quot;, stored within its user data.
+</I>&gt;<i> The LuaCallbackObject itself stores an ref_ptr to the LuaScriptEngine for
+</I>&gt;<i> being able to call the function defined within Lua.
+</I>&gt;<i> Unfortunately the references now are circular:
+</I>&gt;<i>
+</I>&gt;<i> LuaScriptEngine -&gt; Lua -&gt; Object -&gt; LuaCallbackObject -&gt; LuaScriptEngine
+</I>&gt;<i>
+</I>&gt;<i> Once the script is executed it is hard to get rid of the LuaScriptEngine
+</I>&gt;<i> object.
+</I>&gt;<i> Simply deleting all references to the ScriptEngine and the returned Object
+</I>&gt;<i> on the cpp side will cause a leak, as the Lua state keeps them alive.
+</I>&gt;<i> Even if the variable &quot;object&quot; above is only temporarily used in Lua, a GC
+</I>&gt;<i> run is necessary to break the Lua -&gt; Object dependency.
+</I>&gt;<i> But who shall trigger that, if all references on the cpp side are gone and
+</I>&gt;<i> Lua cannot be called anymore?
+</I>&gt;<i>
+</I>&gt;<i> Here is the code to run the Lua script above, that will produce the leak:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void runScript()
+</I>&gt;<i> {
+</I>&gt;<i>    osg::ref_ptr&lt;osg::ScriptEngine&gt; luaScriptEngine =
+</I>&gt;<i> osgDB::readFile&lt;osg::ScriptEngine&gt;(&quot;ScriptEngine.lua&quot;);
+</I>&gt;<i>    osg::ref_ptr&lt;osg::Script&gt; script = osgDB::readScriptFile(&quot;script.lua&quot;);
+</I>&gt;<i>    osg::Parameters inputParameters;
+</I>&gt;<i>    osg::Parameters outputParameters;
+</I>&gt;<i>    luaScriptEngine-&gt;run(script.get(), &quot;makeObjectWithCallback&quot;,
+</I>&gt;<i> inputParameters, outputParameters);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> My intention is to use LuaCallbackObjects but also to have the possibility
+</I>&gt;<i> to clean up and reload the Lua script at any time by re-instantiating the
+</I>&gt;<i> LuaScriptEngine.
+</I>&gt;<i> Unfortunately there seems to be no general and easy way to destroy the
+</I>&gt;<i> shared LuaScriptEngine object.
+</I>&gt;<i>
+</I>&gt;<i> Wouldn't it be a more practical design to have the LuaCallbackObject only
+</I>&gt;<i> weakly reference the LuaScriptEngine?
+</I>&gt;<i> If the ScriptEngine object is gone, callbacks into Lua could simply do
+</I>&gt;<i> nothing &#8211; per definition.
+</I>&gt;<i> I understand such change would break existing code, in situations where
+</I>&gt;<i> one creates a LuaScriptEngine object on the fly running a script that hooks
+</I>&gt;<i> to the OSG runtime system.
+</I>&gt;<i> As far as I understand the Lua plugin code, the lua_close call in the
+</I>&gt;<i> destructor of LuaScriptEngine releases all references held by Lua and thus
+</I>&gt;<i> would be able break up all other eventually existing circular references -
+</I>&gt;<i> so the class would in principle be ready to act as a &#8220;master object&#8221; on the
+</I>&gt;<i> cpp side, that is able to control the lifetime of the whole Lua system.
+</I>&gt;<i>
+</I>&gt;<i> I have made this change to the Lua plugin code (simply by replacing the
+</I>&gt;<i> ref_ptr by an observer_ptr) and for my purposes it seems to work well, but
+</I>&gt;<i> wonder if this is an issue that should generally be addressed within OSG.
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic1de1.php?p=76703#76703">http://forum.openscenegraph.org/viewtopic.php?p=76703#76703</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190920/c416d051/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190920/c416d051/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010443.html">[osg-users] [osgPlugins] Lua: deterministic destruction of the script engine / leaks caused by circular references
+</A></li>
+	<LI>Next message (by thread): <A HREF="010435.html">[osg-users] glClampColor with GL CORE profile
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10445">[ date ]</a>
+              <a href="thread.html#10445">[ thread ]</a>
+              <a href="subject.html#10445">[ subject ]</a>
+              <a href="author.html#10445">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

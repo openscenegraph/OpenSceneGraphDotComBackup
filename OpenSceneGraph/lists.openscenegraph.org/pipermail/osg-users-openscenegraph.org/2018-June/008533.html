@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgmovie - ffmpeg or Gstreamer
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgmovie%20-%20ffmpeg%20or%20Gstreamer&In-Reply-To=%3C1529929090.m2f.74144%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008508.html">
+   <LINK REL="Next"  HREF="008547.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgmovie - ffmpeg or Gstreamer</H1>
+<!--htdig_noindex-->
+    <B>Andrea Martini</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgmovie%20-%20ffmpeg%20or%20Gstreamer&In-Reply-To=%3C1529929090.m2f.74144%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osgmovie - ffmpeg or Gstreamer">martini.andrea at gmail.com
+       </A><BR>
+    <I>Mon Jun 25 05:18:10 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008508.html">[osg-users] osgmovie - ffmpeg or Gstreamer
+</A></li>
+        <LI>Next message (by thread): <A HREF="008547.html">[osg-users] osgmovie - ffmpeg or Gstreamer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8533">[ date ]</a>
+              <a href="thread.html#8533">[ thread ]</a>
+              <a href="subject.html#8533">[ subject ]</a>
+              <a href="author.html#8533">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+some further details about GSTREAMER Plugin. My goals is to play video using osgmovie and gstreamer as plugin.
+
+
+I downloaded following gstreamer installers:
+
+gstreamer-1.0-x86_64-1.14.1.msi
+gstreamer-1.0-devel-x86_64-1.14.0.1.msi
+
+(in order to get both runtime and compile time files).
+
+After settings CMAKE (see picture attached), and set the environment variables: 
+
+SET GST_PLUGIN_PATH=C:\gstreamer\1.0\x86_64\lib\gstreamer-1.0
+SET GSTREAMER_DEP=C:\gstreamer\1.0\x86_64\bin;C:\gstreamer\1.0\x86_64\lib\gstreamer-1.0;%GST_PLUGIN_PATH%
+
+I compiled OSG solution with gstreamer plugin. All works fine. I get osgdb_gstreamerd.dll and osgdb_gstreamer.dll
+
+To test gstreamer plugin with osgmovie, i used a test movie with ogg extension (i used VLC for converting test video file). First of all, i copied and renamed osgdb_gstreamer(d).dll  to osgdb_ogg(d).dll
+
+To be sure gstreamer was installed correctly, i tested gstreamer with this test video file (ogg) with the following pipeline:
+
+gst-launch-1.0.exe filesrc location=C:/SVILUPPO/CommonData/Movie/surf360converted.ogg ! oggdemux ! theoradec ! videoconvert ! autovideosink
+
+and all works fine.
+
+Now the problem. 
+
+When i use osgmovie, i get the following message:
+
+Error reading file C:\SVILUPPO\CommonData\Movie\surf360converted.ogg: file not handled
+Unable to read file C:\SVILUPPO\CommonData\Movie\surf360converted.ogg
+
+In debug, i noticed that in GStreamerImagestream.cpp, 
+(GStreamerImageStream::open method )  the _width and _height attribute are equal to 0, and the method returns false.
+
+
+
+Code:
+ // sink
+
+    GstElement *sink = gst_bin_get_by_name(GST_BIN(_pipeline), &quot;sink&quot;);
+
+    g_signal_connect(sink, &quot;new-sample&quot;, G_CALLBACK(on_new_sample), this);
+    g_signal_connect(sink, &quot;new-preroll&quot;, G_CALLBACK(on_new_preroll), this);
+
+    gst_object_unref(sink);
+
+    gst_element_set_state(_pipeline, GST_STATE_PAUSED);
+    gst_element_get_state(_pipeline, NULL, NULL, GST_CLOCK_TIME_NONE); // wait until the state changed
+
+	//gchar* message = gst_error_get_message(error-&gt;domain, error-&gt;code);
+
+    if (_width==0 || _height==0)
+    {
+        // no valid image has been setup by a on_new_preroll() call.
+        return false;
+    }
+
+  // setLoopingMode(osg::ImageStream::NO_LOOPING);
+  // start the thread to run gstreamer main loop
+
+  start();
+
+
+
+
+It seems that these two attributes are modified by callback on_new_preroll, but i can't access to this function during debug.
+
+Is this approach correct to play video with gstreamer? Does it exist a simpler way?
+
+
+Thank you!
+
+Cheers,
+Andrea
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicbcc1.php?p=74144#74144">http://forum.openscenegraph.org/viewtopic.php?p=74144#74144</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: CMakeGstreamer.jpg
+Type: image/jpeg
+Size: 112346 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180625/89965927/attachment-0001.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180625/89965927/attachment-0001.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008508.html">[osg-users] osgmovie - ffmpeg or Gstreamer
+</A></li>
+	<LI>Next message (by thread): <A HREF="008547.html">[osg-users] osgmovie - ffmpeg or Gstreamer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8533">[ date ]</a>
+              <a href="thread.html#8533">[ thread ]</a>
+              <a href="subject.html#8533">[ subject ]</a>
+              <a href="author.html#8533">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

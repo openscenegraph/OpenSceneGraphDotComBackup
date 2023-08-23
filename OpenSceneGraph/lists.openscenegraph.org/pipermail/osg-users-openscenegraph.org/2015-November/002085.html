@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Processor Affinity and forked processes
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Processor%20Affinity%20and%20forked%20processes&In-Reply-To=%3C1448750912.m2f.65784%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002053.html">
+   <LINK REL="Next"  HREF="002087.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Processor Affinity and forked processes</H1>
+<!--htdig_noindex-->
+    <B>Pete Black</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Processor%20Affinity%20and%20forked%20processes&In-Reply-To=%3C1448750912.m2f.65784%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Processor Affinity and forked processes">pete at marchingcubes.com
+       </A><BR>
+    <I>Sat Nov 28 14:48:32 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002053.html">[osg-users] Processor Affinity and forked processes
+</A></li>
+        <LI>Next message: <A HREF="002087.html">[osg-users] Processor Affinity and forked processes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2085">[ date ]</a>
+              <a href="thread.html#2085">[ thread ]</a>
+              <a href="subject.html#2085">[ subject ]</a>
+              <a href="author.html#2085">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>The logic seems to be if there are more than 1 CPU, and the threadingModel is set to singlethreaded (the default), then set CPU affinity (on what is very likely the main thread of the application) to 0.
+
+This really seems to be a poor idea - it might help a specific OSG app configuration, but silently causes unexpected and almost certainly undesirable behaviour in situations where the programmer is doing their own multithreading.
+
+Its fine to say 'you can reset the CPU affinity manually' but why would anyone think they would need to do this? The only way you notice this is that your app turns into a jerkfest and 'top' puzzlingly shows the OSG app pegging a single core while the others sit idle. 
+
+Running multiple instances of an OSG-based app where the viewer is hardcoding CPU affinity to 0 on both instances is also not going to be pretty, despite the app seemingly working acceptably during single-process testing.
+
+Moving a line of code to create a thread from before the Viewer is initialised to after it will also do very different things w/regard to CPU resource usage.
+
+This also introduces discrepancies between behaviour on different platforms - as setting CPU affinity on OS X does basically nothing, so the same app running on OS X will scale to use all cores just fine - however if/when you did add support for OS X setCPUAffinity to OpenThreads, you would be forcing programmers to write platform-specific hacks around OSG's hardcoded behaviour (since there is no 'unset cpu affinity' function in OpenThreads) , instead of treating OSG as a cross-platform library.
+
+Surely if the programmer wishes CPU affinity to be set, this should be explicit, and should return some kind of status so the programmer is aware the operation did not succeed (e.g. on OS X).
+
+It seems to me that there is no reason apps  cannot make the same direct OpenThreads call to set CPU affinity, if this is desired, rather than baking it into the guts of osgViewer.
+
+
+
+Code:
+
+void ViewerBase::setUpThreading()
+{
+    ...
+    if (_threadingModel==SingleThreaded)
+    {
+        if (_threadsRunning) stopThreading();
+        else
+        {
+            // we'll set processor affinity here to help single threaded apps
+            // with multiple processor cores, and using the database pager.
+            int numProcessors = OpenThreads::GetNumberOfProcessors();
+            bool affinity = numProcessors&gt;1;
+            if (affinity)
+            {
+                OpenThreads::SetProcessorAffinityOfCurrentThread(0);
+                ...
+            }
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicbcb9.php?p=65784#65784">http://forum.openscenegraph.org/viewtopic.php?p=65784#65784</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002053.html">[osg-users] Processor Affinity and forked processes
+</A></li>
+	<LI>Next message: <A HREF="002087.html">[osg-users] Processor Affinity and forked processes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2085">[ date ]</a>
+              <a href="thread.html#2085">[ thread ]</a>
+              <a href="subject.html#2085">[ subject ]</a>
+              <a href="author.html#2085">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Using multiples texture for a geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20multiples%20texture%20for%20a%20geometry&In-Reply-To=%3C4fbca514-420f-fde4-d9cd-7f81e5feab97%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003002.html">
+   <LINK REL="Next"  HREF="003006.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Using multiples texture for a geometry</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20multiples%20texture%20for%20a%20geometry&In-Reply-To=%3C4fbca514-420f-fde4-d9cd-7f81e5feab97%40gmx.de%3E"
+       TITLE="[osg-users] Using multiples texture for a geometry">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Mon May  9 02:00:01 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003002.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+        <LI>Next message: <A HREF="003006.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3004">[ date ]</a>
+              <a href="thread.html#3004">[ thread ]</a>
+              <a href="subject.html#3004">[ subject ]</a>
+              <a href="author.html#3004">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Florian,
+
+see the attached example. It will load to textures and apply them to two 
+different sets of texture coordinates.
+Simply replace the image file paths to test it.
+If you use the 0,0 texture coordinate for all triangle/quad edges you 
+will, depending on the wrap mode, end up having the image's pixel color 
+over the whole primitive.
+
+
+
+&lt;snip&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+#include &lt;osgGA/StateSetManipulator&gt;
+
+
+
+osg::Node* createMT_Graph()
+{
+     osg::Geometry* geom = new osg::Geometry;
+     osg::Vec3Array* vert_array = new osg::Vec3Array;
+     osg::Vec2Array* uv_array = new osg::Vec2Array;
+     osg::Vec2Array* uv2_array = new osg::Vec2Array;
+     osg::Vec3Array* normal_array = new osg::Vec3Array;
+     osg::Vec4Array* color_array = new osg::Vec4Array;
+
+     normal_array-&gt;push_back(osg::Vec3(0, 0, 1));
+     color_array-&gt;push_back(osg::Vec4(1, 1, 1, 1));
+
+     for (unsigned i = 0; i &lt; 40; ++i)
+     {
+         bool even = (0 == i % 2);
+         float x = (i) / 2;
+         float y = even ? 0 : 1;
+         std::cout &lt;&lt; x &lt;&lt; &quot;,&quot; &lt;&lt; y &lt;&lt; std::endl;
+         vert_array-&gt;push_back(osg::Vec3(x,y,0 ));
+         uv_array-&gt;push_back(osg::Vec2(x, y));
+         uv2_array-&gt;push_back(osg::Vec2(0.5*x, y));
+     }
+
+     geom-&gt;setVertexArray(vert_array);
+     geom-&gt;setTexCoordArray(0, uv_array);
+     geom-&gt;setTexCoordArray(1, uv2_array);
+     geom-&gt;setNormalArray(normal_array, osg::Array::BIND_OVERALL);
+     geom-&gt;setNormalArray(color_array, osg::Array::BIND_OVERALL);
+     geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLE_STRIP,0, 
+vert_array-&gt;size()));
+
+     return geom;
+}
+
+
+
+int main(int argc, char** argv)
+{
+     osgViewer::Viewer viewer;
+     viewer.addEventHandler( new 
+osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()) );
+     viewer.addEventHandler(new osgViewer::StatsHandler());
+
+     osg::Node* node = createMT_Graph();
+
+     osg::Texture2D* tex1 = new 
+osg::Texture2D(osgDB::readImageFile(&quot;./resources/textures/ziggis.png&quot;));
+     tex1-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+     tex1-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+node-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, tex1, 
+osg::StateAttribute::ON);
+
+     osg::Texture2D* tex2 = new 
+osg::Texture2D(osgDB::readImageFile(&quot;./resources/textures/wasch.png&quot;));
+     tex2-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+     tex2-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+node-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(1, tex2, 
+osg::StateAttribute::ON);
+
+     viewer.setUpViewInWindow(10,10,1280,1024, 0);
+     viewer.setSceneData( node );
+
+     return( viewer.run() );
+}
+&lt;/snip&gt;
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003002.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+	<LI>Next message: <A HREF="003006.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3004">[ date ]</a>
+              <a href="thread.html#3004">[ thread ]</a>
+              <a href="subject.html#3004">[ subject ]</a>
+              <a href="author.html#3004">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

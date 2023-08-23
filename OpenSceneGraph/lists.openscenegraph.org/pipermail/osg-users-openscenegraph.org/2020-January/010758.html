@@ -1,0 +1,267 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Textured ply file is black when loaded.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Textured%20ply%20file%20is%20black%20when%20loaded.&In-Reply-To=%3C0a139cfd-16d2-4630-ac52-284f93d76461%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010756.html">
+   <LINK REL="Next"  HREF="010759.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Textured ply file is black when loaded.</H1>
+<!--htdig_noindex-->
+    <B>'Tom Pollok' via OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Textured%20ply%20file%20is%20black%20when%20loaded.&In-Reply-To=%3C0a139cfd-16d2-4630-ac52-284f93d76461%40googlegroups.com%3E"
+       TITLE="[osg-users] Textured ply file is black when loaded.">osg-users at googlegroups.com
+       </A><BR>
+    <I>Tue Jan 21 06:07:34 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010756.html">[osg-users] Textured ply file is black when loaded.
+</A></li>
+        <LI>Next message (by thread): <A HREF="010759.html">[osg-users] Textured ply file is black when loaded.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10758">[ date ]</a>
+              <a href="thread.html#10758">[ thread ]</a>
+              <a href="subject.html#10758">[ subject ]</a>
+              <a href="author.html#10758">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+oh i didnt mean you to do a deep investigation, i just thought it was a bug 
+or at least you might know if im doing sth wrong.
+
+
+I investigated a little.
+
+So it seems that the comment for texture files is actively used:
+
+comment TextureFile YourTexture_material_0_map_Kd.jpg
+
+So that needs to be parsed, and not ignored as just being a comment.
+
+The tools i used (MeshLAB and CloudCompare) are widely used in the research 
+community or industry. I guess there is no perfect documentation that keeps 
+track of every &quot;hack&quot;, in case that is it is one.
+
+Regarding the header, ill add comments from what i understood 
+
+ply
+format ascii 1.0
+comment VCGLIB generated
+comment TextureFile Wareneingang_material_0_map_Kd.jpg
+element vertex 99428 //number of vertices
+property float x  //vertex X coordinate
+property float y  //vertex Y coordinate
+property float z //vertex Z coordinate
+element face 186642 //number of faces
+property list uchar int vertex_indices    //means that a face consists of a 
+number of vertices, the first uchar states that there is a n uchar at the 
+beginning that states the number of vertices that make a face. Typically 
+that is 3, but thats then in the ascii or binary dump. So assuming there 
+are 3 vertices, then 3 ints (vertex indices) have to be parsed.
+property list uchar float texcoord //after the vertex indices there is a 
+list of float texture coordiantes. The uchar states the number of values. 
+So this has to be interpreted as uv coordinates like (U0, V0, U1 V1, ..., 
+Un Vn), as there are 3 vertices, there will be three times two (u+v) == six 
+floats. The U V coordinates are typically in a rage between 0/0 to 1/1, but 
+i read somewhere that they could be larger which could mean a mirroring or 
+some sort of repetition. But lets assume they are always in the range of 
+0/0 to 1/1. 
+property uchar red  //not sure, probably a default color if the number of 
+uv coordiantes was zero because there is no texture file?
+property uchar green //not sure, probably a default color if the number of 
+uv coordiantes was zero because there is no texture file?
+property uchar blue //not sure, probably a default color if the number of 
+uv coordiantes was zero because there is no texture file?
+property uchar alpha //not sure, probably a default color if the number of 
+uv coordiantes was zero because there is no texture file?
+end_header
+
+I converted the binary ply to ascii ply and there is one line of a vertex:
+
+-7.326906 -0.92065 -15.26979 
+
+So x y z totally makes sense.
+
+Here is the line of a face:
+
+*3* 74350 89839 97021 *6* 0.670419 0.990827 0.669870 0.993111 0.668217 
+0.991639 255 255 255 255
+
+So the explanation in the header makes sense.
+
+It seems like this shouldnt be to difficult to implement. But i can't 
+promise that I'll find the time to make a PR that fixes that issue. 
+But at least wanted to have this documented in case somebody else is 
+running into that issue.
+
+
+
+
+
+Am Dienstag, 21. Januar 2020 12:47:08 UTC+1 schrieb Robert Osfield:
+&gt;<i>
+</I>&gt;<i> Hi Tom,
+</I>&gt;<i>
+</I>&gt;<i> FYI, it's was a community submission back in 2009, I don't personally know 
+</I>&gt;<i> the ply format or have done anything more than cosmetic work on this 
+</I>&gt;<i> plugin.  I basically in the same boat as yourself in terms of ability to 
+</I>&gt;<i> debug the format, I just have to look at the code and see what it's doing 
+</I>&gt;<i> with your file.  It could be a buggy file, or a buggy plugin, or perhaps a 
+</I>&gt;<i> revision to the ply specs since the OSG plugin was written.  The 
+</I>&gt;<i> investigation might determine which.
+</I>&gt;<i>
+</I>&gt;<i> I have begun looking into the issue with reading your ply file, I just get 
+</I>&gt;<i> a grey model right now.  Converting to .osgt using:
+</I>&gt;<i>
+</I>&gt;<i>    osgconv Wareneingang2.ply test.osgt
+</I>&gt;<i>
+</I>&gt;<i> And then looking the test.osgt in an editor reveals that the model has no 
+</I>&gt;<i> texture coordinats.
+</I>&gt;<i>
+</I>&gt;<i> The next step was to add some debugging to the ply plugin to see what was 
+</I>&gt;<i> happening in texture coordinates code:
+</I>&gt;<i>
+</I>&gt;<i> diff --git a/src/osgPlugins/ply/vertexData.cpp 
+</I>&gt;<i> b/src/osgPlugins/ply/vertexData.cpp
+</I>&gt;<i> index f2db29e00..58293f8dd 100644
+</I>&gt;<i> --- a/src/osgPlugins/ply/vertexData.cpp
+</I>&gt;<i> +++ b/src/osgPlugins/ply/vertexData.cpp
+</I>&gt;<i> @@ -174,6 +174,9 @@ void VertexData::readVertices( PlyFile* file, const 
+</I>&gt;<i> int nVertices,
+</I>&gt;<i>              _texcoord = new osg::Vec2Array;
+</I>&gt;<i>      }
+</I>&gt;<i>  
+</I>&gt;<i> +    std::cout&lt;&lt;&quot;fields = &quot;&lt;&lt;(fields)&lt;&lt;std::endl;
+</I>&gt;<i> +    std::cout&lt;&lt;&quot;fields &amp; TEXCOORD = &quot;&lt;&lt;(fields &amp; TEXCOORD)&lt;&lt;std::endl;
+</I>&gt;<i> +
+</I>&gt;<i>      // read in the vertices
+</I>&gt;<i>      for( int i = 0; i &lt; nVertices; ++i )
+</I>&gt;<i>      {
+</I>&gt;<i>
+</I>&gt;<i> The result was that the plugin wasn't detected any valid texture 
+</I>&gt;<i> coordinates as the field mask didn't enable TEXCOORD , so then I looked 
+</I>&gt;<i> header parsing code and it looks like:
+</I>&gt;<i>
+</I>&gt;<i>            // determine if the file stores vertex colors
+</I>&gt;<i>             for( int j = 0; j &lt; nProps; ++j )
+</I>&gt;<i>             {
+</I>&gt;<i>                 // if the string have the red means color info is there
+</I>&gt;<i>                 if( equal_strings( props[j]-&gt;name, &quot;x&quot; ) )
+</I>&gt;<i>                     fields |= XYZ;
+</I>&gt;<i>                 if( equal_strings( props[j]-&gt;name, &quot;nx&quot; ) )
+</I>&gt;<i>                     fields |= NORMALS;
+</I>&gt;<i>                 if( equal_strings( props[j]-&gt;name, &quot;alpha&quot; ) )
+</I>&gt;<i>                     fields |= RGBA;
+</I>&gt;<i>                 if ( equal_strings( props[j]-&gt;name, &quot;red&quot; ) )
+</I>&gt;<i>                     fields |= RGB;
+</I>&gt;<i>                 if( equal_strings( props[j]-&gt;name, &quot;ambient&quot; ) )
+</I>&gt;<i>                     fields |= AMBIENT;
+</I>&gt;<i>                 if( equal_strings( props[j]-&gt;name, &quot;diffuse_red&quot; ) )
+</I>&gt;<i>                     fields |= DIFFUSE;
+</I>&gt;<i>                 if (equal_strings(props[j]-&gt;name, &quot;specular_red&quot;))
+</I>&gt;<i>                     fields |= SPECULAR;
+</I>&gt;<i>                 if (equal_strings(props[j]-&gt;name, &quot;texture_u&quot;))
+</I>&gt;<i>                     fields |= TEXCOORD;
+</I>&gt;<i>                 if (equal_strings(props[j]-&gt;name, &quot;texture_v&quot;))
+</I>&gt;<i>                     fields |= TEXCOORD;
+</I>&gt;<i>             }
+</I>&gt;<i>
+</I>&gt;<i> So... the plugin is only checking for texture_u and texture_v, but if we 
+</I>&gt;<i> look at your .ply file the header has: 
+</I>&gt;<i>
+</I>&gt;<i> ly
+</I>&gt;<i> format binary_little_endian 1.0
+</I>&gt;<i> comment VCGLIB generated
+</I>&gt;<i> comment TextureFile Wareneingang_material_0_map_Kd.jpg
+</I>&gt;<i> element vertex 99428
+</I>&gt;<i> property float x
+</I>&gt;<i> property float y
+</I>&gt;<i> property float z
+</I>&gt;<i> element face 186642
+</I>&gt;<i> property list uchar int vertex_indices
+</I>&gt;<i> property list uchar float texcoord
+</I>&gt;<i> property uchar red
+</I>&gt;<i> property uchar green
+</I>&gt;<i> property uchar blue
+</I>&gt;<i> property uchar alpha
+</I>&gt;<i> end_header
+</I>&gt;<i>
+</I>&gt;<i> Which suggests it only has a single texcoord, no texcoord_u or texcoord_v 
+</I>&gt;<i> field that the OSG is assuming is required for textured ply files.  For a 
+</I>&gt;<i> 2D textured file I would expect two fields, like the head explicitly has to 
+</I>&gt;<i> the x, y, z and red, green, blue, alpha values.
+</I>&gt;<i>
+</I>&gt;<i> Does texcoord now implictly mean a x,y value?  Is there some other 
+</I>&gt;<i> encoding?
+</I>&gt;<i>
+</I>&gt;<i> A quick search online for the spec takes me to:
+</I>&gt;<i>
+</I>&gt;<i>    <A HREF="http://paulbourke.net/dataformats/ply/">http://paulbourke.net/dataformats/ply/</A>
+</I>&gt;<i>
+</I>&gt;<i> Which doesn't say anything explicit about texcoords so it looks like this 
+</I>&gt;<i> is user definable in which case how to interpret things could be really 
+</I>&gt;<i> open ended.
+</I>&gt;<i>
+</I>&gt;<i> I haven't yet found any explanation online about what is expected in this 
+</I>&gt;<i> case.  I know nothing about the tools you've used to create the file.  This 
+</I>&gt;<i> my first experience with looking into the PLY spec and the actual file 
+</I>&gt;<i> format and haven't away knowing is there is any official guide to what 
+</I>&gt;<i> should be doing with files which using the texcoords field.  To me it looks 
+</I>&gt;<i> like some tools have decided on their own convention and some other tools 
+</I>&gt;<i> honour this, but without know exactly what it is I don't have anything to 
+</I>&gt;<i> go on to make modifications to the OSG's ply plugin.
+</I>&gt;<i>
+</I>&gt;<i> I have to defer further work on this to members of the community that 
+</I>&gt;<i> actually use PLY files in their applications, you will have more knowledge 
+</I>&gt;<i> than myself and what might be meant.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/0a139cfd-16d2-4630-ac52-284f93d76461%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/0a139cfd-16d2-4630-ac52-284f93d76461%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200121/eac4fa7a/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200121/eac4fa7a/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010756.html">[osg-users] Textured ply file is black when loaded.
+</A></li>
+	<LI>Next message (by thread): <A HREF="010759.html">[osg-users] Textured ply file is black when loaded.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10758">[ date ]</a>
+              <a href="thread.html#10758">[ thread ]</a>
+              <a href="subject.html#10758">[ subject ]</a>
+              <a href="author.html#10758">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

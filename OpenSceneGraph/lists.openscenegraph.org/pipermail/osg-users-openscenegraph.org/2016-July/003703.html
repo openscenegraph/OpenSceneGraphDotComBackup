@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Bindless Textures
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Bindless%20Textures&In-Reply-To=%3CCANfcm6YiGqvLehf_7AQyzEynPf_kq_eRRiCa%2BK5FOEi3sgDNyQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279925.html">
+   <LINK REL="Next"  HREF="279930.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Bindless Textures</H1>
+<!--htdig_noindex-->
+    <B>Glenn Waldron</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Bindless%20Textures&In-Reply-To=%3CCANfcm6YiGqvLehf_7AQyzEynPf_kq_eRRiCa%2BK5FOEi3sgDNyQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Bindless Textures">gwaldron at gmail.com
+       </A><BR>
+    <I>Fri Jul 15 08:33:44 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279925.html">[osg-users] Bindless Textures
+</A></li>
+        <LI>Next message: <A HREF="279930.html">[osg-users] OSX/X11 graphics context not updating after window	resize
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3703">[ date ]</a>
+              <a href="thread.html#3703">[ thread ]</a>
+              <a href="subject.html#3703">[ subject ]</a>
+              <a href="author.html#3703">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>David,
+This may or may not be helpful, but a while back I made a bindless version
+of osg::Texture2D here you can look at. It's mostly a experiment but you
+might be able to glean something front it:
+
+<A HREF="https://github.com/gwaldron/osgearth/blob/bindless/src/osgEarth/Texture">https://github.com/gwaldron/osgearth/blob/bindless/src/osgEarth/Texture</A>
+<A HREF="https://github.com/gwaldron/osgearth/blob/bindless/src/osgEarth/Texture.cpp">https://github.com/gwaldron/osgearth/blob/bindless/src/osgEarth/Texture.cpp</A>
+
+
+Glenn Waldron
+
+On Fri, Jul 15, 2016 at 10:21 AM, David Heitbrink &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david-heitbrink at uiowa.edu</A>
+&gt;<i> wrote:
+</I>
+&gt;<i> Has any one implemented bindless textures? I am trying to add this to my
+</I>&gt;<i> app to improve batching. I have a large scene, with lots of unique draw
+</I>&gt;<i> calls. We do use texture atlas's, the number of small objects is limited. I
+</I>&gt;<i> would like to further improve batching without having to redo textures. I
+</I>&gt;<i> do have LODs and occluder nodes as well.
+</I>&gt;<i>
+</I>&gt;<i> Conveniently most of my objects use triangle list, so merging those worked
+</I>&gt;<i> out pretty well. I am using a shader storage buffer object to upload the
+</I>&gt;<i> texture handles to the shader. I have confirmed the value for the handles
+</I>&gt;<i> that I have set are getting into the shader.
+</I>&gt;<i>
+</I>&gt;<i> Here is the segment of my shader where I get the texture:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> layout (binding = 0, std140) coherent buffer TEXTURE_BLOCK
+</I>&gt;<i> {
+</I>&gt;<i>     uint64_t      tex[512];
+</I>&gt;<i> };
+</I>&gt;<i> uniform int textureIndex;
+</I>&gt;<i> void doTexture(inout vec4 color) {
+</I>&gt;<i>        sampler2D s = sampler2D(tex[textureIndex]);
+</I>&gt;<i>        vec4 texel = texture2D(s,TexCoord[0]);
+</I>&gt;<i>            color.rgb = texel.rgb*color.rgb;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I have a draw call back that grabs the extensions:
+</I>&gt;<i> glGetTextureHandleARB
+</I>&gt;<i> glMakeTextureHandleResidentARB
+</I>&gt;<i>
+</I>&gt;<i> Also it grabs the texture handles, I have visitor go and grab references
+</I>&gt;<i> to all the relevant textures (when the scene is loaded and the objects are
+</I>&gt;<i> merged), and I do:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>     osg::UIntArray* array =
+</I>&gt;<i> static_cast&lt;osg::UIntArray*&gt;(m_ssbo-&gt;getBufferData(0));
+</I>&gt;<i>     vector&lt;GLuint&gt; &amp;rawData = array-&gt;asVector();
+</I>&gt;<i>     GLuint64* raw64ptr = (GLuint64*)(rawData.data());
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     if (!bindings)
+</I>&gt;<i>         return false;
+</I>&gt;<i>     for (auto itr = m_textureIdMap.begin(); itr != m_textureIdMap.end();
+</I>&gt;<i> ++itr){
+</I>&gt;<i>         osg::Texture* text=   m_textureMap[itr-&gt;first];
+</I>&gt;<i>         int id = itr-&gt;second;
+</I>&gt;<i>         auto textObject  = text-&gt;getTextureObject(rinfo.getContextID());
+</I>&gt;<i>          if (!textObject){
+</I>&gt;<i>                text-&gt;apply(*rinfo.getState());
+</I>&gt;<i>                textObject  = text-&gt;getTextureObject(rinfo.getContextID());
+</I>&gt;<i>                if (!textObject) return false;
+</I>&gt;<i>          }
+</I>&gt;<i>          uint64 textId = glGetTextureHandleARB(textObject-&gt;_id);
+</I>&gt;<i>          if (glIsTextureHandleResidentARB(textId)==GL_FALSE)
+</I>&gt;<i>             glMakeTextureHandleResidentARB(textObject-&gt;_id);
+</I>&gt;<i>          raw64ptr[id] = textId;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Right now I am getting black for my texture, I cycle through textureIndex
+</I>&gt;<i> from my first texture to my last, I plan on replacing this with an
+</I>&gt;<i> attribute later, but there is not much point right now if I cannot get any
+</I>&gt;<i> textures to show up. If I do get this to work I do plan on building an
+</I>&gt;<i> example app and submitting it.
+</I>&gt;<i>
+</I>&gt;<i> #version 430 compatibility
+</I>&gt;<i> #extension GL_NV_bindless_texture : require
+</I>&gt;<i> #extension GL_NV_shader_buffer_load : require
+</I>&gt;<i> #extension GL_NV_gpu_shader5 : require // uint64_t
+</I>&gt;<i>
+</I>&gt;<i> I am not sure doing a apply() to the texture and grabbing the id is the
+</I>&gt;<i> best idea.
+</I>&gt;<i>
+</I>&gt;<i> I am using OSG 3.4.0, I did make some modifications to support unsigned 64
+</I>&gt;<i> bit uniforms, and to built OSG built-ins to after the last #extension. I
+</I>&gt;<i> have not checked to see if some has added this to the most recent
+</I>&gt;<i> development branch, if not I would gladly
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic8e4c.php?p=68142#68142">http://forum.openscenegraph.org/viewtopic.php?p=68142#68142</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160715/cb954be9/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160715/cb954be9/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279925.html">[osg-users] Bindless Textures
+</A></li>
+	<LI>Next message: <A HREF="279930.html">[osg-users] OSX/X11 graphics context not updating after window	resize
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3703">[ date ]</a>
+              <a href="thread.html#3703">[ thread ]</a>
+              <a href="subject.html#3703">[ subject ]</a>
+              <a href="author.html#3703">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

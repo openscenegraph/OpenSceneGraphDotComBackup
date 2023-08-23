@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Dynamic VBO Performance Drop
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dynamic%20VBO%20Performance%20Drop&In-Reply-To=%3CCAGYwD3D1tzevSaxMEqshWN-KAU2NXnKREg2rWBQkmTYSwqsMAA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009451.html">
+   <LINK REL="Next"  HREF="009455.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Dynamic VBO Performance Drop</H1>
+<!--htdig_noindex-->
+    <B>Ravi Mathur</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dynamic%20VBO%20Performance%20Drop&In-Reply-To=%3CCAGYwD3D1tzevSaxMEqshWN-KAU2NXnKREg2rWBQkmTYSwqsMAA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Dynamic VBO Performance Drop">ravidavi at utexas.edu
+       </A><BR>
+    <I>Thu Dec  6 12:35:30 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009451.html">[osg-users] Tesla?
+</A></li>
+        <LI>Next message (by thread): <A HREF="009455.html">[osg-users] Dynamic VBO Performance Drop
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9452">[ date ]</a>
+              <a href="thread.html#9452">[ thread ]</a>
+              <a href="subject.html#9452">[ subject ]</a>
+              <a href="author.html#9452">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello all,
+
+I'm running into a strange performance drop issue when using dynamic VBOs
+that change frequently. I am measuring performance using framerate with
+vsync turned off. I know that framerate isn't always the best performance
+measurement, but my example is simple enough and the performance drop is
+significant and repeatable, so I feel comfortable using framerate.
+
+The issue: Suppose I have a Geometry that will hold lots of points (e.g.
+100k or more). If I choose to pre-define all points in its vertex array,
+then a certain framerate is achieved. However, if I choose to add a batch
+of points during each update traversal, up to the same total number of
+points, then after all points have been added the framerate is much lower
+than in the pre-defined model. Note that &quot;much lower&quot; means over 30% lower.
+
+Note that in both cases, the same number of points are being drawn, and the
+Geometry and its vertex array are created once and modified (I'm not
+creating new Geometry objects at every update). All that changes is whether
+I added the points all at once before rendering or a few at a time while
+rendering.
+
+I wrote a small standalone osg example (attached). Compile, run, and show
+stats using:
+&gt;<i> .\osgdynamicvbotest.exe --numPoints 100000 --batchSize 100000
+</I>   * If batchSize = 100000 (same as numPoints) then you'll see the case
+where all points are pre-defined.
+   * As you reduce batchSize (e.g. 100), it will take longer to add the
+total number of points, but after all points have been added and the
+framerate stabilizes, you'll see it is much lower than the pre-defined case
+above.
+
+My question is, why is this happening? Is it related to intermediate VBOs
+being kept in memory and slowing down the GPU? All the other forum posts I
+see on the topic are either about VBOs not displaying properly (not the
+case here) or about memory usage (not the case here).
+
+Any thoughts on what's going on here would be very much appreciated.
+
+Thank you!
+Ravi
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20181206/95e6aa2b/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20181206/95e6aa2b/attachment.html</A>&gt;
+-------------- next part --------------
+#include &lt;iostream&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+/** Adds points to a geometry in batches, up to a specified number of points. */
+class PointUpdateCallback : public osg::Callback
+{
+public:
+  PointUpdateCallback(unsigned int numPoints, unsigned int batchSize)
+    : _numPoints(numPoints), _batchSize(batchSize)
+  {}
+
+  virtual bool run(osg::Object* object, osg::Object* data)
+  {
+    // Get the arrays that hold vertex data
+    osg::Geode* geode = static_cast&lt;osg::Geode*&gt;(object);
+    osg::Geometry* geom = geode-&gt;getDrawable(0)-&gt;asGeometry();
+    osg::Vec3Array* vertexArray = static_cast&lt;osg::Vec3Array*&gt;(geom-&gt;getVertexArray());
+    osg::DrawArrays* drawArrays = static_cast&lt;osg::DrawArrays*&gt;(geom-&gt;getPrimitiveSet(0));
+
+    // Add a batch of points
+    osg::Vec3 pos;
+    unsigned int currBatchPoints;
+    for(currBatchPoints = 0; (vertexArray-&gt;size() &lt; _numPoints) &amp;&amp; (currBatchPoints &lt; _batchSize); ++currBatchPoints)
+    {
+      // Compute current point on the unit circle
+      double t = ((double)vertexArray-&gt;size())*2.0*osg::PI / ((double)_numPoints);
+      pos[0] = std::cos(t);
+      pos[1] = std::sin(t);
+      vertexArray-&gt;push_back(pos);
+    }
+
+    // Mark data as changed if a new batch was added
+    if (currBatchPoints &gt; 0)
+    {
+      std::cout &lt;&lt; &quot;Vertex array size = &quot; &lt;&lt; vertexArray-&gt;size() &lt;&lt; &quot;, will stop at &quot; &lt;&lt; _numPoints &lt;&lt; std::endl;
+
+      vertexArray-&gt;dirty();
+      drawArrays-&gt;setCount(vertexArray-&gt;size());
+      drawArrays-&gt;dirty();
+      geom-&gt;dirtyBound();
+    }
+
+    // Continue traversing as needed
+    return traverse(object, data);
+  }
+
+private:
+  unsigned int _numPoints, _batchSize;
+};
+
+osg::Node* createScene()
+{
+  // Initialize geometry that will draw line strips
+  osg::Geometry *geom = new osg::Geometry;
+  geom-&gt;setDataVariance(osg::Object::DYNAMIC);
+  geom-&gt;setUseDisplayList(false);
+  geom-&gt;setUseVertexBufferObjects(true);
+  geom-&gt;getOrCreateVertexBufferObject()-&gt;setUsage(GL_DYNAMIC_DRAW);
+  geom-&gt;setVertexArray(new osg::Vec3Array());
+  osg::Vec4Array *lineColors = new osg::Vec4Array(1);
+  (*lineColors)[0] = osg::Vec4(1.0, 1.0, 1.0, 1.0);
+  geom-&gt;setColorArray(lineColors, osg::Array::BIND_OVERALL);
+  geom-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP, 0, 0));
+  
+  // Geode to hold the geometry
+  osg::Geode* geode = new osg::Geode();
+  geode-&gt;addDrawable(geom);
+  osg::StateSet *stateset = geode-&gt;getOrCreateStateSet();
+  stateset-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+  return geode;
+}
+
+int main(int argc, char** argv)
+{
+  // Parse user inputs
+  osg::ArgumentParser arguments(&amp;argc, argv);
+
+  // Set number of points and batch size
+  unsigned int numPoints = 300000;
+  arguments.read(&quot;--numPoints&quot;, numPoints);
+  unsigned int batchSize = 100;
+  arguments.read(&quot;--batchSize&quot;, batchSize);
+
+  OSG_NOTICE &lt;&lt; &quot;Will draw &quot; &lt;&lt; numPoints &lt;&lt; &quot; points in batches of &quot; &lt;&lt; batchSize &lt;&lt; &quot; points&quot; &lt;&lt; std::endl;
+
+  osg::ref_ptr&lt;osg::Node&gt; scene = createScene();
+  scene-&gt;setUpdateCallback(new PointUpdateCallback(numPoints, batchSize));
+
+  osgViewer::Viewer viewer;
+  viewer.setSceneData(scene);
+  viewer.setUpViewInWindow(100, 100, 1024, 768);
+  viewer.addEventHandler(new osgViewer::StatsHandler);
+  return viewer.run();
+}
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009451.html">[osg-users] Tesla?
+</A></li>
+	<LI>Next message (by thread): <A HREF="009455.html">[osg-users] Dynamic VBO Performance Drop
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9452">[ date ]</a>
+              <a href="thread.html#9452">[ thread ]</a>
+              <a href="subject.html#9452">[ subject ]</a>
+              <a href="author.html#9452">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

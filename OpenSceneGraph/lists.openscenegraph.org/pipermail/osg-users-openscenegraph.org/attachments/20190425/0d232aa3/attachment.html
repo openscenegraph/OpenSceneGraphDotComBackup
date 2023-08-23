@@ -1,0 +1,71 @@
+<tt>
+&lt;div&nbsp;dir=&quot;auto&quot;&gt;My&nbsp;first&nbsp;question&nbsp;would&nbsp;be&nbsp;why&nbsp;you&nbsp;didn&#39;t&nbsp;like&nbsp;the&nbsp;existing&nbsp;Qt&nbsp;OSG&nbsp;options.&lt;div&nbsp;dir=&quot;auto&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;dir=&quot;auto&quot;&gt;What&nbsp;were&nbsp;you&nbsp;seeking&nbsp;to&nbsp;improve? &lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Thu,&nbsp;Apr&nbsp;25,&nbsp;2019,&nbsp;11:49&nbsp;AM&nbsp;Eric&nbsp;Stancliff&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:ericstancliff@yahoo.com&quot;&gt;ericstancliff@yahoo.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hello!&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&#39;m&nbsp;currently&nbsp;working&nbsp;on&nbsp;embedding&nbsp;an&nbsp;osgViewer&nbsp;into&nbsp;a&nbsp;QWidget&nbsp;(using&nbsp;Qt). &nbsp;We&#39;ve&nbsp;historically&nbsp;done&nbsp;this&nbsp;using&nbsp;QGLWidget&nbsp;and&nbsp;the&nbsp;EmbeddedGraphicsWindow,&nbsp;letting&nbsp;Qt&nbsp;manage&nbsp;the&nbsp;OpenGL&nbsp;contexts. &nbsp;I&#39;d&nbsp;like&nbsp;to&nbsp;move&nbsp;away&nbsp;from&nbsp;using&nbsp;QGLWidget&nbsp;and&nbsp;using&nbsp;contexts&nbsp;managed&nbsp;by&nbsp;OSG. &nbsp;I&#39;ve&nbsp;accomplished&nbsp;this&nbsp;on&nbsp;windows&nbsp;but&nbsp;am&nbsp;running&nbsp;into&nbsp;issues&nbsp;on&nbsp;Linux. &nbsp;I&#39;m&nbsp;creating&nbsp;the&nbsp;window&nbsp;as&nbsp;follows:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+#include&nbsp;&lt;QWidget&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+#ifdef&nbsp;WIN32&lt;br&gt;<br>
+#include&nbsp;&lt;osgViewer/api/Win32/GraphicsWindowWin32&gt;&lt;br&gt;<br>
+#define&nbsp;OSG_PLATFORM_WINDOW&nbsp;osgViewer::GraphicsWindowWin32&lt;br&gt;<br>
+#define&nbsp;WINDOW_HANDLE&nbsp;HWND&lt;br&gt;<br>
+#else&lt;br&gt;<br>
+#include&nbsp;&lt;osgViewer/api/X11/GraphicsWindowX11&gt;&lt;br&gt;<br>
+#define&nbsp;OSG_PLATFORM_WINDOW&nbsp;osgViewer::GraphicsWindowX11&lt;br&gt;<br>
+#define&nbsp;WINDOW_HANDLE&nbsp;Window&lt;br&gt;<br>
+#endif&lt;br&gt;<br>
+&lt;br&gt;<br>
+osg::GraphicsContext::Traits*&nbsp;createWindowTraits(QWidget*&nbsp;OwningWidget)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;auto&nbsp;traits&nbsp;=&nbsp;new&nbsp;osg::GraphicsContext::Traits();&lt;br&gt;<br>
+ &nbsp; &nbsp;traits-&gt;x&nbsp;=&nbsp;0;&lt;br&gt;<br>
+ &nbsp; &nbsp;traits-&gt;y&nbsp;=&nbsp;0;&lt;br&gt;<br>
+ &nbsp; &nbsp;traits-&gt;width&nbsp;=&nbsp;1080;&lt;br&gt;<br>
+ &nbsp; &nbsp;traits-&gt;height&nbsp;=&nbsp;720;&lt;br&gt;<br>
+ &nbsp; &nbsp;traits-&gt;doubleBuffer&nbsp;=&nbsp;true;&lt;br&gt;<br>
+ &nbsp; &nbsp;traits-&gt;useCursor&nbsp;=&nbsp;true;&lt;br&gt;<br>
+ &nbsp; &nbsp;//traits-&gt;installEventHandler&nbsp;=&nbsp;true;&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(OwningWidget)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;OSG_PLATFORM_WINDOW::WindowData*&nbsp;data&nbsp;=&nbsp;new&nbsp;OSG_PLATFORM_WINDOW::WindowData((WINDOW_HANDLE)OwningWidget-&gt;winId());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;traits-&gt;inheritedWindowData&nbsp;=&nbsp;data;&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;return&nbsp;traits;&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+----&nbsp;and&nbsp;then&nbsp;in&nbsp;my&nbsp;class&nbsp;derived&nbsp;from&nbsp;Viewer&nbsp;with&nbsp;the&nbsp;traits&nbsp;created&nbsp;above&nbsp;----&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+getCamera()-&gt;setGraphicsContext(osg::GraphicsContext::createGraphicsContext(traits));&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Everything&nbsp;is&nbsp;working&nbsp;as&nbsp;expected&nbsp;on&nbsp;Windows. &nbsp;The&nbsp;problem&nbsp;I&#39;m&nbsp;having&nbsp;is&nbsp;that&nbsp;on&nbsp;Linux&nbsp;(RHEL7),&nbsp;my&nbsp;event&nbsp;handlers&nbsp;never&nbsp;get&nbsp;any&nbsp;mouse/keyboard&nbsp;events. &nbsp;I&#39;m&nbsp;unclear&nbsp;whether&nbsp;QWidget&#39;s&nbsp;X11&nbsp;implementation&nbsp;for&nbsp;the&nbsp;owning&nbsp;widget&nbsp;is&nbsp;eating&nbsp;my&nbsp;events,&nbsp;or&nbsp;if&nbsp;the&nbsp;inherited&nbsp;window&nbsp;implementation&nbsp;of&nbsp;the&nbsp;GraphicsWindowX11&nbsp;has&nbsp;a&nbsp;bug. &nbsp;The&nbsp;resize&nbsp;events&nbsp;I&#39;m&nbsp;passing&nbsp;from&nbsp;QWidget&#39;s&nbsp;resize&nbsp;and&nbsp;pushing&nbsp;to&nbsp;my&nbsp;viewers&nbsp;event&nbsp;queue&nbsp;are&nbsp;effective&nbsp;so&nbsp;my&nbsp;window&nbsp;is&nbsp;successfully&nbsp;embedded&nbsp;in&nbsp;the&nbsp;correct&nbsp;widget&nbsp;and&nbsp;rendering&nbsp;properly.&nbsp;Just&nbsp;events&nbsp;aren&#39;t&nbsp;working.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Any&nbsp;suggestions?&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thanks!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Eric&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=75893#75893&quot;&nbsp;rel=&quot;noreferrer&nbsp;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=75893#75893&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&nbsp;rel=&quot;noreferrer&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&nbsp;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;<br>
+
+</tt>

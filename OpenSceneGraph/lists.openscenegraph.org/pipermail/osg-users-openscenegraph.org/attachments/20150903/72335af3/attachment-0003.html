@@ -1,0 +1,64 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Julie,&lt;br&gt;&lt;br&gt;&lt;/div&gt;I&#39;m&nbsp;not&nbsp;why&nbsp;you&nbsp;are&nbsp;using&nbsp;a&nbsp;separate&nbsp;thread&nbsp;here&nbsp;as&nbsp;the&nbsp;syncronization&nbsp;will&nbsp;likely&nbsp;just&nbsp;serialize&nbsp;the&nbsp;operations&nbsp;anyway,&nbsp;it&#39;ll&nbsp;be&nbsp;more&nbsp;efficient&nbsp;to&nbsp;do&nbsp;all&nbsp;the&nbsp;work&nbsp;in&nbsp;the&nbsp;update&nbsp;callback&nbsp;directly&nbsp;as&nbsp;you&nbsp;won&#39;t&nbsp;thash&nbsp;the&nbsp;cache.&lt;br&gt;&lt;br&gt;&lt;/div&gt;As&nbsp;for&nbsp;the&nbsp;cause&nbsp;of&nbsp;the&nbsp;crash,&nbsp;if&nbsp;you&nbsp;running&nbsp;the&nbsp;viewer&nbsp;multi-threaded&nbsp;(which&nbsp;is&nbsp;the&nbsp;default)&nbsp;then&nbsp;the&nbsp;static&nbsp;objects&nbsp;left&nbsp;in&nbsp;draw&nbsp;traversal&nbsp;will&nbsp;run&nbsp;in&nbsp;a&nbsp;parallel&nbsp;with&nbsp;the&nbsp;next&nbsp;frame. &nbsp;Now&nbsp;if&nbsp;the&nbsp;state+drawables&nbsp;being&nbsp;dispatches&nbsp;in&nbsp;by&nbsp;the&nbsp;draw&nbsp;thread&nbsp;aren&#39;t&nbsp;actually&nbsp;static&nbsp;but&nbsp;are&nbsp;being&nbsp;modified&nbsp;by&nbsp;the&nbsp;update&nbsp;traversal&nbsp;from&nbsp;the&nbsp;main&nbsp;thread&nbsp;(or&nbsp;other&nbsp;thread)&nbsp;you&#39;ll&nbsp;get&nbsp;a&nbsp;conflict. &nbsp;&lt;br&gt;&lt;br&gt;The&nbsp;way&nbsp;to&nbsp;avoid&nbsp;this&nbsp;conflict&nbsp;is&nbsp;to&nbsp;set&nbsp;the&nbsp;DataVariance&nbsp;on&nbsp;the&nbsp;StateSet&nbsp;and&nbsp;Drawable&nbsp;objects&nbsp;that&nbsp;you&nbsp;are&nbsp;modifying&nbsp;to&nbsp;DYNAMIC. &nbsp;The&nbsp;draw&nbsp;traversal&nbsp;holds&nbsp;back&nbsp;the&nbsp;next&nbsp;frame&nbsp;till&nbsp;all&nbsp;the&nbsp;DYNMAIC&nbsp;StateSet&nbsp;and&nbsp;Drawable&nbsp;are&nbsp;dispatched&nbsp;to&nbsp;OpenGL&nbsp;thus&nbsp;avoid&nbsp;thread&nbsp;conflict. &nbsp;An&nbsp;alternative&nbsp;to&nbsp;this&nbsp;would&nbsp;be&nbsp;to&nbsp;run&nbsp;the&nbsp;viewer&nbsp;SingleThreaded&nbsp;or&nbsp;CullDrawThreadPerContext&nbsp;by&nbsp;setting&nbsp;the&nbsp;threading&nbsp;model&nbsp;using&nbsp;viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);&lt;br&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;3&nbsp;September&nbsp;2015&nbsp;at&nbsp;13:06,&nbsp;Julie&nbsp;Green&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:laroux92@mail.ru&quot;&nbsp;target=&quot;_blank&quot;&gt;laroux92@mail.ru&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&#39;m&nbsp;trying&nbsp;to&nbsp;draw&nbsp;a&nbsp;quadric&nbsp;surface,&nbsp;which&nbsp;is&nbsp;modifying&nbsp;each&nbsp;frame,&nbsp;and&nbsp;I&#39;m&nbsp;getting&nbsp;a&nbsp;heap&nbsp;corruption&nbsp;error.&nbsp;I&nbsp;guess&nbsp;the&nbsp;problem&nbsp;is&nbsp;in&nbsp;calculating&nbsp;function,&nbsp;or&nbsp;in&nbsp;update&nbsp;callback,&nbsp;but&nbsp;can&#39;t&nbsp;find&nbsp;it&nbsp;in&nbsp;the&nbsp;debugger.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;SurfaceCalculationThread::reCalculateSurface()&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;mutex.lock();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;x,&nbsp;y,&nbsp;z;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;int&nbsp;i&nbsp;=&nbsp;0;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;t=time-&gt;elapsedTime();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;for&nbsp;(x&nbsp;=&nbsp;-polygonLength;&nbsp;x&nbsp;&lt;=&nbsp;polygonLength;&nbsp;x&nbsp;+=&nbsp;1.0f)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;for&nbsp;(y&nbsp;=&nbsp;-polygonLength;&nbsp;y&nbsp;&lt;=&nbsp;polygonLength;&nbsp;y&nbsp;+=&nbsp;1.0f)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;(*oldVertexArray)[i].set((*newVertexArray)[i]);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;z&nbsp;=&nbsp;computeZ(x,&nbsp;y,&nbsp;t);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;(*newVertexArray)[i].set(osg::Vec3f(x,&nbsp;y,&nbsp;z));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;i++;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;setVertexArray(oldVertexArray);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;setUpdateCallback(new&nbsp;UpdateSurfaceCallback(conditionVariable));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osgUtil::SmoothingVisitor&nbsp;*smoothingVisitor&nbsp;=&nbsp;new&nbsp;osgUtil::SmoothingVisitor();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;smoothingVisitor-&gt;smooth(*geometry);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;smoothingVisitor-&gt;setName(&quot;normal&quot;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;conditionVariable-&gt;wait(&amp;mutex);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;mutex.unlock();&lt;br&gt;<br>
+&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;UpdateSurfaceCallback::operator()(osg::Node&nbsp;*node,&nbsp;osg::NodeVisitor&nbsp;*nv)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;traverse(node,&nbsp;nv);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;conditionVariable-&gt;wakeAll();&lt;br&gt;<br>
+};&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thanks&nbsp;for&nbsp;your&nbsp;help!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Julie&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=65007#65007&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=65007#65007&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

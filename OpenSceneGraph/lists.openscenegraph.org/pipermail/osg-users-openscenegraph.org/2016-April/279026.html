@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Disappearing text
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Disappearing%20text&In-Reply-To=%3C1460912320.m2f.66845%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002978.html">
+   <LINK REL="Next"  HREF="002807.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Disappearing text</H1>
+<!--htdig_noindex-->
+    <B>Ronny Hatteland</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Disappearing%20text&In-Reply-To=%3C1460912320.m2f.66845%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Disappearing text">ronnyhatteland at gmail.com
+       </A><BR>
+    <I>Sun Apr 17 09:58:40 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002978.html">[osg-users] [build] Can't build documentation
+</A></li>
+        <LI>Next message: <A HREF="002807.html">[osg-users] Disappearing text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279026">[ date ]</a>
+              <a href="thread.html#279026">[ thread ]</a>
+              <a href="subject.html#279026">[ subject ]</a>
+              <a href="author.html#279026">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+By coincidence I made some progress to an issue that has been bugging me for two years, where the osgText disappears in a certain case. I am using VBO hardware instancing for another object, and when only the text and the VBO hardware instanced objects are visible (using a Switch node), the text disappears.
+
+Previously, I though it was related to the bounding box of the VBO instances, as the text would appear again if other objects were shown at the same time. However, today I noticed that when the text was not updated on cursor move, the original text that was set on the creation of the osgText::Text object would be visible as expected.
+
+The text is updated using txtObject-&gt;SetText(text) with the cursor position on a grid on the xz plane, with a text looking like this &quot;(%d, %d)&quot;. Below is the code for the initialization of the text objects:
+
+
+Code:
+
+txtSelectedCell = new osgText::Text;
+txtSelectedCell-&gt;setDataVariance(Object::DYNAMIC);
+txtSelectedCell-&gt;setFont(consolasBold);
+txtSelectedCell-&gt;setFontResolution(128, 128);
+txtSelectedCell-&gt;setCharacterSizeMode(osgText::TextBase::OBJECT_COORDS);
+txtSelectedCell-&gt;setLineSpacing(0.10f);
+txtSelectedCell-&gt;setPosition(osg::Vec3(0.0, /*-0.001*/0.0, 0.0));
+txtSelectedCell-&gt;setCharacterSize(0.0015f);
+txtSelectedCell-&gt;setColor(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+txtSelectedCell-&gt;setBackdropType(osgText::Text::OUTLINE);
+txtSelectedCell-&gt;setBackdropColor(osg::Vec4(0.0f, 0.0f, 0.0f, 1.0f));
+txtSelectedCell-&gt;setBackdropOffset(0.10f, 0.10f);
+txtSelectedCell-&gt;setAxisAlignment(osgText::Text::XZ_PLANE);
+txtSelectedCell-&gt;setAlignment(osgText::Text::CENTER_CENTER);
+txtSelectedCell-&gt;setText(&quot;(X,Y)&quot;);
+
+ref_ptr&lt;Geode&gt; infoCellText = new osg::Geode;
+infoCellText-&gt;setDataVariance(Object::DYNAMIC);
+infoCellText-&gt;getOrCreateStateSet()-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+infoCellText-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED);
+infoCellText-&gt;getOrCreateStateSet()-&gt;setMode(GL_BLEND, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+infoCellText-&gt;getOrCreateStateSet()-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+text_program = LoadShaderProgram(&quot;textMaterial.vert&quot;, &quot;textMaterial.frag&quot;);;
+infoCellText-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(text_program.get(), osg::StateAttribute::ON);
+osgUtil::GLObjectsVisitor glov(osgUtil::GLObjectsVisitor::TRAVERSE_ALL_CHILDREN | osgUtil::GLObjectsVisitor::SWITCH_OFF_DISPLAY_LISTS | osgUtil::GLObjectsVisitor::SWITCH_ON_VERTEX_BUFFER_OBJECTS);
+ref_ptr&lt;osg::State&gt; state = new osg::State(); glov.setState(state);
+infoCellText.get()-&gt;accept(glov);
+infoCellText-&gt;setCullingActive(false);
+infoCellText-&gt;addDrawable(txtSelectedCell.get());
+ref_ptr&lt;MatrixTransform&gt; mtSelectedCell-&gt;addChild(infoCellText); // Updated on mouse move
+
+
+
+
+Exploring this further, I created a new text object each time position on the grid was updated, that I added to the infoCellText geode. This would work only if I did not remove the original txtSelectedCell child. However, it would not work if txtSelectedCell-&gt;SetText was initialized to &quot;&quot; instead of &quot;(X,Y)&quot;. If the txtSelectedCell text was changed with setText at the same time as a new osgText was added to the infoCellText geode, the text would not show.
+
+I suspect this has something to do with the bounding box of the text, however, I am not entirely sure if it is related to the osgText::Text object or the Geode with the text as a child. I tried to call computeBound() on txtSelectedCell as well as infoCellText after updating the text with setText(), but without any luck. In many cases when the text is not displayed I get weird artifacts with planes cutting through the view. Any suggestions would be extremely appreciated.
+
+Thank you!
+
+Cheers,
+Ronny
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic513d.php?p=66845#66845">http://forum.openscenegraph.org/viewtopic.php?p=66845#66845</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002978.html">[osg-users] [build] Can't build documentation
+</A></li>
+	<LI>Next message: <A HREF="002807.html">[osg-users] Disappearing text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279026">[ date ]</a>
+              <a href="thread.html#279026">[ thread ]</a>
+              <a href="subject.html#279026">[ subject ]</a>
+              <a href="author.html#279026">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

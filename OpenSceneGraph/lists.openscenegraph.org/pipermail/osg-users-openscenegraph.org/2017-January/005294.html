@@ -1,0 +1,119 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] System requirements for OpenSceneGraph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20System%20requirements%20for%20OpenSceneGraph&In-Reply-To=%3CCAFN7Y%2BWgd1Rruafo_vXLtmJEDpyUq6LboGUG2k0VtmoJypMoYg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005293.html">
+   <LINK REL="Next"  HREF="005306.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] System requirements for OpenSceneGraph</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20System%20requirements%20for%20OpenSceneGraph&In-Reply-To=%3CCAFN7Y%2BWgd1Rruafo_vXLtmJEDpyUq6LboGUG2k0VtmoJypMoYg%40mail.gmail.com%3E"
+       TITLE="[osg-users] System requirements for OpenSceneGraph">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Jan  6 08:28:01 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005293.html">[osg-users] System requirements for OpenSceneGraph
+</A></li>
+        <LI>Next message: <A HREF="005306.html">[osg-users] System requirements for OpenSceneGraph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5294">[ date ]</a>
+              <a href="thread.html#5294">[ thread ]</a>
+              <a href="subject.html#5294">[ subject ]</a>
+              <a href="author.html#5294">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Nikita,
+
+On 6 January 2017 at 15:18, Nikita Petrov &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">nikitapetroff at gmail.com</A>&gt; wrote:
+&gt;<i> D:\OSG\build\OSG\bin&gt;osgviewer.exe cow.osg
+</I>&gt;<i> _forceVertexArrayObject = 0
+</I>&gt;<i> _forceVertexBufferObject = 0
+</I>&gt;<i> ViewerBase::configureAffinity() numProcessors=1
+</I>&gt;<i> SetThreadAffinity() : affinity.activeCPUs.size()=0, numprocessors=1
+</I>&gt;<i>    Fallback setting affinityMask : 0x1
+</I>&gt;<i> Warning: detected OpenGL error 'invalid enumerant' at Before Renderer::compile
+</I>
+Most of the output is debug information for some newly developed
+features found in git master, the values are all correct, once we get
+closer to the next stable release this information will be removed or
+quietened down.  For the purpose of tracking down what is going wrong
+you can safely ignore this part of the output.
+
+The &quot;Warning: detected OpenGL error 'invalid enumerant' at Before
+Renderer::compile&quot; does suggest that some OpenGL state is being passed
+from the OSG that isn't passed in a way that the driver is happy with,
+either a feature that isn't supported by the driver that the OSG is
+assuming is that will be supported, or a bug in either the driver or
+the OSG.
+
+The line that is triggering the &quot;Warning: detected OpenGL error
+'invalid enumerant' at Before Renderer::compile&quot; can be found in
+OpenSceneGraph/src/osgViewer/Renderer.cpp (see the Renderer::compile()
+method) with the line:
+
+    sceneView-&gt;getState()-&gt;checkGLErrors(&quot;Before Renderer::compile&quot;);
+
+This occurs before any of the scene graph related GL object
+compilation and since the Renderer::compile() by default is called on
+the first frame that is renderer it's likely that no scene graph
+related state has been passed to OpenGL by the OSG yet.  The only
+state that will have been passed will have been during graphics
+context set up.  I have just run through the
+src/osgViewer/GraphicsWindow32.cpp but can't see any OpenGL calls so
+I'm stumped at where to look for the OpenGL calls that might have put
+the driver into the error state.
+
+Do you see anything on screen with any of the examples of models
+passed to osgviewer?  Cow.osgt should work with just OpenGL 1.1. so
+all your hardware should be able to handle.
+
+I do wonder if there is some change to GraphicsWindowWin32.cpp that
+has caused a regression for older hardware.
+
+Unfortunately I'm not a Windows developer myself so will have to defer
+to Windows users in the community to pitch in with platform specific
+expertise. Hopefully some will be tracking this thread and be able to
+pitch in.
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005293.html">[osg-users] System requirements for OpenSceneGraph
+</A></li>
+	<LI>Next message: <A HREF="005306.html">[osg-users] System requirements for OpenSceneGraph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5294">[ date ]</a>
+              <a href="thread.html#5294">[ thread ]</a>
+              <a href="subject.html#5294">[ subject ]</a>
+              <a href="author.html#5294">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

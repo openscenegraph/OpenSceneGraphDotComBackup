@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LineSegmentIntersector%20NaN%20warnings%20on%20zero-scaled%0A%09nodes.&In-Reply-To=%3C1448121761.m2f.65720%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002031.html">
+   <LINK REL="Next"  HREF="002036.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.</H1>
+<!--htdig_noindex-->
+    <B>Jannik Heller</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LineSegmentIntersector%20NaN%20warnings%20on%20zero-scaled%0A%09nodes.&In-Reply-To=%3C1448121761.m2f.65720%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.">scrawl at baseoftrash.de
+       </A><BR>
+    <I>Sat Nov 21 08:02:41 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002031.html">[osg-users] IVE, OSGB, XXX -- which one is recommended for generally best performance?
+</A></li>
+        <LI>Next message: <A HREF="002036.html">[osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278258">[ date ]</a>
+              <a href="thread.html#278258">[ thread ]</a>
+              <a href="subject.html#278258">[ subject ]</a>
+              <a href="author.html#278258">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+The LineSegmentIntersector creates NaN warnings when applied to a node with zero scale. I've attached a 3 line change to osgintersection.cpp to reproduce the issue.
+
+The NaN's first pop up when OSG tries to invert a zero matrix here: <A HREF="https://github.com/openscenegraph/osg/blob/master/src/osgUtil/LineSegmentIntersector.cpp#L294">https://github.com/openscenegraph/osg/blob/master/src/osgUtil/LineSegmentIntersector.cpp#L294</A>
+
+Check with the following code snippet:
+
+Code:
+
+        osg::Matrix zero(0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1);
+
+        if (zero.invert(zero))
+            std::cout &lt;&lt; &quot;inverted &quot; &lt;&lt; zero &lt;&lt; std::endl;
+
+
+
+invert() returns true but the inverted matrix is 
+
+inverted {
+	-nan -nan -nan 0 
+	-nan -nan -nan 0 
+	-nan -nan -nan 0 
+	nan nan nan 1 
+}
+
+This looks like a bug in the Matrix invert function.
+
+However even if the matrix was still zero instead of NaN, there is another issue here:
+
+    osg::ref_ptr&lt;LineSegmentIntersector&gt; lsi = new LineSegmentIntersector(_start * matrix, _end * matrix);
+
+Multiplying a vec3 with a zero matrix will cause NaN's, because there is an 1.0 / (mat * vec ...) in the Matrix::preMult(Vec3) function.
+
+Not sure on the best way to fix this. Should we add explicit checks for zero scaled matrices in the LineSegmentIntersector, or fix the Matrix and Vec classes so they don't produce NaN's under any circumstances for (borderline) valid input? The latter seems the cleaner fix but would have a performance impact all over OSG.
+
+Thank you!
+
+Cheers,
+Jannik
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic19ee.php?p=65720#65720">http://forum.openscenegraph.org/viewtopic.php?p=65720#65720</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osgintersection.cpp
+Type: text/x-c++src
+Size: 11140 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20151121/1a2aa49c/attachment-0002.cpp">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151121/1a2aa49c/attachment-0002.cpp</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002031.html">[osg-users] IVE, OSGB, XXX -- which one is recommended for generally best performance?
+</A></li>
+	<LI>Next message: <A HREF="002036.html">[osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278258">[ date ]</a>
+              <a href="thread.html#278258">[ thread ]</a>
+              <a href="subject.html#278258">[ subject ]</a>
+              <a href="author.html#278258">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

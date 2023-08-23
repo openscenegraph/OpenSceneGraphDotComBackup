@@ -1,0 +1,248 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] compositeview and offscreen rendering
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20compositeview%20and%20offscreen%20rendering&In-Reply-To=%3CCAFN7Y%2BVW8JsUZLQu49ht_JK%2BO-v270vrU9wiWRirZr1oLaxdpw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002246.html">
+   <LINK REL="Next"  HREF="002258.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] compositeview and offscreen rendering</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20compositeview%20and%20offscreen%20rendering&In-Reply-To=%3CCAFN7Y%2BVW8JsUZLQu49ht_JK%2BO-v270vrU9wiWRirZr1oLaxdpw%40mail.gmail.com%3E"
+       TITLE="[osg-users] compositeview and offscreen rendering">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Jan 27 06:43:26 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002246.html">[osg-users] compositeview and offscreen rendering
+</A></li>
+        <LI>Next message: <A HREF="002258.html">[osg-users] compositeview and offscreen rendering
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2247">[ date ]</a>
+              <a href="thread.html#2247">[ thread ]</a>
+              <a href="subject.html#2247">[ subject ]</a>
+              <a href="author.html#2247">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Peinman,
+
+Looking at your code the performance problems have little to do with
+OpenGL and the OSG and everything to with creating a new callback on
+every frame and writing to disk from the main thread,  File IO is very
+expensive so absolutely not something you want to do in main rendering
+thread.   The start/stop of threading and releaseContext() is rather
+odd too, I can't think what you are trying to achieve here.
+
+What you should do is create a single callback that you can toggle
+on/off when needed and have it generate an image write operation that
+it dispatches to a back ground thread that does the writing to disk.
+Ideally you'd recycle the images once you've finished.
+
+If this all sounds a bit involved, well what you are trying to do is
+reasonable advanced stuff, you are rather diving into the deep end
+without armbands having not learnt to swim yet...
+
+Robert.
+
+On 27 January 2016 at 14:27, Peiman Shakeri &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">peimansh2014 at gmail.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i> this is a part of my source
+</I>&gt;<i> I cut unnecessary part cause of clarification
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Peiman
+</I>&gt;<i>
+</I>&gt;<i> source:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void VisSystem::CreateArea( )
+</I>&gt;<i> {
+</I>&gt;<i> city=new CityArea();
+</I>&gt;<i> city-&gt;Create(false,7);
+</I>&gt;<i> root-&gt;addChild(weather-&gt;group);
+</I>&gt;<i> root-&gt;addChild(weather-&gt;skyLightSource);
+</I>&gt;<i> city-&gt;setLight(weather-&gt;skyLight);
+</I>&gt;<i> SystemData::getInstance()-&gt;area=city;
+</I>&gt;<i> root-&gt;addChild(city-&gt;areaGroup-&gt;getChild(0));
+</I>&gt;<i> rootRear=new osg::Group;
+</I>&gt;<i> rootRear-&gt;addChild(weather-&gt;skyLightSource);
+</I>&gt;<i> rootRear-&gt;addChild(weather-&gt;group);
+</I>&gt;<i> rootRear-&gt;addChild(city-&gt;areaGroup-&gt;getChild(1));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> viewer.Create();
+</I>&gt;<i> viewer.CreateLeftSide();
+</I>&gt;<i> viewer.CreateRightSide();
+</I>&gt;<i>
+</I>&gt;<i> viewer.AddfrontScene(root);
+</I>&gt;<i> viewer.AddfrontScene(city-&gt;TrafficGroup);
+</I>&gt;<i> viewer.AddRearScene(rootRear);
+</I>&gt;<i> viewer.AddRearScene(city-&gt;TrafficGroup);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> viewer.CreateTopview();
+</I>&gt;<i> viewer.AddTopScene(root);
+</I>&gt;<i> viewer.AddTopScene(city-&gt;TrafficGroup);
+</I>&gt;<i> viewer.AddTopScene(city-&gt;TrafficGroup2);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void VisSystem::Run(void)
+</I>&gt;<i> {
+</I>&gt;<i> CreateArea();
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> std::string fileName;
+</I>&gt;<i> osgDB::DatabasePager* pager = viewer.Topview-&gt;getDatabasePager();
+</I>&gt;<i> pager-&gt;setDoPreCompile(true);
+</I>&gt;<i> osg::ref_ptr&lt;CustomRenderer&gt; customRenderer = new CustomRenderer(viewer.Topview-&gt;getCamera());
+</I>&gt;<i> viewer.Topview-&gt;getCamera()-&gt;setRenderer(customRenderer.get());
+</I>&gt;<i> customRenderer-&gt;setCullOnly(false);
+</I>&gt;<i> GLenum buffer = viewer.Topview-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getTraits()-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+</I>&gt;<i>
+</I>&gt;<i> viewer.TopRTT-&gt;RTTCam-&gt;setDrawBuffer(buffer);
+</I>&gt;<i> viewer.TopRTT-&gt;RTTCam-&gt;setReadBuffer(buffer);
+</I>&gt;<i>
+</I>&gt;<i> const osg::FrameStamp* fs2 = viewer.Topview-&gt;getFrameStamp();
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::Image&gt; posterImage = 0;
+</I>&gt;<i> posterImage = new osg::Image;
+</I>&gt;<i>
+</I>&gt;<i> bool outputPoster = true, outputTiles = false;
+</I>&gt;<i> int tileWidth = 640, tileHeight = 480;
+</I>&gt;<i> int posterWidth = 640, posterHeight = 480;
+</I>&gt;<i> int numCameras = 1;
+</I>&gt;<i> std::string posterName = &quot;poster.bmp&quot;, extName = &quot;bmp&quot;;
+</I>&gt;<i> char filename[50];
+</I>&gt;<i> int i=1;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> IplImage *iplimg = cvCreateImage(CvSize(640,480),IPL_DEPTH_8U,3);
+</I>&gt;<i>
+</I>&gt;<i> CvSize size;
+</I>&gt;<i> int isColor = 1;
+</I>&gt;<i> int fps     = 25;  // or 30
+</I>&gt;<i>
+</I>&gt;<i> size.width = 640;
+</I>&gt;<i> size.height = 480;
+</I>&gt;<i>
+</I>&gt;<i> CvVideoWriter *writer = cvCreateVideoWriter(
+</I>&gt;<i> &quot;D:\\PEIMAN\\video\\test.avi&quot;,
+</I>&gt;<i> CV_FOURCC('P','I','M','1'),//CV_FOURCC('I','Y','U','V'), // VIDEO CODEC
+</I>&gt;<i> fps,
+</I>&gt;<i> size);
+</I>&gt;<i>
+</I>&gt;<i> while(writer == NULL)
+</I>&gt;<i> {
+</I>&gt;<i> writer = cvCreateVideoWriter(
+</I>&gt;<i> &quot;D:\\PEIMAN\\video\\test.avi&quot;,
+</I>&gt;<i> CV_FOURCC('P','I','M','1'),//CV_FOURCC('I','Y','U','V'), // VIDEO CODEC
+</I>&gt;<i> fps,
+</I>&gt;<i> size);
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> viewer.viewer.realize();
+</I>&gt;<i> viewer.viewer.stopThreading();
+</I>&gt;<i> viewer.Topview-&gt;getCamera()-&gt;getGraphicsContext()-&gt;releaseContext();
+</I>&gt;<i> viewer.viewer.startThreading();
+</I>&gt;<i>
+</I>&gt;<i> while(!viewer.viewer.done())
+</I>&gt;<i> {
+</I>&gt;<i> //updating stuff
+</I>&gt;<i>
+</I>&gt;<i> viewer.viewer.frame();
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> std::ostringstream os;
+</I>&gt;<i> std::string snum;
+</I>&gt;<i> os&lt;&lt;fs2-&gt;getFrameNumber();
+</I>&gt;<i> snum=os.str();
+</I>&gt;<i> fileName=&quot;D:\\PEIMAN\\image\\poster&quot;+snum+&quot;.bmp&quot;;
+</I>&gt;<i> char* Fname=new char[fileName.size()+1];
+</I>&gt;<i> std::copy(fileName.begin(),fileName.end(),Fname);
+</I>&gt;<i> Fname[fileName.size()]='\0';
+</I>&gt;<i> std::cout&lt;&lt;Fname&lt;&lt;std::endl;
+</I>&gt;<i> viewer.viewer.renderingTraversals();
+</I>&gt;<i> viewer.Topview-&gt;getCamera()-&gt;setFinalDrawCallback( new WindowCaptureCallback(buffer, fileName,posterImage.get()));
+</I>&gt;<i>
+</I>&gt;<i> if ( (fs2-&gt;getFrameNumber()%2)==0 )
+</I>&gt;<i> {
+</I>&gt;<i>
+</I>&gt;<i> iplimg-&gt;imageData=(char*)posterImage-&gt;data();
+</I>&gt;<i> cvCvtColor(iplimg,iplimg,CV_BGR2RGB);
+</I>&gt;<i> cvFlip(iplimg, iplimg, 0);
+</I>&gt;<i> cvWriteFrame(writer,iplimg);
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> cvReleaseVideoWriter(&amp;writer);
+</I>&gt;<i> cvReleaseImage(&amp;iplimg);
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic6e3b.php?p=66152#66152">http://forum.openscenegraph.org/viewtopic.php?p=66152#66152</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002246.html">[osg-users] compositeview and offscreen rendering
+</A></li>
+	<LI>Next message: <A HREF="002258.html">[osg-users] compositeview and offscreen rendering
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2247">[ date ]</a>
+              <a href="thread.html#2247">[ thread ]</a>
+              <a href="subject.html#2247">[ subject ]</a>
+              <a href="author.html#2247">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

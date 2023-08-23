@@ -1,0 +1,202 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] porting from osg-3.4.0 to osg-3.6.3
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20porting%20from%20osg-3.4.0%20to%20osg-3.6.3&In-Reply-To=%3C1539092983.m2f.75053%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009238.html">
+   <LINK REL="Next"  HREF="009243.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] porting from osg-3.4.0 to osg-3.6.3</H1>
+<!--htdig_noindex-->
+    <B>Herman Varma</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20porting%20from%20osg-3.4.0%20to%20osg-3.6.3&In-Reply-To=%3C1539092983.m2f.75053%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] porting from osg-3.4.0 to osg-3.6.3">hermanvarma at eastlink.ca
+       </A><BR>
+    <I>Tue Oct  9 06:49:43 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009238.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+        <LI>Next message (by thread): <A HREF="009243.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9241">[ date ]</a>
+              <a href="thread.html#9241">[ thread ]</a>
+              <a href="subject.html#9241">[ subject ]</a>
+              <a href="author.html#9241">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert
+
+
+Yes  VTP calls  setEventVisitor
+
+m_pOsgViewer-&gt;setEventVisitor(NULL);
+
+in
+bool vtScene::Init(int argc, char** argv, bool bStereo, int iStereoMode)
+
+Code is listed below marked as //*******CALLED HERE
+
+
+
+
+
+/**
+ * Initialize the vtlib library, including the display and scene graph.
+ * You should call this function only once, before any other vtlib calls.
+ *
+ * \param argc, argv Command-line arguments.
+ * \param bStereo True for a stereo display output.
+ * \param iStereoMode Currently for vtosg, supported values are 0 for
+ *		Anaglyphic (red-blue) and 1 for Quad-buffer (shutter glasses).
+ */
+bool vtScene::Init(int argc, char** argv, bool bStereo, int iStereoMode)
+{
+	VTLOG1(&quot;vtScene::Init\n&quot;);
+
+	// Redirect cout messages (where OSG sends its messages) to our own log
+	previous_cout =  std::cout.rdbuf(&amp;g_Trap);
+	previous_cerr = std::cerr.rdbuf(&amp;g_Trap);
+
+#if 0
+	// If you encounter trouble in OSG that you want to debug, enable this
+	//  to get a LOT of diagnostic messages from OSG.
+	osg::setNotifyLevel(osg::INFO);
+#endif
+
+	m_pDefaultCamera = new vtCamera;
+	m_pDefaultWindow = new vtWindow;
+	SetCamera(m_pDefaultCamera);
+	AddWindow(m_pDefaultWindow);
+
+    // use an ArgumentParser object to manage the program arguments.
+    osg::ArgumentParser arguments(&amp;argc,argv);
+
+	m_pOsgViewer = new osgViewer::Viewer(arguments);
+
+	m_pOsgViewer-&gt;setDisplaySettings(osg::DisplaySettings::instance());
+	if (bStereo)
+	{
+		osg::DisplaySettings* displaySettings = m_pOsgViewer-&gt;getDisplaySettings();
+		displaySettings-&gt;setStereo(true);
+		osg::DisplaySettings::StereoMode mode;
+		if (iStereoMode == 0) mode = osg::DisplaySettings::ANAGLYPHIC;
+		if (iStereoMode == 1) mode = osg::DisplaySettings::QUAD_BUFFER;
+		if (iStereoMode == 2) mode = osg::DisplaySettings::HORIZONTAL_SPLIT;
+		if (iStereoMode == 3) mode = osg::DisplaySettings::VERTICAL_SPLIT;
+		displaySettings-&gt;setStereoMode(mode);
+	}
+#ifdef __DARWIN_OSX__
+	// Kill multi-threading on OSX until wxGLContext properly implemented on that platform
+	m_pOsgViewer-&gt;setThreadingModel(osgViewer::Viewer::SingleThreaded);
+#endif
+
+	// We can't use displaySettings-&gt;setNumMultiSamples here to enable anti-
+	// aliasing, because it has to be done eariler (at the time the OpenGL
+	// context is made).
+
+#ifdef VTP_USE_OSG_STATS
+	osgViewer::StatsHandler* pStatsHandler = new osgViewer::StatsHandler;
+	pStatsHandler-&gt;setKeyEventPrintsOutStats(0);
+	pStatsHandler-&gt;setKeyEventTogglesOnScreenStats('x'); // I dont think this is used for anything else at the moment
+	m_pOsgViewer-&gt;addEventHandler(pStatsHandler);
+#endif
+
+	// Kill the event visitor (saves a scenegraph traversal)
+	// This will need to be restored if we need to use FRAME events etc. in the scenegraph
+	m_pOsgViewer-&gt;setEventVisitor(NULL);//*******CALLED HERE
+
+	if (bStereo)
+	{
+		// displaySettings-&gt;getScreenDistance(); default is 0.5
+		// m_pOsgSceneView-&gt;getFusionDistanceMode(); default is PROPORTIONAL_TO_SCREEN_DISTANCE
+		// m_pOsgSceneView-&gt;getFusionDistanceValue(); default is 1.0
+		// The FusionDistanceValue is only used for USE_FUSION_DISTANCE_VALUE &amp; PROPORTIONAL_TO_SCREEN_DISTANCE modes.
+
+		// We use real-world units for fusion distance value
+		m_pOsgViewer-&gt;setFusionDistance(osgUtil::SceneView::USE_FUSION_DISTANCE_VALUE, 100.0f);
+	}
+
+	// From the OSG mailing list: You must specify the lighting mode in
+	// setDefaults() and override the default options. If you call
+	// setDefaults() with the default options, a headlight is added to the
+	// global state set of the SceneView.  With the default options applied,
+	// I have tried subsequently calling setLightingMode(NO_SCENE_LIGHT)
+	// and setLight(NULL), but I still get a headlight.
+	m_pOsgViewer-&gt;setLightingMode(osg::View::NO_LIGHT);
+	m_pOsgViewer-&gt;getCamera()-&gt;setComputeNearFarMode(osg::Camera::DO_NOT_COMPUTE_NEAR_FAR);
+	m_pOsgViewer-&gt;getCamera()-&gt;setCullingMode(m_pOsgViewer-&gt;getCamera()-&gt;getCullingMode() &amp; ~osg::CullSettings::SMALL_FEATURE_CULLING);
+
+	// We maintain a node between OSG's viewer/camera and the vtlib Root, to
+	//  control global state
+	m_StateRoot = new osg::Group;
+	m_pOsgViewer-&gt;setSceneData(m_StateRoot);
+
+	// By default, things are lit, unless they ask not to be
+	m_StateRoot-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::ON);
+
+	//m_StateRoot-&gt;addCullCallback(new MyCull);
+	//m_StateRoot-&gt;setUpdateCallback(new MyUpdate);
+	//m_StateRoot-&gt;setEventCallback(new MyEvent);
+
+	m_bInitialized = true;
+
+	_initialTick = _timer.tick();
+	_frameTick = _initialTick;
+
+	return true;
+}
+
+
+
+Thank you!
+
+Cheers,
+Herman
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicfaca.php?p=75053#75053">http://forum.openscenegraph.org/viewtopic.php?p=75053#75053</A>
+
+
+
+
+
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009238.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+	<LI>Next message (by thread): <A HREF="009243.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9241">[ date ]</a>
+              <a href="thread.html#9241">[ thread ]</a>
+              <a href="subject.html#9241">[ subject ]</a>
+              <a href="author.html#9241">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

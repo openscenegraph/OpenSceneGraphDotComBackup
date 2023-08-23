@@ -1,0 +1,154 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG-3.6 breaking changes to GLES2 buffered objects
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG-3.6%20breaking%20changes%20to%20GLES2%20buffered%20objects&In-Reply-To=%3CCAEt8o9h%2BKNkYiWo7Rth-Ng4ASf_rer-23FuOKuoMsyQ7Fh%2B22A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007881.html">
+   <LINK REL="Next"  HREF="007885.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG-3.6 breaking changes to GLES2 buffered objects</H1>
+<!--htdig_noindex-->
+    <B>michael kapelko</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG-3.6%20breaking%20changes%20to%20GLES2%20buffered%20objects&In-Reply-To=%3CCAEt8o9h%2BKNkYiWo7Rth-Ng4ASf_rer-23FuOKuoMsyQ7Fh%2B22A%40mail.gmail.com%3E"
+       TITLE="[osg-users] OSG-3.6 breaking changes to GLES2 buffered objects">kornerr at gmail.com
+       </A><BR>
+    <I>Fri Mar 23 01:43:21 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007881.html">[osg-users] Matrix multiplication order
+</A></li>
+        <LI>Next message (by thread): <A HREF="007885.html">[osg-users] OSG-3.6 breaking changes to GLES2 buffered objects
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7884">[ date ]</a>
+              <a href="thread.html#7884">[ thread ]</a>
+              <a href="subject.html#7884">[ subject ]</a>
+              <a href="author.html#7884">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi.
+This is to continue the discussion of PR that broke web (Emscripten)
+builds: <A HREF="https://github.com/openscenegraph/OpenSceneGraph/pull/501">https://github.com/openscenegraph/OpenSceneGraph/pull/501</A>
+
+The mentioned changes break rendering of the osgemscripten example
+(found in OpenSceneGraph/examples/osgemscripten).
+I've prepared two builds to depict the difference.
+1. Build with the breaking fix:
+<A HREF="https://kornerr.github.io/osg-pbo-gles2-fix-builds/versions/fix/osgemscripten.html">https://kornerr.github.io/osg-pbo-gles2-fix-builds/versions/fix/osgemscripten.html</A>
+2. Build with the breaking fix reverted:
+<A HREF="https://kornerr.github.io/osg-pbo-gles2-fix-builds/versions/reverted-fix/osgemscripten.html">https://kornerr.github.io/osg-pbo-gles2-fix-builds/versions/reverted-fix/osgemscripten.html</A>
+
+The second build simply has the following GLExtension.cpp line:
+  isBufferObjectSupported = isVBOSupported &amp;&amp; isPBOSupported;
+replaced with:
+  isBufferObjectSupported = isVBOSupported;
+
+So the problem is not really in PBO support, but in the fact that
+possibly missing PBO support removes buffer object support. This is
+wrong. The osgemscripten example uses VBO and this is what WebGL1
+requires.
+
+You can build osgemscripten example yourself (README explains how to
+do it, it's easy on Linux) and see the errors.
+Make sure to use the updated CMakeLists.txt I've attached to this email.
+-------------- next part --------------
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.0 FATAL_ERROR)
+
+# Path to OpenSceneGraph
+SET(OSG_DIR &quot;${CMAKE_SOURCE_DIR}/../..&quot;)
+
+# Specify critical OpenSceneGraph build variables.
+SET(BUILD_OSG_APPLICATIONS NO CACHE BOOL &quot;Do not build applications&quot;)
+SET(EGL_LIBRARY &quot;GL&quot; CACHE STRING &quot;Suppress linkage error&quot;)
+SET(OSG_GL1_AVAILABLE OFF CACHE BOOL &quot;Unavailable under Emscripten&quot;)
+SET(OSG_GL2_AVAILABLE OFF CACHE BOOL &quot;Unavailable under Emscripten&quot;)
+SET(OSG_GLES2_AVAILABLE ON CACHE BOOL &quot;GLES2 is what Emscripten uses&quot;)
+SET(OSG_WINDOWING_SYSTEM &quot;None&quot; CACHE STRING &quot;Unavailable under Emscripten&quot;)
+SET(DYNAMIC_OPENTHREADS OFF CACHE BOOL &quot;Link OpenThreads statically&quot;)
+SET(DYNAMIC_OPENSCENEGRAPH OFF CACHE BOOL &quot;Link OpenSceneGraph statically&quot;)
+# Prevent CMake configuration error.
+SET(_OPENTHREADS_ATOMIC_USE_GCC_BUILTINS_EXITCODE &quot;0&quot; CACHE STRING &quot;Prevent cfg error&quot;)
+
+# Set special build flags:
+# * -O3: make compact binary, critical for web
+# * -s USE_SDL=2: provide SDL2
+SET(BUILD_FLAGS &quot;-O3 -s USE_SDL=2&quot;)
+ADD_DEFINITIONS(${BUILD_FLAGS})
+
+# Reference OpenSceneGraph includes and libraries.
+SET(OSG_SOURCE_DIR &quot;${OSG_DIR}&quot;)
+SET(OSG_BUILD_DIR &quot;${OSG_DIR}/build/Emscripten&quot;)
+INCLUDE_DIRECTORIES(${OSG_SOURCE_DIR}/include)
+INCLUDE_DIRECTORIES(${OSG_BUILD_DIR}/include)
+LINK_DIRECTORIES(${OSG_BUILD_DIR}/lib)
+
+# Build OpenSceneGraph if osgViewer library is missing.
+IF(EXISTS &quot;${OSG_BUILD_DIR}/lib/libosgViewer.a&quot;)
+    MESSAGE(&quot;Skip building OpenSceneGraph&quot;)
+ELSE()
+    MESSAGE(&quot;Build OpenSceneGraph&quot;)
+    FILE(MAKE_DIRECTORY ${OSG_BUILD_DIR})
+    ADD_SUBDIRECTORY(${OSG_SOURCE_DIR} ${OSG_BUILD_DIR})
+ENDIF()
+
+# Build example.
+ADD_EXECUTABLE(osgemscripten osgemscripten.cpp)
+# Make Emscripten generate ready-to-open HTML page.
+SET(CMAKE_EXECUTABLE_SUFFIX &quot;.html&quot;)
+# Make Emscripten preload the resource.
+SET_TARGET_PROPERTIES(osgemscripten PROPERTIES LINK_FLAGS &quot;--preload-file box.osgt ${BUILD_FLAGS}&quot;)
+# Copy the resource to the build directory.
+CONFIGURE_FILE(box.osgt box.osgt COPYONLY)
+# Libraries must be linked in the specified order.
+# Otherwise you may get unsatisified linker errors.
+TARGET_LINK_LIBRARIES(
+    osgemscripten
+    osgViewer
+    osgDB
+    # osgDB plugins start.
+    osgdb_osg
+    osgdb_serializers_osg
+    # osgDB plugins end.
+    osgGA
+    osgText
+    osgUtil
+    osg
+    OpenThreads
+)
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007881.html">[osg-users] Matrix multiplication order
+</A></li>
+	<LI>Next message (by thread): <A HREF="007885.html">[osg-users] OSG-3.6 breaking changes to GLES2 buffered objects
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7884">[ date ]</a>
+              <a href="thread.html#7884">[ thread ]</a>
+              <a href="subject.html#7884">[ subject ]</a>
+              <a href="author.html#7884">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

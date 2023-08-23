@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgQt + OSG 3.6.2 Status
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20%2B%20OSG%203.6.2%20Status&In-Reply-To=%3CCAHhtjQYthPJQ8bCm2t6-fZ9%3D-w9P832OOXTN_vE%3D1eSQ%3DTBerg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008798.html">
+   <LINK REL="Next"  HREF="008803.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgQt + OSG 3.6.2 Status</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20%2B%20OSG%203.6.2%20Status&In-Reply-To=%3CCAHhtjQYthPJQ8bCm2t6-fZ9%3D-w9P832OOXTN_vE%3D1eSQ%3DTBerg%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgQt + OSG 3.6.2 Status">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Mon Jul 30 00:53:26 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008798.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+        <LI>Next message (by thread): <A HREF="008803.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8802">[ date ]</a>
+              <a href="thread.html#8802">[ thread ]</a>
+              <a href="subject.html#8802">[ subject ]</a>
+              <a href="author.html#8802">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Stuart,
+
+I understand my setDrawBuffer / setReadBuffer observation was probably not
+the only problem. But I believe this one is genuine problem that should not
+be neglected. So I decide to write this small followup and elaborate a bit
+to make it clearer. In the meantime I did some more research on
+DrawBuffer/ReadBuffer calls made in OSG. [disclaimer]: We use OSG 3.4.0 and
+I did not check latest OSG versions. So if anyone uses later 3.6.x he/she
+may check if my observations are still valid. I did however, noticed that
+plain osgViewer window config setups call camera-&gt;setDrawBuffer /
+camera-&gt;setReadBuffer for main window cams. See
+osgViewer\config\SingleWindow.cpp for example (search for setDrawBuffer).
+And I did notice that the same is NOT done in osgQT window setup. At least
+in OSG 3.4.0 release we use, osgQT does not call setDrawBuffer /
+serReadBuffer for camera set in QT window.  And I believe this is a bug.
+setDrawBuffer/setReadBuffer should be called for any top window camera.
+Because if not, and if you add some other camera which will explicitly or
+implicitly invoke glDrawBuffer call with other buffer than the one set by
+default in window creation, you are most likely going to see black screen.
+
+Sorry if I am clogging the thread. But just wanted to clarify this. Hope
+this may help someone,
+
+Cheers,
+Wojtek Lewandowski
+
+
+niedz., 29 lip 2018 o 23:04 Stuart Mentzer &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osgforum at tevs.eu</A>&gt; napisa&#322;(a):
+
+&gt;<i> Circling back to my original issue, I got my OSG Qt viewer widget running
+</I>&gt;<i> with OSG 3.6.2 and osgQt by moving all the GL-related boilerplate after the
+</I>&gt;<i> main window show() call happens. I'm not sure what changed in Qt or osgQt
+</I>&gt;<i> to require this but this could be useful for other osgQt users.
+</I>&gt;<i>
+</I>&gt;<i> Wojtek: thanks. I was already doing
+</I>&gt;<i> camera-&gt;setDrawBuffer(GL_BACK)
+</I>&gt;<i> but that does seem to be another thing that we didn't used to need. Maybe
+</I>&gt;<i> the osgQt docs should collect these migration tips.
+</I>&gt;<i>
+</I>&gt;<i> A minor annoyance remains that I didn't have before: the OSG viewer is in
+</I>&gt;<i> a tab widget and I have to setCurrentWidget to a different tab and then
+</I>&gt;<i> back on to the OSG widget tab to get the OSG model to appear. No explicit
+</I>&gt;<i> repaint, updateGL, etc. calls worked.
+</I>&gt;<i>
+</I>&gt;<i> On a related note, I got a tip to use
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> QApplication::setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity,
+</I>&gt;<i> true);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> to allow use of multithreading in Qt 5. It does allow things to run but
+</I>&gt;<i> I'm not sure if this is safe. Thoughts?
+</I>&gt;<i>
+</I>&gt;<i> As far as the lively Qt discussion, I think you are all correct. Qt is
+</I>&gt;<i> probably the best cross-platform GUI framework we have AND it is deeply
+</I>&gt;<i> flawed. QML is nifty for mobile/etc GUIs but it is causing the C++ side to
+</I>&gt;<i> be neglected. Qt3D is getting pretty good but may not be up to serious
+</I>&gt;<i> visualization applications out of the box yet. E.g., I'll have to write a
+</I>&gt;<i> manipulator to get close to OSG's great trackball. Our application is
+</I>&gt;<i> well-layered so that we can easily keep experimenting in a Qt3D branch
+</I>&gt;<i> while using OSG for production builds. I hope that osgQt will keep up with
+</I>&gt;<i> Qt and that solutions for the integration and multithreading can be found.
+</I>&gt;<i> Maybe we can get more involvement from the Qt devs -- they are certainly
+</I>&gt;<i> aware and supportive of the OSG integration.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Stuart
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic3b5c.php?p=74418#74418">http://forum.openscenegraph.org/viewtopic.php?p=74418#74418</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180730/96e67863/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180730/96e67863/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008798.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+	<LI>Next message (by thread): <A HREF="008803.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8802">[ date ]</a>
+              <a href="thread.html#8802">[ thread ]</a>
+              <a href="subject.html#8802">[ subject ]</a>
+              <a href="author.html#8802">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,209 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] code for merging tri strips in a cache friendly way
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20code%20for%20merging%20tri%20strips%20in%20a%20cache%20friendly%20way&In-Reply-To=%3CCALm6U%2BoDsRsQgTOzPbf6sBFthz_ULyWteU_tsNfcP8SpBnjXmA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005324.html">
+   <LINK REL="Next"  HREF="281451.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] code for merging tri strips in a cache friendly way</H1>
+<!--htdig_noindex-->
+    <B>Christian Buchner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20code%20for%20merging%20tri%20strips%20in%20a%20cache%20friendly%20way&In-Reply-To=%3CCALm6U%2BoDsRsQgTOzPbf6sBFthz_ULyWteU_tsNfcP8SpBnjXmA%40mail.gmail.com%3E"
+       TITLE="[osg-users] code for merging tri strips in a cache friendly way">christian.buchner at gmail.com
+       </A><BR>
+    <I>Tue Jan  3 04:34:08 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005324.html">[osg-users] Collada and OSG
+</A></li>
+        <LI>Next message: <A HREF="281451.html">[osg-users] osgconv.exe textures getting mangled
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281450">[ date ]</a>
+              <a href="thread.html#281450">[ thread ]</a>
+              <a href="subject.html#281450">[ subject ]</a>
+              <a href="author.html#281450">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>When loading .obj files (e.g. exported from Blender) into OSG - especially
+those that are exported with the &quot;group by material&quot; option - you might
+find a lot of individual tri strips in the resulting OSG geometry.
+
+Here is a piece of code (a node visitor) that will join these tri strips
+into a single large strip, taking into account cache locality aspects: The
+tri strips are sorted by their median vertex index before joining. This can
+be useful to improve the performance of hardware instancing.
+
+Some C++11 language features may be used in the code (range based for and
+others). Feel free to modify/use/improve on this code.
+
+Christian
+
+/**
+ * A visitor that merges triangle strip drawables by creating some
+degenerate triangles.
+ */
+class TriStripMergeVisitor : public osg::NodeVisitor
+{
+public:
+
+    TriStripMergeVisitor():
+        osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {}
+
+    virtual void apply(osg::Node&amp; node)
+    {
+        traverse(node);
+    }
+
+    virtual void apply(osg::Geode&amp; node)
+    {
+        for(unsigned int i=0;i&lt;node.getNumDrawables();++i)
+        {
+            osg::Drawable* drawable = node.getDrawable(i);
+            if (drawable) apply(*drawable);
+        }
+
+        traverse(node);
+    }
+
+    virtual void apply(osg::Drawable&amp; drawable)
+    {
+        osg::Geometry *geo = dynamic_cast&lt;osg::Geometry*&gt;(&amp;drawable);
+        if (geo != NULL) apply(*geo);
+    }
+
+    virtual void apply(osg::Geometry&amp; geometry)
+    {
+        osg::Geometry::PrimitiveSetList &amp;psl =
+geometry.getPrimitiveSetList();
+
+        // count the number of tri strips
+        int num_tristrips = 0;
+        unsigned int total_indices = 0;
+        std::vector&lt; std::pair&lt;std::vector&lt;unsigned int&gt;, unsigned int&gt; &gt;
+tristrips;
+        bool first = true;
+        for (auto &amp;ps : psl)
+        {
+            osg::DrawElements *de =
+dynamic_cast&lt;osg::DrawElements*&gt;(ps.get());
+            if (de != NULL)
+            {
+                if (de-&gt;getMode() == osg::PrimitiveSet::TRIANGLE_STRIP)
+                {
+                    num_tristrips++;
+                    std::vector&lt;unsigned int&gt; indices;
+                    unsigned int num_indices = de-&gt;getNumIndices();
+                    if (!first) total_indices += 2;
+                    total_indices += num_indices;
+                    indices.reserve(num_indices);
+                    for (unsigned int i=0; i &lt; num_indices; i++)
+indices.push_back(de-&gt;index(i));
+
+                    std::vector&lt;unsigned int&gt; sorted_indices(indices);
+                    std::sort(sorted_indices.begin(), sorted_indices.end());
+                    int median_index =
+sorted_indices[sorted_indices.size()/2];
+                    tristrips.emplace_back(indices, median_index);
+                    first = false;
+                }
+            }
+        }
+
+        // merge all tri-strips in a cache-friendly manner
+        if (num_tristrips &gt;= 2)
+        {
+            std::sort(tristrips.begin(), tristrips.end(),
+[](std::pair&lt;std::vector&lt;unsigned int&gt;, unsigned int&gt; &amp;a,
+std::pair&lt;std::vector&lt;unsigned int&gt;, unsigned int&gt; &amp;b) {
+                return b.second &gt; a.second;
+            });
+
+            std::vector&lt; unsigned int &gt; joined_tristrips;
+            joined_tristrips.reserve(total_indices);
+            first = true;
+            for (auto ts : tristrips)
+            {
+                if (!first)
+                {
+                    joined_tristrips.push_back(joined_tristrips.back());
+                    joined_tristrips.push_back(ts.first.front());
+                }
+                joined_tristrips.insert(joined_tristrips.end(),
+ts.first.begin(), ts.first.end());
+
+                first = false;
+            }
+
+            unsigned int max_element =
+*std::max_element(joined_tristrips.begin(), joined_tristrips.end());
+            osg::ref_ptr&lt;osg::DrawElements&gt; new_de;
+            if (max_element &lt; 256)        new_de = new
+osg::DrawElementsUByte(osg::PrimitiveSet::TRIANGLE_STRIP,
+joined_tristrips.size());
+            else if (max_element &lt; 65536) new_de = new
+osg::DrawElementsUShort(osg::PrimitiveSet::TRIANGLE_STRIP,
+joined_tristrips.size());
+            else                          new_de = new
+osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLE_STRIP,
+joined_tristrips.size());
+            for (unsigned int i=0; i &lt; joined_tristrips.size(); i++)
+                new_de-&gt;setElement(i, joined_tristrips[i]);
+
+            osg::Geometry::PrimitiveSetList new_psl;
+            new_psl.push_back(new_de);
+
+            // append all non tri strip geometry
+            for (auto &amp;ps : psl)
+            {
+                osg::DrawElements *de =
+dynamic_cast&lt;osg::DrawElements*&gt;(ps.get());
+                if (!(de != NULL &amp;&amp; de-&gt;getMode() ==
+osg::PrimitiveSet::TRIANGLE_STRIP))
+                     new_psl.push_back(ps);
+            }
+
+            geometry.setPrimitiveSetList(new_psl);
+        }
+    }
+};
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170103/1b3863e9/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170103/1b3863e9/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005324.html">[osg-users] Collada and OSG
+</A></li>
+	<LI>Next message: <A HREF="281451.html">[osg-users] osgconv.exe textures getting mangled
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281450">[ date ]</a>
+              <a href="thread.html#281450">[ thread ]</a>
+              <a href="subject.html#281450">[ subject ]</a>
+              <a href="author.html#281450">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

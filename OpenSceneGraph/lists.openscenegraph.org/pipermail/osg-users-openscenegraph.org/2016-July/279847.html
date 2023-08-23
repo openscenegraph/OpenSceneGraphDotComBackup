@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Why is setTexCoordArray(0,	texcoords) needed if array is modified in-place
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20is%20setTexCoordArray%280%2C%0A%09texcoords%29%20needed%20if%20array%20is%20modified%20in-place&In-Reply-To=%3C1467883505.m2f.68035%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003622.html">
+   <LINK REL="Next"  HREF="003625.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Why is setTexCoordArray(0,	texcoords) needed if array is modified in-place</H1>
+<!--htdig_noindex-->
+    <B>Florian Castellane</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20is%20setTexCoordArray%280%2C%0A%09texcoords%29%20needed%20if%20array%20is%20modified%20in-place&In-Reply-To=%3C1467883505.m2f.68035%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Why is setTexCoordArray(0,	texcoords) needed if array is modified in-place">fixed-term.florian.castellane at bosch.com
+       </A><BR>
+    <I>Thu Jul  7 02:25:05 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003622.html">[osg-users] Color Change Question
+</A></li>
+        <LI>Next message: <A HREF="003625.html">[osg-users] Why is setTexCoordArray(0, texcoords) needed if array is modified in-place
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279847">[ date ]</a>
+              <a href="thread.html#279847">[ thread ]</a>
+              <a href="subject.html#279847">[ subject ]</a>
+              <a href="author.html#279847">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Greetings fellow OSG users :) 
+
+There is a detail in my code that I found disturbing:
+
+
+Code:
+
+void applyTextureToCenter( MyNameSpace::SpecificNode* floor ) 
+{
+  MyNameSpace::MyGeode* center = floor-&gt;getCenterGeode() ;
+  osg::StateSet* stateSet = center-&gt;getOrCreateStateSet() ;
+  MyNameSpace::MyGeometry* geometry = center -&gt; getGeometry() ;
+  const osg::DrawElementsUShort* indices = geometry -&gt; getIndexArray() ;
+  const osg::Vec3Array* vtxArray = static_cast&lt;osg::Vec3Array*&gt;( geometry-&gt;getVertexArray() ) ;
+  osg::Vec2Array* texArray = floor -&gt;getTexCoordArray() ;
+  const unsigned numVertex = geometry-&gt;getVertexArray()-&gt;getNumElements() ;
+  const unsigned numIndices = geometry-&gt;getIndexArray() -&gt;getNumIndices() ;
+
+  for ( unsigned id = 0 ; id &lt; numIndices ; ++id )
+  {
+    const unsigned idx = (*indices)[id] ;
+    osg::Vec2 uv ;
+
+    /* *snip* 
+     * some texture coordinates computation
+     */
+  
+    (*texArray)[idx].set( uv.x(), uv.y() ) ;
+  }
+
+  geometry-&gt;setTexCoordArray( 0, texArray ) ; //Why is this needed ? 
+
+    /* *snip*
+     * Code setting the stateSet parameters (shader program, uniforms...)
+     */
+  return ;
+}
+
+
+
+
+I don't understand why the line 
+Code:
+geometry-&gt;setTexCoordArray( 0, texArray ) ;
+
+ is needed. AFAIK since texArray points to the value given by getTexCoordArray(), we are not actually changing anything...  :? 
+I was thinking that maybe it was because setTexCoordArray() caused dirty() to be called, causing re-evaluation of the texture coordinates, but calling
+
+Code:
+geometry-&gt;getTexCoordArray(0)-&gt;dirty() ;
+
+
+is not enough for my texture to be displayed.
+
+So I went on and looked at the code for setTexCoordArray:
+
+Code:
+openscenegraph/OpenSceneGraph/blob/master/src/osg/Geometry.cpp
+
+
+I see that it is calling 
+Code:
+geometry-&gt;dirtyDisplayList() ;
+
+ but since we are using VBOs (Vertex Buffer Objects) and not display lists that should not do anything.
+The code is also calling 
+Code:
+geometry-&gt;addVertexBufferObjectIfRequired()
+
+, which should itself call
+
+Code:
+texArray-&gt;setVertexBufferObject(geometry-&gt;getOrCreateVertexBufferObject());
+
+
+, which AFAIK should not be changing anything here either, since it is setting the array to use the existing VBOs (which should already be the case).
+
+What is your take on this? There must be something I'm missing.
+
+Thank you!
+
+Best regards,
+Florian.
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic3586.php?p=68035#68035">http://forum.openscenegraph.org/viewtopic.php?p=68035#68035</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003622.html">[osg-users] Color Change Question
+</A></li>
+	<LI>Next message: <A HREF="003625.html">[osg-users] Why is setTexCoordArray(0, texcoords) needed if array is modified in-place
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279847">[ date ]</a>
+              <a href="thread.html#279847">[ thread ]</a>
+              <a href="subject.html#279847">[ subject ]</a>
+              <a href="author.html#279847">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

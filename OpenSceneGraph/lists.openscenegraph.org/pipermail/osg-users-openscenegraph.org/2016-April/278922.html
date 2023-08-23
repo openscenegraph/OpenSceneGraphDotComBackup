@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] DatabasePager Crash
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20DatabasePager%20Crash&In-Reply-To=%3C1459867165.m2f.66732%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278920.html">
+   <LINK REL="Next"  HREF="278925.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] DatabasePager Crash</H1>
+<!--htdig_noindex-->
+    <B>Jeff White</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20DatabasePager%20Crash&In-Reply-To=%3C1459867165.m2f.66732%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] DatabasePager Crash">jeladi at yahoo.com
+       </A><BR>
+    <I>Tue Apr  5 07:39:25 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278920.html">[osg-users]  Draw trackball (sphere with constant radius)
+</A></li>
+        <LI>Next message: <A HREF="278925.html">[osg-users]  Sync main camera with slave camera rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278922">[ date ]</a>
+              <a href="thread.html#278922">[ thread ]</a>
+              <a href="subject.html#278922">[ subject ]</a>
+              <a href="author.html#278922">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I am running a osgEarth-based (v2.7) application that uses OpenSceneGraph 3.4.0 built with mingw (gcc v.4.9.2).  When I am running in cache-only mode on some machines I am seeing a crash in the osgDB::DatabasePager class. I have seen some traffic in the past related to DatabasePager issues so I figured it would be worth asking on here.  It is crashing on a OSG info log statement which seems strange.  It looks like it is trying to iterate over an empty container.  Has anyone seen this behavior before?  My OSG_NUM_DATABASE_THREADS are set to 4 and the machine it crashes on has 8 cores.  I tried setting the value to 8 and still got the same result.
+
+
+ Here is the call stack along with some information from GDB:
+
+(gdb) info threads
+  Id   Target Id         Frame
+  18   Thread 8804.0x1ce8 0x77dd1f86 in ntdll!ZwWaitForWorkViaWorkerFactory () from C:\Windows\SysWOW64\ntdll.dll
+  17   Thread 8804.0x1738 0x77dd019d in ntdll!ZwWaitForMultipleObjects () from C:\Windows\SysWOW64\ntdll.dll
+  16   Thread 8804.0x210c 0x77dd019d in ntdll!ZwWaitForMultipleObjects () from C:\Windows\SysWOW64\ntdll.dll
+  15   Thread 8804.0x213c 0x61d50a0a in std::_List_const_iterator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt;::operator++ (this=0x54bbfd10)
+    at C:/Qt/Tools/mingw492_32/i686-w64-mingw32/include/c++/bits/stl_list.h:244
+* 14   Thread 8804.0x18e8 0x77dd019d in ntdll!ZwWaitForMultipleObjects () from C:\Windows\SysWOW64\ntdll.dll
+  13   Thread 8804.0x15e8 0x77dd019d in ntdll!ZwWaitForMultipleObjects () from C:\Windows\SysWOW64\ntdll.dll
+  12   Thread 8804.0x1dd0 0x77dd019d in ntdll!ZwWaitForMultipleObjects () from C:\Windows\SysWOW64\ntdll.dll
+  7    Thread 8804.0x1e98 0x77dd019d in ntdll!ZwWaitForMultipleObjects () from C:\Windows\SysWOW64\ntdll.dll
+  5    Thread 8804.0x1d48 0x77dcfdd1 in ntdll!ZwDelayExecution () from C:\Windows\SysWOW64\ntdll.dll
+  4    Thread 8804.0x910 0x77dd1f86 in ntdll!ZwWaitForWorkViaWorkerFactory () from C:\Windows\SysWOW64\ntdll.dll
+  3    Thread 8804.0x2190 0x77dd1f86 in ntdll!ZwWaitForWorkViaWorkerFactory () from C:\Windows\SysWOW64\ntdll.dll
+  2    Thread 8804.0xb14 0x77dd019d in ntdll!ZwWaitForMultipleObjects () from C:\Windows\SysWOW64\ntdll.dll
+  1    Thread 8804.0x3ac 0x77de805d in ntdll!RtlGetNtGlobalFlags () from C:\Windows\SysWOW64\ntdll.dll
+(gdb) thread 15
+[Switching to thread 15 (Thread 8804.0x213c)]
+#0  0x61d50a0a in std::_List_const_iterator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt;::operator++ (this=0x54bbfd10)
+    at C:/Qt/Tools/mingw492_32/i686-w64-mingw32/include/c++/bits/stl_list.h:244
+244     C:/Qt/Tools/mingw492_32/i686-w64-mingw32/include/c++/bits/stl_list.h: No such file or directory.
+(gdb) bt
+#0  0x61d50a0a in std::_List_const_iterator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt;::operator++ (this=0x54bbfd10)
+    at C:/Qt/Tools/mingw492_32/i686-w64-mingw32/include/c++/bits/stl_list.h:244
+#1  0x61d8a093 in std::__distance&lt;std::_List_const_iterator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt; &gt; (__first=..., __last=...)
+    at C:/Qt/Tools/mingw492_32/i686-w64-mingw32/include/c++/bits/stl_iterator_base_funcs.h:82
+#2  0x61d9740c in std::distance&lt;std::_List_const_iterator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt; &gt; (__first=..., __last=...)
+    at C:/Qt/Tools/mingw492_32/i686-w64-mingw32/include/c++/bits/stl_iterator_base_funcs.h:118
+#3  0x61d3e48c in std::list&lt;osg::ref_ptr&lt;osg::Object&gt;, std::allocator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt; &gt;::size (this=0x3b905d7c)
+    at C:/Qt/Tools/mingw492_32/i686-w64-mingw32/include/c++/bits/stl_list.h:887
+#4  0x61cd828c in osgDB::DatabasePager::DatabaseThread::run (this=0x3c3285a0)
+    at C:\msys\1.0\home\MWoodJ\Projects\OSG\OpenSceneGraph-3.4.0\src\osgDB\DatabasePager.cpp:731
+#5  0x66a08538 in OpenThreads::ThreadPrivateActions::StartThread(void*)@4 (data=0x3c3285ac)
+    at C:\msys\1.0\home\MWoodJ\Projects\OSG\OpenSceneGraph-3.4.0\src\OpenThreads\win32\Win32Thread.cpp:113
+#6  0x77131287 in msvcrt!_itow_s () from C:\Windows\syswow64\msvcrt.dll
+#7  0x77131328 in msvcrt!_endthreadex () from C:\Windows\syswow64\msvcrt.dll
+#8  0x7757336a in KERNEL32!BaseThreadInitThunk () from C:\Windows\syswow64\kernel32.dll
+#9  0x77de9882 in ntdll!RtlInitializeExceptionChain () from C:\Windows\SysWOW64\ntdll.dll
+#10 0x77de9855 in ntdll!RtlInitializeExceptionChain () from C:\Windows\SysWOW64\ntdll.dll
+#11 0x00000000 in ?? ()
+
+
+(gdb) frame 4
+#4  0x61cd828c in osgDB::DatabasePager::DatabaseThread::run (this=0x3c3285a0)
+    at C:\msys\1.0\home\MWoodJ\Projects\OSG\OpenSceneGraph-3.4.0\src\osgDB\DatabasePager.cpp:731
+731     C:\msys\1.0\home\MWoodJ\Projects\OSG\OpenSceneGraph-3.4.0\src\osgDB\DatabasePager.cpp: No such file or directory.
+
+
+(gdb) info locals
+fileLocationCallback = {_ptr = 0x0}
+databaseRequest = {_ptr = 0x0}
+readFromFileCache = false
+fileCache = {_ptr = 0x0}
+dr_loadOptions = {_ptr = 0x0}
+fileName = {static npos = &lt;optimized out&gt;,
+  _M_dataplus = {&lt;std::allocator&lt;char&gt;&gt; = {&lt;__gnu_cxx::new_allocator&lt;char&gt;&gt; = {&lt;No data fields&gt;}, &lt;No data fields&gt;},
+    _M_p = 0x3ab7e0c4 &quot;&#238;_&#238;_&#238;_&#238;_&#238;_&#238;_&#238;_&#238;_&#238;_&#238;_L\033&#191;\b&quot;}}
+frameNumberLastRequest = 0
+cacheNodes = false
+firstTime = false
+read_queue = {_ptr = 0x3b905d40}
+out_queue = {_ptr = 0x3b923cf8}
+
+
+
+(gdb) print read_queue
+$3 = {_ptr = 0x3b905d40}
+(gdb) print read_queue-&gt;size()
+$4 = 0
+(gdb) print _mode
+$5 = osgDB::DatabasePager::DatabaseThread::HANDLE_NON_HTTP
+
+
+(gdb) print _pager-&gt;_fileRequestQueue
+$6 = {_ptr = 0x3b905d40}
+(gdb) print _pager-&gt;_fileRequestQueue-&gt;size()
+$7 = 0
+(gdb) print _pager-&gt;_fileRequestQueue-&gt;_childrenToDeleteList
+$8 = {&lt;std::_List_base&lt;osg::ref_ptr&lt;osg::Object&gt;, std::allocator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt; &gt;&gt; = {
+    _M_impl = {&lt;std::allocator&lt;std::_List_node&lt;osg::ref_ptr&lt;osg::Object&gt; &gt; &gt;&gt; = {&lt;__gnu_cxx::new_allocator&lt;std::_List_node&lt;os
+g::ref_ptr&lt;osg::Object&gt; &gt; &gt;&gt; = {&lt;No data fields&gt;}, &lt;No data fields&gt;}, _M_node = {_M_next = 0x3b905d7c,
+        _M_prev = 0x3b905d7c}}}, &lt;No data fields&gt;}
+(gdb) print _pager-&gt;_fileRequestQueue-&gt;_childrenToDeleteList-&gt;size()
+Cannot resolve method osgDB::DatabasePager::ObjectList::size to any overloaded instance
+(gdb) print _pager-&gt;_fileRequestQueue-&gt;_childrenToDeleteList-&gt;size
+$9 = {std::list&lt;osg::ref_ptr&lt;osg::Object&gt;, std::allocator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt; &gt;::size_type (const std::list&lt;osg::ref_
+ptr&lt;osg::Object&gt;, std::allocator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt; &gt; * const)} 0x61d3e460 &lt;std::list&lt;osg::ref_ptr&lt;osg::Object&gt;, std
+::<i>allocator&lt;osg::ref_ptr&lt;osg::Object&gt; &gt; &gt;::size() const&gt;
+</I>(gdb) print _pager-&gt;_fileRequestQueue-&gt;_childrenToDeleteList.size()
+$10 = 0
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic0e9d.php?p=66732#66732">http://forum.openscenegraph.org/viewtopic.php?p=66732#66732</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278920.html">[osg-users]  Draw trackball (sphere with constant radius)
+</A></li>
+	<LI>Next message: <A HREF="278925.html">[osg-users]  Sync main camera with slave camera rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278922">[ date ]</a>
+              <a href="thread.html#278922">[ thread ]</a>
+              <a href="subject.html#278922">[ subject ]</a>
+              <a href="author.html#278922">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

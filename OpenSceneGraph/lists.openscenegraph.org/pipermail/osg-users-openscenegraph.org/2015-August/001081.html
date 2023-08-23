@@ -1,0 +1,120 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] update slave camera with frame scheme ON_DEMAND
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20update%20slave%20camera%20with%20frame%20scheme%20ON_DEMAND&In-Reply-To=%3C1438790311.m2f.64634%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001080.html">
+   <LINK REL="Next"  HREF="001082.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] update slave camera with frame scheme ON_DEMAND</H1>
+<!--htdig_noindex-->
+    <B>Gianni Ambrosio</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20update%20slave%20camera%20with%20frame%20scheme%20ON_DEMAND&In-Reply-To=%3C1438790311.m2f.64634%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] update slave camera with frame scheme ON_DEMAND">g.ambrosio+osg at gmail.com
+       </A><BR>
+    <I>Wed Aug  5 08:58:31 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001080.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+        <LI>Next message: <A HREF="001082.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1081">[ date ]</a>
+              <a href="thread.html#1081">[ thread ]</a>
+              <a href="subject.html#1081">[ subject ]</a>
+              <a href="author.html#1081">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert, I didn't understand your answer.
+
+I use OSG 3.0.1 but I tried with 3.4.0.-rc8 and the behavior is the same. Moreover updateTraversal() of CompositeViewer is basically the same for these versions.
+Anyway we are probably talking of a slightly different scenario: I have a slave camera which update callback needs an up to date viewer master camera's view matrix. In this case, as you told me, since the master camera matrix is updated (with the inverse matrix of the manipulator) after the slave camera update callback, then the value is that of the previous frame. I can understand and the reason is in CompositeViewer::updateTraversal() because the for loop &quot;// Do UpdateTraversal for slaves with their own subgraph&quot; is done before &quot;view-&gt;getCameraManipulator()-&gt;updateCamera(*(view-&gt;getCamera()));&quot;.
+So, to make scenarios like mine working, my suggestion is to move:
+
+
+Code:
+
+            // Do UpdateTraversal for slaves with their own subgraph
+            for(unsigned int i=0; i&lt;view-&gt;getNumSlaves(); ++i)
+            {
+                osg::View::Slave&amp; slave = view-&gt;getSlave(i);
+                osg::Camera* camera = slave._camera.get();
+                if(camera &amp;&amp; !slave._useMastersSceneData)
+                {
+                    camera-&gt;accept(*_updateVisitor);
+                }
+            }
+
+
+
+
+after
+
+
+Code:
+
+        if (view-&gt;getCameraManipulator())
+        {
+            view-&gt;setFusionDistance( view-&gt;getCameraManipulator()-&gt;getFusionDistanceMode(),
+                                    view-&gt;getCameraManipulator()-&gt;getFusionDistanceValue() );
+
+            view-&gt;getCameraManipulator()-&gt;updateCamera(*(view-&gt;getCamera()));
+
+        }
+
+
+
+
+I tried this solution and it works fine.
+With this modification the scene remains updated before the main camera, so nothing you already told me should be broken.
+Moreover the for loop to move down is related to slave cameras with thier own subgraph.
+
+Regards,
+Gianni[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc6ce.php?p=64634#64634">http://forum.openscenegraph.org/viewtopic.php?p=64634#64634</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001080.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+	<LI>Next message: <A HREF="001082.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1081">[ date ]</a>
+              <a href="thread.html#1081">[ thread ]</a>
+              <a href="subject.html#1081">[ subject ]</a>
+              <a href="author.html#1081">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

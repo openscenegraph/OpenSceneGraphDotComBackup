@@ -1,0 +1,271 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] BTG to blender with textures?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20BTG%20to%20blender%20with%20textures%3F&In-Reply-To=%3C1438396456.m2f.64556%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277228.html">
+   <LINK REL="Next"  HREF="277231.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] BTG to blender with textures?</H1>
+<!--htdig_noindex-->
+    <B>Josh Branning</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20BTG%20to%20blender%20with%20textures%3F&In-Reply-To=%3C1438396456.m2f.64556%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] BTG to blender with textures?">lovell.joshyyy at gmail.com
+       </A><BR>
+    <I>Fri Jul 31 19:34:16 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277228.html">[osg-users] OpenSceneGraph-3.4.0-rc8 tagged, please test
+</A></li>
+        <LI>Next message: <A HREF="277231.html">[osg-users] NodeVisitor finds the named Node,	but NodeCallback doesn't rotate it
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277246">[ date ]</a>
+              <a href="thread.html#277246">[ thread ]</a>
+              <a href="subject.html#277246">[ subject ]</a>
+              <a href="author.html#277246">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I'm trying to convert flightgear BTG files to a format which I can open in the most recent blender. The most success I've had is with 3ds format, but there are no textures shown. 
+
+Here is the code (most of it shamelessly 'robbed' from flightgear's fgviewer):
+
+
+Code:
+//
+// Copyright (C) 2009 - 2012  Mathias Froehlich
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License as
+// published by the Free Software Foundation; either version 2 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+#ifdef HAVE_CONFIG_H
+#include &lt;config.h&gt;
+#endif
+
+#include &lt;osg/ArgumentParser&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgDB/WriteFile&gt;
+
+#include &lt;simgear/props/props.hxx&gt;
+#include &lt;simgear/props/props_io.hxx&gt;
+#include &lt;simgear/scene/material/matlib.hxx&gt;
+#include &lt;simgear/scene/util/SGReaderWriterOptions.hxx&gt;
+#include &lt;simgear/scene/util/SGSceneFeatures.hxx&gt;
+#include &lt;simgear/scene/tgdb/userdata.hxx&gt;
+#include &lt;simgear/scene/model/ModelRegistry.hxx&gt;
+#include &lt;simgear/misc/ResourceManager.hxx&gt;
+
+int
+main(int argc, char** argv)
+{
+    /// Read arguments and environment variables.
+
+    // use an ArgumentParser object to manage the program arguments.
+    // FIXME implement a flightgear similar argument parser into simgear and use this one
+    osg::ArgumentParser arguments(&amp;argc, argv);
+
+    sglog().set_log_classes(SG_ALL);
+    sglog().set_log_priority(SG_ALERT);
+
+    std::string fg_root;
+    if (arguments.read(&quot;--fg-root&quot;, fg_root)) {
+    } else if (const char *fg_root_env = std::getenv(&quot;FG_ROOT&quot;)) {
+        fg_root = fg_root_env;
+    } else {
+        SG_LOG(SG_GENERAL, SG_ALERT, &quot;No --fg-root option set.&quot;);
+	return -1;
+    }
+
+    std::string fg_scenery;
+    if (arguments.read(&quot;--fg-scenery&quot;, fg_scenery)) {
+    } else if (const char *fg_scenery_env = std::getenv(&quot;FG_SCENERY&quot;)) {
+        fg_scenery = fg_scenery_env;
+    } else {
+        SG_LOG(SG_GENERAL, SG_ALERT, &quot;No --fg-scenery option set.&quot;);
+        return -1;
+    }
+
+    SGSharedPtr&lt;SGPropertyNode&gt; props = new SGPropertyNode;
+    try {
+        SGPath preferencesFile = fg_root;
+        preferencesFile.append(&quot;preferences.xml&quot;);
+        readProperties(preferencesFile.str(), props);
+    } catch (...) {
+        // In case of an error, at least make summer :)
+        props-&gt;getNode(&quot;sim/startup/season&quot;, true)-&gt;setStringValue(&quot;summer&quot;);
+
+        SG_LOG(SG_GENERAL, SG_ALERT, &quot;Problems loading FlightGear preferences.\n&quot;
+               &lt;&lt; &quot;Probably FG_ROOT is not properly set.&quot;);
+    }
+
+    std::string config;
+    while (arguments.read(&quot;--config&quot;, config)) {
+        try {
+            readProperties(config, props);
+        } catch (...) {
+            SG_LOG(SG_GENERAL, SG_ALERT, &quot;Problems loading config file \&quot;&quot; &lt;&lt; config
+                   &lt;&lt; &quot;\&quot; given on the command line.&quot;);
+        }
+    }
+
+    std::string prop, value;
+    while (arguments.read(&quot;--prop&quot;, prop, value)) {
+        props-&gt;setStringValue(prop, value);
+    }
+
+    std::string renderer;
+    while (arguments.read(&quot;--renderer&quot;, renderer));
+
+    std::string federation;
+    if (arguments.read(&quot;--federation&quot;, federation)) {
+        props-&gt;setStringValue(&quot;hla/federate/federation&quot;, federation);
+    }
+    /// now set up the simgears required model stuff
+
+    simgear::ResourceManager::instance()-&gt;addBasePath(fg_root, simgear::ResourceManager::PRIORITY_DEFAULT);
+    // Just reference simgears reader writer stuff so that the globals get
+    // pulled in by the linker ...
+    // FIXME: make that more explicit clear and call an initialization function
+    simgear::ModelRegistry::instance();
+
+    // FIXME Ok, replace this by querying the root of the property tree
+    sgUserDataInit(props.get());
+    SGSceneFeatures::instance()-&gt;setTextureCompression(SGSceneFeatures::DoNotUseCompression);
+    SGMaterialLibPtr ml = new SGMaterialLib;
+    SGPath mpath(fg_root);
+    mpath.append(&quot;Materials/default/materials.xml&quot;);
+    try {
+        ml-&gt;load(fg_root, mpath.str(), props);
+    } catch (...) {
+        SG_LOG(SG_GENERAL, SG_ALERT, &quot;Problems loading FlightGear materials.\n&quot;
+               &lt;&lt; &quot;Probably FG_ROOT is not properly set.&quot;);
+    }
+    simgear::SGModelLib::init(fg_root, props);
+
+    // Set up the reader/writer options
+    osg::ref_ptr&lt;simgear::SGReaderWriterOptions&gt; options;
+    if (osgDB::Options* ropt = osgDB::Registry::instance()-&gt;getOptions())
+        options = new simgear::SGReaderWriterOptions(*ropt);
+    else
+        options = new simgear::SGReaderWriterOptions;
+    osgDB::convertStringPathIntoFilePathList(fg_scenery,
+                                             options-&gt;getDatabasePathList());
+    options-&gt;setMaterialLib(ml);
+    options-&gt;setPropertyNode(props);
+    options-&gt;setPluginStringData(&quot;SimGear::FG_ROOT&quot;, fg_root);
+    // Omit building bounding volume trees, as the viewer will not run a simulation
+    options-&gt;setPluginStringData(&quot;SimGear::BOUNDINGVOLUMES&quot;, &quot;OFF&quot;);
+    options-&gt;setOptionString(&quot;OutputTextureFiles&quot;);
+    //viewer.setReaderWriterOptions(options.get());
+
+    // Here, all arguments are processed
+    arguments.reportRemainingOptionsAsUnrecognized();
+    arguments.writeErrorMessages(std::cerr);
+
+    /// Read the model files that are configured.
+
+    osg::ref_ptr&lt;osg::Node&gt; loadedModel;
+    if (1 &lt; arguments.argc()) {
+        // read the scene from the list of file specified command line args.
+        loadedModel = osgDB::readNodeFiles(arguments, options.get());
+    } else {
+        // if no arguments given resort to the whole world scenery
+        options-&gt;setPluginStringData(&quot;SimGear::FG_EARTH&quot;, &quot;ON&quot;);
+        loadedModel = osgDB::readNodeFile(&quot;w180s90-360x180.spt&quot;, options.get());
+    }
+
+    // if no model has been successfully loaded report failure.
+
+    if (!loadedModel.valid()) {
+        SG_LOG(SG_GENERAL, SG_ALERT, arguments.getApplicationName()
+               &lt;&lt; &quot;: No data loaded&quot;);
+        return EXIT_FAILURE;
+    }
+
+    osgDB::writeNodeFile(*loadedModel, &quot;saved.3ds&quot;, options.get());
+}
+
+
+
+
+I compile with:
+
+
+Code:
+g++ -g $1.cxx -o $1 -lSimGearCore -lSimGearScene -losg -losgDB -lOpenThreads -losgViewer
+
+
+
+After installing dependencies:
+
+
+Code:
+sudo apt-get install libboost-dev libsimgear-dev libsimgearcore3.0.0 libsimgearscene3.0.0 libopenscenegraph-dev libopenthreads-dev libopenthreads14
+
+
+
+I've tried with other formats without success, others don't tend to show anything at all.
+
+Thank you!
+
+Cheers,
+Josh[/quote]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic39d6.php?p=64556#64556">http://forum.openscenegraph.org/viewtopic.php?p=64556#64556</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277228.html">[osg-users] OpenSceneGraph-3.4.0-rc8 tagged, please test
+</A></li>
+	<LI>Next message: <A HREF="277231.html">[osg-users] NodeVisitor finds the named Node,	but NodeCallback doesn't rotate it
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277246">[ date ]</a>
+              <a href="thread.html#277246">[ thread ]</a>
+              <a href="subject.html#277246">[ subject ]</a>
+              <a href="author.html#277246">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

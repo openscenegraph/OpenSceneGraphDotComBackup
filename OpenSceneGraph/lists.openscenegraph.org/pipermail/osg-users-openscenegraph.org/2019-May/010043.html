@@ -1,0 +1,197 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgQt &amp; osgEarth not working with 0 margin in Qlayout
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20%26%20osgEarth%20not%20working%20with%200%20margin%20in%20Qlayout&In-Reply-To=%3C1558016165.m2f.76113%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010042.html">
+   <LINK REL="Next"  HREF="010077.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgQt &amp; osgEarth not working with 0 margin in Qlayout</H1>
+<!--htdig_noindex-->
+    <B>David Bobavid</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20%26%20osgEarth%20not%20working%20with%200%20margin%20in%20Qlayout&In-Reply-To=%3C1558016165.m2f.76113%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osgQt &amp; osgEarth not working with 0 margin in Qlayout">david.bobavid at gmail.com
+       </A><BR>
+    <I>Thu May 16 07:16:05 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010042.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="010077.html">[osg-users] osgQt &amp; osgEarth not working with 0 margin in Qlayout
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10043">[ date ]</a>
+              <a href="thread.html#10043">[ thread ]</a>
+              <a href="subject.html#10043">[ subject ]</a>
+              <a href="author.html#10043">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I've come across an issue I'm sort of confused about, and hopefully someone can help figure it out. 
+
+I'm using osgQt &amp; osgEarth 2.10 &amp; osg 3.6.3 with Qt 5.12 on Windows 10. It all seems to work, and I'm following the osgQt Viewer example for setting up my program. My osg widget, when added to my frame, has the default margin and spacing, so when I set it to my central widget (in a QMainWidget) it has a gray border. However, when I set the margins to 0, it won't draw the map at all, and it shows some artifacts around the edge of the widget. 
+
+This is what I'm doing:
+
+Code:
+
+OsgViewerQWidget::OsgViewerQWidget(QWidget* parent /*= 0*/, Qt::WindowFlags f /*= 0*/, QStatusBar* statusBar /*= 0*/)
+:<i> QWidget(parent, f)
+</I>{
+ _map = new osgEarth::Map();
+
+// add a TMS imagery layer: 
+osgEarth::Drivers::TMSOptions imagery;
+imagery.url() = &quot;<A HREF="http://readymap.org/readymap/tiles/1.0.0/7/">http://readymap.org/readymap/tiles/1.0.0/7/</A>&quot;;
+_map-&gt;addLayer(new osgEarth::ImageLayer(&quot;ReadyMap Imagery&quot;, imagery));
+
+// add a TMS elevation layer:
+osgEarth::Drivers::TMSOptions elevation;
+elevation.url() = &quot;<A HREF="http://readymap.org/readymap/tiles/1.0.0/116/">http://readymap.org/readymap/tiles/1.0.0/116/</A>&quot;;
+_map-&gt;addLayer(new osgEarth::ElevationLayer(&quot;ReadyMap Elevation&quot;, elevation));
+
+graticuleLayer = new osgEarth::Util::GeodeticGraticule();
+_map-&gt;addLayer(graticuleLayer);
+
+// That's it, the map is ready; now create a MapNode to render the Map:
+_mapNode = new osgEarth::MapNode(_map);
+
+_mapNode-&gt;setNodeMask(0x1);
+
+setThreadingModel(osgViewer::ViewerBase::SingleThreaded);
+
+// disable the default setting of viewer.done() by pressing Escape.
+setKeyEventSetsDone(0);
+
+QWidget* widget1 = AddViewWidget(CreateGraphicsWindow(0, 0, 100, 100), _mapNode, statusBar);
+
+QGridLayout* grid = new QGridLayout;
+setLayout(grid);
+
+grid-&gt;setSpacing(0);
+//grid-&gt;setContentsMargins(0, 0, 0, 0);   ////// with this line commented out, it works, with it in, it doesn't work... but, why?!
+grid-&gt;addWidget(widget1);
+	
+connect(&amp;_timer, SIGNAL(timeout()), this, SLOT(update()));
+_timer.start(10);
+}
+
+osgQt::GraphicsWindowQt* OsgViewerQWidget::CreateGraphicsWindow(int x, int y, int w, int h, const std::string&amp; name /*= &quot;&quot;*/, bool windowDecoration /*= false*/)
+{
+osg::DisplaySettings* ds = osg::DisplaySettings::instance().get();
+osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+traits-&gt;windowName = name;
+traits-&gt;windowDecoration = windowDecoration;
+traits-&gt;x = x;
+traits-&gt;y = y;
+traits-&gt;width = w;
+traits-&gt;height = h;
+traits-&gt;doubleBuffer = true;
+traits-&gt;alpha = ds-&gt;getMinimumNumAlphaBits();
+traits-&gt;stencil = ds-&gt;getMinimumNumStencilBits();
+traits-&gt;sampleBuffers = ds-&gt;getMultiSamples();
+traits-&gt;samples = ds-&gt;getNumMultiSamples();
+
+return new osgQt::GraphicsWindowQt(traits.get());
+}
+
+QWidget* OsgViewerQWidget::AddViewWidget(osgQt::GraphicsWindowQt* gw, osg::ref_ptr&lt;osg::Node&gt; scene, QStatusBar *statusBar)
+{
+osgViewer::View* view = new osgViewer::View;
+addView(view);
+
+osg::Camera* camera = view-&gt;getCamera();
+camera-&gt;setGraphicsContext(gw);
+
+// need to do this to make lines show up... o_O  Thanks's Glenn!
+osgEarth::Util::GLUtils::setGlobalDefaults(camera-&gt;getOrCreateStateSet());
+
+const osg::GraphicsContext::Traits* traits = gw-&gt;getTraits();
+
+camera-&gt;setClearColor(osg::Vec4(0.2, 0.2, 0.6, 1.0));
+camera-&gt;setViewport(new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height));
+
+// set the draw and read buffers up for a double buffered window with rendering going to back buffer
+camera-&gt;setDrawBuffer(GL_BACK);
+camera-&gt;setReadBuffer(GL_BACK);
+
+camera-&gt;setProjectionMatrixAsPerspective(30.0f, static_cast&lt;double&gt;(traits-&gt;width) / static_cast&lt;double&gt;(traits-&gt;height), 1.0f, 10000.0f);
+
+view-&gt;setSceneData(scene);
+view-&gt;addEventHandler(new osgViewer::StatsHandler);
+view-&gt;addEventHandler(new osgGA::StateSetManipulator(view-&gt;getCamera()-&gt;getOrCreateStateSet()));
+view-&gt;addEventHandler(new osgViewer::ThreadingHandler());
+view-&gt;addEventHandler(new osgViewer::LODScaleHandler());
+view-&gt;addEventHandler(new osgViewer::ScreenCaptureHandler());
+	
+earthManip = new osgEarth::Util::EarthManipulator;
+view-&gt;setCameraManipulator(earthManip);
+
+ldBuffer = new osgEarth::Util::LogarithmicDepthBuffer;
+ldBuffer-&gt;install(camera);
+
+gw-&gt;setTouchEventsEnabled(true);
+return gw-&gt;getGLWidget();
+}
+
+
+
+
+So it seems to go wrong in my constructor, when I set the grid layout content margins to 0. Otherwise this works just fine. I set the margin to 0, and it doesn't show anything. 
+
+Any ideas will be greatly appreciated.
+
+Thank you!
+David
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic27b0.php?p=76113#76113">http://forum.openscenegraph.org/viewtopic.php?p=76113#76113</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010042.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="010077.html">[osg-users] osgQt &amp; osgEarth not working with 0 margin in Qlayout
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10043">[ date ]</a>
+              <a href="thread.html#10043">[ thread ]</a>
+              <a href="subject.html#10043">[ subject ]</a>
+              <a href="author.html#10043">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

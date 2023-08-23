@@ -1,0 +1,220 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Create a custom StandardManipulator
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Create%20a%20custom%20StandardManipulator&In-Reply-To=%3C1461402497.m2f.66937%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002899.html">
+   <LINK REL="Next"  HREF="279111.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Create a custom StandardManipulator</H1>
+<!--htdig_noindex-->
+    <B>Florian GOLESTIN</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Create%20a%20custom%20StandardManipulator&In-Reply-To=%3C1461402497.m2f.66937%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Create a custom StandardManipulator">florian.golestin at gmail.com
+       </A><BR>
+    <I>Sat Apr 23 02:08:17 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002899.html">[osg-users] Segfault when using addChild on Group object
+</A></li>
+        <LI>Next message: <A HREF="279111.html">[osg-users] (no subject)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279110">[ date ]</a>
+              <a href="thread.html#279110">[ thread ]</a>
+              <a href="subject.html#279110">[ subject ]</a>
+              <a href="author.html#279110">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi everyone,
+
+I'm trying to develop my own Camera Manipulator (in order to have a Doom-like view). I've looked at documentations but there are still questions for me.
+
+First question I had was &quot;How to translate an object relatively to its own position (and not to the world)&quot;. I'm still looking for a way doing this with Matrix, however, I've found a solution with quaternion :
+You can multiply a Quaternion with a Vector to move relatively to the direction. 
+
+For instance: 
+
+Code:
+
+_position += _attitude * translation;
+
+
+
+where 
+
+&quot;_position&quot; is a Vec3 representing the current position (e.g. from osg::PositionAttitudeTransform)
+&quot;_attitude&quot; is a quaternion representing the current direction (e.g. from osg::PositionAttitudeTransform)
+&quot;translation&quot; is the relative translation (as Vec3) to apply
+
+
+This solution provides me good result but is it a good way?
+
+
+
+Then I wanted to create the camera manipulator, so I've extended the class such as:
+
+Header
+
+Code:
+
+class FirstPersonManipulator : public osgGA::StandardManipulator, public osg::PositionAttitudeTransform
+
+
+
+
+Source
+
+Code:
+
+FirstPersonManipulator::FirstPersonManipulator(const osg::Vec3d &amp;eye, const osg::Vec3d &amp;center)
+{
+  osg::Vec3 up(0.0, 0.0, 1.0);
+    
+  setTransformation(eye, center, up);
+
+  _homeEye = eye;
+  _homeCenter = center;
+  _homeUp = up;
+  _autoComputeHomePosition = false;
+}
+  
+FirstPersonManipulator::~FirstPersonManipulator(void)
+{
+}
+
+void  FirstPersonManipulator::setTransformation(const osg::Vec3d &amp;eye, const osg::Quat &amp;rotation)
+{
+
+  std::cout &lt;&lt; &quot;FirstPersonManipulator::setTransformation: Old Position [&quot; &lt;&lt; _position &lt;&lt; &quot; X &quot; &lt;&lt; _attitude
+     &lt;&lt; &quot;] New Position: [&quot; &lt;&lt;  eye &lt;&lt; &quot; X &quot; &lt;&lt; rotation &lt;&lt; &quot;]\n&quot;;
+  this-&gt;_position = eye;
+  this-&gt;_attitude = rotation;
+}
+
+void  FirstPersonManipulator::setTransformation(const osg::Vec3d &amp;eye, const osg::Vec3d &amp;center, const osg::Vec3d &amp;up)
+{
+  osg::Matrixd view;
+    
+  view.makeLookAt(eye, center, up);
+
+  /* This line is required otherwise the canera seems &quot;head-down&quot; */
+  view.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1, 0, 0));
+
+    
+  std::cout &lt;&lt; &quot;FirstPersonManipulator::setTransformation: &quot; &lt;&lt; view  &lt;&lt; &quot;\n&quot;;
+    
+  this-&gt;setTransformation(eye, view.getRotate());
+}
+
+void  FirstPersonManipulator::getTransformation(osg::Vec3d &amp;eye, osg::Quat &amp;rotation) const
+{
+  eye = this-&gt;_position;
+  rotation = this-&gt;_attitude;
+}
+
+void  FirstPersonManipulator::getTransformation(osg::Vec3d &amp;eye, osg::Vec3d &amp;center, osg::Vec3d &amp;up) const
+{
+  osg::Matrixd view;
+
+  view.setTrans(this-&gt;_position);
+  view.setRotate(this-&gt;_attitude);
+  view.getLookAt(eye, center, up);
+}
+
+void  FirstPersonManipulator::setByMatrix(const osg::Matrixd &amp;matrix)
+{
+  std::cout &lt;&lt; &quot;FirstPersonManipulator::setByMatrix: &quot; &lt;&lt; matrix &lt;&lt; &quot;\n&quot;;
+  this-&gt;setTransformation(matrix.getTrans(), matrix.getRotate());
+}
+  
+void  FirstPersonManipulator::setByInverseMatrix(const osg::Matrixd &amp;matrix)
+{
+  std::cout &lt;&lt; &quot;FirstPersonManipulator::setByInverseMatrix: &quot; &lt;&lt; matrix &lt;&lt; &quot;\n&quot;;
+  setByMatrix(osg::Matrixd::inverse(matrix));
+}
+    
+osg::Matrixd  FirstPersonManipulator::getMatrix() const
+{
+  osg::Matrixd view;
+
+  view.setTrans(this-&gt;_position);
+  view.setRotate(this-&gt;_attitude);
+  std::cout &lt;&lt; &quot;FirstPersonManipulator::getMatrix: &quot; &lt;&lt; view &lt;&lt; &quot;\n&quot;;
+  return view;
+}
+  
+osg::Matrixd  FirstPersonManipulator::getInverseMatrix() const
+{
+  std::cout &lt;&lt; &quot;FirstPersonManipulator::getInverseMatrix: &quot; &lt;&lt; osg::Matrixd::inverse(getMatrix()) &lt;&lt; &quot;\n&quot;;
+  return osg::Matrixd::inverse(getMatrix());
+}
+
+
+
+
+Here the camera is correctly positioned and oriented but I had to add this line (in FirstPersonManipulator::setTransformation):
+
+Code:
+
+  /* This line is required otherwise the canera seems &quot;head-down&quot; */
+  view.makeRotate(osg::DegreesToRadians(90.0), osg::Vec3(1, 0, 0));
+
+
+
+Otherwise the camera seemed to had foot up and head down.
+
+Is the code above correct?
+Do you have an idea about the rotation I had to do?
+
+
+(PS: Sorry I cannot get rid of the 'question-mark '?' - I've replaced all tab and spaces but they still appears)
+
+Thanks,
+Florian[/list]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic5cf7.php?p=66937#66937">http://forum.openscenegraph.org/viewtopic.php?p=66937#66937</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002899.html">[osg-users] Segfault when using addChild on Group object
+</A></li>
+	<LI>Next message: <A HREF="279111.html">[osg-users] (no subject)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279110">[ date ]</a>
+              <a href="thread.html#279110">[ thread ]</a>
+              <a href="subject.html#279110">[ subject ]</a>
+              <a href="author.html#279110">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

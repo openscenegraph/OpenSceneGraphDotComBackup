@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText and OpenGL ES 3
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20and%20OpenGL%20ES%203&In-Reply-To=%3Ca38a9066-d9c4-67a1-a6b3-d083187d4d55%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280031.html">
+   <LINK REL="Next"  HREF="003810.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText and OpenGL ES 3</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20and%20OpenGL%20ES%203&In-Reply-To=%3Ca38a9066-d9c4-67a1-a6b3-d083187d4d55%40gmx.de%3E"
+       TITLE="[osg-users] osgText and OpenGL ES 3">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Tue Aug  2 06:09:56 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280031.html">[osg-users] osgText and OpenGL ES 3
+</A></li>
+        <LI>Next message: <A HREF="003810.html">[osg-users] osgText and OpenGL ES 3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3809">[ date ]</a>
+              <a href="thread.html#3809">[ thread ]</a>
+              <a href="subject.html#3809">[ subject ]</a>
+              <a href="author.html#3809">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Benjamin,
+&gt;<i> Hello,
+</I>&gt;<i>
+</I>&gt;<i> I am trying to port my project using OSG 3.4.0 on iOS.
+</I>&gt;<i> I first tried to modify OSG sources to be fully usable with an OpenGL ES 3 context, as other dependencies require OpenGL ES 3.
+</I>&gt;<i>
+</I>&gt;<i> I managed to run osg on my iPad, modifying shaders and removing duplicates while merging them, but osgText is making me crazy |-)
+</I>&gt;<i> I tried to debug using only the osgtext.cpp example.
+</I>&gt;<i>
+</I>&gt;<i> I embedded a font with my application in a bundle, and successfully load it. I modified osgText/Glyph to use GL_RED as glyph texture format.
+</I>&gt;<i> Only the DefaultFont is correctly rendered. Other Glyphs are not rendered, only their bouding boxes (cf. attached image).
+</I>&gt;<i>
+</I>&gt;<i> Does anyone has an idea on what could be the cause?
+</I>The osgText is build around fixed function set rendering. You need to 
+supply a shader for text-rendering in your case.
+I've attached my default shaders which I simply assign to the root state 
+set of the scenegraph or to nodes with osg-text.
+You might need to attach the correct sampler uniform to get the correct 
+glyph texture however.
+
+
+Cheers
+Sebastian
+&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Benjamin
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic5b4e.php?p=68251#68251">http://forum.openscenegraph.org/viewtopic.php?p=68251#68251</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Attachments:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/files/img_0029_454.png">http://forum.openscenegraph.org//files/img_0029_454.png</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+-------------- next part --------------
+#version 440
+#extension GL_ARB_enhanced_layouts : enable
+#extension GL_ARB_separate_shader_objects : enable
+
+layout (location=0) in vec4 osg_Vertex;
+layout (location=1) in vec3 osg_Normal;
+layout (location=2) in vec4 osg_Color;
+layout (location=3) in vec4 osg_MultiTexCoord0;
+
+uniform mat4 osg_ModelViewMatrix;
+uniform mat4 osg_ModelViewProjectionMatrix;
+
+
+out gl_PerVertex
+{
+	vec4 gl_Position;
+};
+
+layout(location=1) out block
+{
+	mediump vec2 tex_coord;
+	mediump vec4 color;
+} Out;
+
+void main()
+{
+	Out.color = osg_Color;
+	Out.tex_coord = vec4(osg_MultiTexCoord0).xy;
+	gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;
+
+}
+-------------- next part --------------
+#version 440
+#extension GL_ARB_enhanced_layouts : enable
+#extension GL_ARB_separate_shader_objects : enable
+
+layout (location=0) out vec4 FragmentData;
+
+layout(location=1) in block
+{
+	mediump vec2 tex_coord;
+	mediump vec4 color;
+} In;
+
+uniform sampler2D osg_Texture;
+
+void main()
+{
+	vec4 diffuse_color = In.color;
+	diffuse_color *=  texture2D(osg_Texture, In.tex_coord).a;
+
+	FragmentData = diffuse_color;
+}
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280031.html">[osg-users] osgText and OpenGL ES 3
+</A></li>
+	<LI>Next message: <A HREF="003810.html">[osg-users] osgText and OpenGL ES 3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3809">[ date ]</a>
+              <a href="thread.html#3809">[ thread ]</a>
+              <a href="subject.html#3809">[ subject ]</a>
+              <a href="author.html#3809">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,166 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] &quot;LOS&quot; materail query
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%22LOS%22%20materail%20query&In-Reply-To=%3C55D6D40B.50401%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277513.html">
+   <LINK REL="Next"  HREF="001298.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] &quot;LOS&quot; materail query</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%22LOS%22%20materail%20query&In-Reply-To=%3C55D6D40B.50401%40gmx.de%3E"
+       TITLE="[osg-users] &quot;LOS&quot; materail query">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Fri Aug 21 00:32:27 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277513.html">[osg-users] &quot;LOS&quot; materail query
+</A></li>
+        <LI>Next message: <A HREF="001298.html">[osg-users] &quot;LOS&quot; materail query
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1295">[ date ]</a>
+              <a href="thread.html#1295">[ thread ]</a>
+              <a href="subject.html#1295">[ subject ]</a>
+              <a href="author.html#1295">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Mike
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I am wanting to do a dust cloud when an entity (helicopter) lands on a terrain. Ideally, would like the color of the dust cloud to be similar to the material/texture that the entity is on. Is there a way to do a &quot;material/texture color&quot; query based on an entity position, kind of like an LOS intersector test?
+</I>&gt;<i> Thank you!
+</I>
+You can use the osgUtil::LineSegmentIntersector to retrieve intersections.
+The result will contain the information on the primitives hit, so you 
+can get the stateset containing the material properties from there. As 
+for the textures: you can also retrieve the texel you hit.
+I've attached some code-snippet out of some test-application of mine.
+
+&lt;snip&gt;
+
+if (!mExternalPickPositionHandler.empty() &amp;&amp; computeIntersections(view, 
+ea, intersections) )
+     {
+         osg::Vec3d pos = (intersections.begin())-&gt;getWorldIntersectPoint();
+         osg::Vec3d normal = 
+(intersections.begin())-&gt;getWorldIntersectNormal();
+#ifdef TEST_TEXELS
+     // use the nearest intersection
+         const osgUtil::LineSegmentIntersector::Intersection&amp; 
+intersection = *(intersections.begin());
+         osg::Drawable* drawable = intersection.drawable.get();
+         osg::Geometry* geometry = drawable ? drawable-&gt;asGeometry() : 0;
+         osg::Vec3Array* vertices = geometry ? 
+dynamic_cast&lt;osg::Vec3Array*&gt;(geometry-&gt;getVertexArray()) : 0;
+         if (vertices)
+         {
+             // get the vertex indices.
+             const 
+osgUtil::LineSegmentIntersector::Intersection::IndexList&amp; indices = 
+intersection.indexList;
+             const 
+osgUtil::LineSegmentIntersector::Intersection::RatioList&amp; ratios = 
+intersection.ratioList;
+
+             if (indices.size()==3 &amp;&amp; ratios.size()==3)
+             {
+                 unsigned int i1 = indices[0];
+                 unsigned int i2 = indices[1];
+                 unsigned int i3 = indices[2];
+
+                 float r1 = ratios[0];
+                 float r2 = ratios[1];
+                 float r3 = ratios[2];
+
+                 osg::Array* texcoords = 
+(geometry-&gt;getNumTexCoordArrays()&gt;0) ? geometry-&gt;getTexCoordArray(0) : 0;
+                 osg::Vec2Array* texcoords_Vec2Array = 
+dynamic_cast&lt;osg::Vec2Array*&gt;(texcoords);
+                 if (texcoords_Vec2Array)
+                 {
+                     osg::Vec2 tc1 = (*texcoords_Vec2Array)[i1];
+                     osg::Vec2 tc2 = (*texcoords_Vec2Array)[i2];
+                     osg::Vec2 tc3 = (*texcoords_Vec2Array)[i3];
+                     osg::Vec2 tc = tc1*r1 + tc2*r2 + tc3*r3;
+                     //normalize, since negative tex-coords are not 
+handled by osg::Image::set/getImage
+                     float int_part;
+                     if (tc[0] &lt; 0) { tc[0] = 1.0 - modf(tc[0], 
+&amp;int_part); }
+                     if (tc[1] &lt; 0) { tc[1] = 1.0 - modf(tc[1], 
+&amp;int_part); }
+
+                     osg::Texture* texture = 
+intersection.getTextureLookUp(osg::Vec3(tc,0));
+                     osg::Image* image = nullptr;
+
+                     if (texture &amp;&amp; (image = texture-&gt;getImage(0)))
+                     {
+                         osg::Vec4 color = image-&gt;getColor(osg::Vec3(tc,0));
+                         std::cout &lt;&lt; SCRed() &lt;&lt; &quot;HIT texture: &quot; &lt;&lt; 
+image-&gt;getFileName() &lt;&lt; &quot; at &quot; &lt;&lt; color &lt;&lt; std::endl;
+                         image-&gt;setColor(osg::Vec4(color) * 
+0.9,osg::Vec3(tc,0));
+                         image-&gt;dirty();
+texture-&gt;setDataVariance(osg::Object::DYNAMIC);
+                     }
+                 }
+             }
+         }
+&lt;/snip&gt;
+&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Mike
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic121c.php?p=64857#64857">http://forum.openscenegraph.org/viewtopic.php?p=64857#64857</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277513.html">[osg-users] &quot;LOS&quot; materail query
+</A></li>
+	<LI>Next message: <A HREF="001298.html">[osg-users] &quot;LOS&quot; materail query
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1295">[ date ]</a>
+              <a href="thread.html#1295">[ thread ]</a>
+              <a href="subject.html#1295">[ subject ]</a>
+              <a href="author.html#1295">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

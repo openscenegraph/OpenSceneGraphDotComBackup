@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Preparing to make 3.5.3 dev release, please test
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Preparing%20to%20make%203.5.3%20dev%20release%2C%20please%20test&In-Reply-To=%3CCAFN7Y%2BWTOOMJ0VLzB-9ZX761vCN-wKjkB1mWPf%3Dc8eWc%3Dji6mg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003260.html">
+   <LINK REL="Next"  HREF="003263.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Preparing to make 3.5.3 dev release, please test</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Preparing%20to%20make%203.5.3%20dev%20release%2C%20please%20test&In-Reply-To=%3CCAFN7Y%2BWTOOMJ0VLzB-9ZX761vCN-wKjkB1mWPf%3Dc8eWc%3Dji6mg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Preparing to make 3.5.3 dev release, please test">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Jun  6 06:41:08 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003260.html">[osg-users] Preparing to make 3.5.3 dev release, please test
+</A></li>
+        <LI>Next message: <A HREF="003263.html">[osg-users] Preparing to make 3.5.3 dev release, please test
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3262">[ date ]</a>
+              <a href="thread.html#3262">[ thread ]</a>
+              <a href="subject.html#3262">[ subject ]</a>
+              <a href="author.html#3262">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Bj&#246;rn,
+
+On 6 June 2016 at 13:55, Bj&#246;rn Blissing &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">bjorn.blissing at vti.se</A>&gt; wrote:
+&gt;<i> In the LUA-plugin:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> d:\code\github\openscenegraph\src\osgplugins\lua\lua-5.2.3\src\lapi.c(1110): warning C4702: unreachable code
+</I>
+Removing the return statement that the warning is complaining about
+would force a in the break method API.  Could be a slippery slope of
+changes required so I've just disabled the warning, at least tried to
+using simple CMake entry to what you added to the 3ds plugin.
+
+&gt;<i> In the OSC-plugin:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> openscenegraph\src\osgPlugins\osc\ip\win32\NetworkingUtils.cpp(80): warning C4996: 'gethostbyname': Use getaddrinfo() or GetAddrInfoW() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+</I>&gt;<i>   C:\Program Files (x86)\Windows Kits\8.1\Include\um\winsock2.h(2238): note: see declaration of 'gethostbyname'
+</I>&gt;<i> openscenegraph\src\osgPlugins\osc\ip\win32\UdpSocket.cpp(401): warning C4456: declaration of 'currentTimeMs' hides previous local declaration
+</I>&gt;<i>   openscenegraph\src\osgPlugins\osc\ip\win32\UdpSocket.cpp(386): note: see declaration of 'currentTimeMs'
+</I>&gt;<i>
+</I>&gt;<i> The first one is self explainatory. The second one is a simple variable shadowing. Which I do not think have any unintended consequences.
+</I>
+This is 3rd party code that's integrated, we could fix or just disable
+the warnings.  If we modify the code we'd need to test it to make
+sure.  I'm not the original author of the code or a Windows hack so
+I'll not personally dive in and start hacking with the code.  If no
+one else feels the urge then I'd suggest we just disable the warning.
+
+The shadowing warning I've simply removed the second double as it's not needed.
+
+
+&gt;<i> In the OSG-plugin:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> openscenegraph\src\osgPlugins\osg\ReaderWriterOSG.cpp(257): warning C4459: declaration of 'NodeList' hides global declaration
+</I>&gt;<i>   openscenegraph\include\osg/Group(22): note: see declaration of 'osg::NodeList'
+</I>
+I've changed the code to simply use the osg::NodeList variant.
+
+
+&gt;<i> And finally in the TXP plugin:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> openscenegraph\src\osgPlugins\txp\trpage_pparse.cpp(241): warning C4458: declaration of 'imageHelp' hides class member
+</I>&gt;<i>   openscenegraph\src\osgPlugins\txp\trpage_print.h(136): note: see declaration of 'trpgPrintGraphParser::imageHelp'
+</I>&gt;<i>
+</I>&gt;<i> This last one may actually have consequences which the author did not intend. But I am entirely not sure. The author have a protected member variable named imageHelp, which is set in the constructor. It also have an access method. But the variable is not used anywhere inside of the class, instead the scoped variable with the same name is used.
+</I>
+I've changed the local name to parse_imageHelp to make sure it's using
+the local one.
+
+With these fixes now checked into master it should just be the OSC warning left.
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003260.html">[osg-users] Preparing to make 3.5.3 dev release, please test
+</A></li>
+	<LI>Next message: <A HREF="003263.html">[osg-users] Preparing to make 3.5.3 dev release, please test
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3262">[ date ]</a>
+              <a href="thread.html#3262">[ thread ]</a>
+              <a href="subject.html#3262">[ subject ]</a>
+              <a href="author.html#3262">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

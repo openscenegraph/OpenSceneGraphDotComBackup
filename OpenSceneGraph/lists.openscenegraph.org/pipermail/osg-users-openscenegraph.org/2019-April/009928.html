@@ -1,0 +1,241 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Removing objects with shared GL state from scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1555430326.m2f.75849%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009909.html">
+   <LINK REL="Next"  HREF="009915.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Removing objects with shared GL state from scene graph</H1>
+<!--htdig_noindex-->
+    <B>Chris Djali</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1555430326.m2f.75849%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Removing objects with shared GL state from scene graph">krizdjali at gmail.com
+       </A><BR>
+    <I>Tue Apr 16 08:58:46 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009909.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="009915.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9928">[ date ]</a>
+              <a href="thread.html#9928">[ thread ]</a>
+              <a href="subject.html#9928">[ subject ]</a>
+              <a href="author.html#9928">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+The following basically simulates the use case that's causing problems.
+
+
+Code:
+#include &lt;random&gt;
+
+#include &lt;osg/AutoTransform&gt;
+#include &lt;osg/Group&gt;
+#include &lt;osg/PositionAttitudeTransform&gt;
+#include &lt;osg/ShapeDrawable&gt;
+
+#include &lt;osgText/Text&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+
+/** A representation of something that gets edited.
+ *  Pretend it's actually more complicated than this so that reference counting the number of attached text nodes is a nuisance. */
+class World
+{
+public:
+    World() : mScene(new osg::Group)
+    {
+        // add things so the viewer doesn't automatically zoom too far in to see the 'objects'
+        
+        auto worldCorners = { osg::Vec3(-11, -11, -11), osg::Vec3(-11, -11, 11),
+                              osg::Vec3(-11, 11, -11), osg::Vec3(-11, 11, 11),
+                              osg::Vec3(11, -11, -11), osg::Vec3(11, -11, 11),
+                              osg::Vec3(11, 11, -11), osg::Vec3(11, 11, 11) };
+
+        for (auto corner : worldCorners)
+        {
+            osg::ref_ptr&lt;osg::PositionAttitudeTransform&gt; pat = new osg::PositionAttitudeTransform();
+            pat-&gt;setPosition(corner);
+            pat-&gt;addChild(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(0, 0, 0), 0.1)));
+            mScene-&gt;addChild(pat);
+        }
+    }
+
+    osg::ref_ptr&lt;osg::Group&gt; getScene() { return mScene; }
+
+    /** Adds an object with a label to the scene based on something the user has done. */
+    void addObject(std::string name)
+    {
+        osg::ref_ptr&lt;osg::PositionAttitudeTransform&gt; object = new osg::PositionAttitudeTransform();
+        object-&gt;setName(name);
+
+        static std::random_device r;
+        static std::default_random_engine randEngine(r());
+        static std::uniform_real_distribution&lt;&gt; dist(-10, 10);
+
+        object-&gt;setPosition(osg::Vec3(dist(randEngine), dist(randEngine), dist(randEngine)));
+
+        osg::ref_ptr&lt;osgText::Text&gt; objectLabel = new osgText::Text();
+        osg::ref_ptr&lt;osg::AutoTransform&gt; autoTransform = new osg::AutoTransform();
+        autoTransform-&gt;addChild(objectLabel);
+        autoTransform-&gt;setAutoRotateMode(osg::AutoTransform::ROTATE_TO_SCREEN);
+        object-&gt;addChild(autoTransform);
+        autoTransform-&gt;getOrCreateStateSet()-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+        objectLabel-&gt;setText(name);
+        objectLabel-&gt;setCharacterSize(1);
+
+        osg::ref_ptr&lt;osg::Shape&gt; shape = new osg::Sphere(osg::Vec3(0, 0, 0), 1);
+        object-&gt;addChild(new osg::ShapeDrawable(shape));
+
+        mScene-&gt;addChild(object);
+    }
+
+    /** Removes an object from the scene based on something the user has done. */
+    void removeObject(std::string name)
+    {
+        osg::ref_ptr&lt;osg::Node&gt; child;
+        for (unsigned int i = 0; i &lt; mScene-&gt;getNumChildren(); ++i)
+        {
+            if (mScene-&gt;getChild(i)-&gt;getName() == name)
+            {
+                child = mScene-&gt;getChild(i);
+                mScene-&gt;removeChild(i);
+                break;
+            }
+        }
+
+        // If we call child-&gt;releaseGLObjects() here, the text program will be released, too, even though it could still be being used by other labels.
+        // If we don't, we may be detaching the last text node from the scene graph, and so the text program may never get released.
+    }
+
+private:
+    osg::ref_ptr&lt;osg::Group&gt; mScene;
+};
+
+
+World world;
+bool useNewViewer = true;
+
+class EventHandler : public osgGA::GUIEventHandler
+{
+public:
+    bool handle(const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; aa)
+    {
+        if (ea.getEventType() != osgGA::GUIEventAdapter::KEYDOWN)
+            return false;
+
+        // The user may wish to close the 3D view to work on something else and then reopen it later.
+        // That would be a pain to implement directly, so instead, we simulate it by reopening the 3D view when it's closed if Return was pressed while it was open.
+        if (ea.getKey() == osgGA::GUIEventAdapter::KEY_Return)
+        {
+            useNewViewer = true;
+            return true;
+        }
+        // Press a letter key without shift to add an object.
+        else if (ea.getKey() &gt;= 'a' &amp;&amp; ea.getKey() &lt;= 'z')
+        {
+            std::string name(1, ea.getKey());
+            world.addObject(name);
+            return true;
+        }
+        // Press a letter key with shift to remove an object.
+        else if (ea.getKey() &gt;= 'A' &amp;&amp; ea.getKey() &lt;= 'Z')
+        {
+            std::string name(1, ea.getKey() - ('Z' - 'z'));
+            world.removeObject(name);
+            return true;
+        }
+
+        return false;
+    }
+};
+
+int main()
+{
+    osg::ref_ptr&lt;osgViewer::Viewer&gt; currentViewer;
+
+    int returnCode = 0;
+
+    while (useNewViewer)
+    {
+        currentViewer = new osgViewer::Viewer;
+        currentViewer-&gt;setSceneData(world.getScene());
+        currentViewer-&gt;addEventHandler(new EventHandler);
+
+        useNewViewer = false;
+        
+        returnCode = currentViewer-&gt;run();
+    }
+
+    return returnCode;
+}
+
+
+
+
+Imagine this is part of a world editor for a game or CAD software or one of any number of types of software packages where you edit something and might want a 3D view of it, but wouldn't necessarily always want that 3D view taking up space in the window, so you'd possibly close it and then reopen it later. So I didn't have to make a load of extra stuff, this is simulated by opening a new viewer after the previous one closed if enter was pressed.
+
+Pressing a letter key will add an object, and pressing the same letter with the shift key will remove it. Pretend that there are actually loads of different object types and not all of them have text labels so that keeping track of when the last text label is removed via reference counting or similar becomes a pain.
+
+If you add at least one object, then remove all of them, then open a new view, you'll see OpenGL errors and text won't render correctly. This is because there were no osgText::Text nodes attached to the scene graph when the view was reset, so the program never got released, and the new text nodes try and reuse it with the new context, where it's not valid.
+
+The obvious solution is to releaseGLObjects in the removeObject method, but if there are other objects still using text nodes, that's problematic as they'll still be using the program, and it would need recreating immediately.
+
+Alternatively, removed objects could be kept around forever, attached to a hidden part of the scene graph so that anything that was ever used gets released when the context gets torn down. That means a bunch of junk needs keeping around forever, though.
+
+Another option would just be to always have a hidden text node attached to the scene graph even when there are no objects. This solves the problem without much overhead but doesn't really seem like a tidy solution.
+
+Thank you!
+
+Cheers,
+Chris
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic0d3a.php?p=75849#75849">http://forum.openscenegraph.org/viewtopic.php?p=75849#75849</A>
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009909.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="009915.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9928">[ date ]</a>
+              <a href="thread.html#9928">[ thread ]</a>
+              <a href="subject.html#9928">[ subject ]</a>
+              <a href="author.html#9928">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

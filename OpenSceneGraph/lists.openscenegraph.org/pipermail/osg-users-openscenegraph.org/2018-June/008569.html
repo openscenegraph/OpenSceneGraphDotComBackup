@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Scaled Images with GL_RG Format
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Scaled%20Images%20with%20GL_RG%20Format&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827EFAD16%40tewdmx.enews.nrl.navy.mil%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008589.html">
+   <LINK REL="Next"  HREF="008574.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Scaled Images with GL_RG Format</H1>
+<!--htdig_noindex-->
+    <B>Daniel Emminizer, Code 5773</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Scaled%20Images%20with%20GL_RG%20Format&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827EFAD16%40tewdmx.enews.nrl.navy.mil%3E"
+       TITLE="[osg-users] Scaled Images with GL_RG Format">dan.emminizer at nrl.navy.mil
+       </A><BR>
+    <I>Tue Jun 26 11:46:33 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008589.html">[osg-users] LineSegmentIntersector::intersect + performance
+</A></li>
+        <LI>Next message (by thread): <A HREF="008574.html">[osg-users] setAxisAlignment(osgText::Text::SCREEN) access violation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8569">[ date ]</a>
+              <a href="thread.html#8569">[ thread ]</a>
+              <a href="subject.html#8569">[ subject ]</a>
+              <a href="author.html#8569">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+I have found a minor bug with image scaling.  I have a texture that is 1024x768 that is being resized to 1024x1024 for a Texture2D.  Texture::applyTexImage2D_load() detects the need to resize and tries to do so through gluScaleImage(), which is implemented in src/osg/glu/libutil/mipmap.cpp.
+
+All that works great for most of my images, but this image is greyscale with alpha.  GL spec deprecates GL_LUMINANCE_ALPHA and requires use of GL_RG for these images types.  But the code in gluScaleImage() does not respect GL_RG (though it supports many other formats).
+
+This patch treats GL_RG identically to GL_LUMINANCE; a simple 2 element format.
+
+After this patch, my image shows up fine.  Mipmap.cpp supports many other similar types, like GL_RED.  Risk of this change seems pretty low.
+
+PR is up at <A HREF="https://github.com/openscenegraph/OpenSceneGraph/pull/566">https://github.com/openscenegraph/OpenSceneGraph/pull/566</A>
+
+Thanks,
+
+ - Dan
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008589.html">[osg-users] LineSegmentIntersector::intersect + performance
+</A></li>
+	<LI>Next message (by thread): <A HREF="008574.html">[osg-users] setAxisAlignment(osgText::Text::SCREEN) access violation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8569">[ date ]</a>
+              <a href="thread.html#8569">[ thread ]</a>
+              <a href="subject.html#8569">[ subject ]</a>
+              <a href="author.html#8569">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

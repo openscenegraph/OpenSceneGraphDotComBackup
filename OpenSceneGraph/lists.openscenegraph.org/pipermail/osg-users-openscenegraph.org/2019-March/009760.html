@@ -1,0 +1,163 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Deep cloning an active root scene node
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deep%20cloning%20an%20active%20root%20scene%20node&In-Reply-To=%3CCAGUte1cmBmzfoW8am7XSXh9r2-CD_BY2ZPQLcv%3DeVjV63CFqRQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="009761.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Deep cloning an active root scene node</H1>
+<!--htdig_noindex-->
+    <B>Robert Lockyer</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deep%20cloning%20an%20active%20root%20scene%20node&In-Reply-To=%3CCAGUte1cmBmzfoW8am7XSXh9r2-CD_BY2ZPQLcv%3DeVjV63CFqRQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Deep cloning an active root scene node">robert.lockyer at avalonholographics.com
+       </A><BR>
+    <I>Fri Mar  1 03:56:05 PST 2019</I>
+    <P><UL>
+        
+        <LI>Next message (by thread): <A HREF="009761.html">[osg-users] Deep cloning an active root scene node
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9760">[ date ]</a>
+              <a href="thread.html#9760">[ thread ]</a>
+              <a href="subject.html#9760">[ subject ]</a>
+              <a href="author.html#9760">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks Robert, that's actually what I tried initially and it renders fine,
+however there's a usability issue. For more background I'm rendering light
+fields. In order to do this I set up an array of thousands of slightly
+offset cameras in a rectangular grid pattern. Because I'm capturing so many
+views when I call osgViewer::Viewer::frame() it locks the main thread and
+the application becomes unresponsive for a long time.
+
+Ideally what I'd like is for the main application to continue rendering its
+single 3d view, while I render these thousands of cameras to a texture in a
+background thread. I'm rendering to a texture now without issue, but what's
+eluded me so far is how I can run this process without locking up the
+application.
+
+I'd like to have a snapshot of the scene graph for this background thread
+so that the user can continue to use the main 3d view while the background
+thread renders a static copy of the scene graph. This is why I've been
+attempting to clone the root scene node recursively and pass it to my
+thread. Any concerns with that approach?
+
+Cheers,
+Rob
+
+
+Message: 9
+Date: Thu, 28 Feb 2019 18:53:19 +0000
+From: Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+Subject: Re: [osg-users] Deep cloning an active root scene node
+Message-ID:
+        &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">CAFN7Y+WMmVdWhgQJsnkoPvKo9zi3mWm149mrdGMhBUHxJpLtrw at mail.gmail.com</A>&gt;
+Content-Type: text/plain; charset=&quot;UTF-8&quot;
+
+Hi Rob,
+
+The OSG is design to allow you to rendering multiple views at once,
+there is no need to clone the scene graph, you simply add another View
+to a CompositeView to add the extra rendering.  You can toggle
+optional View's on/off as you need them.
+
+Robert.
+
+Message: 7
+Date: Thu, 28 Feb 2019 14:20:46 -0330
+From: Robert Lockyer &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.lockyer at avalonholographics.com</A>&gt;
+To: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+Subject: [osg-users] Deep cloning an active root scene node
+Message-ID:
+        &lt;CAGUte1dn64d=<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">pcQXMrgQTShbQqDHKmdVcpd+09czFjNqb9JfZA at mail.gmail.com</A>&gt;
+Content-Type: text/plain; charset=&quot;utf-8&quot;
+
+Hi all, my name is Rob.
+
+I'm currently writing a plugin for an OSG based application. I effectively
+want to create a snapshot of the application's scene graph state and pass
+it to another thread where I can render to a texture, while the main
+rendering thread continues with minimal interruption.
+
+I'd like to do this because blocking the main thread with a
+osgViewer::Viewer::frame() call causes the application to lock up and
+prevents me from displaying a progress dialog. The scene I render takes a
+long time because I render many camera views to a single texture.
+
+I'm currently trying to do this:
+
+osg::Node* sceneCopy =
+dynamic_cast&lt;osg::Node*&gt;(sceneData_-&gt;clone(osg::CopyOp::DEEP_COPY_ALL));
+
+Then passing this to another thread where I run:
+
+viewer_ = new osgViewer::Viewer();
+viewer_-&gt;setSceneData(sceneCopy);
+
+However the behavior seems inconsistent. It either dies on a null reference
+inside osgEarth somewhere or it renders an empty scene. I don't think I
+fully understand the threading model of OSG, I've read a bit here and
+there, but I think there's a lot I'm still missing.
+
+Is there a safe way to copy the scene data and use it to run an isolated
+viewer like this in parallel? Is it even safe to run two viewers in
+parallel like this at all?
+
+Cheers,
+Rob
+
+Robert Lockyer
+Software Developer
+
+Office: 1-709-701-0281
+Email: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.lockyer at avalonholographics.com</A>
+
+-- 
+_This email and any attachments are confidential and may be privileged. Any 
+unauthorized use, disclosure, copying or distribution of the information 
+received is prohibited. If you are not the intended recipient please 
+contact the sender immediately by return email confirming that you have and 
+will delete all communications related to the email and any attachments 
+sent to you in error._
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190301/61907fbe/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190301/61907fbe/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message (by thread): <A HREF="009761.html">[osg-users] Deep cloning an active root scene node
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9760">[ date ]</a>
+              <a href="thread.html#9760">[ thread ]</a>
+              <a href="subject.html#9760">[ subject ]</a>
+              <a href="author.html#9760">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

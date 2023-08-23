@@ -1,0 +1,131 @@
+/* OpenSceneGraph example, osgtext.
+*
+*  Permission is hereby granted, free of charge, to any person obtaining a copy
+*  of this software and associated documentation files (the "Software"), to deal
+*  in the Software without restriction, including without limitation the rights
+*  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*  copies of the Software, and to permit persons to whom the Software is
+*  furnished to do so, subject to the following conditions:
+*
+*  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*  THE SOFTWARE.
+*/
+
+#include <osgDB/ReadFile>
+
+#include <osgGA/StateSetManipulator>
+#include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
+#include <osgViewer/config/SingleWindow>
+
+#include <osg/Camera>
+#include <osg/MatrixTransform>
+
+#include <osgText/Font>
+#include <osgText/Text>
+
+osgText::Text* createText(const std::string& textString, float xPosition)
+{
+  osgText::Text* returnValue = new osgText::Text;
+  returnValue->setDataVariance(osg::Object::DYNAMIC);
+  returnValue->setFont("fonts/times.ttf");
+  returnValue->setCharacterSize(32.f);
+  returnValue->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+  returnValue->setPosition(osg::Vec3(xPosition, -0.05, 0.0));
+  returnValue->setAlignment(osgText::TextBase::CENTER_CENTER);
+  returnValue->setAutoRotateToScreen(true);
+  returnValue->setText(textString);
+
+  // Note that adding a drop shadow makes text's alignment pretty far off.  This does
+  // not seem to have a huge negative impact in my app, but was noticed during the copy
+  // over to this demo.  Probably just an artifact of only having text in the scene?
+  //returnValue->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+  return returnValue;
+}
+
+// create text which sits in 3D space such as would be inserted into a normal model
+osg::Group* create3DText()
+{
+    osg::MatrixTransform* topXform = new osg::MatrixTransform;
+    topXform->setName("Top Level Transform");
+    // Real application adjusts this matrix on the fly as window resizes
+    topXform->setMatrix(osg::Matrix(
+        0.854637, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0.125313, 0, 0, 1
+    ));
+
+    // In real app, there are nodes between these two transforms
+
+    osg::MatrixTransform* xformLayoutItem = new osg::MatrixTransform;
+    xformLayoutItem->setName("VerticalLayout LayoutItem");
+    // Real application adjusts this matrix on the fly as window resizes
+    xformLayoutItem->setMatrix(osg::Matrix(
+        1, 0, 0, 0,
+        0, 0.920716, 0, 0,
+        0, 0, 1, 0,
+        0, 0.774936, 0, 1
+    ));
+
+    osgText::Text* text330 = createText("330", -0.166667);
+    osgText::Text* text000 = createText("000", 0.0);
+    osgText::Text* text030 = createText("030", 0.166667);
+    osgText::Text* text060 = createText("060", 0.333334);
+
+    topXform->addChild(xformLayoutItem);
+    xformLayoutItem->addChild(text330);
+    xformLayoutItem->addChild(text000);
+    xformLayoutItem->addChild(text030);
+    xformLayoutItem->addChild(text060);
+
+    return topXform;
+}
+
+int main(int argc, char** argv)
+{
+    osg::ArgumentParser arguments(&argc, argv);
+
+    // construct the viewer.
+    osgViewer::Viewer viewer(arguments);
+
+    // make sure the root node is group so we can add extra nodes to it.
+    osg::Group* group = new osg::Group;
+    group->addChild(create3DText());
+
+    // set the scene to render
+    viewer.setSceneData(group);
+
+    viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
+    viewer.addEventHandler(new osgViewer::StatsHandler());
+    viewer.addEventHandler(new osgViewer::WindowSizeHandler());
+
+    int width = 800;
+    int height = 600;
+    if (arguments.read("--size1"))
+      ; // noop
+    else if (arguments.read("--size2"))
+      height = 100;
+    else if (arguments.read("--size3"))
+      width = 100;
+    viewer.setUpViewInWindow(100, 100, width, height);
+
+    // Configure an ortho-2D projection, using -1 and +1 as bounds
+    osg::Camera* camera = viewer.getCamera();
+    camera->getOrCreateStateSet()->setGlobalDefaults();
+    camera->setProjectionMatrixAsOrtho2D(-1.f, 1.f, -1.f, 1.f);
+    camera->setProjectionResizePolicy(osg::Camera::FIXED);
+    camera->setViewMatrixAsLookAt(
+      osg::Vec3d(0, 0, 100),
+      osg::Vec3d(0, 0, 0),
+      osg::Y_AXIS);
+
+    viewer.run();
+
+    return 0;
+}

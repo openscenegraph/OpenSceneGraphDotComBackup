@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Unwanted culling in 3.6.4 vs 3.5.1
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Unwanted%20culling%20in%203.6.4%20vs%203.5.1&In-Reply-To=%3CCAFN7Y%2BWu4bKPGhi-gatopykSyHOWvph88%2B3%3DvvjUwtRSLma5jw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010689.html">
+   <LINK REL="Next"  HREF="010693.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Unwanted culling in 3.6.4 vs 3.5.1</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Unwanted%20culling%20in%203.6.4%20vs%203.5.1&In-Reply-To=%3CCAFN7Y%2BWu4bKPGhi-gatopykSyHOWvph88%2B3%3DvvjUwtRSLma5jw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Unwanted culling in 3.6.4 vs 3.5.1">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Jan 10 01:43:41 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010689.html">[osg-users] Unwanted culling in 3.6.4 vs 3.5.1
+</A></li>
+        <LI>Next message (by thread): <A HREF="010693.html">[osg-users] Unwanted culling in 3.6.4 vs 3.5.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10692">[ date ]</a>
+              <a href="thread.html#10692">[ thread ]</a>
+              <a href="subject.html#10692">[ subject ]</a>
+              <a href="author.html#10692">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Anders,
+
+On Thu, 9 Jan 2020 at 14:07, Anders Backman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>&gt; wrote:
+
+&gt;<i> Problem solved:
+</I>&gt;<i>
+</I>&gt;<i>     obj-&gt;setAutoScaleTransitionWidthRatio(0.001f); // Was 0 earlier.
+</I>&gt;<i>
+</I>&gt;<i> This seems to be something that changed between the two versions!
+</I>&gt;<i> Now it works.
+</I>&gt;<i>
+</I>
+Good to hear that you've found a workaround.
+
+There were a number of fixes made to osg::AutoTransform so it looks like
+one of the changes has created a regression for your usage case.  This is
+why I make so many calls for testing before release go out so we can catch
+these cases where the changes are still relatively fresh in out minds.
+
+This commit may have made the code sensitive to a zero
+setAutoScaleTransitionWidthRatio :
+
+
+<A HREF="https://github.com/openscenegraph/OpenSceneGraph/commit/92092a56ae920b41b25b984592d69a7aaba28480#diff-02ae8731c81cbf820759403a17780405">https://github.com/openscenegraph/OpenSceneGraph/commit/92092a56ae920b41b25b984592d69a7aaba28480#diff-02ae8731c81cbf820759403a17780405</A>
+
+I think this PR addresses a bug associated with using AutoTransforms in
+multiple views at one time.  Looking at the code I wonder if the commented
+out line (line 153 of src/osg/AutoTransform.cpp):
+
+    //if (_autoScaleTransitionWidthRatio&gt;0.0)
+
+Is what has introduced this sensitivity to a zero value
+of_autoScaleTransitionWidthRatio.
+The following code block looks like it would provoke a divide by zero with
+a _autoScaleTransitionWidthRatio of zero when the i and j values ended
+becoming the same value.
+
+I will need to think about what should be happening in the code in your
+usage case.  Do you know what was intended with the original settings?  I'm
+a bit cold on this code as it's nearly three years since I last worked on
+it.
+
+For the upcomming 3.6.5 release I'd like to get a fix checked in to handle
+this case.
+
+Cheers,
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200110/660e8658/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200110/660e8658/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010689.html">[osg-users] Unwanted culling in 3.6.4 vs 3.5.1
+</A></li>
+	<LI>Next message (by thread): <A HREF="010693.html">[osg-users] Unwanted culling in 3.6.4 vs 3.5.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10692">[ date ]</a>
+              <a href="thread.html#10692">[ thread ]</a>
+              <a href="subject.html#10692">[ subject ]</a>
+              <a href="author.html#10692">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

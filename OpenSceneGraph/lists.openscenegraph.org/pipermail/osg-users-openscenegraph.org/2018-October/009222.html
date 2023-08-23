@@ -1,0 +1,119 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Moving from 3.4.1 to 3.5.7 breaks my &quot;hardware instancing&quot;
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Moving%20from%203.4.1%20to%203.5.7%20breaks%20my%20%22hardware%0A%20instancing%22&In-Reply-To=%3C1538580897.m2f.75029%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009215.html">
+   <LINK REL="Next"  HREF="009198.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Moving from 3.4.1 to 3.5.7 breaks my &quot;hardware instancing&quot;</H1>
+<!--htdig_noindex-->
+    <B>Andrew Cunningham</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Moving%20from%203.4.1%20to%203.5.7%20breaks%20my%20%22hardware%0A%20instancing%22&In-Reply-To=%3C1538580897.m2f.75029%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Moving from 3.4.1 to 3.5.7 breaks my &quot;hardware instancing&quot;">andrewC at mac.com
+       </A><BR>
+    <I>Wed Oct  3 08:34:57 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009215.html">[osg-users] Moving from 3.4.1 to 3.5.7 breaks my &quot;hardware instancing&quot;
+</A></li>
+        <LI>Next message (by thread): <A HREF="009198.html">[osg-users] Latency
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9222">[ date ]</a>
+              <a href="thread.html#9222">[ thread ]</a>
+              <a href="subject.html#9222">[ subject ]</a>
+              <a href="author.html#9222">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Updating to 3.6.3 fixed the problem! 
+
+I did find a possible subtle issue with 3.6.3 when OSG_NOTIFY_LEVEL=DEBUG.
+No issues at other OSG_NOTIFY_LEVELs.
+
+I am getting a crash at program exit at this line, called from GraphicsObjectManager::~GraphicsObjectManager
+
+
+std::ostream&amp; osg::notify(const osg::NotifySeverity severity)
+{
+    if (osg::isNotifyEnabled(severity))
+    {
+        getNotifySingleton()._notifyStream.setCurrentSeverity(severity);
+        return getNotifySingleton()._notifyStream; &lt;---crash here
+    }
+    return getNotifySingleton()._nullStream;
+}
+
+GraphicsObjectManager::~GraphicsObjectManager()
+{
+    OSG_INFO&lt;&lt;_name&lt;&lt;&quot;::~&quot;&lt;&lt;_name&lt;&lt;&quot;()&quot;&lt;&lt;this&lt;&lt;std::endl;
+}
+
+
+My suspicion is that some &quot;singletons&quot; are getting destroyed in such an order that the &quot;NotifySingleton&quot; is destroyed before , say, the osg::ContextData is destroyed. 
+
+
+	osg158-osgd.dll!osg::notify(const osg::NotifySeverity severity) Line 231	C++
+ 	osg158-osgd.dll!osg::GraphicsObjectManager::~GraphicsObjectManager() Line 70	C++
+ 	osg158-osgd.dll!osg::GLObjectManager::~GLObjectManager() Line 85	C++
+ 	[External Code]	
+ 	osg158-osgd.dll!osg::Referenced::signalObserversAndDelete(bool signalDelete, bool doDelete) Line 292	C++
+ 	osg158-osgd.dll!osg::Referenced::unref() Line 194	C++
+ 	osg158-osgd.dll!osg::ref_ptr&lt;osg::Referenced&gt;::~ref_ptr&lt;osg::Referenced&gt;() Line 41	C++
+ 	[External Code]	
+ 	osg158-osgd.dll!osg::ContextData::~ContextData() Line 35	C++
+ 	[External Code]	
+ 	osg158-osgd.dll!osg::Referenced::signalObserversAndDelete(bool signalDelete, bool doDelete) Line 292	C++
+ 	osg158-osgd.dll!osg::Referenced::unref() Line 194	C++
+&gt;<i>	osg158-osgd.dll!osg::ref_ptr&lt;osg::ContextData&gt;::~ref_ptr&lt;osg::ContextData&gt;() Line 41	C++
+</I>
+
+
+Anyway, it's a minor issue and does not affect release code.
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic1f1a.php?p=75029#75029">http://forum.openscenegraph.org/viewtopic.php?p=75029#75029</A>
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009215.html">[osg-users] Moving from 3.4.1 to 3.5.7 breaks my &quot;hardware instancing&quot;
+</A></li>
+	<LI>Next message (by thread): <A HREF="009198.html">[osg-users] Latency
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9222">[ date ]</a>
+              <a href="thread.html#9222">[ thread ]</a>
+              <a href="subject.html#9222">[ subject ]</a>
+              <a href="author.html#9222">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

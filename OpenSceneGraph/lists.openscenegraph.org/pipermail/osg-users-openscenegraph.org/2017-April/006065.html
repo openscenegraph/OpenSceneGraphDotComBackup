@@ -1,0 +1,255 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Recommended way to render a scene from multiple independent viewpoints
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Recommended%20way%20to%20render%20a%20scene%20from%20multiple%0A%20independent%20viewpoints&In-Reply-To=%3CCACUuSRShRe8kDVsDEyFxe81UiwzuJge7nQPMTjj2vgibbcG%2BVQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006063.html">
+   <LINK REL="Next"  HREF="282298.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Recommended way to render a scene from multiple independent viewpoints</H1>
+<!--htdig_noindex-->
+    <B>Hannes Naude</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Recommended%20way%20to%20render%20a%20scene%20from%20multiple%0A%20independent%20viewpoints&In-Reply-To=%3CCACUuSRShRe8kDVsDEyFxe81UiwzuJge7nQPMTjj2vgibbcG%2BVQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Recommended way to render a scene from multiple independent viewpoints">naude.jj at gmail.com
+       </A><BR>
+    <I>Tue Apr 11 13:54:04 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006063.html">[osg-users] Recommended way to render a scene from multiple independent viewpoints
+</A></li>
+        <LI>Next message: <A HREF="282298.html">[osg-users] Lighting
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6065">[ date ]</a>
+              <a href="thread.html#6065">[ thread ]</a>
+              <a href="subject.html#6065">[ subject ]</a>
+              <a href="author.html#6065">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Robert
+
+Thanks so much for your help. That makes a lot of sense. I'll go implement
+the approach where the traversal is stopped at the shared subgraph root.
+
+Regards
+Hannes
+
+On Tue, Apr 11, 2017 at 8:08 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> HI Hannes,
+</I>&gt;<i>
+</I>&gt;<i> The osgViewer has a mechanism for avoid multiple traversals of shared
+</I>&gt;<i> scene graphs if mutlple View's share the same root node of the scene
+</I>&gt;<i> graph.  If shared component isn't the topmost node then the OSG has no
+</I>&gt;<i> straight forward way to know whether a subgraph has been traversed or
+</I>&gt;<i> not that frame.  One could implement a mechanism to avoid this
+</I>&gt;<i> visiting a node multiple times in one frame but it would be really
+</I>&gt;<i> costly to do, an expense that would only be a benefit for a very small
+</I>&gt;<i> number of users, but would slow performance for everyone else.
+</I>&gt;<i>
+</I>&gt;<i> The most efficient way to avoid this multiple traversals issue is to
+</I>&gt;<i> implement to have a custom callback that is tailored to the specific
+</I>&gt;<i> usage case that a user has.  I don't know enough about the specific
+</I>&gt;<i> callbacks and scene graph set up you have so I can't pinpoint the best
+</I>&gt;<i> route.
+</I>&gt;<i>
+</I>&gt;<i> If you have a shared subgraph that you don't want traversed multiple
+</I>&gt;<i> times per frame then use an UpdateCallback that has a frameNumber
+</I>&gt;<i> member variable that keep track of the the frameNumber (use
+</I>&gt;<i> NodeVisitor::getFrameStamp()'s FrameNumber) of the last traversal,
+</I>&gt;<i> when a traversal calls the update callback you only traverse the
+</I>&gt;<i> subgraph if the frameNumber is different and then set the frameNumber
+</I>&gt;<i> to the present frame,  if the frameNumber is the same then you just
+</I>&gt;<i> return immediately.  This custom UpdateCallback you'd place as high as
+</I>&gt;<i> you can in your scene graph to make sure the traversal stops as soon
+</I>&gt;<i> as possible.
+</I>&gt;<i>
+</I>&gt;<i> Another approach is to move this frameNumber tracking into your
+</I>&gt;<i> existing update callbacks, and simple return right away with the
+</I>&gt;<i> frameNumber is the same.  This requires a small tweak to the callbacks
+</I>&gt;<i> but is such a small change it's generally pretty easy to integrate.
+</I>&gt;<i>
+</I>&gt;<i> Finally you can simple make your callbacks resilient so that the are
+</I>&gt;<i> no ill effects from being called multiple times.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 11 April 2017 at 18:48, Hannes Naude &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">naude.jj at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Thanks Riccardo and Robert for your inputs.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Robert, yes you are correct that the only issue I had with the
+</I>&gt;<i> &gt; CompositeViewer was that the same Node's callback would get called as
+</I>&gt;<i> many
+</I>&gt;<i> &gt; times as views that it appeared in. This means that for example if I
+</I>&gt;<i> have a
+</I>&gt;<i> &gt; simple update that would translate a node a fixed amount, then nodes that
+</I>&gt;<i> &gt; appear in mulitple views would move faster than those that appear in a
+</I>&gt;<i> &gt; single view only. Also, as I add more cameras nodes end up moving faster.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Obviously I can fix this in the update callback itself, by checking
+</I>&gt;<i> &gt; something like simulationTime (and I would ultimately have to do this
+</I>&gt;<i> anyway
+</I>&gt;<i> &gt; to make my motion happen at the same speed, irrespective of frame rate),
+</I>&gt;<i> but
+</I>&gt;<i> &gt; I would prefer to not have the callbacks called at all when not required.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Incidentally, I found that the (non-composite) viewer did not immediately
+</I>&gt;<i> &gt; solve this. It would only go away if all my cameras shared the exact same
+</I>&gt;<i> &gt; root node. Now I have some symbology that I wish to display on one
+</I>&gt;<i> camera,
+</I>&gt;<i> &gt; but not the others, but I managed to achieve this by setting the nodemask
+</I>&gt;<i> &gt; appropriately.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I am not really doing anything fancy with the callbacks. I created a
+</I>&gt;<i> class
+</I>&gt;<i> &gt; which extends osg::Callback and overrode the run method to update a
+</I>&gt;<i> &gt; MatrixTransform node (via getMatrix and setMatrix). I then created
+</I>&gt;<i> another
+</I>&gt;<i> &gt; class which extends MatrixTransform and in the constructor I call
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; this-&gt;setUpdateCallback
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; providing an instance of my callback class as the argument. Now whenever
+</I>&gt;<i> I
+</I>&gt;<i> &gt; add an instance of my MatrixTransform class to the scenegraph, it
+</I>&gt;<i> implements
+</I>&gt;<i> &gt; the motion I want.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; This seems to work, except for the multiple update problem.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Hannes
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; On Tue, Apr 11, 2017 at 3:09 PM, Robert Osfield &lt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> &gt; wrote:
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; HI Hannes,
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; The CompositeViewer was written specifically for your usage case -
+</I>&gt;<i> &gt;&gt; i.e. multiple Views.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; I wouldn't recommend using slave Camera's for doing multiple views,
+</I>&gt;<i> &gt;&gt; while possible it's just a mess in terms of management.  slave
+</I>&gt;<i> &gt;&gt; Camera's are tools for helping rendering a single view, but with a
+</I>&gt;<i> &gt;&gt; view that is composed of several components - either spread across
+</I>&gt;<i> &gt;&gt; multiple windows, or a view that requires multiple passes such as
+</I>&gt;<i> &gt;&gt; distortion correction, field of view etc.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; The only reason you drawback you state about using CompositeViewer is
+</I>&gt;<i> &gt;&gt; multiple update traversals. Is this correct?  If so then the
+</I>&gt;<i> &gt;&gt; discussion should be about what problems you are having with
+</I>&gt;<i> &gt;&gt; callbacks, as the solution will likely related to how you are doing
+</I>&gt;<i> &gt;&gt; callbacks rather high level viewer configuration.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Robert.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; On 11 April 2017 at 12:08, Hannes Naude &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">naude.jj at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt;&gt; &gt; Hi all
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; I am trying to render a single scene from multiple viewpoints. I
+</I>&gt;<i> &gt;&gt; &gt; initially
+</I>&gt;<i> &gt;&gt; &gt; implemented this with a compositeviewer as per the osgthirdpersonview
+</I>&gt;<i> &gt;&gt; &gt; example. This worked fine except that my update callbacks appeared to
+</I>&gt;<i> be
+</I>&gt;<i> &gt;&gt; &gt; getting called more than once per render cycle. I assumed that the
+</I>&gt;<i> &gt;&gt; &gt; update
+</I>&gt;<i> &gt;&gt; &gt; traversal was being done for each view separately and therefore nodes
+</I>&gt;<i> &gt;&gt; &gt; that
+</I>&gt;<i> &gt;&gt; &gt; are present in multiple views will have their update callbacks called
+</I>&gt;<i> &gt;&gt; &gt; multiple times. So, at this point I tried to do the same thing but
+</I>&gt;<i> with
+</I>&gt;<i> &gt;&gt; &gt; a
+</I>&gt;<i> &gt;&gt; &gt; single View, somewhat similar to the osgCamera example. But, I do not
+</I>&gt;<i> &gt;&gt; &gt; want
+</I>&gt;<i> &gt;&gt; &gt; to add my cameras with viewer.addSlave as I want them to move
+</I>&gt;<i> &gt;&gt; &gt; independently
+</I>&gt;<i> &gt;&gt; &gt; of one another. So I tried adding them into the scene graph and giving
+</I>&gt;<i> &gt;&gt; &gt; each
+</I>&gt;<i> &gt;&gt; &gt; their own GraphicsContext, but even though the windows corresponding
+</I>&gt;<i> to
+</I>&gt;<i> &gt;&gt; &gt; these GraphicsContexts get created, it appears as if all rendering is
+</I>&gt;<i> &gt;&gt; &gt; done
+</I>&gt;<i> &gt;&gt; &gt; in a single window with multiple viewpoints being rendered over one
+</I>&gt;<i> &gt;&gt; &gt; another.
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; Obviously there are many ways to skin this cat, but I would appreciate
+</I>&gt;<i> &gt;&gt; &gt; some
+</I>&gt;<i> &gt;&gt; &gt; guidance on the recommended approach. To recap my requirements are :
+</I>&gt;<i> &gt;&gt; &gt;  - Multiple cameras viewing the same scene.
+</I>&gt;<i> &gt;&gt; &gt;  - Camera positions and orientations must be independently controlled.
+</I>&gt;<i> &gt;&gt; &gt;  - Node update callbacks should be called only once per Node per
+</I>&gt;<i> render
+</I>&gt;<i> &gt;&gt; &gt; cycle.
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; Any help will be appreciated
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; Regards
+</I>&gt;<i> &gt;&gt; &gt; Hannes Naude
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; _______________________________________________
+</I>&gt;<i> &gt;&gt; &gt; osg-users mailing list
+</I>&gt;<i> &gt;&gt; &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; <A HREF="../../../listinfo.cgi/osg-users-.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-</A>
+</I>&gt;<i> openscenegraph.org
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; _______________________________________________
+</I>&gt;<i> &gt;&gt; osg-users mailing list
+</I>&gt;<i> &gt;&gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt; <A HREF="../../../listinfo.cgi/osg-users-.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-</A>
+</I>&gt;<i> openscenegraph.org
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-</A>
+</I>&gt;<i> openscenegraph.org
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170411/2680d4c3/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170411/2680d4c3/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006063.html">[osg-users] Recommended way to render a scene from multiple independent viewpoints
+</A></li>
+	<LI>Next message: <A HREF="282298.html">[osg-users] Lighting
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6065">[ date ]</a>
+              <a href="thread.html#6065">[ thread ]</a>
+              <a href="subject.html#6065">[ subject ]</a>
+              <a href="author.html#6065">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] setGLExtensionFuncPtr priority
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20setGLExtensionFuncPtr%20priority&In-Reply-To=%3CCAFN7Y%2BW8L33CQmDSn_STacBsnzr%2BYrDwaZTNvTfr5XD0-nKziw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008981.html">
+   <LINK REL="Next"  HREF="008983.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] setGLExtensionFuncPtr priority</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20setGLExtensionFuncPtr%20priority&In-Reply-To=%3CCAFN7Y%2BW8L33CQmDSn_STacBsnzr%2BYrDwaZTNvTfr5XD0-nKziw%40mail.gmail.com%3E"
+       TITLE="[osg-users] setGLExtensionFuncPtr priority">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Aug 28 01:56:46 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008981.html">[osg-users] setGLExtensionFuncPtr priority
+</A></li>
+        <LI>Next message (by thread): <A HREF="008983.html">[osg-users] setGLExtensionFuncPtr priority
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8982">[ date ]</a>
+              <a href="thread.html#8982">[ thread ]</a>
+              <a href="subject.html#8982">[ subject ]</a>
+              <a href="author.html#8982">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>We are entering a bit of twilight zone.... to
+osg::getGLExtensionFuncPtr() I added the follow debug output to the
+linux code path:
+
+        static GetProcAddressARBProc s_glXGetProcAddressARB =
+convertPointerType&lt;GetProcAddressARBProc, void*&gt;(dlsym(0,
+&quot;glXGetProcAddressARB&quot;));
+        if (s_glXGetProcAddressARB)
+        {
+            OSG_NOTICE&lt;&lt;&quot;    s_glXGetProcAddressARB(&quot;&lt;&lt;funcName&lt;&lt;&quot;) =
+&quot;&lt;&lt;(s_glXGetProcAddressARB)(funcName)&lt;&lt;std::endl;
+            OSG_NOTICE&lt;&lt;&quot;
+convertPointerType(s_glXGetProcAddressARB(&quot;&lt;&lt;funcName&lt;&lt;&quot;)) =
+&quot;&lt;&lt;convertPointerType&lt;void*,
+__GLXextFuncPtr&gt;((s_glXGetProcAddressARB)(funcName))&lt;&lt;std::endl;
+            OSG_NOTICE&lt;&lt;&quot;    dlsym(0, &quot;&lt;&lt;funcName&lt;&lt;&quot;) = &quot;&lt;&lt;dlsym(0,
+funcName)&lt;&lt;std::endl;
+
+            return convertPointerType&lt;void*,
+__GLXextFuncPtr&gt;((s_glXGetProcAddressARB)(funcName));
+        }
+
+And the output I get is:
+$ osgbindlesstext  | grep glGetTexture
+    s_glXGetProcAddressARB(glGetTextureHandle) = 1
+    convertPointerType(s_glXGetProcAddressARB(glGetTextureHandle)) =
+convertPointerType(0x7fe1e11bf2e0) 0x7fe1e11bf2e0
+    dlsym(0, glGetTextureHandle) = 0
+getGLExtensionFuncPtr(glGetTextureHandle)
+s_glXGetProcAddressARB(glGetTextureHandle) = 1
+    convertPointerType(s_glXGetProcAddressARB(glGetTextureHandle)) =
+convertPointerType(0x7fe1e11bf2e0) 0x7fe1e11bf2e0
+    dlsym(0, glGetTextureHandle) = 0
+getGLExtensionFuncPtr(glGetTextureHandleARB)
+s_glXGetProcAddressARB(glGetTextureHandleARB) = 1
+    convertPointerType(s_glXGetProcAddressARB(glGetTextureHandleARB))
+= convertPointerType(0x7fe1f27674a0) 0x7fe1f27674a0
+    dlsym(0, glGetTextureHandleARB) = 0x7fe1f3e7a4a0
+getGLExtensionFuncPtr(glGetTextureHandleNV)
+s_glXGetProcAddressARB(glGetTextureHandleNV) = 1
+    convertPointerType(s_glXGetProcAddressARB(glGetTextureHandleNV)) =
+convertPointerType(0x7fe1f27674c0) 0x7fe1f27674c0
+    dlsym(0, glGetTextureHandleNV) = 0x7fe1f3e7a4c0
+getGLExtensionFuncPtr(glGetTextureHandleIMG)
+s_glXGetProcAddressARB(glGetTextureHandleIMG) = 1
+    convertPointerType(s_glXGetProcAddressARB(glGetTextureHandleIMG))
+= convertPointerType(0x7fe1e11bf380) 0x7fe1e11bf380
+    dlsym(0, glGetTextureHandleIMG) = 0
+getGLExtensionFuncPtr(glGetTextureHandleFrog)
+s_glXGetProcAddressARB(glGetTextureHandleFrog) = 1
+    convertPointerType(s_glXGetProcAddressARB(glGetTextureHandleFrog))
+= convertPointerType(0x7fe1e11bf3a0) 0x7fe1e11bf3a0
+    dlsym(0, glGetTextureHandleFrog) = 0
+getGLExtensionFuncPtr(glGetTextureHandleCat)
+s_glXGetProcAddressARB(glGetTextureHandleCat) = 1
+    convertPointerType(s_glXGetProcAddressARB(glGetTextureHandleCat))
+= convertPointerType(0x7fe1e11bf3c0) 0x7fe1e11bf3c0
+    dlsym(0, glGetTextureHandleCat) = 0
+
+So dlsym is working as expected but the s_glXGetProcAddressARB usage
+is problematic when the pointer should be NULL.  More digging to do...
+
+Robert.
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008981.html">[osg-users] setGLExtensionFuncPtr priority
+</A></li>
+	<LI>Next message (by thread): <A HREF="008983.html">[osg-users] setGLExtensionFuncPtr priority
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8982">[ date ]</a>
+              <a href="thread.html#8982">[ thread ]</a>
+              <a href="subject.html#8982">[ subject ]</a>
+              <a href="author.html#8982">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

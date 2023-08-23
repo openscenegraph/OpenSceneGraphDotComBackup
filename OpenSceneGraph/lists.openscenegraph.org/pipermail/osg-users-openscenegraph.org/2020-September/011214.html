@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] ParticleSystem lifetime, race conditions
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ParticleSystem%20lifetime%2C%20race%20conditions&In-Reply-To=%3Cmailman.14543.1599722463.3541.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011213.html">
+   <LINK REL="Next"  HREF="011215.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] ParticleSystem lifetime, race conditions</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ParticleSystem%20lifetime%2C%20race%20conditions&In-Reply-To=%3Cmailman.14543.1599722463.3541.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] ParticleSystem lifetime, race conditions">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Thu Sep 10 00:20:50 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011213.html">[osg-users] ParticleSystem lifetime, race conditions
+</A></li>
+        <LI>Next message (by thread): <A HREF="011215.html">[osg-users]  [ANN] Job Opportunity: SIL C++ developer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11214">[ date ]</a>
+              <a href="thread.html#11214">[ thread ]</a>
+              <a href="subject.html#11214">[ subject ]</a>
+              <a href="author.html#11214">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi James,
+
+Almost all the updating of the scene graph is not threadsafe and meant to
+be updated from a single threaded update section/traversal. Normally this
+would be invoked in the main loop like the viewer.updateTraversal() or in
+custom update osg::Operation assigned to the viewer, or through subclassing
+of Viewer::updateTraversal().
+
+The exception is where you have a subgraph that is wholly created and
+updated within a background thread before being assigned to the viewer.
+
+&gt;<i>From your description it'll be the ParticularSystemUpdater that is causing
+</I>problems.  Caching all the required particle addition in a thread safe
+container and applying them as a batch in the updateTraversal would be how
+I'd do it.  An update callback assigned to the ParticuleSystemUpdater could
+probably do this.  This callback would be the thread safe container or
+&quot;have a&quot; thread safe container then the loaders also know about.
+
+Or simply create a subclass from ParticularSystemUpdater to add a thread
+safe container within it and custom handling of this during update.
+
+I had to add, I haven't tried this with type of usage with osgPairicle, and
+I'm rather rusty as my focus has been on the VSG for the past two years :-)
+
+
+Robert.
+
+
+On Wed, 9 Sep 2020 at 21:40, OpenSceneGraph Users &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt; wrote:
+
+&gt;<i> Hello,
+</I>&gt;<i>
+</I>&gt;<i> We&#8217;re seeing some crashes in FlightGear relating to osgParticle, which
+</I>&gt;<i> raised some questions:
+</I>&gt;<i>
+</I>&gt;<i> - what is the thread-safety / expected thread calling restrictions on
+</I>&gt;<i> ParticleSystemUpdater addPS/removePS? I&#8217;m asking because none of the method
+</I>&gt;<i> which modify the PSU&#8217;s list of particle-systems, seem to lock any kind of
+</I>&gt;<i> mutex before making changes. (there is locking internal to each PS, but
+</I>&gt;<i> that doesn&#8217;t protect the std::vector inside the PSU)
+</I>&gt;<i>
+</I>&gt;<i> In FlightGear, we create ParticleSystems in some custom osgDB loaders, and
+</I>&gt;<i> therefore our ParticleSytems are created, and added to our global
+</I>&gt;<i> ParticleSystemUpdater, in those osgDB threads. We suspect this might be a
+</I>&gt;<i> race condition given the lack of locking in
+</I>&gt;<i> ParticleSystemUpdater::addParticleSystem and others. I wondered if it was
+</I>&gt;<i> expected to only touch the PSU from the main thread, for example. Eg by
+</I>&gt;<i> deferring adding to the PSU to an UpdateCallback.
+</I>&gt;<i>
+</I>&gt;<i> - what is the expected lifetime model of ParticleSystems/Updaters?
+</I>&gt;<i>
+</I>&gt;<i> We have a single global PSU, but since the PSU takes an owning ref_ptr to
+</I>&gt;<i> each added ParticleSystem, I suspect we are in practice never freeing any
+</I>&gt;<i> particle systems, even once the node which owns them in the scene, is
+</I>&gt;<i> unloaded/removed. (By the scenery tile expiring in our cache)
+</I>&gt;<i>
+</I>&gt;<i> I would have expected the PSU to use a weak-ref / osg::Observer onto the
+</I>&gt;<i> ParticleSystem, but maybe having a single global PSU is not the intended
+</I>&gt;<i> design here, perhaps we should be having one PSU per scenery tile (covers a
+</I>&gt;<i> few square km), or something else again? Or maybe I need to add an Observer
+</I>&gt;<i> on the parent Node, to call PSU::removeParticleSystem?
+</I>&gt;<i>
+</I>&gt;<i> Any pointers on best practice for this would be welcome. Maybe this is the
+</I>&gt;<i> wrong design for managing the creation and destruction of ParticleSystems
+</I>&gt;<i> in a long-lived scene such as a flight simulator.
+</I>&gt;<i>
+</I>&gt;<i> Kind regards,
+</I>&gt;<i> James
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200910/9ffb16e8/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200910/9ffb16e8/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011213.html">[osg-users] ParticleSystem lifetime, race conditions
+</A></li>
+	<LI>Next message (by thread): <A HREF="011215.html">[osg-users]  [ANN] Job Opportunity: SIL C++ developer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11214">[ date ]</a>
+              <a href="thread.html#11214">[ thread ]</a>
+              <a href="subject.html#11214">[ subject ]</a>
+              <a href="author.html#11214">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

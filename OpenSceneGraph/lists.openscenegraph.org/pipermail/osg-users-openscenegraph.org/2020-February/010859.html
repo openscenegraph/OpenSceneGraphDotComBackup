@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [Performance] Update dynamic vertices in drawable by external incoming data
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BPerformance%5D%20Update%20dynamic%20vertices%20in%20drawable%20by%0A%20external%20incoming%20data&In-Reply-To=%3Cmailman.71258.1582110685.7166.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010858.html">
+   <LINK REL="Next"  HREF="010860.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [Performance] Update dynamic vertices in drawable by external incoming data</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BPerformance%5D%20Update%20dynamic%20vertices%20in%20drawable%20by%0A%20external%20incoming%20data&In-Reply-To=%3Cmailman.71258.1582110685.7166.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] [Performance] Update dynamic vertices in drawable by external incoming data">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Tue Feb 18 10:19:45 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010858.html">[osg-users] osgShadow 3.6.3
+</A></li>
+        <LI>Next message (by thread): <A HREF="010860.html">[osg-users] [Performance] Update dynamic vertices in drawable by external incoming data
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10859">[ date ]</a>
+              <a href="thread.html#10859">[ thread ]</a>
+              <a href="subject.html#10859">[ subject ]</a>
+              <a href="author.html#10859">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello everyone,
+
+I am not experienced at osg and want to post my question here (please bear 
+me if my question is stupid). 
+
+Here is the backround of my question:
+I get 400 ~ 800 incoming points of simulated road marks by one programm 
+every 20 ~ 30 ms. My Programm is fed by these points continuously on the 
+main thread. My goal is to visualise them by connecting them into lines:
+
+After reading many releated posts on this forum, I got some ideas and 
+implemented them:
+
+this is basic setup:
+    osg::ref_ptr&lt;osg::Geode&gt; road_mark_geode; // hold the vertices inside 
+my program
+    ...
+    osg::ref_ptr&lt;osg::Geometry&gt; geom(new osg::Geometry());
+
+    geom-&gt;setUseVertexBufferObjects(true);
+    geom-&gt;setUseDisplayList(false);
+    geom-&gt;setUpdateCallback(new DynamicRoadMarkCallback); //  I customized 
+a osg::Drawable::UpdateCallback to run vertices-&gt;dirty(), to update inside 
+road mark vertices 
+    osg::Vec3Array* vertices(new osg::Vec3Array());
+    geom-&gt;setVertexArray(vertices);
+    geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_LINE_STRIP, 0, 
+DEFAULT_VERTEX_SIZE));
+    road_mark_geode-&gt;addDrawable(geom.get());
+    ...
+
+Given that data reception is on main thread, i did this (points_in is 
+incoming data from another program):
+
+Loop on main thread:
+    receive points and store them -&gt; call function &quot;*update_pos_of_vertices* &quot; 
+to set the pos (x, y, z) for vertices by new points.
+   
+    Blow is the interested code snippet:
+   
+    getdata(points_in, points_save); // save incoming data into &quot;
+*points_save&quot;* of my own data type
+ 
+    update_pos_of_vertices (points_save) {
+        osg::Geometry* geo_drawable = 
+static_cast&lt;osg::Geometry*&gt;(road_mark_geode-&gt;getDrawable(0));
+geo_drawable-&gt;setDataVariance(osg::Object::DYNAMIC);
+osg::DrawArrays* drawArrays = 
+static_cast&lt;osg::DrawArrays*&gt;(geo_drawable-&gt;getPrimitiveSet(0));
+osg::Vec3Array* vertices = 
+static_cast&lt;osg::Vec3Array*&gt;(geo_drawable-&gt;getVertexArray());
+int num_vertices = points_save.size();
+drawArrays-&gt;setCount(num_vertices);
+vertices-&gt;resize(num_vertices);
+for (... ) { 
+vertices-&gt;at(i).set(points_save[i]); // set new pos of each vertex
+}
+    }
+
+My program ran and i got visualized lines which are linked by points (see 
+pic in attachment). But my program becomes very slow: average time for one 
+single loop is 50ms. So my question is:
+How can I improve the performance?
+Did I do anything wrong regarding the my implementation above?
+
+Look  forward to any help, tips and remarks!
+Thank you
+
+Yuan
+
+   
+
+
+
+    
+
+    
+
+
+
+
+
+
+
+ 
+
+
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/5a56fb13-4d17-41dd-a7c5-62ec49a3d421%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/5a56fb13-4d17-41dd-a7c5-62ec49a3d421%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200218/9102729d/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200218/9102729d/attachment.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: visualized_lines.png
+Type: image/png
+Size: 3770 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200218/9102729d/attachment.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200218/9102729d/attachment.png</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010858.html">[osg-users] osgShadow 3.6.3
+</A></li>
+	<LI>Next message (by thread): <A HREF="010860.html">[osg-users] [Performance] Update dynamic vertices in drawable by external incoming data
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10859">[ date ]</a>
+              <a href="thread.html#10859">[ thread ]</a>
+              <a href="subject.html#10859">[ subject ]</a>
+              <a href="author.html#10859">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

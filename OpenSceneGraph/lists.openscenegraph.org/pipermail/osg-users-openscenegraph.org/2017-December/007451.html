@@ -1,0 +1,185 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Serialization differences between ASCII and XML
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Serialization%20differences%20between%20ASCII%20and%20XML&In-Reply-To=%3C1514487104.m2f.72647%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007450.html">
+   <LINK REL="Next"  HREF="007454.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Serialization differences between ASCII and XML</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Serialization%20differences%20between%20ASCII%20and%20XML&In-Reply-To=%3C1514487104.m2f.72647%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Serialization differences between ASCII and XML">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Thu Dec 28 10:51:44 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007450.html">[osg-users] Serialization differences between ASCII and XML
+</A></li>
+        <LI>Next message (by thread): <A HREF="007454.html">[osg-users] Serialization differences between ASCII and XML
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7451">[ date ]</a>
+              <a href="thread.html#7451">[ thread ]</a>
+              <a href="subject.html#7451">[ subject ]</a>
+              <a href="author.html#7451">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Hartwig
+I have no experience with osgx format
+But the bug seams to come from osgDB/XMLParser.cpp
+perhaps removing newline from strings in osgDB::XMLParser::writeString
+could to the trick...
+Cheers
+
+
+hartwigw wrote:
+&gt;<i> Hi,
+</I>&gt;<i> 
+</I>&gt;<i> wrote a simple serialiser for the output of a range:
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> 
+</I>&gt;<i> namespace
+</I>&gt;<i> {
+</I>&gt;<i> 	bool checkGeographicRange(osgPlanetCore::GeodeticData const&amp;)
+</I>&gt;<i> 	{
+</I>&gt;<i> 		return true;
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> 	bool readGeographicRange(osgDB::InputStream&amp; inputStream, osgPlanetCore::GeodeticData&amp; geodeticData)
+</I>&gt;<i> 	{
+</I>&gt;<i> 		osgPlanetCore::GeographicRange geographicRange;
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 		if (osgPlanetWrappers::readRange(inputStream,geographicRange))
+</I>&gt;<i> 		{
+</I>&gt;<i> 			geodeticData.setGeographicRange(geographicRange);
+</I>&gt;<i> 			return true;
+</I>&gt;<i> 		} /* if */
+</I>&gt;<i> 		else
+</I>&gt;<i> 			return false;
+</I>&gt;<i> 	}
+</I>&gt;<i> 	
+</I>&gt;<i> 	bool writeGeographicRange(osgDB::OutputStream&amp; outputStream, osgPlanetCore::GeodeticData const&amp; geodeticData)
+</I>&gt;<i> 	{
+</I>&gt;<i> 		outputStream &lt;&lt; std::endl;
+</I>&gt;<i> 		return osgPlanetWrappers::writeRange(outputStream,geodeticData.getGeographicRange());
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> } /* namespace */
+</I>&gt;<i> 
+</I>&gt;<i> 	template &lt; typename Values &gt;
+</I>&gt;<i> 	bool readRange(osgDB::InputStream&amp; inputStream, osgPlanetCore::Range&lt; Values &gt;&amp; range)
+</I>&gt;<i> 	{
+</I>&gt;<i> 		inputStream &gt;&gt; inputStream.BEGIN_BRACKET;
+</I>&gt;<i> 		inputStream &gt;&gt; inputStream.PROPERTY(&quot;FromValues&quot;) &gt;&gt; range.getFromValues();
+</I>&gt;<i> 		inputStream &gt;&gt; inputStream.PROPERTY(&quot;TillValues&quot;) &gt;&gt; range.getTillValues();
+</I>&gt;<i> 		inputStream &gt;&gt; inputStream.END_BRACKET;
+</I>&gt;<i> 		return true;
+</I>&gt;<i> 	}
+</I>&gt;<i> 	
+</I>&gt;<i> 	template &lt; typename Values &gt;
+</I>&gt;<i> 	bool writeRange(osgDB::OutputStream&amp; outputStream, osgPlanetCore::Range&lt; Values &gt; const&amp; range)
+</I>&gt;<i> 	{
+</I>&gt;<i> 		outputStream &lt;&lt; outputStream.BEGIN_BRACKET &lt;&lt; std::endl;
+</I>&gt;<i> 		outputStream &lt;&lt; outputStream.PROPERTY(&quot;FromValues&quot;) &lt;&lt; range.getFromValues() &lt;&lt; std::endl;
+</I>&gt;<i> 		outputStream &lt;&lt; outputStream.PROPERTY(&quot;TillValues&quot;) &lt;&lt; range.getTillValues() &lt;&lt; std::endl;
+</I>&gt;<i> 		outputStream &lt;&lt; outputStream.END_BRACKET &lt;&lt; std::endl;
+</I>&gt;<i> 		return true;
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> In a wrapper I call
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> 
+</I>&gt;<i> 	ADD_USER_SERIALIZER(GeographicRange);
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Basically serialisation should write / read two vectors indicating a lower and a higher limit of a geodetic range.
+</I>&gt;<i> 
+</I>&gt;<i> The ASCII output looks like:
+</I>&gt;<i> 
+</I>&gt;<i> GeographicRange 
+</I>&gt;<i> {
+</I>&gt;<i> FromValues -135 40.9799 -10000 
+</I>&gt;<i> TillValues -90 66.5133 10000 
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> Which seems to be fine.
+</I>&gt;<i> 
+</I>&gt;<i> The XML output looks like:
+</I>&gt;<i> 
+</I>&gt;<i>           &lt; FromValues attribute=&quot;-135 40.9799 -10000&nl;&quot; &gt;
+</I>&gt;<i>             &lt; TillValues attribute=&quot;-90 66.5133 10000&nl;&nl;&quot; &gt;
+</I>&gt;<i>              &lt; /TillValues &gt;
+</I>&gt;<i>           &lt; /FromValues &gt;
+</I>&gt;<i> 
+</I>&gt;<i> Which is not really the same. Besides the fact that &quot;GeographicRange&quot; is gone completely.
+</I>&gt;<i> 
+</I>&gt;<i> How do I make the output of both versions the same?
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Hartwig
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopice91e.php?p=72647#72647">http://forum.openscenegraph.org/viewtopic.php?p=72647#72647</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007450.html">[osg-users] Serialization differences between ASCII and XML
+</A></li>
+	<LI>Next message (by thread): <A HREF="007454.html">[osg-users] Serialization differences between ASCII and XML
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7451">[ date ]</a>
+              <a href="thread.html#7451">[ thread ]</a>
+              <a href="subject.html#7451">[ subject ]</a>
+              <a href="author.html#7451">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

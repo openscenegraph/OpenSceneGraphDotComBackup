@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Using callbacks for all graph modifications?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20callbacks%20for%20all%20graph%20modifications%3F&In-Reply-To=%3CCAFN7Y%2BWqgxNVSgnPE2%3DcqE7yH9v9VZ10feSDSky4ZR6Ez78OAA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006600.html">
+   <LINK REL="Next"  HREF="006603.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Using callbacks for all graph modifications?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20callbacks%20for%20all%20graph%20modifications%3F&In-Reply-To=%3CCAFN7Y%2BWqgxNVSgnPE2%3DcqE7yH9v9VZ10feSDSky4ZR6Ez78OAA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Using callbacks for all graph modifications?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Aug 18 13:57:55 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006600.html">[osg-users] Using callbacks for all graph modifications?
+</A></li>
+        <LI>Next message: <A HREF="006603.html">[osg-users] Using callbacks for all graph modifications?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6602">[ date ]</a>
+              <a href="thread.html#6602">[ thread ]</a>
+              <a href="subject.html#6602">[ subject ]</a>
+              <a href="author.html#6602">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Antoine,
+
+Callbacks are just one way of managing updates to the scene graph, whether
+they are the most appropriate tool for each job depends entirely and usage
+case, within one application you may well use multiple approaches, using
+the appropriate tool for each task.
+
+As a general guide I would suggest that one would use a node callback when
+you want to encapsulate updates to particular subgraphs so that once you
+add the callback it looks after its subgraph largely by itself.  For
+instance a subgraph that you want to spin constantly you create/load the
+subgraph put a transform above it and attach a callback.  Once setup you
+then can just pass the whole subgraph into the main scene graph and not
+have worry about the implementation details any more.
+
+If your updates related closely with high level operations then you'd
+typically push these high level updates into the frame loop - similar to
+what you seem to be doing right now.
+
+Robert.
+
+On 18 August 2017 at 18:21, Antoine Rennuit &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">antoinerennuit at hotmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> I have a custom DataModel describing objects, relations between them. The
+</I>&gt;<i> objects of my custom DataModel are rendered using OSG.
+</I>&gt;<i>
+</I>&gt;<i> Depending on user events in my app, the objects of my DataModel are
+</I>&gt;<i> modified and OSG is being notified of all these modifications. These
+</I>&gt;<i> modifications leads to e.g. osg::PositionAttitudeTransforms being
+</I>&gt;<i> updated, node masks being modified, osg::Geodes being added or removed of
+</I>&gt;<i> the graph (via addChild() / removeChild()). This leads to a live 3D
+</I>&gt;<i> rendering with animations...
+</I>&gt;<i>
+</I>&gt;<i> I do all the updates of my OSG graph in a raw way, without using
+</I>&gt;<i> callbacks. This gives code such as
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> m_worldFrame-&gt;setPosition(EigenToOsgVector3(m_node-&gt;m_worldFrame-&gt;m_pos));
+</I>&gt;<i> m_worldFrame-&gt;setAttitude(EigenToOsgQuat(m_node-&gt;m_worldFrame-&gt;m_quat));
+</I>&gt;<i>
+</I>&gt;<i> if (m_worldFrame)
+</I>&gt;<i>     m_worldFrame-&gt;setNodeMask(0xffffffff);
+</I>&gt;<i> if (m_mesh)
+</I>&gt;<i>     m_mesh-&gt;setNodeMask(0xffffffff);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Now I am currently reading the Beginners' Guide and have read callbacks
+</I>&gt;<i> should be used for animation (chapter 8).
+</I>&gt;<i>
+</I>&gt;<i> Does that mean I should use callbacks for all modifications of the osg
+</I>&gt;<i> graph?
+</I>&gt;<i>
+</I>&gt;<i> This could be implemented in such a way that when my DataModel is updated
+</I>&gt;<i> a flag is updated which is read by the callbacks and depending on the state
+</I>&gt;<i> of the flag the callback performs the osg graph update of not. This is
+</I>&gt;<i> possible but this looks very heavy to implement...
+</I>&gt;<i>
+</I>&gt;<i> Am I getting something wrong? Or should I really use update callbacks for
+</I>&gt;<i> all modifications of the OSG graph (objects moving, setting masks...)?
+</I>&gt;<i>
+</I>&gt;<i> Thanks a lot,
+</I>&gt;<i>
+</I>&gt;<i> Antoine.[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic3e54.php?p=71456#71456">http://forum.openscenegraph.org/viewtopic.php?p=71456#71456</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170818/e0f3edae/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170818/e0f3edae/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006600.html">[osg-users] Using callbacks for all graph modifications?
+</A></li>
+	<LI>Next message: <A HREF="006603.html">[osg-users] Using callbacks for all graph modifications?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6602">[ date ]</a>
+              <a href="thread.html#6602">[ thread ]</a>
+              <a href="subject.html#6602">[ subject ]</a>
+              <a href="author.html#6602">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

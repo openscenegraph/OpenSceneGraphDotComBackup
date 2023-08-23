@@ -1,0 +1,664 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgDB XmlParser and localization
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgDB%20XmlParser%20and%20localization&In-Reply-To=%3CCAO-%2BzinagPeKfJ4Ly0R1jFvsOL%2BS%3D1F4TE7E4fOc__EGX%3Dkw0A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008686.html">
+   <LINK REL="Next"  HREF="008671.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgDB XmlParser and localization</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgDB%20XmlParser%20and%20localization&In-Reply-To=%3CCAO-%2BzinagPeKfJ4Ly0R1jFvsOL%2BS%3D1F4TE7E4fOc__EGX%3Dkw0A%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgDB XmlParser and localization">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Mon Jul  9 03:40:54 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008686.html">[osg-users] Graphics context issues
+</A></li>
+        <LI>Next message (by thread): <A HREF="008671.html">[osg-users] osgDB XmlParser and localization
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8670">[ date ]</a>
+              <a href="thread.html#8670">[ thread ]</a>
+              <a href="subject.html#8670">[ subject ]</a>
+              <a href="author.html#8670">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+I am working with some localized XML files (with chars out of 0-255 range)
+and at present the XML Node parsing is not suitable to manage it. And I
+think the support for is important - at my case it is OpenStreetMap with
+street names containing these chars.
+
+Attached is the modified source (based on the master) that fixes ity, if
+you have time and will to review. I can do PR if you want
+
+Thanks and cheers!
+
+Nick
+
+p.s. welcome back
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180709/a5fb28aa/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180709/a5fb28aa/attachment.html</A>&gt;
+-------------- next part --------------
+/* -*-c++-*- OpenSceneGraph - Copyright (C) 1998-2009 Robert Osfield
+ *
+ * This library is open source and may be redistributed and/or modified under
+ * the terms of the OpenSceneGraph Public License (OSGPL) version 0.0 or
+ * (at your option) any later version.  The full license is in LICENSE file
+ * included with this distribution, and on the openscenegraph.org website.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * OpenSceneGraph Public License for more details.
+*/
+
+#include &lt;osgDB/XmlParser&gt;
+#include &lt;osgDB/FileUtils&gt;
+
+#include &lt;osg/Notify&gt;
+
+using namespace osgDB;
+
+XmlNode* osgDB::readXmlFile(const std::string&amp; filename,const Options* options)
+{
+    std::string foundFile = osgDB::findDataFile(filename, options);
+    if (!foundFile.empty())
+    {
+        XmlNode::Input input;
+        input.open(foundFile);
+        input.readAllDataIntoBuffer();
+
+        if (!input)
+        {
+            OSG_NOTICE&lt;&lt;&quot;Could not open XML file: &quot;&lt;&lt;filename&lt;&lt;std::endl;
+            return 0;
+        }
+
+        osg::ref_ptr&lt;XmlNode&gt; root = new XmlNode;
+        root-&gt;read(input);
+
+        return root.release();
+    }
+    else
+    {
+        OSG_NOTICE&lt;&lt;&quot;Could not find XML file: &quot;&lt;&lt;filename&lt;&lt;std::endl;
+        return 0;
+    }
+}
+
+std::string osgDB::trimEnclosingSpaces(const std::string&amp; str)
+{
+    if (str.empty()) return str;
+
+    const std::string whitespaces(&quot; \t\f\v\n\r&quot;);
+
+    std::string::size_type start = str.find_first_not_of(whitespaces);
+    if (start==std::string::npos) return std::string();
+
+    std::string::size_type end = str.find_last_not_of(whitespaces);
+    if (end==std::string::npos) return std::string();
+
+    return std::string(str, start, (end-start)+1);
+}
+
+
+XmlNode* osgDB::readXmlStream(std::istream&amp; fin)
+{
+    XmlNode::Input input;
+    input.attach(fin);
+    input.readAllDataIntoBuffer();
+
+    if (!input)
+    {
+        OSG_NOTICE&lt;&lt;&quot;Could not attach to XML stream.&quot;&lt;&lt;std::endl;
+        return 0;
+    }
+
+    osg::ref_ptr&lt;XmlNode&gt; root = new XmlNode;
+    root-&gt;read(input);
+
+    return root.release();
+}
+
+XmlNode::ControlMap::ControlMap()
+{
+    setUpControlMappings();
+}
+
+void XmlNode::ControlMap::addControlToCharacter(const std::string&amp; control, int c)
+{
+    _controlToCharacterMap[control] = c;
+    _characterToControlMap[c] = control;
+}
+
+void XmlNode::ControlMap::setUpControlMappings()
+{
+    addControlToCharacter(&quot;&amp;&quot;,'&amp;');
+    addControlToCharacter(&quot;&lt;&quot;,'&lt;');
+    addControlToCharacter(&quot;&gt;&quot;,'&gt;');
+    addControlToCharacter(&quot;&quot;&quot;,'&quot;');
+    addControlToCharacter(&quot;&apos;&quot;,'\'');
+    addControlToCharacter(&quot;&nl;&quot;,'\n');
+}
+
+XmlNode::Input::Input():
+    _currentPos(0)
+{
+}
+
+XmlNode::Input::Input(const Input&amp;):
+    ControlMap(),
+    _currentPos(0)
+{
+}
+
+XmlNode::Input::~Input()
+{
+}
+void XmlNode::Input::open(const std::string&amp; filename)
+{
+    _fin.open(filename.c_str());
+}
+
+void XmlNode::Input::attach(std::istream&amp; fin)
+{
+    std::ios &amp;fios = _fin;
+    fios.rdbuf(fin.rdbuf());
+}
+
+void XmlNode::Input::readAllDataIntoBuffer()
+{
+    while(_fin)
+    {
+        int c = _fin.get();
+		//if (c&gt;=0 &amp;&amp; c&lt;=255)
+        {
+            _buffer.push_back(c);
+        }
+    }
+}
+
+void XmlNode::Input::skipWhiteSpace()
+{
+    while(_currentPos&lt;_buffer.size() &amp;&amp; (_buffer[_currentPos]==' ' || _buffer[_currentPos]=='\t' || _buffer[_currentPos]=='\n' || _buffer[_currentPos]=='\r'))
+    {
+        //OSG_NOTICE&lt;&lt;&quot;_currentPos=&quot;&lt;&lt;_currentPos&lt;&lt;&quot;_buffer.size()=&quot;&lt;&lt;_buffer.size()&lt;&lt;&quot; v=&quot;&lt;&lt;int(_buffer[_currentPos])&lt;&lt;std::endl;
+        ++_currentPos;
+    }
+    //OSG_NOTICE&lt;&lt;&quot;done&quot;&lt;&lt;std::endl;
+}
+
+XmlNode::XmlNode()
+{
+    type = UNASSIGNED;
+}
+
+bool XmlNode::read(Input&amp; input)
+{
+    if (type == UNASSIGNED) type = ROOT;
+
+    while(input)
+    {
+        //input.skipWhiteSpace();
+        if (input.match(&quot;&lt;!--&quot;))
+        {
+            XmlNode* commentNode = new XmlNode;
+            commentNode-&gt;type = XmlNode::COMMENT;
+            children.push_back(commentNode);
+
+            input += 4;
+            XmlNode::Input::size_type end = input.find(&quot;--&gt;&quot;);
+            commentNode-&gt;contents = input.substr(0, end);
+            if (end!=std::string::npos)
+            {
+                OSG_INFO&lt;&lt;&quot;Valid Comment record [&quot;&lt;&lt;commentNode-&gt;contents&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += (end+3);
+            }
+            else
+            {
+                OSG_NOTICE&lt;&lt;&quot;Error: Unclosed Comment record [&quot;&lt;&lt;commentNode-&gt;contents&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += end;
+            }
+        }
+        else if (input.match(&quot;&lt;/&quot;))
+        {
+            input += 2;
+            XmlNode::Input::size_type end = input.find(&quot;&gt;&quot;);
+            std::string comment = input.substr(0, end);
+            if (end!=std::string::npos)
+            {
+                OSG_INFO&lt;&lt;&quot;Valid end tag [&quot;&lt;&lt;comment&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += (end+1);
+            }
+            else
+            {
+                OSG_NOTICE&lt;&lt;&quot;Error: Unclosed end tag [&quot;&lt;&lt;comment&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += end;
+            }
+
+            if (comment==name) { OSG_INFO&lt;&lt;&quot;end tag is matched correctly&quot;&lt;&lt;std::endl; }
+            else { OSG_NOTICE&lt;&lt;&quot;Error: end tag is not matched correctly&quot;&lt;&lt;std::endl; }
+
+            return true;
+        }
+        else if (input.match(&quot;&lt;!DOCTYPE&quot;))
+        {
+            XmlNode* commentNode = new XmlNode;
+            commentNode-&gt;type = XmlNode::INFORMATION;
+            children.push_back(commentNode);
+
+            ++input;
+            XmlNode::Input::size_type end = input.find(&quot;&gt;&quot;);
+            commentNode-&gt;contents = input.substr(0, end);
+            if (end!=std::string::npos)
+            {
+                OSG_INFO&lt;&lt;&quot;Valid information record [&quot;&lt;&lt;commentNode-&gt;contents&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += (end+2);
+            }
+            else
+            {
+                OSG_NOTICE&lt;&lt;&quot;Error: Unclosed information record [&quot;&lt;&lt;commentNode-&gt;contents&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += end;
+            }
+        }
+        else if (input.match(&quot;&lt;![CDATA[&quot;))
+        {
+            XmlNode* commentNode = new XmlNode;
+            commentNode-&gt;type = XmlNode::INFORMATION;
+            children.push_back(commentNode);
+
+            input += 9;
+            XmlNode::Input::size_type end = input.find(&quot;]]&gt;&quot;);
+            commentNode-&gt;contents = input.substr(0, end);
+            if (end!=std::string::npos)
+            {
+                OSG_INFO&lt;&lt;&quot;Valid information record [&quot;&lt;&lt;commentNode-&gt;contents&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += (end+2);
+            }
+            else
+            {
+                OSG_NOTICE&lt;&lt;&quot;Error: Unclosed information record [&quot;&lt;&lt;commentNode-&gt;contents&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += end;
+            }
+        }
+        else if (input.match(&quot;&lt;?&quot;))
+        {
+            XmlNode* commentNode = new XmlNode;
+            commentNode-&gt;type = XmlNode::INFORMATION;
+            children.push_back(commentNode);
+
+            input += 2;
+            XmlNode::Input::size_type end = input.find(&quot;?&gt;&quot;);
+            commentNode-&gt;contents = input.substr(0, end);
+            if (end!=std::string::npos)
+            {
+                OSG_INFO&lt;&lt;&quot;Valid information record [&quot;&lt;&lt;commentNode-&gt;contents&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += (end+2);
+            }
+            else
+            {
+                OSG_NOTICE&lt;&lt;&quot;Error: Unclosed information record [&quot;&lt;&lt;commentNode-&gt;contents&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                input += end;
+            }
+        }
+        else if (input.match(&quot;&lt;&quot;))
+        {
+            XmlNode* childNode = new XmlNode;
+            childNode-&gt;type = XmlNode::NODE;
+            children.push_back(childNode);
+
+            input += 1;
+
+            input.skipWhiteSpace();
+
+            int c = 0;
+			c = input[0];
+            while (c!=' ' &amp;&amp; c!='\n' &amp;&amp; c!='\r' &amp;&amp; c!='&gt;' &amp;&amp; c!='/')
+            {
+                childNode-&gt;name.push_back(c);
+                ++input;
+
+				c = input[0];
+            }
+
+			c = input[0];
+            while (c!='&gt;' &amp;&amp; c!='/')
+            {
+                Input::size_type prev_pos = input.currentPosition();
+
+                input.skipWhiteSpace();
+                std::string option;
+                std::string value;
+
+                if (input[0]=='&quot;')
+                {
+                    option.push_back(input[0]);
+                    ++input;
+					c = input[0];
+                    while(c!='&quot;')
+                    {
+                        if (c=='&amp;')
+                            readAndReplaceControl(option, input);
+                        else
+                        {
+                            option.push_back(c);
+                            ++input;
+                        }
+						c = input[0];
+                    }
+                    option.push_back(input[0]);
+                    ++input;
+					c = input[0];
+                }
+                else
+                {
+					c = input[0];
+                    while(c!='&gt;' &amp;&amp; c!='/' &amp;&amp; c!='&quot;' &amp;&amp; c!='\'' &amp;&amp; c!='=' &amp;&amp; c!=' ' &amp;&amp; c!='\n' &amp;&amp; c!='\r')
+                    {
+                        option.push_back(c);
+                        ++input;
+						c = input[0];
+                    }
+                }
+
+                input.skipWhiteSpace();
+                if (input[0]=='=')
+                {
+                    ++input;
+
+                    input.skipWhiteSpace();
+
+                    if (input[0]=='&quot;')
+                    {
+                        ++input;
+						c = input[0];
+                        while(c!='&quot;')
+                        {
+                            if (c=='&amp;')
+                                readAndReplaceControl(value, input);
+                            else
+                            {
+                                value.push_back(c);
+                                ++input;
+                            }
+							c = input[0];
+                        }
+                        ++input;
+						c = input[0];
+                    }
+                    else if (input[0]=='\'')
+                    {
+                        ++input;
+						c = input[0];
+                        while(c!='\'')
+                        {
+                            if (c=='&amp;')
+                                readAndReplaceControl(value, input);
+                            else
+                            {
+                                value.push_back(c);
+                                ++input;
+                            }
+							c = input[0];
+                        }
+                        ++input;
+						c = input[0];
+                    }
+                    else
+                    {
+                        ++input;
+						c = input[0];
+                        while(c!=' ' &amp;&amp; c!='\n' &amp;&amp; c!='\r' &amp;&amp; c!='&quot;' &amp;&amp; c!='\'' &amp;&amp; c!='&gt;')
+                        {
+                            value.push_back(c);
+                            ++input;
+							c = input[0];
+                        }
+                    }
+                }
+
+                if (prev_pos == input.currentPosition())
+                {
+                    OSG_NOTICE&lt;&lt;&quot;Error, parser iterator not advanced, position: &quot;&lt;&lt;input.substr(0,50)&lt;&lt;std::endl;
+                    ++input;
+                }
+
+                if (!option.empty())
+                {
+                    OSG_INFO&lt;&lt;&quot;Assigning option &quot;&lt;&lt;option&lt;&lt;&quot; with value &quot;&lt;&lt;value&lt;&lt;std::endl;
+                    childNode-&gt;properties[option] = value;
+                }
+				c = input[0];
+            }
+
+			c = input[0];
+            if ((c=='&gt;' || c=='/'))
+            {
+                ++input;
+
+                OSG_INFO&lt;&lt;&quot;Valid tag [&quot;&lt;&lt;childNode-&gt;name&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+
+                if (c=='/')
+                {
+                    if ((c=input[0])&gt;=0 &amp;&amp; c=='&gt;')
+                    {
+                        ++input;
+                        OSG_INFO&lt;&lt;&quot;tag is closed correctly&quot;&lt;&lt;std::endl;
+                        childNode-&gt;type = ATOM;
+                    }
+                    else
+                        OSG_NOTICE&lt;&lt;&quot;Error: tag is not closed correctly&quot;&lt;&lt;std::endl;
+                }
+                else
+                {
+                    bool result = childNode-&gt;read(input);
+                    if (!result) return false;
+                }
+
+                if (type==NODE &amp;&amp; !children.empty()) type = GROUP;
+            }
+            else
+            {
+                OSG_NOTICE&lt;&lt;&quot;Unclosed tag [&quot;&lt;&lt;childNode-&gt;name&lt;&lt;&quot;]&quot;&lt;&lt;std::endl;
+                return false;
+            }
+
+        }
+        else
+        {
+            int c = input[0];
+
+            if (c=='&amp;')
+            {
+                readAndReplaceControl(contents, input);
+            }
+            else
+            {
+                contents.push_back( c );
+                ++input;
+            }
+
+        }
+    }
+
+    if (type==NODE &amp;&amp; !children.empty()) type = GROUP;
+    return false;
+}
+
+bool XmlNode::write(std::ostream&amp; fout, const std::string&amp; indent) const
+{
+    ControlMap controlMap;
+    return write(controlMap, fout, indent);
+}
+
+bool XmlNode::write(const ControlMap&amp; controlMap, std::ostream&amp; fout, const std::string&amp; indent) const
+{
+    switch(type)
+    {
+        case(UNASSIGNED):
+            OSG_NOTICE&lt;&lt;&quot;UNASSIGNED&quot;&lt;&lt;std::endl;
+            return false;
+        case(ATOM):
+        {
+            fout&lt;&lt;indent&lt;&lt;&quot;&lt;&quot;&lt;&lt;name;
+            writeProperties(controlMap, fout);
+            fout&lt;&lt;&quot; /&gt;&quot;&lt;&lt;std::endl;
+            return true;
+        }
+        case(ROOT):
+        {
+            writeChildren(controlMap, fout, indent);
+            return true;
+        }
+        case(NODE):
+            fout&lt;&lt;indent&lt;&lt;&quot;&lt;&quot;&lt;&lt;name;
+            writeProperties(controlMap,fout);
+            fout&lt;&lt;&quot;&gt;&quot;; writeString(controlMap, fout, contents); fout&lt;&lt;&quot;&lt;/&quot;&lt;&lt;name&lt;&lt;&quot;&gt;&quot;&lt;&lt;std::endl;
+            return true;
+        case(GROUP):
+        {
+            fout&lt;&lt;indent&lt;&lt;&quot;&lt;&quot;&lt;&lt;name;
+            writeProperties(controlMap,fout);
+            fout&lt;&lt;&quot;&gt;&quot;&lt;&lt;std::endl;
+
+            writeChildren(controlMap, fout, indent + &quot;  &quot;);
+
+            fout&lt;&lt;indent&lt;&lt;&quot;&lt;/&quot;&lt;&lt;name&lt;&lt;&quot;&gt;&quot;&lt;&lt;std::endl;
+            return true;
+        }
+        case(COMMENT):
+        {
+            fout&lt;&lt;indent&lt;&lt;&quot;&lt;!--&quot;&lt;&lt;contents&lt;&lt;&quot;--&gt;&quot;&lt;&lt;std::endl;
+            return true;
+        }
+        case(INFORMATION):
+        {
+            fout&lt;&lt;indent&lt;&lt;&quot;&lt;?&quot;&lt;&lt;contents&lt;&lt;&quot;?&gt;&quot;&lt;&lt;std::endl;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool XmlNode::writeString(const ControlMap&amp; controlMap, std::ostream&amp; fout, const std::string&amp; str) const
+{
+    for(std::string::const_iterator itr = str.begin();
+        itr != str.end();
+        ++itr)
+    {
+        int c = *itr;
+        ControlMap::CharacterToControlMap::const_iterator citr = controlMap._characterToControlMap.find(c);
+        if (citr != controlMap._characterToControlMap.end()) fout &lt;&lt; citr-&gt;second;
+        else fout.put(c);
+    }
+    return true;
+}
+
+bool XmlNode::writeChildren(const ControlMap&amp; /*controlMap*/, std::ostream&amp; fout, const std::string&amp; indent) const
+{
+    for(Children::const_iterator citr = children.begin();
+        citr != children.end();
+        ++citr)
+    {
+        if (!(*citr)-&gt;write(fout, indent))
+            return false;
+    }
+
+    return true;
+}
+
+bool XmlNode::writeProperties(const ControlMap&amp; controlMap, std::ostream&amp; fout) const
+{
+    for(Properties::const_iterator oitr = properties.begin();
+        oitr != properties.end();
+        ++oitr)
+    {
+        fout&lt;&lt;&quot; &quot;&lt;&lt;oitr-&gt;first&lt;&lt;&quot;=\&quot;&quot;;
+        if (!writeString(controlMap,fout,oitr-&gt;second))
+            return false;
+        fout&lt;&lt;&quot;\&quot;&quot;;
+    }
+
+    return true;
+}
+
+bool XmlNode::readAndReplaceControl(std::string&amp; in_contents, XmlNode::Input&amp; input) const
+{
+    int c = 0;
+    std::string value;
+    while(input &amp;&amp; (c=input.get())!=';') { value.push_back(c); }
+    value.push_back(c);
+
+    if (input._controlToCharacterMap.count(value)!=0)
+    {
+        c = input._controlToCharacterMap[value];
+        OSG_INFO&lt;&lt;&quot;Read control character &quot;&lt;&lt;value&lt;&lt;&quot; converted to &quot;&lt;&lt;char(c)&lt;&lt;std::endl;
+        in_contents.push_back(c);
+        return true;
+    }
+    else
+    {
+        OSG_NOTICE&lt;&lt;&quot;Warning: read control character &quot;&lt;&lt;value&lt;&lt;&quot;, but have no mapping to convert it to.&quot;&lt;&lt;std::endl;
+        return false;
+    }
+}
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008686.html">[osg-users] Graphics context issues
+</A></li>
+	<LI>Next message (by thread): <A HREF="008671.html">[osg-users] osgDB XmlParser and localization
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8670">[ date ]</a>
+              <a href="thread.html#8670">[ thread ]</a>
+              <a href="subject.html#8670">[ subject ]</a>
+              <a href="author.html#8670">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

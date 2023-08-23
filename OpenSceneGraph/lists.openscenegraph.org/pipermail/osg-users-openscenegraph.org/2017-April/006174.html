@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Optimizer::RemoveLoadedProxyNodesVisitor +	NO_AUTOMATIC_LOADING
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Optimizer%3A%3ARemoveLoadedProxyNodesVisitor%20%2B%0A%09NO_AUTOMATIC_LOADING&In-Reply-To=%3CCAFN7Y%2BXj%2BSaqfrie99MDdfr2KZ9YhhexfYzR7ACogpu4gJPzVQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="282396.html">
+   <LINK REL="Next"  HREF="006175.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Optimizer::RemoveLoadedProxyNodesVisitor +	NO_AUTOMATIC_LOADING</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Optimizer%3A%3ARemoveLoadedProxyNodesVisitor%20%2B%0A%09NO_AUTOMATIC_LOADING&In-Reply-To=%3CCAFN7Y%2BXj%2BSaqfrie99MDdfr2KZ9YhhexfYzR7ACogpu4gJPzVQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Optimizer::RemoveLoadedProxyNodesVisitor +	NO_AUTOMATIC_LOADING">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Apr 28 11:05:55 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="282396.html">[osg-users] Optimizer::RemoveLoadedProxyNodesVisitor +	NO_AUTOMATIC_LOADING
+</A></li>
+        <LI>Next message: <A HREF="006175.html">[osg-users] Optimizer::RemoveLoadedProxyNodesVisitor	+	NO_AUTOMATIC_LOADING
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6174">[ date ]</a>
+              <a href="thread.html#6174">[ thread ]</a>
+              <a href="subject.html#6174">[ subject ]</a>
+              <a href="author.html#6174">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Guy,
+
+The visitor in question is meant to just remove loading ProxyNode's
+it's not meant to remove nodes that haven't yet been loaded, doing so
+would potentially break applications where nodes disappear that are
+still needed.
+
+What you describe is a special case - there are problems loading
+external nodes and you still want to get rid of them.  This is an
+application specific decision you are prepared to make but isn't a
+general solution.  My recommendation would be to just write a visitor
+that you run on the loaded subgraphs and cleans up items like
+ProxuNode's that have failed.  There may be other platform specific
+scene graph optimizations you can do that the OSG can do because it
+can't assume that it's safe.
+
+Robert.
+
+On 28 April 2017 at 18:10, Guy Volckaert &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">guy.volckaert at meggitt.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I was wondering if someone could explain why the Optimizer::RemoveLoadedProxyNodesVisitor is not removing ProxyNodes with NO_AUTOMATIC_LOADING set?
+</I>&gt;<i>
+</I>&gt;<i> Here is the motivation behind my question... We often need to load relatively large openflight terrains that contains a significant number external references. In fact, on some terrains, each single tree is an external reference - so you can image how many external references that makes!!! Unfortunately, many of these terrains are provided to us AS IS and we don't have the necessary rights to modify them.
+</I>&gt;<i>
+</I>&gt;<i> What we discovered is that, sometimes, many of those external reference files are missing, thus leading to poor performance. For example, if we simply delete all the external references for a terrains, I would expect better performance (since I don't need to render all those trees), but that's not the case.
+</I>&gt;<i>
+</I>&gt;<i> To resolve this poor performance problem, I modified the following optimizer function to consider the NO_AUTOMATIC_LOADING. Can you tell me if what I did makes sense? If so, then I could propose this as a change in the osg-submission.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> void Optimizer::RemoveLoadedProxyNodesVisitor::apply(osg::ProxyNode&amp; proxyNode)
+</I>&gt;<i> {
+</I>&gt;<i>     if (proxyNode.getNumParents()&gt;0
+</I>&gt;<i>         &amp;&amp; ( proxyNode.getNumFileNames()==proxyNode.getNumChildren()
+</I>&gt;<i> //MTSI_BEGIN
+</I>&gt;<i>             || ( proxyNode.getLoadingExternalReferenceMode() == osg::ProxyNode::NO_AUTOMATIC_LOADING &amp;&amp; proxyNode.getNumChildren() == 0 ) ) )
+</I>&gt;<i> //MTSI_END
+</I>&gt;<i>     {
+</I>&gt;<i>         if (isOperationPermissibleForObject(&amp;proxyNode))
+</I>&gt;<i>         {
+</I>&gt;<i>             _redundantNodeList.insert(&amp;proxyNode);
+</I>&gt;<i>         }
+</I>&gt;<i>     }
+</I>&gt;<i>     traverse(proxyNode);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Guy
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopica0c2.php?p=70857#70857">http://forum.openscenegraph.org/viewtopic.php?p=70857#70857</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="282396.html">[osg-users] Optimizer::RemoveLoadedProxyNodesVisitor +	NO_AUTOMATIC_LOADING
+</A></li>
+	<LI>Next message: <A HREF="006175.html">[osg-users] Optimizer::RemoveLoadedProxyNodesVisitor	+	NO_AUTOMATIC_LOADING
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6174">[ date ]</a>
+              <a href="thread.html#6174">[ thread ]</a>
+              <a href="subject.html#6174">[ subject ]</a>
+              <a href="author.html#6174">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

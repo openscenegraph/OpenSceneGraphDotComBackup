@@ -1,0 +1,173 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OpenSceneGraph-3.6.5 release candidate 2 tagged, please test
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenSceneGraph-3.6.5%20release%20candidate%202%20tagged%2C%0A%20please%20test&In-Reply-To=%3Cmailman.67320.1580212278.7167.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010809.html">
+   <LINK REL="Next"  HREF="010783.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OpenSceneGraph-3.6.5 release candidate 2 tagged, please test</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenSceneGraph-3.6.5%20release%20candidate%202%20tagged%2C%0A%20please%20test&In-Reply-To=%3Cmailman.67320.1580212278.7167.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] OpenSceneGraph-3.6.5 release candidate 2 tagged, please test">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Tue Jan 28 03:51:03 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010809.html">[osg-users] OpenSceneGraph-3.6.5 release candidate 2 tagged, please test
+</A></li>
+        <LI>Next message (by thread): <A HREF="010783.html">[osg-users] OpenSceneGraph-3.6.5 release candidate 2 tagged, please test
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10782">[ date ]</a>
+              <a href="thread.html#10782">[ thread ]</a>
+              <a href="subject.html#10782">[ subject ]</a>
+              <a href="author.html#10782">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Fabian &amp; Chris,
+
+I was curious about the clean up of the global getGlobalReferencedMutex()
+so I added some debug messages to OpenThreads and to relevant calls in the
+OSG to track the creation and clean up of mutexes.  I tried an alternative
+means of static initialization of the static getGlobalReferencedMutex() and
+got the same behavior for before and after results so I don't think the
+version in the 3.6 branch is likley to be be a source of problem, even if
+it's not particular clean.  Below is diff of the changes I made.
+
+Robert
+
+$ git diff
+diff --git a/src/OpenThreads/pthreads/PThreadMutex.cpp
+b/src/OpenThreads/pthreads/PThreadMutex.cpp
+index 3a3d1c338..d122fc67c 100644
+--- a/src/OpenThreads/pthreads/PThreadMutex.cpp
++++ b/src/OpenThreads/pthreads/PThreadMutex.cpp
+@@ -22,6 +22,8 @@
+ #include &lt;OpenThreads/Mutex&gt;
+ #include &quot;PThreadMutexPrivateData.h&quot;
+
++#include &lt;stdio.h&gt;
++
+ using namespace OpenThreads;
+
+ //----------------------------------------------------------------------------
+@@ -33,7 +35,7 @@ using namespace OpenThreads;
+ Mutex::Mutex(MutexType type):
+     _mutexType(type)
+ {
+-
++    printf(&quot;Mutex::Mutex(%d) %p\n&quot;, type, this);
+     pthread_mutexattr_t mutex_attr;
+     pthread_mutexattr_init( &amp;mutex_attr );
+
+@@ -107,6 +109,8 @@ Mutex::Mutex(MutexType type):
+ //
+ Mutex::~Mutex() {
+
++    printf(&quot;Mutex::~Mutex() %p\n&quot;, this);
++
+     PThreadMutexPrivateData *pd =
+         static_cast&lt;PThreadMutexPrivateData*&gt;(_prvData);
+
+diff --git a/src/osg/Referenced.cpp b/src/osg/Referenced.cpp
+index 95b665c57..267bda310 100644
+--- a/src/osg/Referenced.cpp
++++ b/src/osg/Referenced.cpp
+@@ -79,11 +79,16 @@ struct ResetPointer
+ };
+
+ typedef ResetPointer&lt;DeleteHandler&gt; DeleteHandlerPointer;
++
++#if 1
++#include &lt;stdio.h&gt;
++
+ typedef ResetPointer&lt;OpenThreads::Mutex&gt; GlobalMutexPointer;
+
+ OpenThreads::Mutex* Referenced::getGlobalReferencedMutex()
+ {
+     static GlobalMutexPointer s_ReferencedGlobalMutext = new
+OpenThreads::Mutex;
++    printf(&quot;Referenced::getGlobalReferencedMutex() %p\n&quot;,
+(s_ReferencedGlobalMutext.get()));
+     return s_ReferencedGlobalMutext.get();
+ }
+
+@@ -96,6 +101,17 @@ struct InitGlobalMutexes
+     }
+ };
+ static InitGlobalMutexes s_initGlobalMutexes;
++#else
++
++#include &lt;stdio.h&gt;
++
++static OpenThreads::Mutex s_ReferencedGlobalMutex;
++OpenThreads::Mutex* Referenced::getGlobalReferencedMutex()
++{
++    printf(&quot;Referenced::getGlobalReferencedMutex() %p\n&quot;,
+(&amp;s_ReferencedGlobalMutex));
++    return &amp;s_ReferencedGlobalMutex;
++}
++#endif
+
+ // static std::auto_ptr&lt;DeleteHandler&gt; s_deleteHandler(0);
+ static DeleteHandlerPointer s_deleteHandler(0);
+diff --git a/src/osg/StateAttribute.cpp b/src/osg/StateAttribute.cpp
+index e239fb3aa..c7df40894 100644
+--- a/src/osg/StateAttribute.cpp
++++ b/src/osg/StateAttribute.cpp
+@@ -39,6 +39,8 @@ void StateAttribute::removeParent(osg::StateSet* object)
+
+     ParentList::iterator pitr =
+std::find(_parents.begin(),_parents.end(),object);
+     if (pitr!=_parents.end()) _parents.erase(pitr);
++
++    printf(&quot;StateAttribute::removeParent()\n&quot;);
+ }
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200128/bcbc50c4/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200128/bcbc50c4/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010809.html">[osg-users] OpenSceneGraph-3.6.5 release candidate 2 tagged, please test
+</A></li>
+	<LI>Next message (by thread): <A HREF="010783.html">[osg-users] OpenSceneGraph-3.6.5 release candidate 2 tagged, please test
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10782">[ date ]</a>
+              <a href="thread.html#10782">[ thread ]</a>
+              <a href="subject.html#10782">[ subject ]</a>
+              <a href="author.html#10782">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

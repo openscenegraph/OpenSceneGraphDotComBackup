@@ -1,0 +1,223 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] TransferFunction definition and osgVolume
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20TransferFunction%20definition%20and%20osgVolume&In-Reply-To=%3CCAHKmQh8F_E-JyLtQeiwCv-7qKR5a5yqp_gQHxF6L5f3ADXuq6w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008933.html">
+   <LINK REL="Next"  HREF="008838.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] TransferFunction definition and osgVolume</H1>
+<!--htdig_noindex-->
+    <B>Alex Taylor</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20TransferFunction%20definition%20and%20osgVolume&In-Reply-To=%3CCAHKmQh8F_E-JyLtQeiwCv-7qKR5a5yqp_gQHxF6L5f3ADXuq6w%40mail.gmail.com%3E"
+       TITLE="[osg-users] TransferFunction definition and osgVolume">alextaylor at gmail.com
+       </A><BR>
+    <I>Thu Aug  2 09:30:35 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008933.html">[osg-users] VAO Resource Leak in OSG 3.6.2
+</A></li>
+        <LI>Next message (by thread): <A HREF="008838.html">[osg-users] Crash when using LineSegmentIntersector
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8837">[ date ]</a>
+              <a href="thread.html#8837">[ thread ]</a>
+              <a href="subject.html#8837">[ subject ]</a>
+              <a href="author.html#8837">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>First off, I'm having problems posting to OSG Users with my work email.
+Apologies in advance if you receive multiple copies of this same email.
+
+We&#8217;re encountering a puzzling behavior in rendering using
+RayTracedTechnique and we&#8217;ve narrowed it down to what appears to be an
+inconsistency in how the TransferFunction passed to osgVolume is defined.
+
+
+
+If we use osgVolume::applyTransferFunction
+
+
+
+The mapping of our image values to corresponding Vec4 values works
+exactly as we would expect. Our TransferFunction is defined as:
+
+
+
+    osg::ref_ptr&lt;osg::TransferFunction1D&gt; createTransferFunction(const
+uint8_T* xfer_table, const bool useIsosurface)
+
+    {
+
+        osg::TransferFunction1D::ColorMap colorMap;
+
+        for (size_t r = 0; r &lt; 256; ++r){
+
+            size_t rowOffset = r*4;
+
+            float red = static_cast&lt;float&gt;(xfer_table[rowOffset])/255.0f;
+
+            float green =
+static_cast&lt;float&gt;(xfer_table[rowOffset+1])/255.0f;
+
+            float blue = static_cast&lt;float&gt;(xfer_table[rowOffset+2])/255.0f;
+
+            float alpha = (useIsosurface) ? 1.0f :
+static_cast&lt;float&gt;(xfer_table[rowOffset+3])/255.0f;
+
+
+
+            colorMap[static_cast&lt;float&gt;(r)/255.0f] =
+osg::Vec4(red,green,blue,alpha);
+
+        }
+
+        osg::TransferFunction1D *transferFunction = new
+osg::TransferFunction1D;
+
+        transferFunction-&gt;assign(colorMap);
+
+
+
+        osg::ref_ptr&lt;osg::TransferFunction1D&gt; tfSmartPtr = transferFunction;
+
+        return tfSmartPtr;
+
+    }
+
+
+
+Here, xfer_table is a 256x4 array, so we are always defining a
+TransferFunction that has exactly as many entries as there are
+possible values in our volume.
+
+
+
+When we attempt to use the &#8220;direct&#8221; GPU mapping in which we add a
+TransferFunction definition to the volume layer:
+
+
+
+        layer-&gt;addProperty(new
+osgVolume::TransferFunctionProperty(volumeProperties.transferFunction.get()));
+
+
+
+What we see is that the correspondence between the values in our
+[0,255] uint8 volume do not seem to map correctly to the
+TransferFunction. For example, if we start with a 200x200x200 volume
+where the volume contains only two distinct values: [0,255], where
+each value is present in a continuous half of the volume:
+
+
+
+We see exactly what we&#8217;d expect here, where the alpha map is defined on the
+right plot and its uniformly 1 for all volume intensity values.
+
+
+[image: correctImage.jpg]
+
+
+Now, if we edit the transfer function such that we wouldn&#8217;t expect to see
+any of the 255 valued voxels in the volume, we see things don&#8217;t render
+correctly, you still see the 255 voxels partially.
+
+
+
+[image: badImage.jpg]
+
+
+Again, the exact same transfer function renders as we would expect if we
+use osgVolume::applyTransferFunction and render the remapped volume. So, it
+seems like maybe the shader used when you do GPU mapping of the transfer
+function expects a different convention for the definition of the
+TransferFunction map?, but I can&#8217;t figure out what that convention is.
+
+
+Apologies for the length of this question and appreciate any advice people
+have.
+
+
+Thanks!
+
+
+Alex
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180802/4a659ea6/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180802/4a659ea6/attachment.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: correctImage.jpg
+Type: image/jpeg
+Size: 13464 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180802/4a659ea6/attachment.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180802/4a659ea6/attachment.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: badImage.jpg
+Type: image/jpeg
+Size: 13491 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180802/4a659ea6/attachment-0001.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180802/4a659ea6/attachment-0001.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008933.html">[osg-users] VAO Resource Leak in OSG 3.6.2
+</A></li>
+	<LI>Next message (by thread): <A HREF="008838.html">[osg-users] Crash when using LineSegmentIntersector
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8837">[ date ]</a>
+              <a href="thread.html#8837">[ thread ]</a>
+              <a href="subject.html#8837">[ subject ]</a>
+              <a href="author.html#8837">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

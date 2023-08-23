@@ -1,0 +1,257 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Get Animation current time
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Get%20Animation%20current%20time&In-Reply-To=%3C1546889425.m2f.75403%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009537.html">
+   <LINK REL="Next"  HREF="009570.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Get Animation current time</H1>
+<!--htdig_noindex-->
+    <B>Diego Mancilla</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Get%20Animation%20current%20time&In-Reply-To=%3C1546889425.m2f.75403%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Get Animation current time">dmancillac at gmail.com
+       </A><BR>
+    <I>Mon Jan  7 11:30:25 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009537.html">[osg-users] Get Animation current time
+</A></li>
+        <LI>Next message (by thread): <A HREF="009570.html">[osg-users] Get Animation current time
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9554">[ date ]</a>
+              <a href="thread.html#9554">[ thread ]</a>
+              <a href="subject.html#9554">[ subject ]</a>
+              <a href="author.html#9554">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello Robert,
+
+Thank you very much for you complete response.
+
+ I'm trying to do what you suggest and have my on AnimationPath/AnimationPathCallback classes that handle my data. But I stumble into a problem.
+
+ When I subclass AnimationPath and AnimationPathCallback I have no problems. But when I wrote my own classes, from scratch my application crashes.
+
+ In order to achieve what I want, I pass a pointer to a custom data container class to my AnimationPath class (I called it MobilesAnimationPath) from my main application. I tried to keep most part of the architecture of AnimationPath, but I eliminate the TimeControlPointMap container. So, now my class generates the control points from the data pointed from custom data pointer class. 
+
+
+So, for instance, my custom Path class looks like this:
+
+
+Code:
+#include &quot;MobileObject.h&quot;
+#include &lt;osg/AnimationPath&gt;
+#include &lt;osg/Object&gt;
+
+using namespace osg;
+
+class MobilesAnimationPath: public virtual osg::Object
+{
+public:
+	MobilesAnimationPath();
+	MobilesAnimationPath(const MobilesAnimationPath &amp;, const osg::CopyOp &amp; copyop = osg::CopyOp::SHALLOW_COPY);
+	MobilesAnimationPath(MobileObject &amp; mobile);
+
+	META_Object(osg, MobilesAnimationPath); //Visual Studio complains about this line, but compiles... : &quot;function definition for META_Object not found&quot;
+
+	enum LoopMode
+	{
+		SWING,
+		LOOP,
+		NO_LOOPING
+	};
+
+	void setLoopMode(LoopMode loopMode);
+	LoopMode getLoopMode() const;
+
+	virtual bool getInterpolatedControlPoint(double time, osg::AnimationPath::ControlPoint &amp; cp) const;
+
+	double getFirstTime() const;
+	double getLastTime() const;
+	double getPeriod() const;
+
+protected:
+	~MobilesAnimationPath(){};
+
+private:
+	MobileObject * _mobile;
+	LoopMode _loopMode;
+
+};
+
+
+
+And the implementation.
+
+
+Code:
+#include &quot;MobilesAnimationPath.h&quot;
+
+MobilesAnimationPath::MobilesAnimationPath()
+	:_loopMode(NO_LOOPING)
+	,_mobile(nullptr)
+{
+}
+
+
+MobilesAnimationPath::MobilesAnimationPath(const MobilesAnimationPath&amp; ap, const osg::CopyOp&amp; copyop)
+	:osg::Object(ap, copyop)
+	,_loopMode(ap._loopMode)
+	,_mobile(ap._mobile) 
+{
+}
+
+MobilesAnimationPath::MobilesAnimationPath(MobileObject &amp; mobile)
+	:_loopMode(NO_LOOPING)
+{
+	_mobile = &mobile;
+}
+
+void MobilesAnimationPath::setLoopMode(LoopMode loopMode)
+{
+	_loopMode = loopMode;
+}
+
+MobilesAnimationPath::LoopMode MobilesAnimationPath::getLoopMode() const
+{
+	return _loopMode;
+}
+
+double MobilesAnimationPath::getFirstTime() const
+{
+	if (_mobile != nullptr)
+	{
+		if (_mobile-&gt;dataLoaded())
+		{
+			return _mobile-&gt;getFirstTime();
+		}
+	}
+	return 0.0;
+}
+
+double MobilesAnimationPath::getLastTime() const
+{
+	if (_mobile != nullptr)
+	{
+		if (_mobile-&gt;dataLoaded())
+		{
+			return _mobile-&gt;getLastTime();
+		}
+	}
+	return 0.0;
+}
+
+double MobilesAnimationPath::getPeriod() const
+{
+	if (_mobile != nullptr)
+	{
+		if (_mobile-&gt;dataLoaded())
+		{
+			return _mobile-&gt;getFirstTime() - _mobile-&gt;getLastTime();
+		}
+	}
+	return 0.0;
+}
+
+bool MobilesAnimationPath::getInterpolatedControlPoint(double time, osg::AnimationPath::ControlPoint &amp; cp) const
+{
+	if (_mobile == nullptr) return false;
+	if (!_mobile-&gt;dataLoaded()) return false;
+        
+        // at this point _mobile points something thats not nullptr but returns garbage...
+
+	switch (_loopMode)
+	{
+	case(SWING):
+	{
+		double modulated_time = (time - getFirstTime()) / (getPeriod()*2.0);
+		double fraction_part = modulated_time - floor(modulated_time);
+		if (fraction_part &gt; 0.5) fraction_part = 1.0 - fraction_part;
+
+		time = getFirstTime() + (fraction_part*2.0) * getPeriod();
+		break;
+	}
+	case(LOOP):
+	{
+		double modulated_time = (time - getFirstTime()) / getPeriod();
+		double fraction_part = modulated_time - floor(modulated_time);
+		time = getFirstTime() + fraction_part * getPeriod();
+		break;
+	}
+	case(NO_LOOPING):
+		// no need to modulate the time.
+		break;
+	}
+
+	//... here I fill the control point through the data on _mobile.
+
+	return true;
+
+	
+}
+
+
+
+but at the first call to &quot;getInterpolatedControlPoint&quot; the application crashes. Moreover, the _mobile pointer is &quot;corrupted&quot;, i.e., when I try to access its data it returns garbage (but it not nullptr). Also the &quot;time&quot; value passed is random (sometimes huge, sometimes negative, etc...)
+
+As I pointed on the code snippet, MSVS complains about my META_Object call, but the code compiles.
+
+Am I missing something?
+
+Cheers,
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic6a79.php?p=75403#75403">http://forum.openscenegraph.org/viewtopic.php?p=75403#75403</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009537.html">[osg-users] Get Animation current time
+</A></li>
+	<LI>Next message (by thread): <A HREF="009570.html">[osg-users] Get Animation current time
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9554">[ date ]</a>
+              <a href="thread.html#9554">[ thread ]</a>
+              <a href="subject.html#9554">[ subject ]</a>
+              <a href="author.html#9554">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

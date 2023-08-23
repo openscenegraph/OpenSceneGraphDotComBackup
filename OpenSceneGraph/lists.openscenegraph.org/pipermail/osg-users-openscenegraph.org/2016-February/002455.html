@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Depth texture display
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Depth%20texture%20display&In-Reply-To=%3C1456509022.m2f.66444%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278676.html">
+   <LINK REL="Next"  HREF="278680.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Depth texture display</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Depth%20texture%20display&In-Reply-To=%3C1456509022.m2f.66444%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Depth texture display">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Fri Feb 26 09:50:22 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278676.html">[osg-users] Depth texture display
+</A></li>
+        <LI>Next message: <A HREF="278680.html">[osg-users] Multiwindows with Qt and OSG from the same scene
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2455">[ date ]</a>
+              <a href="thread.html#2455">[ thread ]</a>
+              <a href="subject.html#2455">[ subject ]</a>
+              <a href="author.html#2455">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>According some old code of mine ,  difference are the following:
+
+Code:
+
+_depthtexture-&gt;setInternalFormat(GL_DEPTH_COMPONENT16_ARB);
+cam-&gt;attach(osg::Camera::DEPTH_BUFFER, _depthtexture.get(),0, 0);
+
+char linearize_depth[]=
+&quot;float LinearizeDepth(float z)\n&quot;
+&quot;{\n&quot;
+&quot; return((gl_DepthRange.diff * z) +    gl_DepthRange.near + gl_DepthRange.far) / 2.0;\n&quot;
+&quot;}\n&quot;;
+
+
+
+
+
+Hope it helps
+
+MadWatch wrote:
+&gt;<i> Hello everyone.
+</I>&gt;<i> 
+</I>&gt;<i> I'm trying to save my depth buffer into a texture and then render it on a quad using a fragment shader.
+</I>&gt;<i> 
+</I>&gt;<i> First I create a texture and attach it to a camera
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> _depth = new osg::Texture2D();
+</I>&gt;<i> _depth-&gt;setTextureSize(_w, _h);
+</I>&gt;<i> _depth-&gt;setInternalFormat(GL_DEPTH_COMPONENT);
+</I>&gt;<i> _depth-&gt;setSourceFormat(GL_DEPTH_COMPONENT);
+</I>&gt;<i> _depth-&gt;setSourceType(GL_FLOAT);
+</I>&gt;<i> _depth-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
+</I>&gt;<i> _depth-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
+</I>&gt;<i> 
+</I>&gt;<i> _camera = new osg::Camera();
+</I>&gt;<i> _camera-&gt;setViewport(0., 0., _w, _h);
+</I>&gt;<i> _camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+</I>&gt;<i> _camera-&gt;setClearColor(Color(0., 0., 0., 1.));
+</I>&gt;<i> _camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+</I>&gt;<i> _camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+</I>&gt;<i> _camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+</I>&gt;<i> _camera-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+</I>&gt;<i> _camera-&gt;attach(osg::Camera::DEPTH_BUFFER, _depth);
+</I>&gt;<i> _camera-&gt;setGraphicsContext(_view-&gt;getCamera()-&gt;getGraphicsContext());
+</I>&gt;<i> _view-&gt;addSlave(_camera, true);
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Then I bind my depth texture to a uniform and try to display it with the following shader.
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> uniform sampler2D depth;
+</I>&gt;<i> 
+</I>&gt;<i> float linearize(vec2 uv)
+</I>&gt;<i> {
+</I>&gt;<i>    float n = 1000.;   // Near
+</I>&gt;<i>    float f = 100000.; // Far
+</I>&gt;<i>    float z = texture2D(depth, uv).r;
+</I>&gt;<i>    return (2. * n) / (f + n - z * (f - n));
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> void main()
+</I>&gt;<i> {
+</I>&gt;<i>    float d = linearize(gl_TexCoord[0].st);
+</I>&gt;<i>    gl_FragColor = vec4(d, d, d, 1.);
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> It doesn't work, all I see is black, as if my depth texture was cleared.
+</I>&gt;<i> If I do the same thing with the color buffer (with an RBGA texture) it works as expected, so I know my camera is working and looking at the scene as it should. But I can't make it work with a depth texture. What did I do wrong ?
+</I>&gt;<i> 
+</I>&gt;<i> Thanks,
+</I>&gt;<i> Nicolas
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicfac8.php?p=66444#66444">http://forum.openscenegraph.org/viewtopic.php?p=66444#66444</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278676.html">[osg-users] Depth texture display
+</A></li>
+	<LI>Next message: <A HREF="278680.html">[osg-users] Multiwindows with Qt and OSG from the same scene
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2455">[ date ]</a>
+              <a href="thread.html#2455">[ thread ]</a>
+              <a href="subject.html#2455">[ subject ]</a>
+              <a href="author.html#2455">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Synchronizing with textures uploads.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Synchronizing%20with%20textures%20uploads.&In-Reply-To=%3CCAG7xrZdwabamzr0W3WzX%3DqbOo7VKXNAUGgQXRLwb4mu%2BY%3Dz4Sw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007794.html">
+   <LINK REL="Next"  HREF="007795.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Synchronizing with textures uploads.</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Synchronizing%20with%20textures%20uploads.&In-Reply-To=%3CCAG7xrZdwabamzr0W3WzX%3DqbOo7VKXNAUGgQXRLwb4mu%2BY%3Dz4Sw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Synchronizing with textures uploads.">l.voerman at rug.nl
+       </A><BR>
+    <I>Thu Mar  8 05:08:16 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007794.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+        <LI>Next message (by thread): <A HREF="007795.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7796">[ date ]</a>
+              <a href="thread.html#7796">[ thread ]</a>
+              <a href="subject.html#7796">[ subject ]</a>
+              <a href="author.html#7796">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Altin,
+just a few remarks:
+
+you wrote:
+ &gt;Steeping through the code, It seems that uploading the image is done by
+applyTexImage_subload() called from within
+ &gt;TextureRectangle::apply(state) called from a GraphicsThread. And this
+operation is triggered by renderingTraversals(). It just doesn't upload in
+ &gt;time and the background rectangle drawn by this renderingTraversal() uses
+the previous image.
+That's not how it works, openGL will upload the image before using it to
+render. This might be slow for a big image, but the old image will not be
+used. You might be tricked by a tripple buffering driver, where at the next
+buffer swap you will see a render containing the old image.
+
+2&gt; test singlethreaded. I've seen no hint that you marked the stateset
+containing the imageStream texture as DYNAMIC,  so the renderingTraversal
+might return before the texture or uniform has been apply'ed - trusting the
+(default) STATIC promise.
+
+Regards, Laurens.
+
+On Thu, Mar 8, 2018 at 1:48 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Altin,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 8 March 2018 at 12:18, Altin Gjata &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">altingjataj at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; I use (the default) DrawThreadPerContext for the moment.
+</I>&gt;<i>
+</I>&gt;<i> The first thing you need to try is SingleTheaded:
+</I>&gt;<i>
+</I>&gt;<i>   viewer.setThreadingModel(osgViewer::Viewer::SingleTheaded);
+</I>&gt;<i>
+</I>&gt;<i> I can't stress this enough, this is the biggest variable to test.  I
+</I>&gt;<i> didn't suggest you do this in my previous email for no reason.
+</I>&gt;<i>
+</I>&gt;<i> &gt; Steeping through the code, It seems that uploading the image is done by
+</I>&gt;<i> applyTexImage_subload() called from within TextureRectangle::apply(state)
+</I>&gt;<i> called from a GraphicsThread. And this operation is triggered by
+</I>&gt;<i> renderingTraversals(). It just doesn't upload in time and the background
+</I>&gt;<i> rectangle drawn by this renderingTraversal() uses the previous image.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Is there any way I can trigger applyTexImage_subload() sooner?
+</I>&gt;<i>
+</I>&gt;<i> The subload will be happening as sooner as is necessary to properly
+</I>&gt;<i> reflect the updates to the osg::ImageStream, it's a pretty widely
+</I>&gt;<i> fleshed out part of the OSG, this won't be the problem, the problem
+</I>&gt;<i> will be elsewhere.  If the subload is not happening soon enough for
+</I>&gt;<i> you then it's because the updated dirty of the image stream isn't
+</I>&gt;<i> happening soon enough.
+</I>&gt;<i>
+</I>&gt;<i> &gt; Would it help if I used another camera that also uses the same
+</I>&gt;<i> ImageStream as texture and renders to a small texture, and set its
+</I>&gt;<i> rendering order before that of the camera that renders the background?
+</I>&gt;<i>
+</I>&gt;<i> No. Coming up with ever more complicated solutions to a problem you
+</I>&gt;<i> don't yet understand is only going to take you further away from the
+</I>&gt;<i> solution.
+</I>&gt;<i>
+</I>&gt;<i> The key to a solution is understanding the problem.  Without actual
+</I>&gt;<i> code to look or even better test there really isn't too much we can do
+</I>&gt;<i> apart from give you general pointers.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180308/be8dd024/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180308/be8dd024/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007794.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+	<LI>Next message (by thread): <A HREF="007795.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7796">[ date ]</a>
+              <a href="thread.html#7796">[ thread ]</a>
+              <a href="subject.html#7796">[ subject ]</a>
+              <a href="author.html#7796">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

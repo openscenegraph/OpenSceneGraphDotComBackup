@@ -1,0 +1,223 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] compositeview and offscreen rendering
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20compositeview%20and%20offscreen%20rendering&In-Reply-To=%3C1453904867.m2f.66152%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002240.html">
+   <LINK REL="Next"  HREF="002247.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] compositeview and offscreen rendering</H1>
+<!--htdig_noindex-->
+    <B>Peiman Shakeri</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20compositeview%20and%20offscreen%20rendering&In-Reply-To=%3C1453904867.m2f.66152%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] compositeview and offscreen rendering">peimansh2014 at gmail.com
+       </A><BR>
+    <I>Wed Jan 27 06:27:47 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002240.html">[osg-users] compositeview and offscreen rendering
+</A></li>
+        <LI>Next message: <A HREF="002247.html">[osg-users] compositeview and offscreen rendering
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2246">[ date ]</a>
+              <a href="thread.html#2246">[ thread ]</a>
+              <a href="subject.html#2246">[ subject ]</a>
+              <a href="author.html#2246">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+this is a part of my source
+I cut unnecessary part cause of clarification
+
+Thank you!
+
+Cheers,
+Peiman
+
+source:
+
+
+Code:
+
+void VisSystem::CreateArea( ) 
+{
+city=new CityArea();
+city-&gt;Create(false,7);
+root-&gt;addChild(weather-&gt;group);
+root-&gt;addChild(weather-&gt;skyLightSource);
+city-&gt;setLight(weather-&gt;skyLight);
+SystemData::getInstance()-&gt;area=city;
+root-&gt;addChild(city-&gt;areaGroup-&gt;getChild(0));
+rootRear=new osg::Group;
+rootRear-&gt;addChild(weather-&gt;skyLightSource);
+rootRear-&gt;addChild(weather-&gt;group);
+rootRear-&gt;addChild(city-&gt;areaGroup-&gt;getChild(1));
+
+
+viewer.Create();
+viewer.CreateLeftSide();
+viewer.CreateRightSide();
+
+viewer.AddfrontScene(root);
+viewer.AddfrontScene(city-&gt;TrafficGroup);
+viewer.AddRearScene(rootRear);
+viewer.AddRearScene(city-&gt;TrafficGroup);
+
+
+viewer.CreateTopview();
+viewer.AddTopScene(root);
+viewer.AddTopScene(city-&gt;TrafficGroup);
+viewer.AddTopScene(city-&gt;TrafficGroup2);
+
+
+}
+
+void VisSystem::Run(void)
+{
+CreateArea();
+
+
+std::string fileName;
+osgDB::DatabasePager* pager = viewer.Topview-&gt;getDatabasePager();
+pager-&gt;setDoPreCompile(true);
+osg::ref_ptr&lt;CustomRenderer&gt; customRenderer = new CustomRenderer(viewer.Topview-&gt;getCamera());
+viewer.Topview-&gt;getCamera()-&gt;setRenderer(customRenderer.get());
+customRenderer-&gt;setCullOnly(false);
+GLenum buffer = viewer.Topview-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getTraits()-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+
+viewer.TopRTT-&gt;RTTCam-&gt;setDrawBuffer(buffer);
+viewer.TopRTT-&gt;RTTCam-&gt;setReadBuffer(buffer);
+
+const osg::FrameStamp* fs2 = viewer.Topview-&gt;getFrameStamp();
+
+osg::ref_ptr&lt;osg::Image&gt; posterImage = 0;
+posterImage = new osg::Image;
+
+bool outputPoster = true, outputTiles = false;
+int tileWidth = 640, tileHeight = 480;
+int posterWidth = 640, posterHeight = 480;
+int numCameras = 1;
+std::string posterName = &quot;poster.bmp&quot;, extName = &quot;bmp&quot;;
+char filename[50];
+int i=1;
+
+
+IplImage *iplimg = cvCreateImage(CvSize(640,480),IPL_DEPTH_8U,3);
+
+CvSize size;
+int isColor = 1;
+int fps     = 25;  // or 30
+
+size.width = 640;
+size.height = 480;
+
+CvVideoWriter *writer = cvCreateVideoWriter(
+&quot;D:\\PEIMAN\\video\\test.avi&quot;,
+CV_FOURCC('P','I','M','1'),//CV_FOURCC('I','Y','U','V'), // VIDEO CODEC
+fps,
+size);
+
+while(writer == NULL)
+{
+writer = cvCreateVideoWriter(
+&quot;D:\\PEIMAN\\video\\test.avi&quot;,
+CV_FOURCC('P','I','M','1'),//CV_FOURCC('I','Y','U','V'), // VIDEO CODEC
+fps,
+size);
+
+}
+
+viewer.viewer.realize();
+viewer.viewer.stopThreading();
+viewer.Topview-&gt;getCamera()-&gt;getGraphicsContext()-&gt;releaseContext();
+viewer.viewer.startThreading();
+
+while(!viewer.viewer.done())
+{
+//updating stuff
+
+viewer.viewer.frame();
+
+
+std::ostringstream os;
+std::string snum;
+os&lt;&lt;fs2-&gt;getFrameNumber();
+snum=os.str();
+fileName=&quot;D:\\PEIMAN\\image\\poster&quot;+snum+&quot;.bmp&quot;;
+char* Fname=new char[fileName.size()+1];
+std::copy(fileName.begin(),fileName.end(),Fname);
+Fname[fileName.size()]='\0';
+std::cout&lt;&lt;Fname&lt;&lt;std::endl;	
+viewer.viewer.renderingTraversals();
+viewer.Topview-&gt;getCamera()-&gt;setFinalDrawCallback( new WindowCaptureCallback(buffer, fileName,posterImage.get()));
+
+if ( (fs2-&gt;getFrameNumber()%2)==0 )
+{
+ 
+iplimg-&gt;imageData=(char*)posterImage-&gt;data();
+cvCvtColor(iplimg,iplimg,CV_BGR2RGB);
+cvFlip(iplimg, iplimg, 0);
+cvWriteFrame(writer,iplimg);
+
+}
+
+
+
+
+}
+
+cvReleaseVideoWriter(&amp;writer);
+cvReleaseImage(&amp;iplimg);
+
+}
+
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic6e3b.php?p=66152#66152">http://forum.openscenegraph.org/viewtopic.php?p=66152#66152</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002240.html">[osg-users] compositeview and offscreen rendering
+</A></li>
+	<LI>Next message: <A HREF="002247.html">[osg-users] compositeview and offscreen rendering
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2246">[ date ]</a>
+              <a href="thread.html#2246">[ thread ]</a>
+              <a href="subject.html#2246">[ subject ]</a>
+              <a href="author.html#2246">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

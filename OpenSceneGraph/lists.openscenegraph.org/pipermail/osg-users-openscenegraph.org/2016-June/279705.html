@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Realtime Pointpicking
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Realtime%20Pointpicking&In-Reply-To=%3C1466780818.m2f.67797%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003522.html">
+   <LINK REL="Next"  HREF="003490.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Realtime Pointpicking</H1>
+<!--htdig_noindex-->
+    <B>Daniel Neos</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Realtime%20Pointpicking&In-Reply-To=%3C1466780818.m2f.67797%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Realtime Pointpicking">daniel.rd at hotmail.de
+       </A><BR>
+    <I>Fri Jun 24 08:06:58 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003522.html">[osg-users] [osgPlugins] [OSG Exporter problem] Export skinning model with biped animation to OSG format
+</A></li>
+        <LI>Next message: <A HREF="003490.html">[osg-users] Realtime Pointpicking
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279705">[ date ]</a>
+              <a href="thread.html#279705">[ thread ]</a>
+              <a href="subject.html#279705">[ subject ]</a>
+              <a href="author.html#279705">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I have a Pickhandler and a dynamically changing scene which consists only of a geometry node. To be more specific, the geometry node represents a point cloud consisting over ~100000 vertices.
+
+Using a line intersector makes it nearly impossible to get an intersection, but the Intersector I am using, the polytopeintersector, needs ~200ms to get an intersection, which is too long for my application. I need a 'smooth' visualization of ~20-25fps and this would be definitley a bottleneck.
+
+Is there a more simple way to get intersections of a non-solid object fast?
+
+Here is my PickHandler. Input arguments in my application are the normalized (x,y)coordinates from the GUIEventAdapter, buffer is the tolerance with 0.005 and the viewer casted from the ActionAdapter.
+
+
+Code:
+
+bool PickHandler::getPickedPoint(double x, double y, float buffer,
+    osgViewer::View* viewer)
+{
+ osg::ref_ptr&lt;osgUtil::PolytopeIntersector&gt; intersector(0);
+    try
+    {
+        intersector = new osgUtil::PolytopeIntersector(
+            osgUtil::Intersector::PROJECTION,
+            x - buffer, y - buffer, x + buffer, y + buffer);
+    }
+    catch (const std::bad_alloc&amp;)
+    {
+        return false;
+    }
+
+    // DimZero = check only for points
+    intersector-&gt;setDimensionMask(osgUtil::PolytopeIntersector::DimZero);
+
+    intersector-&gt;setIntersectionLimit(osgUtil::Intersector::LIMIT_NEAREST);
+    osgUtil::IntersectionVisitor iv(intersector);
+    viewer-&gt;getCamera()-&gt;accept(iv);
+
+    if (intersector-&gt;containsIntersections())
+    {
+        osgUtil::PolytopeIntersector::Intersection intersection
+            = *(intersector-&gt;getIntersections().begin());
+
+        const osg::Vec3f&amp; p = intersection.intersectionPoints[0];
+        m_point.set(p[0], p[1], p[2]);
+        return true;
+    }
+    return false;
+
+
+
+
+Thank you!
+
+Cheers,
+Daniel[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2783.php?p=67797#67797">http://forum.openscenegraph.org/viewtopic.php?p=67797#67797</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003522.html">[osg-users] [osgPlugins] [OSG Exporter problem] Export skinning model with biped animation to OSG format
+</A></li>
+	<LI>Next message: <A HREF="003490.html">[osg-users] Realtime Pointpicking
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279705">[ date ]</a>
+              <a href="thread.html#279705">[ thread ]</a>
+              <a href="subject.html#279705">[ subject ]</a>
+              <a href="author.html#279705">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

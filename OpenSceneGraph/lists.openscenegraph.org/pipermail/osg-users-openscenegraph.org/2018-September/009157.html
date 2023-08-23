@@ -1,0 +1,215 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] context IDs
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20context%20IDs&In-Reply-To=%3CCAFN7Y%2BXvTFXuMbLqJB%2Bu97w5z95LyNGgi%2BUvzP3LsnsaEDGiow%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009156.html">
+   <LINK REL="Next"  HREF="009153.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] context IDs</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20context%20IDs&In-Reply-To=%3CCAFN7Y%2BXvTFXuMbLqJB%2Bu97w5z95LyNGgi%2BUvzP3LsnsaEDGiow%40mail.gmail.com%3E"
+       TITLE="[osg-users] context IDs">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Sep 21 13:13:33 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009156.html">[osg-users] context IDs
+</A></li>
+        <LI>Next message (by thread): <A HREF="009153.html">[osg-users] the speed of PagedLOD create nodes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9157">[ date ]</a>
+              <a href="thread.html#9157">[ thread ]</a>
+              <a href="subject.html#9157">[ subject ]</a>
+              <a href="author.html#9157">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Andy,
+
+I think it should be safe, if someone is calling isGL* at the same
+time as the GLExtension is being destructed then there are wider
+problems at play, as far as I'm aware it shouldn't happen in normal
+operation of the OSG.
+
+Once you have changes you are happy with just create a PR for it or
+post the changes to osg-submissions.
+
+Cheers,
+Robert.
+
+
+On Fri, 21 Sep 2018 at 16:47, Andy Skinner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Andy.Skinner at mathworks.com</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> I tried your suggestion of clearing the s_gl* lists in ~GLException.  I think it works, but have not been as thorough as I'd like  yet.
+</I>&gt;<i>
+</I>&gt;<i> Do I need to consider threading issues?  Could someone be calling isGLExtensionOrVersionSupported at the same time ~GLExceptions is being called?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I am using an older version of OSG, and when I send a version for review, I should probably make the change to current files.
+</I>&gt;<i>
+</I>&gt;<i> While I think the smaller fix would be appropriate for us, I like the alternate approach better.  It would be:
+</I>&gt;<i> * put the things stored on the s_gl* lists into GLExtensions
+</I>&gt;<i> * pull out the code that gets the renderer string and extensions and have them called from GLExtensions constructor.
+</I>&gt;<i> * have isGLExtensionOrVersionSupported do GLExtensions::Get to get or create the GLExtensions for the given context ID and check that.
+</I>&gt;<i> * remove the s_gl* lists
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I can't update the version of OpenSceneGraph in this part of our cycle, but I may be able to make a change.  I think I feel better with the change to clear the existing list element in ~GLException.  But I think the other approach would be better for current OSG.
+</I>&gt;<i>
+</I>&gt;<i> andy
+</I>&gt;<i>
+</I>&gt;<i> -----Original Message-----
+</I>&gt;<i> From: Andy Skinner
+</I>&gt;<i> Sent: Wednesday, September 19, 2018 3:32 PM
+</I>&gt;<i> To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i> Subject: RE: [osg-users] context IDs
+</I>&gt;<i>
+</I>&gt;<i> Thanks, I'll take a look.  I am hoping this will be more remove than replace, not needing multiple levels of caching.
+</I>&gt;<i>
+</I>&gt;<i> thanks
+</I>&gt;<i> andy
+</I>&gt;<i>
+</I>&gt;<i> -----Original Message-----
+</I>&gt;<i> From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; On Behalf Of Robert Osfield
+</I>&gt;<i> Sent: Wednesday, September 19, 2018 2:28 PM
+</I>&gt;<i> To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i> Subject: Re: [osg-users] context IDs
+</I>&gt;<i>
+</I>&gt;<i> Hi Andy,
+</I>&gt;<i>
+</I>&gt;<i> I have just had a quick look at the various s_* containers in GLExtensions.cpp and I think these are an old hang over that should be removed and replaced by code that is embedded into the GLExtensions object so that it can be constructed and destructed.
+</I>&gt;<i>
+</I>&gt;<i> Short of this refactor perhaps these data structures could be reset within the GLExtensions destructor.
+</I>&gt;<i>
+</I>&gt;<i> I don't have time to look into a fix right now, so either dive into the code yourself or avoid creating and destructor lots of contexts.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i> On Wed, 19 Sep 2018 at 15:52, Andy Skinner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Andy.Skinner at mathworks.com</A>&gt; wrote:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; OK, I've digested some more.  I see what you mean (I think) about ~State clearing the GLExtensions object from the static map (s_extensions) defined in GLExtensions.cpp.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; However, if the next GLExceptions::Get will make a new one, the GLExtensions constructor will use other static maps: s_glExtensionSetList, s_glRendererList, and s_glInitializedList.  So if we make a new GLExtensions object, we will get the answers from last time, because they were cached.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; It seems to me that if we need to store these per context ID, and if we can re-use context IDs, then we need a way to clear out what is stored, possibly when the context ID usage count goes to 0, or maybe explicitly.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; thanks
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; andy
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; -----Original Message-----
+</I>&gt;<i> &gt; From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; On Behalf
+</I>&gt;<i> &gt; Of Robert Osfield
+</I>&gt;<i> &gt; Sent: Wednesday, September 19, 2018 4:20 AM
+</I>&gt;<i> &gt; To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i> &gt; Subject: Re: [osg-users] context IDs
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Hi Andy,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; It's quite a while since I worked specifically on the osg::State,
+</I>&gt;<i> &gt; ContextID, osg::GLExtensions management.  In principle it should be
+</I>&gt;<i> &gt; possible to reuse ContextID's, the sticky issue of whether the
+</I>&gt;<i> &gt; GLExtensions object is recreated for each new graphics context is
+</I>&gt;<i> &gt; something I haven't personally tested.  Looking at osg::State is does
+</I>&gt;<i> &gt; look to clean up the GLExtensions object in 3.4 onwards (I haven't
+</I>&gt;<i> &gt; checked further back)
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; For graphics performance I would recommend that applications don't go creating and destroying GraphicsWindows, if possible just hide the window and reuse it will provide better performance.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Cheers,
+</I>&gt;<i> &gt; Robert.
+</I>&gt;<i> &gt; On Mon, 17 Sep 2018 at 19:08, Andy Skinner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Andy.Skinner at mathworks.com</A>&gt; wrote:
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; If we get our contextIDs from GraphicsContext::createNewContextID(), it could give us a new number or return a previous one, if we are returning them with GraphicsContext::decrementContextIDUsageCount.  Right?
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; Is there an intended connection between a contextID that has been used and a new one?  It looks to me that extensions are stored per context ID and never reset.
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; So if we change something about what we are looking for in the context (sometimes we fall back to software OpenGL for testing or helping a customer through an issue), we might reuse a context ID, but still have extensions associated with the ID that are not appropriate for it.
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; Am I missing an assumption here?  Should I be able to reuse a contextID for an unrelated context?  If not, I'll just remove call to decrementContextIDUsageCount.  That means the number and various maps will continue to grow.
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; thanks
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; andy
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; _______________________________________________
+</I>&gt;<i> &gt; &gt; osg-users mailing list
+</I>&gt;<i> &gt; &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt; &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.org.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org.</A>
+</I>&gt;<i> &gt; &gt; openscenegraph.org
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.org.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org.</A>
+</I>&gt;<i> &gt; openscenegraph.org
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.org.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org.</A>
+</I>&gt;<i> &gt; openscenegraph.org
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009156.html">[osg-users] context IDs
+</A></li>
+	<LI>Next message (by thread): <A HREF="009153.html">[osg-users] the speed of PagedLOD create nodes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9157">[ date ]</a>
+              <a href="thread.html#9157">[ thread ]</a>
+              <a href="subject.html#9157">[ subject ]</a>
+              <a href="author.html#9157">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

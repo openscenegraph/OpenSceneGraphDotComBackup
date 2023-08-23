@@ -1,0 +1,208 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Embed in SFML window, rendering problem
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Embed%20in%20SFML%20window%2C%20rendering%20problem&In-Reply-To=%3C1477934846.m2f.69185%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280860.html">
+   <LINK REL="Next"  HREF="004640.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Embed in SFML window, rendering problem</H1>
+<!--htdig_noindex-->
+    <B>Cem Aydin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Embed%20in%20SFML%20window%2C%20rendering%20problem&In-Reply-To=%3C1477934846.m2f.69185%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Embed in SFML window, rendering problem">cem.aydin at gmx.ch
+       </A><BR>
+    <I>Mon Oct 31 10:27:26 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280860.html">[osg-users] [osgOcean] osgOcean and osgSim::LOS segmentation fault.
+</A></li>
+        <LI>Next message: <A HREF="004640.html">[osg-users] Embed in SFML window, rendering problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280862">[ date ]</a>
+              <a href="thread.html#280862">[ thread ]</a>
+              <a href="subject.html#280862">[ subject ]</a>
+              <a href="author.html#280862">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello
+
+I'm trying to embed osg in an SFML window. I found some examples and managed to include an osgViewer. However there is a problem with the rendering. I'm not sure what exactly is happening but it looks like if the normals get messed up or so, see the attached image.
+
+According to examples and posts I found it should work. Also since ATM I'm not rendering anything with SFML. I also found this post indicating some problems, but since I'm a beginner I'm not sure if it matters: &quot;Notify OSG when OpenGL state gets modified externally (e.g. by SFML)&quot; (can't post links)
+Also I don't have the push/popGLStates..
+
+Here's my test code:
+
+
+Code:
+// compile e.g.:
+// g++ sfml-test.cpp -o sfml-test -lsfml-window -lsfml-graphics -lsfml-system -losg -losgViewer -losgDB -losgGA
+
+#include &lt;iostream&gt;
+
+// SFML
+#include &lt;SFML/Window.hpp&gt;
+//#include &lt;SFML/Graphics.hpp&gt;
+
+// OpenSceneGraph
+#include &lt;osg/PositionAttitudeTransform&gt;
+//#include &lt;osg/ShapeDrawable&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgGA/TrackballManipulator&gt;
+//#include &lt;osgGA/OrbitManipulator&gt;
+#include &lt;osgDB/ReadFile&gt;
+
+using namespace std;
+
+int main() {
+
+	// SFML Window
+
+	sf::Window window;
+	window.create(sf::VideoMode(800, 600), &quot;My window&quot;);
+	window.setVerticalSyncEnabled(true);
+
+	sf::Vector2u size = window.getSize();
+
+	// OSG
+
+	// load model from file
+	osg::ref_ptr&lt;osg::Node&gt; model (osgDB::readNodeFile(&quot;cessna.osgt&quot;));
+	if (!model) {
+	cout &lt;&lt; &quot;3D model not found, leaving...&quot; &lt;&lt; endl;
+	return 1;
+	}
+
+	// create model position-attitude transformer
+	osg::ref_ptr&lt;osg::PositionAttitudeTransform&gt; model_pat (new osg::PositionAttitudeTransform);
+
+	// add the object geode as a child of the object PAT
+	model_pat-&gt;addChild(model.get());
+
+	// set up scene graph
+	//
+	// root --&gt; model_pat --&gt; model
+	//
+
+	// creating the root node
+	osg::ref_ptr&lt;osg::Group&gt; root (new osg::Group);
+
+	root-&gt;addChild(model_pat.get());
+
+	//Creating the viewer
+	osgViewer::Viewer viewer;
+
+	osg::ref_ptr&lt;osgViewer::GraphicsWindowEmbedded&gt; gw = viewer.setUpViewerAsEmbeddedInWindow(0, 0, size.x, size.y);
+
+	// set scene to render and run
+	viewer.setSceneData(root.get());
+
+	// attach a trackball manipulator to all user control of the view
+	// (needed when loop is used below)
+	//osgGA::OrbitManipulator* om = new osgGA::OrbitManipulator;
+	osgGA::TrackballManipulator* om = new osgGA::TrackballManipulator;
+	viewer.setCameraManipulator(om);
+	viewer.getCameraManipulator()-&gt;setHomePosition( osg::Vec3d(30,-50,30),  // eye
+							osg::Vec3d(0,0,0),      // center
+							osg::Vec3d(0,0,1)       // up
+							);
+	viewer.home();
+
+	// instead of returning, use loop now
+	viewer.realize();
+
+	/*auto state = gw-&gt;getState();
+	state-&gt;setUseModelViewAndProjectionUniforms(true);
+	state-&gt;setUseVertexAttributeAliasing(true);*/
+
+	// GAME LOOP
+
+	while (window.isOpen()) {
+
+	// --&gt; read input
+	sf::Event event;
+	while (window.pollEvent(event)) {
+		switch(event.type) {
+		case sf::Event::Closed:
+		window.close();
+		break;
+		case sf::Event::KeyPressed:
+		if (event.key.code == sf::Keyboard::Escape) {
+			window.close();
+		}
+		break;
+		case sf::Event::Resized:
+		gw-&gt;resized(0, 0, event.size.width, event.size.height);
+		break;
+		}
+	}
+
+
+	window.setActive();
+	//window.pushGLStates();
+	// OSG Viewer step
+	viewer.frame();
+	//window.popGLStates();
+	window.display();
+
+	}
+	return 0;
+}
+
+
+
+
+Any ideas ?
+Thanks!
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic88e1.php?p=69185#69185">http://forum.openscenegraph.org/viewtopic.php?p=69185#69185</A>
+
+
+
+
+Attachments: 
+<A HREF="../../../../forum.openscenegraph.org/files/screen_osg_150.jpg">http://forum.openscenegraph.org//files/screen_osg_150.jpg</A>
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280860.html">[osg-users] [osgOcean] osgOcean and osgSim::LOS segmentation fault.
+</A></li>
+	<LI>Next message: <A HREF="004640.html">[osg-users] Embed in SFML window, rendering problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280862">[ date ]</a>
+              <a href="thread.html#280862">[ thread ]</a>
+              <a href="subject.html#280862">[ subject ]</a>
+              <a href="author.html#280862">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

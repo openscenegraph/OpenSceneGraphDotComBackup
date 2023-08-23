@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG 3.2.1 and Qt5 Widget integration
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%203.2.1%20and%20Qt5%20Widget%20integration&In-Reply-To=%3C1438613847.m2f.64591%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001038.html">
+   <LINK REL="Next"  HREF="001041.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG 3.2.1 and Qt5 Widget integration</H1>
+<!--htdig_noindex-->
+    <B>Can Olcek</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%203.2.1%20and%20Qt5%20Widget%20integration&In-Reply-To=%3C1438613847.m2f.64591%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] OSG 3.2.1 and Qt5 Widget integration">can.olcek at gmail.com
+       </A><BR>
+    <I>Mon Aug  3 07:57:27 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001038.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+        <LI>Next message: <A HREF="001041.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1040">[ date ]</a>
+              <a href="thread.html#1040">[ thread ]</a>
+              <a href="subject.html#1040">[ subject ]</a>
+              <a href="author.html#1040">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sebastian,
+
+I have almost completed the example. My original implementation is a little bit complex than this. Thanks to the couple of private replies and discussion, I will post it tomorrow.
+
+But for keyboard inputs, I'm using an event filter.
+
+Something like this:
+
+
+Code:
+
+
+class QInputFilter : public QObject
+{
+  Q_OBJECT
+
+protected:
+  bool eventFilter(QObject *obj, QEvent *event);
+
+  void onKeyPress(QKeyEvent *e);
+  void onKeyRelease(QKeyEvent *e);
+};
+
+bool QInputFilter::eventFilter(QObject *obj, QEvent *event)
+{
+  switch(event-&gt;type())
+  {
+    case QEvent::KeyPress:
+      onKeyPress(static_cast&lt;QKeyEvent *&gt;(event));
+      break;
+    case QEvent::KeyRelease:
+      onKeyRelease(static_cast&lt;QKeyEvent *&gt;(event));
+      break;
+  }
+ 
+  return QObject::eventFilter(obj, event);
+}
+ 
+void QInputFilter::onKeyPress(QKeyEvent *e)
+{
+  if(e-&gt;isAutoRepeat())
+  {
+    e-&gt;ignore();
+    return;
+  }
+ 
+  unsigned int key = e-&gt;key();
+  // add pressed keys and add changed keys for current frame
+  // renderwidget will clear changed keys at the end of frame
+  Input::PrivateAccess::pressedKeys().insert(key);
+  Input::PrivateAccess::changedKeys().insert(key);
+     
+  e-&gt;accept();
+}
+ 
+void QInputFilter::onKeyPress(QKeyEvent *e)
+{
+  if(e-&gt;isAutoRepeat())
+  {
+    e-&gt;ignore();
+    return;
+  }
+ 
+  unsigned int key = e-&gt;key();
+  // remove released keys and add changed keys for current frame
+  // renderwidget will clear changed keys at the end of frame
+  Input::PrivateAccess::pressedKeys().erase(e-&gt;key());
+  Input::PrivateAccess::changedKeys().insert(e-&gt;key());
+
+  e-&gt;accept();
+}
+
+
+
+
+
+Add input listener to your Qt app:
+
+
+Code:
+
+
+sdt::Author::QInputFilter inputFilter;
+app.installEventFilter(&amp;inputFilter);
+
+
+
+
+
+I have almost fully static Input class to access keys and mouse states during each frame (paintGL()) I've actually tried to implement Unity3D like approach so inside cull or update traversal I can use Input::getButton(), Input::getKey(), Input::isKeyUp(), etc. methods.
+
+I can add full implemention of this to my full example.
+
+Cheers,
+Can
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic6c6d.php?p=64591#64591">http://forum.openscenegraph.org/viewtopic.php?p=64591#64591</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001038.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+	<LI>Next message: <A HREF="001041.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1040">[ date ]</a>
+              <a href="thread.html#1040">[ thread ]</a>
+              <a href="subject.html#1040">[ subject ]</a>
+              <a href="author.html#1040">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

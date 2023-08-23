@@ -1,0 +1,166 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;If&nbsp;you&#39;re&nbsp;just&nbsp;updating&nbsp;an&nbsp;existing&nbsp;array,&nbsp;you&nbsp;don&#39;t&nbsp;need&nbsp;to&nbsp;call&nbsp;setVertexArray&nbsp;(etc);&nbsp;but&nbsp;you&nbsp;need&nbsp;to&nbsp;mark&nbsp;it&nbsp;dirty&nbsp;by&nbsp;calling&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt; &nbsp;m_vertices-&gt;dirty();&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;That&nbsp;applies&nbsp;also&nbsp;to&nbsp;your&nbsp;other&nbsp;buffer&nbsp;objects&nbsp;(color&nbsp;array,&nbsp;elements,&nbsp;etc.)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;div&nbsp;class=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;Glenn&nbsp;Waldron&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;<br>
+&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;Thu,&nbsp;Apr&nbsp;28,&nbsp;2016&nbsp;at&nbsp;3:51&nbsp;PM,&nbsp;Daniel&nbsp;Neos&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:daniel.rd@hotmail.de&quot;&nbsp;target=&quot;_blank&quot;&gt;daniel.rd@hotmail.de&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Greetings&nbsp;everyone,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;am&nbsp;trying&nbsp;to&nbsp;display&nbsp;a&nbsp;point&nbsp;cloud,&nbsp;consisting&nbsp;of&nbsp;vertices&nbsp;and&nbsp;color&nbsp;with&nbsp;OpenSceneGraph.&nbsp;A&nbsp;static&nbsp;point&nbsp;cloud&nbsp;to&nbsp;display&nbsp;is&nbsp;rather&nbsp;easy&nbsp;with&nbsp;this&nbsp;guide.&lt;br&gt;<br>
+But&nbsp;I&nbsp;am&nbsp;not&nbsp;capable&nbsp;of&nbsp;updating&nbsp;such&nbsp;a&nbsp;point&nbsp;cloud.&nbsp;My&nbsp;intention&nbsp;is&nbsp;to&nbsp;create&nbsp;a&nbsp;geometry&nbsp;and&nbsp;attach&nbsp;it&nbsp;to&nbsp;my&nbsp;viewer&nbsp;class&nbsp;once.&lt;br&gt;<br>
+This&nbsp;is&nbsp;the&nbsp;mentioned&nbsp;method&nbsp;which&nbsp;is&nbsp;called&nbsp;once&nbsp;in&nbsp;the&nbsp;beginning.&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;OSGWidget&nbsp;strongly&nbsp;depends&nbsp;on&nbsp;this&nbsp;OpenGLWidget&nbsp;based&nbsp;approach.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;OSGWidget::attachGeometry(osg::ref_ptr&lt;osg::Geometry&gt;&nbsp;geom)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+osg::Geode*&nbsp;geode&nbsp;=&nbsp;new&nbsp;osg::Geode;&lt;br&gt;<br>
+&lt;br&gt;<br>
+geom-&gt;setDataVariance(osg::Object::DYNAMIC);&lt;br&gt;<br>
+geom-&gt;setUseDisplayList(false);&lt;br&gt;<br>
+geom-&gt;setUseVertexBufferObjects(true);&lt;br&gt;<br>
+bool&nbsp;addDrawSuccess&nbsp;=&nbsp;geode-&gt;addDrawable(geom.get());&nbsp;//&nbsp;Adding&nbsp;Drawable&nbsp;Shape&nbsp;to&nbsp;the&nbsp;geometry&nbsp;node&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+if&nbsp;(!addDrawSuccess)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+throw&nbsp;&quot;Adding&nbsp;Drawable&nbsp;failed!&quot;;&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+osg::StateSet*&nbsp;stateSet&nbsp;=&nbsp;geode-&gt;getOrCreateStateSet();&lt;br&gt;<br>
+stateSet-&gt;setMode(GL_LIGHTING,&nbsp;osg::StateAttribute::OFF);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+float&nbsp;aspectRatio&nbsp;=&nbsp;static_cast&lt;float&gt;(this-&gt;width())&nbsp;/&nbsp;static_cast&lt;float&gt;(this-&gt;height());&lt;br&gt;<br>
+&lt;br&gt;<br>
+//&nbsp;Setting&nbsp;up&nbsp;the&nbsp;camera&lt;br&gt;<br>
+osg::Camera*&nbsp;camera&nbsp;=&nbsp;new&nbsp;osg::Camera;&lt;br&gt;<br>
+camera-&gt;setViewport(0,&nbsp;0,&nbsp;this-&gt;width(),&nbsp;this-&gt;height());&lt;br&gt;<br>
+camera-&gt;setClearColor(osg::Vec4(0.f,&nbsp;0.f,&nbsp;0.f,&nbsp;1.f));&nbsp;//&nbsp;Kind&nbsp;of&nbsp;Backgroundcolor,&nbsp;clears&nbsp;the&nbsp;buffer&nbsp;and&nbsp;sets&nbsp;the&nbsp;default&nbsp;color&nbsp;(RGBA)&lt;br&gt;<br>
+camera-&gt;setProjectionMatrixAsPerspective(30.f,&nbsp;aspectRatio,&nbsp;1.f,&nbsp;1000.f);&nbsp;//&nbsp;Create&nbsp;perspective&nbsp;projection&lt;br&gt;<br>
+camera-&gt;setGraphicsContext(graphicsWindow_);&nbsp;//&nbsp;embed&lt;br&gt;<br>
+&lt;br&gt;<br>
+osgViewer::View*&nbsp;view&nbsp;=&nbsp;new&nbsp;osgViewer::View;&lt;br&gt;<br>
+view-&gt;setCamera(camera);&nbsp;//&nbsp;Set&nbsp;the&nbsp;defined&nbsp;camera&lt;br&gt;<br>
+view-&gt;setSceneData(geode);&nbsp;//&nbsp;Set&nbsp;the&nbsp;geometry&lt;br&gt;<br>
+view-&gt;addEventHandler(new&nbsp;osgViewer::StatsHandler);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+osgGA::TrackballManipulator*&nbsp;manipulator&nbsp;=&nbsp;new&nbsp;osgGA::TrackballManipulator;&lt;br&gt;<br>
+manipulator-&gt;setAllowThrow(false);&lt;br&gt;<br>
+&lt;br&gt;<br>
+view-&gt;setCameraManipulator(manipulator);&lt;br&gt;<br>
+&lt;br&gt;<br>
+///////////////////////////////////////////////////&lt;br&gt;<br>
+//&nbsp;Set&nbsp;the&nbsp;viewer&lt;br&gt;<br>
+//////////////////////////////////////////////////&lt;br&gt;<br>
+viewer_-&gt;addView(view);&lt;br&gt;<br>
+viewer_-&gt;setThreadingModel(osgViewer::CompositeViewer::SingleThreaded);&lt;br&gt;<br>
+viewer_-&gt;realize();&lt;br&gt;<br>
+&lt;br&gt;<br>
+this-&gt;setFocusPolicy(Qt::StrongFocus);&lt;br&gt;<br>
+this-&gt;setMinimumSize(100,&nbsp;100);&lt;br&gt;<br>
+&lt;br&gt;<br>
+this-&gt;setMouseTracking(true);&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+This&nbsp;method&nbsp;gets&nbsp;set&nbsp;once&nbsp;and&nbsp;shall&nbsp;set&nbsp;up&nbsp;the&nbsp;camera,&nbsp;interactor&nbsp;settings&nbsp;and&nbsp;the&nbsp;overall&nbsp;scene&nbsp;which&nbsp;only&nbsp;consists&nbsp;of&nbsp;one&nbsp;geode&nbsp;containing&nbsp;the&nbsp;geometry&nbsp;which&nbsp;shall&nbsp;be&nbsp;updated&nbsp;continiously.&lt;br&gt;<br>
+And&nbsp;after&nbsp;I&nbsp;have&nbsp;&#39;attached&#39;&nbsp;the&nbsp;geometry,&nbsp;I&nbsp;am&nbsp;trying&nbsp;to&nbsp;update&nbsp;the&nbsp;geometry&nbsp;like&nbsp;this&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;PointCloudViewOSG::processData(DepthDataSet&nbsp;depthData)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+if&nbsp;(depthData.points()-&gt;empty())&lt;br&gt;<br>
+{&lt;br&gt;<br>
+return;&nbsp;//&nbsp;empty&nbsp;cloud,&nbsp;cannot&nbsp;do&nbsp;anything&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+const&nbsp;DepthDataSet::IndexPtr::element_type&amp;&nbsp;index&nbsp;=&nbsp;*depthData.index();&lt;br&gt;<br>
+const&nbsp;size_t&nbsp;nPixel&nbsp;=&nbsp;depthData.points().get()-&gt;points.size();&lt;br&gt;<br>
+&lt;br&gt;<br>
+if&nbsp;(depthData.intensity().isValid()&nbsp;&amp;&amp;&nbsp;!index.empty()&nbsp;)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;for&nbsp;(int&nbsp;i&nbsp;=&nbsp;0;&nbsp;i&nbsp;&lt;&nbsp;nPixel;&nbsp;i++)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;x&nbsp;=&nbsp;depthData.points().get()-&gt;points[i].x;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;y&nbsp;=&nbsp;depthData.points().get()-&gt;points[i].y;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;z&nbsp;=&nbsp;depthData.points().get()-&gt;points[i].z;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;m_vertices-&gt;push_back(osg::Vec3(x&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;,&nbsp;y&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;,&nbsp;z));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;32&nbsp;bit&nbsp;integer&nbsp;variable&nbsp;containing&nbsp;the&nbsp;rgb&nbsp;(8&nbsp;bit&nbsp;per&nbsp;channel)&nbsp;value&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;uint32_t&nbsp;rgb_val_;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;memcpy(&amp;rgb_val_,&nbsp;&amp;(depthData.points().get()-&gt;points[i].rgb),&nbsp;sizeof(uint32_t));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;uint32_t&nbsp;red,&nbsp;green,&nbsp;blue;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;blue&nbsp;=&nbsp;rgb_val_&nbsp;&amp;&nbsp;0x000000ff;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;rgb_val_&nbsp;=&nbsp;rgb_val_&nbsp;&gt;&gt;&nbsp;8;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;green&nbsp;=&nbsp;rgb_val_&nbsp;&amp;&nbsp;0x000000ff;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;rgb_val_&nbsp;=&nbsp;rgb_val_&nbsp;&gt;&gt;&nbsp;8;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;red&nbsp;=&nbsp;rgb_val_&nbsp;&amp;&nbsp;0x000000ff;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;m_colors-&gt;push_back(&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Vec4f((float)red&nbsp;/&nbsp;255.0f,&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;(float)green&nbsp;/&nbsp;255.0f,&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;(float)blue&nbsp;/&nbsp;255.0f,&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;1.0f)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;m_geometry-&gt;setVertexArray(m_vertices.get());&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;m_geometry-&gt;setColorArray(m_colors.get());&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;m_geometry-&gt;setColorBinding(osg::Geometry::BIND_PER_VERTEX);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;m_geometry-&gt;addPrimitiveSet(new&nbsp;osg::DrawArrays(osg::PrimitiveSet::POINTS,&nbsp;0,&nbsp;m_vertices-&gt;size()));&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+(Apperantly&nbsp;the&nbsp;code&nbsp;tag&nbsp;can&nbsp;somehow&nbsp;not&nbsp;handle&nbsp;the&nbsp;whitespaces&nbsp;but&nbsp;i&nbsp;will&nbsp;let&nbsp;it&nbsp;be&nbsp;since&nbsp;it&nbsp;is&nbsp;more&nbsp;readable&nbsp;than&nbsp;if&nbsp;everything&nbsp;is&nbsp;aligned)&lt;br&gt;<br>
+&lt;br&gt;<br>
+So&nbsp;my&nbsp;guess&nbsp;is&nbsp;that&nbsp;the &nbsp;addPrimitiveSet(...) &nbsp;shall&nbsp;not&nbsp;be&nbsp;called&nbsp;everytime&nbsp;I&nbsp;update&nbsp;the&nbsp;geometry,&nbsp;since&nbsp;it&nbsp;will&nbsp;push_back&lt;br&gt;<br>
+the&nbsp;primitive&nbsp;set&nbsp;everytime&nbsp;the&nbsp;geometry&nbsp;gets&nbsp;updated?&lt;br&gt;<br>
+&lt;br&gt;<br>
+Do&nbsp;I&nbsp;have&nbsp;to&nbsp;reattach&nbsp;my&nbsp;geometry&nbsp;after&nbsp;every&nbsp;update?&nbsp;Or&nbsp;do&nbsp;I&nbsp;have&nbsp;to&nbsp;rewrite&nbsp;my&nbsp;update&nbsp;method?&lt;br&gt;<br>
+So&nbsp;it&nbsp;boils&nbsp;down&nbsp;to&nbsp;the&nbsp;question &nbsp;What&nbsp;steps&nbsp;are&nbsp;necessary&nbsp;to&nbsp;update&nbsp;my&nbsp;underlying&nbsp;geometry&nbsp;with&nbsp;new&nbsp;vertices&nbsp;and&nbsp;colors&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;have&nbsp;read&nbsp;the&nbsp;basic&nbsp;tutorials&nbsp;and&nbsp;looked&nbsp;for&nbsp;similar&nbsp;questions&nbsp;in&nbsp;this&nbsp;forum&lt;br&gt;<br>
+and&nbsp;the&nbsp;only&nbsp;thing&nbsp;that&nbsp;I&nbsp;could&nbsp;adapt&nbsp;is&nbsp;the&nbsp;use&nbsp;of&nbsp;VBO&nbsp;for&nbsp;performance&nbsp;gain&lt;br&gt;<br>
+&lt;br&gt;<br>
+PointCloudlibrary&nbsp;(PCL)&nbsp;is&nbsp;unfortunately&nbsp;not&nbsp;an&nbsp;alternative&nbsp;since&nbsp;of&nbsp;some&nbsp;incompatibilities&nbsp;with&nbsp;my&nbsp;application.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Daniel&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=67011#67011&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=67011#67011&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [build] OSG 3.4.0 Build with Visual C++ 2015
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20OSG%203.4.0%20Build%20with%20Visual%20C%2B%2B%202015&In-Reply-To=%3C436d9e48-c897-c7ec-bf33-aef2edce02d5%40objexx.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002851.html">
+   <LINK REL="Next"  HREF="279031.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [build] OSG 3.4.0 Build with Visual C++ 2015</H1>
+<!--htdig_noindex-->
+    <B>Stuart Mentzer</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20OSG%203.4.0%20Build%20with%20Visual%20C%2B%2B%202015&In-Reply-To=%3C436d9e48-c897-c7ec-bf33-aef2edce02d5%40objexx.com%3E"
+       TITLE="[osg-users] [build] OSG 3.4.0 Build with Visual C++ 2015">Stuart_Mentzer at objexx.com
+       </A><BR>
+    <I>Wed Apr 20 14:36:13 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002851.html">[osg-users] [build] OSG 3.4.0 Build with Visual C++ 2015
+</A></li>
+        <LI>Next message: <A HREF="279031.html">[osg-users] osgWidget update function
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2852">[ date ]</a>
+              <a href="thread.html#2852">[ thread ]</a>
+              <a href="subject.html#2852">[ subject ]</a>
+              <a href="author.html#2852">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160420/0ae9ec61/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160420/0ae9ec61/attachment-0003.htm</A>&gt;
+-------------- next part --------------
+OSG VC++ 2015 Build on Windows
+
+Notes:
+ mcd is a script for md then cd
+ A subset of optional dependencies was used for this first try
+
+cmake.VC.r.bat: (installs OSG to C:\OSG) (without /arch arg for build that works on generic CPU)
+@echo off
+setlocal
+set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\bin;C:\MinGW\bin;C:\Git\cmd;C:\CMake\bin
+set INCLUDE=
+set LIB=
+set LIBPATH=
+call setVC14.64.bat
+set CC=cl
+set CXX=cl
+del CMakeCache.txt &gt;nul 2&gt;nul
+C:\CMake\bin\cmake.exe -G &quot;MinGW Makefiles&quot; -DCMAKE_COLOR_MAKEFILE:BOOL=0 -DCMAKE_INSTALL_PREFIX=&quot;C:/OSG&quot; -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_CXX_FLAGS_RELEASE=&quot;/nologo /EHsc /DNOMINMAX /DWIN32_LEAN_AND_MEAN /DNDEBUG /O2 /GS- /MD&quot; -DCMAKE_C_FLAGS_RELEASE=&quot;/nologo /EHsc /DNOMINMAX /DWIN32_LEAN_AND_MEAN /DNDEBUG /O2 /GS- /MD&quot; %*
+make -j%NUMBER_OF_PROCESSORS% VERBOSE=true
+make install
+endlocal
+
+
+zlib:
+mcd zlib_build
+..\cmake.VC.r.bat ../zlib
+copy zconf.h ..\zlib
+
+minizip: (after zlib)
+option(USE_AES &quot;enables building of aes library&quot; OFF)
+mcd minizip_build
+..\cmake.VC.r.bat -DZLIB_LIBRARY:FILEPATH=&quot;../zlib_build/zlib.lib&quot; -DZLIB_INCLUDE_DIR:PATH=&quot;../zlib&quot; ../minizip
+
+curl:
+option(CURL_STATICLIB &quot;Set to ON to build libcurl with static linking.&quot; ON)
+mcd curl_build
+..\cmake.VC.r.bat ../curl
+
+freetype:
+mcd freetype_build
+..\cmake.VC.r.bat /I ../freetype
+
+giflib:
+copy osg-3rdparty-cmake\giflib\* giflib
+mcd giflib_build
+..\cmake.VC.r.bat -DGIFLIB_SOURCE_DIR:PATH=&quot;../giflib&quot; -DSKIP_INSTALL_ALL=1 ../giflib
+
+glut:
+copy osg-3rdparty-cmake\glut\* glut
+mcd glut_build
+..\cmake.VC.r.bat -DGLUT_SOURCE_DIR:PATH=&quot;../glut&quot; -DSKIP_INSTALL_ALL=1 ../glut
+
+jpeg:
+copy osg-3rdparty-cmake\libjpeg\* jpeg
+mcd jpeg_build
+..\cmake.VC.r.bat -DLIBJPEG_SOURCE_DIR:PATH=&quot;../jpeg&quot; -DSKIP_INSTALL_ALL=1 ../jpeg
+
+lpng: (after zlib)
+mcd lpng_build
+..\cmake.VC.r.bat -DZLIB_INCLUDE_DIR:PATH=&quot;../zlib&quot; -DZLIB_LIBRARY:FILEPATH=&quot;../zlib_build/zlib&quot; -DPNG_STATIC=1 ../lpng
+
+tiff:
+mcd tiff_build
+..\cmake.VC.r.bat -DCMAKE_PREFIX_PATH:PATH=&quot;..&quot; ../tiff
+(not finding zlib, jpeg, ... packages)
+
+Collect all 3rd party libraries in 3rdparty\lib directory and rename them:
+freetype.lib
+giflib.lib
+glut32.lib
+jpeg.lib
+libcurl.lib
+libcurl.dll
+libcurl.dll.manifest
+libpng16.lib	(rename from libpng16_static.lib)
+libpng16.dll
+libpng16.dll.manifest
+minizip.lib
+tiff.lib
+tiff.dll
+tiff.dll.manifest
+zlib.lib
+
+Collect all 3rd party library headers in 3rdparty\include
+
+OSG:
+
+Put OSG 3.4.0 source in OSG directory
+
+Top-level CMakeLists.txt:
+ IF(MSVC) block (Use newest Windows Kits directory):
+        # Objexx
+        set(CMAKE_STATIC_LINKER_FLAGS &quot;${CMAKE_STATIC_LINKER_FLAGS} /LIBPATH:\&quot;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.10586.0/um/x64\&quot;&quot; CACHE INTERNAL &quot;&quot; FORCE)
+        set(CMAKE_SHARED_LINKER_FLAGS &quot;${CMAKE_SHARED_LINKER_FLAGS} /LIBPATH:\&quot;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.10586.0/um/x64\&quot;&quot; CACHE INTERNAL &quot;&quot; FORCE)
+        set(CMAKE_EXE_LINKER_FLAGS &quot;${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:\&quot;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.10586.0/um/x64\&quot;&quot; CACHE INTERNAL &quot;&quot; FORCE)
+        include_directories(AFTER &quot;C:/Projects/OSG/freetype/include&quot;)
+ Enable packages on this line and add C:\CMake\bin to PATH so cpack is found:
+    OPTION(BUILD_OSG_PACKAGES &quot;Set to ON to generate CPack configuration files and packaging targets&quot; ON)
+
+mcd OSG_build
+..\cmake.VC.r.bat ../OSG
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002851.html">[osg-users] [build] OSG 3.4.0 Build with Visual C++ 2015
+</A></li>
+	<LI>Next message: <A HREF="279031.html">[osg-users] osgWidget update function
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2852">[ date ]</a>
+              <a href="thread.html#2852">[ thread ]</a>
+              <a href="subject.html#2852">[ subject ]</a>
+              <a href="author.html#2852">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

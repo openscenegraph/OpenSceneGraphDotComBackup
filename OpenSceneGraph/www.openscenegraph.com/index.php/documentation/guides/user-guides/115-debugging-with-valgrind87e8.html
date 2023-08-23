@@ -1,0 +1,166 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-gb" lang="en-gb">
+
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
+<head>
+    <script type="text/javascript">
+var siteurl='../../../../index.html';
+var tmplurl='../../../../templates/ja_purity_ii/index.html';
+var isRTL = false;
+</script>
+
+<base  />
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content="scene graph
+OpenGL
+realtime graphics
+OpenGL ES" />
+	<meta name="author" content="openscenegraph" />
+	<meta name="robots" content="noindex, nofollow" />
+	<meta name="description" content="Project website for OpenSceneGraph" />
+	<meta name="generator" content="Joomla! - Open Source Content Management" />
+	<title>Debugging with Valgrind</title>
+	<link href="../../../../index4adc.css?jat3action=gzip&amp;jat3type=css&amp;jat3file=t3-assets%2Fcss_4ca7c.css" rel="stylesheet" type="text/css" />
+	<script type="application/json" class="joomla-script-options new">{"csrf.token":"23bec26cc03510f450694fb403a05734","system.paths":{"root":"","base":""}}</script>
+	<script src="../../../../indexa945.php?jat3action=gzip&amp;jat3type=js&amp;jat3file=t3-assets%2Fjs_a0ffa.js" type="text/javascript"></script>
+	<script type="text/javascript">
+jQuery(window).on('load',  function() {
+				new JCaption('img.caption');
+			});
+	</script>
+
+<!--[if ie]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/templates/ja_purity_ii/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+
+
+
+
+<link href="../../../../plugins/system/jat3/jat3/base-themes/default/images/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+
+
+<!--[if IE 7.0]>
+<style>
+.clearfix { display: inline-block; } /* IE7xhtml*/
+</style>
+<![endif]-->
+
+<script language="javascript" type="text/javascript">
+var rightCollapseDefault='show';
+var excludeModules='38';
+</script>
+<script language="javascript" type="text/javascript" src="../../../../templates/ja_purity_ii/js/ja.rightcol.js"></script>
+
+<style type="text/css">
+#ja-header .main {
+	background-image: url(../../../../templates/ja_purity_ii/images/header/header2.jpg);
+}
+</style></head>
+
+<body id="bd" class="fs3 com_content contentpane">
+    <div id="system-message-container">
+	</div>
+
+    <div class="item-page clearfix">
+	<h2 class="contentheading">
+			<a href="115-debugging-with-valgrind.html">
+		Debugging with Valgrind</a>
+		</h2>
+
+	
+<div class="article-tools clearfix">
+	<ul class="actions">
+			<li>
+		<a href="#" onclick="window.print();return false;">			<span class="icon-print" aria-hidden="true"></span>
+		Print	</a>		</li>
+		
+	</ul>
+
+
+
+	<dl class="article-info">
+	<dt class="article-info-term">Details</dt>
+	<dd class="category-name">
+				Category: <span><a href="../user-guides.html">User Guides</a></span>		</dd>
+	<dd class="published">
+	Published: <span>13 February 2013</span>	</dd>
+	<dd class="createdby"> 
+				Written by <span>openscenegraph</span>	
+	</dd>
+	
+	<dd class="hits">
+	Hits: <span>14565</span>	</dd>
+	</dl>
+</div>
+
+
+	<p>Valgrind is a very good memory checker and debugger. It does the job by emulating the CPU and all of the instructions your program makes. Valgrind doesn't require specialized instrumentation or other tricks, but rather just requires that you compile your program with debugging information. If you want to debug <span class="wiki">OpenSceneGraph</span> itself, just compile it with debugging information and link it in. The best part is that valgrind is itself Open Source. There is, however, a drawback. Your application, when run with the debugger, will be very slow.</p>
+<p>It is recommended that valgrind 3.0.1 or later be used with OSG applications. I have only used valgrind under the GNU/Linux operating system on the x86 platform with Nvidia graphics cards, using Nvidia's proprietary driver. Valgrind has been used successfully with GCC 3.4.2 under Fedora Core 3, and with GCC 4.0.1 under Fedora Core 4. Other modern versions of GNU/Linux should work equally well.</p>
+<p>Valgrind exposes many unfixable problems in the Nvidia graphics driver when running OSG applications. Valgrind also allows these errors to be suppressed by describing them in a separate suppression file, reproduced below. I called this file opengl.supp. Here is the command line that I use to run OSG applications with valgrind (&lt;progname&gt; and &lt;progargs&gt; are your own program name and arguments):</p>
+<pre class="wiki"> valgrind --gen-suppressions=all --leak-check=full --num-callers=40 --log-file=out --suppressions=opengl.supp --error-limit=no -v &lt;progname&gt; &lt;progargs&gt;
+</pre>
+<p>Here are the contents of opengl.supp:</p>
+<pre class="wiki">{
+   opengl addr4 (1)
+   Memcheck:Addr4
+   obj:/usr/lib/libGL*
+}
+{
+   opengl param (2)
+   Memcheck:Param
+   ioctl(generic)
+   fun:ioctl
+   fun:_nv*gl
+   obj:/usr/lib/libGL*
+}
+{
+   opengl cond (3)
+   Memcheck:Cond
+   obj:/usr/lib/libGL*
+}
+{
+   opengl param (4)
+   Memcheck:Param
+   ioctl(generic)
+   fun:ioctl
+   obj:/usr/lib/libGL*
+}
+{
+   opengl cond (5)
+   Memcheck:Cond
+   fun:_nv*gl
+   obj:/usr/lib/libGL*
+}
+{
+   opengl cond (6)
+   Memcheck:Cond
+   fun:strcat
+   obj:/usr/lib/libGL*
+}
+{
+   opengl value4 (7)
+   Memcheck:Value4
+   obj:/usr/lib/libGL*
+}
+{
+   opengl memleak (8)
+   Memcheck:Leak
+   fun:calloc
+   obj:/usr/lib/libGL*
+}
+{
+   opengl memleak (9)
+   Memcheck:Leak
+   fun:malloc
+   obj:/usr/lib/libGL*
+}
+</pre> 
+			
+				
+
+	</div>
+</body>
+
+</html>

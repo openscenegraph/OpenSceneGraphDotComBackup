@@ -1,0 +1,106 @@
+/* OpenSceneGraph example, osgtext.
+*
+*  Permission is hereby granted, free of charge, to any person obtaining a copy
+*  of this software and associated documentation files (the "Software"), to deal
+*  in the Software without restriction, including without limitation the rights
+*  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*  copies of the Software, and to permit persons to whom the Software is
+*  furnished to do so, subject to the following conditions:
+*
+*  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*  THE SOFTWARE.
+*/
+
+#include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
+
+#include <osgGA/StateSetManipulator>
+#include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
+
+#include <osg/Camera>
+
+#include <osgText/Font>
+#include <osgText/Text>
+
+class UpdateText : public osgGA::GUIEventHandler
+{
+public:
+  UpdateText(osgText::Text* left, osgText::Text* right)
+    : left_(left), right_(right), flipText_(false)
+  {
+  }
+
+  virtual bool handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, osg::Object*, osg::NodeVisitor*)
+  {
+    if (ea.getEventType() == ea.FRAME)
+    {
+      static const int INIT_X = 10;
+      static const int INIT_Y = 100;
+
+      osg::BoundingBox bb1 = left_->getBoundingBox();
+
+      // Alternate the Y to get new positions every frame
+      int newY = INIT_Y;
+      if (flipText_)
+        newY += 10.f;
+      flipText_ = !flipText_;
+
+      left_->setPosition(osg::Vec3f(INIT_X, newY, 0.f));
+      int newX = (bb1.xMax() - bb1.xMin()) + 50 + INIT_X;
+      right_->setPosition(osg::Vec3f(newX, newY, 0.f));
+    }
+    return false;
+  }
+private:
+  osg::ref_ptr<osgText::Text> left_;
+  osg::ref_ptr<osgText::Text> right_;
+  bool flipText_;
+};
+
+
+int main(int argc, char** argv)
+{
+    osg::ArgumentParser arguments(&argc, argv);
+
+    // construct the viewer.
+    osgViewer::Viewer viewer(arguments);
+
+    // create the hud.
+    osg::Camera* camera = new osg::Camera;
+    camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    camera->setProjectionMatrixAsOrtho2D(0, 1280, 0, 1024);
+    camera->setViewMatrix(osg::Matrix::identity());
+    camera->setClearMask(GL_DEPTH_BUFFER_BIT);
+    camera->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+    viewer.setSceneData(camera);
+
+    osgText::Text* left = new osgText::Text;
+    left->setFont("fonts/arialbd.ttf");
+    left->setText("Left");
+    left->setDataVariance(osg::Object::DYNAMIC);
+    left->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+    camera->addChild(left);
+
+    osgText::Text* right = new osgText::Text;
+    right->setFont("fonts/arialbd.ttf");
+    right->setText("Right");
+    right->setDataVariance(osg::Object::DYNAMIC);
+    right->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+    camera->addChild(right);
+
+    viewer.addEventHandler(new UpdateText(left, right));
+    viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
+    viewer.addEventHandler(new osgViewer::StatsHandler());
+
+    viewer.run();
+
+    return 0;
+}
+

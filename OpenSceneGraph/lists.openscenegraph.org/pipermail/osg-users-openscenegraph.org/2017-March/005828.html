@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Multiple cameras sharing multisample fbo
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Multiple%20cameras%20sharing%20multisample%20fbo&In-Reply-To=%3C1489280772.m2f.70466%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="282049.html">
+   <LINK REL="Next"  HREF="282050.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Multiple cameras sharing multisample fbo</H1>
+<!--htdig_noindex-->
+    <B>Ravi Mathur</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Multiple%20cameras%20sharing%20multisample%20fbo&In-Reply-To=%3C1489280772.m2f.70466%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Multiple cameras sharing multisample fbo">ravidavi at utexas.edu
+       </A><BR>
+    <I>Sat Mar 11 17:06:12 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="282049.html">[osg-users] Multiple cameras sharing multisample fbo
+</A></li>
+        <LI>Next message: <A HREF="282050.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5828">[ date ]</a>
+              <a href="thread.html#5828">[ thread ]</a>
+              <a href="subject.html#5828">[ subject ]</a>
+              <a href="author.html#5828">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>OK, after thinking about this, reading MANY other forum posts, and looking into the osg::Camera code, I've realized that my post title itself was incorrect. Sharing FBOs is not the appropriate approach, since FBOs are an internal object to a camera's RenderStage, which itself doesn't exist until the cull stage.
+
+I really should have asked: How can I have a camera render on top of an existing texture, if that camera has a multisample attachment? The answer to that question is much easier to find: use a view-aligned textured quad and nested camera with the desired &quot;background&quot; texture bound to it.
+
+Here's the code I'm using for this:
+
+Code:
+
+// Create Texture that will be used for rendering
+colorTex = new Texture2D(); // Also perform texture setup, not shown here...
+
+// Create Camera that draws background scene
+backCamera = new osg::Camera();
+backCamera-&gt;setRenderOrder(Camera::PRE_RENDER, 0); // Render first 
+backCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT); 
+backCamera-&gt;attach(Camera::COLOR_BUFFER0, colorTex); // Not multi-sampled
+backCamera-&gt;addChild(backSceneNode);
+
+// Create Camera that draws foreground scene
+frontCamera = new osg::Camera();
+frontCamera-&gt;setRenderOrder(Camera::PRE_RENDER, 1); // Render after backCamera 
+frontCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT); // Don't erase backCamera's results 
+frontCamera-&gt;attach(Camera::COLOR_BUFFER0, colorTex, 0, 0, false, 4, 4); // multi-sampled
+frontCamera-&gt;addChild(frontSceneNode);
+
+// Create view-aligned textured quad
+osg::Geometry* geom = osg::createTexturedQuadGeometry(osg::Vec3(), osg::Vec3(1, 0, 0), osg::Vec3(0, 1, 0));
+osg::Geode *quad = new osg::Geode;
+quad-&gt;addDrawable(geom);
+
+// Create Camera that copies colorTex to current render buffer
+copyCamera = new osg::Camera();
+copyCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF); // Use our own view/projection matrix
+copyCamera-&gt;setProjectionMatrixAsOrtho2D(0, 1, 0, 1); // Same as textured quad's bounds
+copyCamera-&gt;addChild(quad); 
+osg::StateSet *ss = copyCamera-&gt;getOrCreateStateSet();
+ss-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF); // Don't need lighting to copy a texture
+ss-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF); // Don't want depth test to clip out texture
+ss-&gt;setTextureAttributeAndModes(0, colorTex, osg::StateAttribute::ON); // Bind colorTex
+
+// Add copy camera as child of frontCamera
+frontCamera-&gt;addChild(copyCamera);
+copyCamera-&gt;setRenderOrder(Camera::NESTED_RENDER, -100); // Render first, within frontCamera's render stage
+
+
+
+
+This seems to work correctly. The render order is:
+1: backCamera renders its scene directly to colorTex without multisampling
+2: frontCamera creates its multisampled renderbuffer
+3: copyCamera renders colorTex to frontCamera's renderbuffer via the textured quad
+4: frontCamera renders its scene to its renderbuffer
+5: frontCamera resolves its renderbuffer to colorTex
+
+I can confirm that, using this method, colorTex contains both the background and foreground scenes in the correct order.
+
+So now my question is, is this the correct way to approach the problem of chaining a texture between multi-sampled cameras?
+
+Thanks!
+Ravi[/list]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic5617.php?p=70466#70466">http://forum.openscenegraph.org/viewtopic.php?p=70466#70466</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="282049.html">[osg-users] Multiple cameras sharing multisample fbo
+</A></li>
+	<LI>Next message: <A HREF="282050.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5828">[ date ]</a>
+              <a href="thread.html#5828">[ thread ]</a>
+              <a href="subject.html#5828">[ subject ]</a>
+              <a href="author.html#5828">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

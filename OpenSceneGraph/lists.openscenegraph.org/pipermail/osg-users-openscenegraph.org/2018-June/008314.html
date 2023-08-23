@@ -1,0 +1,160 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Updating VBO's during runtime
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Updating%20VBO%27s%20during%20runtime&In-Reply-To=%3CCAFN7Y%2BX31ojV0w2X6JPNLP_NPXbZmW_D8P704u4yy3M4ixoUXg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008313.html">
+   <LINK REL="Next"  HREF="008315.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Updating VBO's during runtime</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Updating%20VBO%27s%20during%20runtime&In-Reply-To=%3CCAFN7Y%2BX31ojV0w2X6JPNLP_NPXbZmW_D8P704u4yy3M4ixoUXg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Updating VBO's during runtime">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Jun  1 07:37:59 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008313.html">[osg-users] Updating VBO's during runtime
+</A></li>
+        <LI>Next message (by thread): <A HREF="008315.html">[osg-users] Updating VBO's during runtime
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8314">[ date ]</a>
+              <a href="thread.html#8314">[ thread ]</a>
+              <a href="subject.html#8314">[ subject ]</a>
+              <a href="author.html#8314">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Brad,
+
+In principle calling array-&gt;dirty(); should be enough to get the data
+to update, though the underlying code has seen a lot of changes
+between 3.4 and 3.6.  Which version of the OSG are you using?
+
+When setting up the arrays you need either specify the binding on the
+osg::Array, or pass the binding in with the set*Array(array, binding)
+call.
+
+If the problem presists when using OSG-3.6.1 could you create a
+compilable example program so we can test it and see the problem first
+hand, if there is bug in the OSG we'll need to track it down and fix
+it, if it's a problem in your code then we'll also be able to spot
+this and recommend how you can do things better.
+
+Cheers,
+Robert.
+
+
+On 1 June 2018 at 15:20, Brad Colbert &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">bcolbert at rscusa.com</A>&gt; wrote:
+&gt;<i> I'm updating my vertices at runtime.  I've found a few posts that discuss
+</I>&gt;<i> this:
+</I>&gt;<i>
+</I>&gt;<i> (a couple are:)
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic256a.php?t=14826">http://forum.openscenegraph.org/viewtopic.php?t=14826</A>
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic711f.php?t=15782">http://forum.openscenegraph.org/viewtopic.php?t=15782</A>
+</I>&gt;<i>
+</I>&gt;<i> Let me first mention that I've compiled OSG with GL3 support, so no display
+</I>&gt;<i> lists.  That said, I'm still calling:
+</I>&gt;<i>
+</I>&gt;<i>   pointsGeom-&gt;setUseDisplayList(false);
+</I>&gt;<i>   pointsGeom-&gt;setUseVertexBufferObjects(true);
+</I>&gt;<i>
+</I>&gt;<i> Here is a snippet of my call to update the vertices (v_ = vertices, c_ =
+</I>&gt;<i> colors, n_ = normals, da_ = DrawArrays, g_ = Geometry):
+</I>&gt;<i>
+</I>&gt;<i>     for (int i = 0; i &lt; numVertices; i++) {
+</I>&gt;<i>       // Verticies
+</I>&gt;<i>       v_.at(i)[0] = 500.f * (0.0f + (3.0f * float(rand() % 1000) / 1000.f) -
+</I>&gt;<i> 1.5f);
+</I>&gt;<i>       v_.at(i)[1] = 500.f * (0.0f + (4.0f * float(rand() % 1000) / 1000.f) -
+</I>&gt;<i> 2.f);
+</I>&gt;<i>       v_.at(i)[2] = 500.f * (1.5f + (0.1f * float(rand() % 1000) / 1000.f) -
+</I>&gt;<i> 0.05f);
+</I>&gt;<i>
+</I>&gt;<i>       // Colors
+</I>&gt;<i>       c_.at(i)[0] = 1.f;
+</I>&gt;<i>       c_.at(i)[1] = 1.f;
+</I>&gt;<i>       c_.at(i)[2] = 1.f;
+</I>&gt;<i>       c_.at(i)[3] = 1.f;
+</I>&gt;<i>
+</I>&gt;<i>       // Normals
+</I>&gt;<i>       n_.at(i)[0] = 0.f;
+</I>&gt;<i>       n_.at(i)[1] = 1.f;
+</I>&gt;<i>       n_.at(i)[2] = 0.f;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     v_.dirty();
+</I>&gt;<i>     c_.dirty();
+</I>&gt;<i>     n_.dirty();
+</I>&gt;<i>
+</I>&gt;<i>     da_.setCount(numVertices);
+</I>&gt;<i>     da_.dirty();
+</I>&gt;<i>
+</I>&gt;<i>     // *** The dirty() calls above are supposed to tell OSG to update the
+</I>&gt;<i> VBO's.  For
+</I>&gt;<i>     // some reason this isn't happening.  We are going to force it here.
+</I>&gt;<i> Not sure of the
+</I>&gt;<i>     // performance implications but hopefully this is temporary.
+</I>&gt;<i>     g_.setVertexArray(&amp;v_);
+</I>&gt;<i>     g_.setColorArray(&amp;c_);
+</I>&gt;<i>     g_.setNormalArray(&amp;n_);
+</I>&gt;<i>
+</I>&gt;<i>     g_.dirtyBound();
+</I>&gt;<i>
+</I>&gt;<i> The update just doesn't happen unless I call the setVertexArray,
+</I>&gt;<i> setColorArray, setNormalArray methods which doesn't match what the previous
+</I>&gt;<i> posts about this topic.
+</I>&gt;<i>
+</I>&gt;<i> Is this because of GL3 or something else?
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i> Brad
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I></PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008313.html">[osg-users] Updating VBO's during runtime
+</A></li>
+	<LI>Next message (by thread): <A HREF="008315.html">[osg-users] Updating VBO's during runtime
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8314">[ date ]</a>
+              <a href="thread.html#8314">[ thread ]</a>
+              <a href="subject.html#8314">[ subject ]</a>
+              <a href="author.html#8314">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

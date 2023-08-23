@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Android - corrupt block passed to dlfree
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20-%20corrupt%20block%20passed%20to%20dlfree&In-Reply-To=%3C44449C7D8EADE94B86FE1429633A7D3B473202D4%40colo-mail-1.exchange2.ara.wan%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000782.html">
+   <LINK REL="Next"  HREF="277008.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Android - corrupt block passed to dlfree</H1>
+<!--htdig_noindex-->
+    <B>Steven A. White ARA/SED</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20-%20corrupt%20block%20passed%20to%20dlfree&In-Reply-To=%3C44449C7D8EADE94B86FE1429633A7D3B473202D4%40colo-mail-1.exchange2.ara.wan%3E"
+       TITLE="[osg-users] Android - corrupt block passed to dlfree">sawhite at ara.com
+       </A><BR>
+    <I>Tue Jul  7 07:26:23 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000782.html">[osg-users] Android - corrupt block passed to dlfree
+</A></li>
+        <LI>Next message: <A HREF="277008.html">[osg-users] Atmospheric effects in OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#784">[ date ]</a>
+              <a href="thread.html#784">[ thread ]</a>
+              <a href="subject.html#784">[ subject ]</a>
+              <a href="author.html#784">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+Alright,  I managed to fix this last night.  This is a good lesson in due diligence.  I normally use a modified android-toolchain file derived from the one available in the OpenCV source.  While working this issue I noticed that OpenSceneGraph a version of this file that share a common ancestor.   My modified version of the file configures CMake to use gcc4.8 out of the android NDK while the default behavior is to pick gcc4.9 from the most recent copies of the Android NDK.
+
+At some point in my development I ended up with a hybrid CMake configuration which built OSG against gcc4.9 but linked against libraries linked against gcc4.8.  I  was in the wrong  mindset chasing this down so I started playing with dynamic vs static configurations of the STL and the behavior when combined with the incompatible versions of libc and libc++ were very interesting. I corrected this issue last night rebuild the entire backend using a unified toolchain and as you can guess everything is working.
+
+
+
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Steven A. White ARA/SED
+Sent: Monday, July 06, 2015 1:02 PM
+To: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+Subject: [osg-users] Android - corrupt block passed to dlfree
+
+I've been chasing a problem for the last few days regarding OSG and Android.  Today I finally decided to work forward from the osgAndroidExcmpleGLES2 from the osg example source.  The issue manifested very quickly in the application startup so I am fairly sure I've built my Android ARM OSG libraries incorrectly.
+
+The symptom seems to be a block of uninitialized memory being passed to a dlfree call .  The back trace can start from numerous sources based on the example code, but the failure is always based in std::allocator&lt;char&gt; &gt;::~basic_string().   I would normally blame STL incompatibilities, but with the osgAndroidExampleGLES2 I can confirm that both the APK and the OSG libs were compiled against gnustl_static so I wouldn't expect this to be the core conflict.
+
+Does anyone have an idea on common pitfalls which could cause this type of behavior?
+
+
+4.087.028_msm8974_LNX.LA.3.5.2.2_RB1__release_AU ()
+I/Adreno-EGL( 7544): OpenGL ES Shader Compiler Version: E031.24.00.15
+I/Adreno-EGL( 7544): Build Date: 07/31/14 Thu
+I/Adreno-EGL( 7544): Local Branch:
+I/Adreno-EGL( 7544): Remote Branch: quic/LNX.LA.3.5.2.2_rb1
+I/Adreno-EGL( 7544): Local Patches: NONE
+I/Adreno-EGL( 7544): Reconstruct Branch: AU_LINUX_ANDROID_LNX.LA.3.5.2.2_RB1.04.04.04.087.028 +  NOTHING
+W/EGLview ( 7544): creating OpenGL ES 2.0 context
+W/IInputConnectionWrapper( 1460): showStatusIcon on inactive InputConnection
+D/dalvikvm( 7544): Trying to load lib /data/app-lib/osg.AndroidExample-1/libosgNativeLib.so 0x41be9e18
+I/ActivityManager(  777): Displayed osg.AndroidExample/.osgViewer: +278ms
+I/Timeline(  777): Timeline: Activity_windows_visible id: ActivityRecord{41ac1290 u0 osg.AndroidExample/.osgViewer t155}                                                                                                                                                           time:183309031
+I/WindowManager(  777): Screen frozen for +256ms due to Window{41a71c80 u0 Starting osg.AndroidExample}
+I/Timeline( 7544): Timeline: Activity_idle id: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">android.os.BinderProxy at 41be1018</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">android.os.BinderProxy at 41be1018</A>&gt; time:183309056
+F/libc    ( 7544): invalid address or address of corrupt block 0x772b385c passed to dlfree
+F/libc    ( 7544): Fatal signal 11 (SIGSEGV) at 0xdeadbaad (code=1), thread 7568 (Thread-1245)
+I/DEBUG   (  359): *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+I/DEBUG   (  359): Build fingerprint: 'samsung/kltetmo/kltetmo:4.4.2/KOT49H/G900TUVU1BNH5:user/release-keys'
+I/DEBUG   (  359): Revision: '14'
+I/DEBUG   (  359): pid: 7544, tid: 7568, name: Thread-1245  &gt;&gt;&gt; osg.AndroidExample &lt;&lt;&lt;
+I/DEBUG   (  359): signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr deadbaad
+I/DEBUG   (  359): Abort message: 'invalid address or address of corrupt block 0x772b385c passed to dlfree'
+I/DEBUG   (  359):     r0 00000000  r1 40121d6e  r2 deadbaad  r3 401258e2
+I/DEBUG   (  359):     r4 772b385c  r5 40130180  r6 400d1000  r7 772b3864
+I/DEBUG   (  359):     r8 78bf6b60  r9 75e40168  sl 78bf6288  fp 75e40170
+I/DEBUG   (  359):     ip 00000001  sp 75e40118  lr 400f370b  pc 400f370c  cpsr 60000030
+I/DEBUG   (  359):     d0  2064696c61766e69  d1  2073736572646461
+I/DEBUG   (  359):     d2  657264646120726f  d3  6f6320666f207373
+I/DEBUG   (  359):     d4  5056746f446e202a  d5  70732020200a203b
+I/DEBUG   (  359):     d6  2b2072616c756365  d7  67694c5f6c67203d
+I/DEBUG   (  359):     d8  0000000000000000  d9  0000000000000000
+I/DEBUG   (  359):     d10 0000000000000000  d11 0000000000000000
+I/DEBUG   (  359):     d12 0000000000000000  d13 0000000000000000
+I/DEBUG   (  359):     d14 0000000000000000  d15 0000000000000000
+I/DEBUG   (  359):     d16 202020200a200a20  d17 465f6c6720202020
+I/DEBUG   (  359):     d18 6f6c6f43746e6f72  d19 6f6c6f63203d2072
+I/DEBUG   (  359):     d20 20200a200a203b72  d21 2020200a207d2020
+I/DEBUG   (  359):     d22 200a2065736c6520  d23 20200a207b202020
+I/DEBUG   (  359):     d24 3f8fcf32d797aef0  d25 3f3052f5e30e9be2
+I/DEBUG   (  359):     d26 3f435c6a06d3f812  d27 3f12f714115285d3
+I/DEBUG   (  359):     d28 3f145163e2128ba2  d29 3fb5442cbe6c5c90
+I/DEBUG   (  359):     d30 bef375cbdb605373  d31 3f72b7bd6def46f5
+I/DEBUG   (  359):     scr 60000012
+I/DEBUG   (  359):
+I/DEBUG   (  359): backtrace:
+I/DEBUG   (  359):     #00  pc 0001170c  /system/lib/libc.so (dlfree+1191)
+I/DEBUG   (  359):     #01  pc 0000dc5b  /system/lib/libc.so (free+10)
+I/DEBUG   (  359):     #02  pc 0006953c  /data/app-lib/osg.AndroidExample-1/libosgSim.so (std::basic_string&lt;char, std::c                                                                                                                                                          har_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::~basic_string()+92)
+I/DEBUG   (  359):     #03  pc 0003510d  /data/app-lib/osg.AndroidExample-1/libosgSim.so (osgSim::OverlayNode::getOverla                                                                                                                                                          yData(osgUtil::CullVisitor*)+788)
+I/DEBUG   (  359):
+I/DEBUG   (  359): stack:
+I/DEBUG   (  359):          75e400d8  78bf630c
+I/DEBUG   (  359):          75e400dc  75e400e0  [stack:7568]
+I/DEBUG   (  359):          75e400e0  78bf62b8
+I/DEBUG   (  359):          75e400ec  40130180
+I/DEBUG   (  359):          75e400f0  400d1000
+I/DEBUG   (  359):          75e400f4  400f4a65  /system/lib/libc.so
+I/DEBUG   (  359):          75e400f8  40121d6e  /system/lib/libc.so
+I/DEBUG   (  359):          75e400fc  75e4010c  [stack:7568]
+I/DEBUG   (  359):          75e40100  401258e2  /system/lib/libc.so
+I/DEBUG   (  359):          75e40104  400f370b  /system/lib/libc.so (dlfree+1190)
+I/DEBUG   (  359):          75e40108  40121d6e  /system/lib/libc.so
+I/DEBUG   (  359):          75e4010c  772b385c
+I/DEBUG   (  359):          75e40110  401258e2  /system/lib/libc.so
+I/DEBUG   (  359):          75e40114  00000000
+I/DEBUG   (  359):     #00  75e40118  4012c000  /system/lib/libc.so
+I/DEBUG   (  359):          75e4011c  75e4016c  [stack:7568]
+I/DEBUG   (  359):          75e40120  78bf5400
+I/DEBUG   (  359):          75e40124  75e4016c  [stack:7568]
+I/DEBUG   (  359):          75e40128  78bf54d0
+I/DEBUG   (  359):          75e4012c  400efc5d  /system/lib/libc.so (free+12)
+I/DEBUG   (  359):     #01  75e40130  00000000
+I/DEBUG   (  359):          75e40134  7769f540  /data/app-lib/osg.AndroidExample-1/libosgSim.so (std::basic_string&lt;char,                                                                                                                                                           std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;::~basic_string()+96)
+I/DEBUG   (  359):     #02  75e40138  78bf5400
+I/DEBUG   (  359):          75e4013c  75e4016c  [stack:7568]
+I/DEBUG   (  359):          75e40140  78bf5588
+I/DEBUG   (  359):          75e40144  7766b111  /data/app-lib/osg.AndroidExample-1/libosgSim.so (osgSim::OverlayNode::ge                                                                                                                                                          tOverlayData(osgUtil::CullVisitor*)+792)
+I/DEBUG   (  359):
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150707/1be96eda/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150707/1be96eda/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000782.html">[osg-users] Android - corrupt block passed to dlfree
+</A></li>
+	<LI>Next message: <A HREF="277008.html">[osg-users] Atmospheric effects in OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#784">[ date ]</a>
+              <a href="thread.html#784">[ thread ]</a>
+              <a href="subject.html#784">[ subject ]</a>
+              <a href="author.html#784">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

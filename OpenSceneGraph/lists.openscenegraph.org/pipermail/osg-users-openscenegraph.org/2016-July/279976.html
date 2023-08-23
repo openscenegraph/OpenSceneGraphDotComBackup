@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Improvement of Arcball Camera Handling
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Improvement%20of%20Arcball%20Camera%20Handling&In-Reply-To=%3C1469115753.m2f.68194%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003780.html">
+   <LINK REL="Next"  HREF="279980.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Improvement of Arcball Camera Handling</H1>
+<!--htdig_noindex-->
+    <B>Daniel Neos</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Improvement%20of%20Arcball%20Camera%20Handling&In-Reply-To=%3C1469115753.m2f.68194%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Improvement of Arcball Camera Handling">daniel.rd at hotmail.de
+       </A><BR>
+    <I>Thu Jul 21 08:42:33 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003780.html">[osg-users] [build] OSX X11 Build System Failures
+</A></li>
+        <LI>Next message: <A HREF="279980.html">[osg-users] 3D osg::Image allocation size problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279976">[ date ]</a>
+              <a href="thread.html#279976">[ thread ]</a>
+              <a href="subject.html#279976">[ subject ]</a>
+              <a href="author.html#279976">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I want to improve my CameraHandling since it acts a little bit odd if I am too far in the center of the scene, which is the lookat-point of the camera.
+
+The camera is rotates around a specific point(mid of the boundingsphere center), always looking at it.  
+
+But if I am getting to close to the midpoint, sometimes I lose the focus point or the camera rotates very fast. My code is rather simple, maybe there is a caveat which I am not aware of.
+
+Also the distance changes, if I am rotating around the same axis everytime, I get close or far away.
+
+
+Code:
+
+void OsgWidgetEventHandler::rotateOrbitCamera(double angle, const osg::Vec3d&amp; axis, osgViewer::View* viewer)
+{
+    const osg::Matrixd rotation = osg::Matrix::rotate(angle, axis);
+    osg::Matrixd preTrans = osg::Matrix::identity();
+    osg::Matrixd postTrans = osg::Matrix::identity();
+
+    const osg::Vec3 translation = viewer-&gt;getCamera()-&gt;getViewMatrix().getTrans();
+    m_rotationPoint = translation - m_boundingSphereCenter;
+
+    preTrans.setTrans(-m_rotationPoint);
+    postTrans.setTrans(m_rotationPoint);
+    osg::Matrixd viewMatrix = viewer-&gt;getCamera()-&gt;getViewMatrix();
+    viewMatrix = viewMatrix * (preTrans * rotation *  postTrans);
+    viewer-&gt;getCamera()-&gt;setViewMatrix(viewMatrix);
+
+    osg::Vec3d eye, center, up;
+    viewer-&gt;getCamera()-&gt;getViewMatrixAsLookAt(eye, center, up);
+    if (m_focusPointFlag)
+    {
+        viewer-&gt;getCamera()-&gt;setViewMatrixAsLookAt(eye, m_boundingSphereCenter, up);
+    }
+}
+
+
+
+
+The m_focusPointFlag is only false when the camera was translated(not zoomed), so that the lookat point can be changed.
+
+How can I achieve a smooth arcball camera behaviour?
+
+Thank you!
+
+Cheers,
+Daniel
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic87d7.php?p=68194#68194">http://forum.openscenegraph.org/viewtopic.php?p=68194#68194</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003780.html">[osg-users] [build] OSX X11 Build System Failures
+</A></li>
+	<LI>Next message: <A HREF="279980.html">[osg-users] 3D osg::Image allocation size problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279976">[ date ]</a>
+              <a href="thread.html#279976">[ thread ]</a>
+              <a href="subject.html#279976">[ subject ]</a>
+              <a href="author.html#279976">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

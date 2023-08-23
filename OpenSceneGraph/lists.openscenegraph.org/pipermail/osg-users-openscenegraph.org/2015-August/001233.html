@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] ClipNode Opposite Behavior
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ClipNode%20Opposite%20Behavior&In-Reply-To=%3CCALm6U%2Bo0%3D9dvxkR0y2t9dWP5LosJ46mW1Vu4w-mCqZvNmg0gPg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277446.html">
+   <LINK REL="Next"  HREF="277447.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] ClipNode Opposite Behavior</H1>
+<!--htdig_noindex-->
+    <B>Christian Buchner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ClipNode%20Opposite%20Behavior&In-Reply-To=%3CCALm6U%2Bo0%3D9dvxkR0y2t9dWP5LosJ46mW1Vu4w-mCqZvNmg0gPg%40mail.gmail.com%3E"
+       TITLE="[osg-users] ClipNode Opposite Behavior">christian.buchner at gmail.com
+       </A><BR>
+    <I>Mon Aug 17 04:02:23 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277446.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+        <LI>Next message: <A HREF="277447.html">[osg-users] Geometry of Generic 3D Surface from Collection of Points
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1233">[ date ]</a>
+              <a href="thread.html#1233">[ thread ]</a>
+              <a href="subject.html#1233">[ subject ]</a>
+              <a href="author.html#1233">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>whatever float your boat... ;)
+
+Here's a shader routine that evaluates if a fragment coordinate in object
+space is within a polygon described by up to 16 vertices in the x/y plane.
+We use it to cut a hole into a city scenario, so we can see into the
+basement of a house. The shader does a simple point in polygon test.
+
+The weird osgShadow_.... naming for my uniforms comes from the fact that
+we've extended the one of OSG's shadow implementations of OSG with support
+for cutting holes into the shadowed scene.
+
+const char MyShadowMap::fragmentShaderSource_HoleCutter[] =
+{
+    &quot;#version 120\n&quot;
+    &quot;uniform vec2 osgShadow_polygon[16]; \n&quot;
+    &quot;uniform float osgShadow_nvert; \n&quot;
+    &quot;\n&quot;
+    &quot;bool pnpoly(vec2 test)\n&quot;
+    &quot;{\n&quot;
+    &quot;    bool c = false;&quot;
+    &quot;    if (osgShadow_nvert &gt;= 3)\n&quot;
+    &quot;    {\n&quot;
+    &quot;        int i, j;\n&quot;
+    &quot;        for (i = 0, j = int(osgShadow_nvert) - 1; i &lt;
+int(osgShadow_nvert); j = i++) {\n&quot;
+    &quot;            if (((osgShadow_polygon[i].y&gt;test.y) !=
+(osgShadow_polygon[j].y&gt;test.y)) &amp;&amp;\n&quot;
+    &quot;                (test.x &lt; (osgShadow_polygon[j].x -
+osgShadow_polygon[i].x) * (test.y - osgShadow_polygon[i].y) /
+(osgShadow_polygon[j].y - osgShadow_polygon[i].y) +
+osgShadow_polygon[i].x))\n&quot;
+    &quot;                c = !c;\n&quot;
+    &quot;        }\n&quot;
+    &quot;    }\n&quot;
+    &quot;    return c;\n&quot;
+    &quot;}\n&quot;
+    &quot;\n&quot;
+    &quot;bool is_hole(vec3 pos)\n&quot;
+    &quot;{\n&quot;
+    &quot;    return pnpoly(pos.xy);\n&quot;
+    &quot;}\n&quot;
+};
+
+static const char fragmentShaderSource[] =
+    &quot;#version 120\n&quot;
+    &quot;\n&quot;
+    &quot;bool is_hole(vec3 pos);\n&quot;
+    &quot;\n&quot;
+    &quot;void main(void) \n&quot;
+    &quot;{ \n&quot;
+    &quot;    \n&quot;
+    //   early discard
+    //   NOTE: we've previously set up gl_TexCoord[4].xyz to contain vertex
+coordinates
+    //   so we don't require a vertex shader here that passes us a varying
+of vertex coords.
+    &quot;    if (is_hole(gl_TexCoord[4].xyz)) discard;\n&quot;
+    &quot;    \n&quot;
+         // remainder of shader is here
+    &quot;}\n&quot;;
+
+
+
+2015-08-17 3:03 GMT+02:00 Erik Hensens &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ehensens at hunter.com</A>&gt;:
+
+&gt;<i> I just wanted to mention that I never got the fragment shader approach to
+</I>&gt;<i> work for what I wanted. I ended up using polygon tessellation to build the
+</I>&gt;<i> geometry out of triangles.
+</I>&gt;<i>
+</I>&gt;<i> Thanks anyway to everyone who attempted to help!
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicddbb.php?p=64791#64791">http://forum.openscenegraph.org/viewtopic.php?p=64791#64791</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150817/b06539aa/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150817/b06539aa/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277446.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+	<LI>Next message: <A HREF="277447.html">[osg-users] Geometry of Generic 3D Surface from Collection of Points
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1233">[ date ]</a>
+              <a href="thread.html#1233">[ thread ]</a>
+              <a href="subject.html#1233">[ subject ]</a>
+              <a href="author.html#1233">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

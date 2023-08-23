@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20AutoTransform%2C%0A%20ROTATE_TO_SCREEN%20and%20small%20feature%20culling&In-Reply-To=%3CCAFN7Y%2BX0UkvO1JiwQUA-nj1R9f9wsB%2BNpynyFGwa03FHxrE3TQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007905.html">
+   <LINK REL="Next"  HREF="007915.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20AutoTransform%2C%0A%20ROTATE_TO_SCREEN%20and%20small%20feature%20culling&In-Reply-To=%3CCAFN7Y%2BX0UkvO1JiwQUA-nj1R9f9wsB%2BNpynyFGwa03FHxrE3TQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Mar 27 00:31:01 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007905.html">[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+</A></li>
+        <LI>Next message (by thread): <A HREF="007915.html">[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7907">[ date ]</a>
+              <a href="thread.html#7907">[ thread ]</a>
+              <a href="subject.html#7907">[ subject ]</a>
+              <a href="author.html#7907">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Hartwig,
+
+CullingActive flag is only effective for the Node that you set it for
+and all it's parents, it doesn't disable culling for the children of
+the node with CullingActive set.
+
+Robert.
+
+On 26 March 2018 at 22:28, Hartwig Wiesmann &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hartwig.wiesmann at skywind.eu</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I found a very old article covering this issue: <A HREF="https://www.mail-archive.com/osg-users@lists.openscenegraph.org/msg15948.html.">https://www.mail-archive.com/osg-users@lists.openscenegraph.org/msg15948.html.</A> In the meantime it seems to be that proposal (2) has been implemented and the AutoTransform's computeBound() method returns an invalid bounding sphere during the first cull traversal. Nevertheless, when checking in the example osgautotransform.cpp the bounding spheres (of the text messages) remain invalid. To check this I have added an update callback to the AutoTransforms that only checks the validity of the bounding sphere.
+</I>&gt;<i>
+</I>&gt;<i> Now, if the bounding sphere remains invalid culling of the AutoTransform's children will not be correctly performed because the AutoTransform's isCullingActive method will always return false (bounding sphere is invalid).
+</I>&gt;<i>
+</I>&gt;<i> To solve this issue I was thinking to add a ComputeBoundingSphere callback or an update callback to the AutoTransform. But this is not a good solution because in this case I have to calculate always a new bounding sphere as I do not have access to the node's &quot;_boundingSphereComputed&quot; flag.
+</I>&gt;<i>
+</I>&gt;<i> Another solution is to patch the node's getBound() method that will set the flag &quot;_boundingSphereComputed&quot; only to true if a valid &quot;_boundingSphere&quot; exists. This sounds reasonable in any case:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>         inline const BoundingSphere&amp; getBound() const
+</I>&gt;<i>         {
+</I>&gt;<i>             if(!_boundingSphereComputed)
+</I>&gt;<i>             {
+</I>&gt;<i>                 _boundingSphere = _initialBound;
+</I>&gt;<i>                 if (_computeBoundCallback.valid())
+</I>&gt;<i>                     _boundingSphere.expandBy(_computeBoundCallback-&gt;computeBound(*this));
+</I>&gt;<i>                 else
+</I>&gt;<i>                     _boundingSphere.expandBy(computeBound());
+</I>&gt;<i>
+</I>&gt;<i>                 _boundingSphereComputed = _boundingSphere.valid();
+</I>&gt;<i>             }
+</I>&gt;<i>             return _boundingSphere;
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> But I do not know if this breaks anything.
+</I>&gt;<i>
+</I>&gt;<i> Is there any other method to get a valid bounding sphere for the AutoTransform without sacrificing performance?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Hartwig
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic8af0.php?p=73174#73174">http://forum.openscenegraph.org/viewtopic.php?p=73174#73174</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007905.html">[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+</A></li>
+	<LI>Next message (by thread): <A HREF="007915.html">[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7907">[ date ]</a>
+              <a href="thread.html#7907">[ thread ]</a>
+              <a href="subject.html#7907">[ subject ]</a>
+              <a href="author.html#7907">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

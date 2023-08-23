@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] INVALID_OPERATION with compressed textures with mipmaps in OSG 3.4.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20INVALID_OPERATION%20with%20compressed%20textures%20with%0A%20mipmaps%20in%20OSG%203.4.0&In-Reply-To=%3CCAO-%2BzimB3U%2BM%3DiZX-20ft0_o8vbbLwJ5W09-a%3DtTiBaTfofsVA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001597.html">
+   <LINK REL="Next"  HREF="001610.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] INVALID_OPERATION with compressed textures with mipmaps in OSG 3.4.0</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20INVALID_OPERATION%20with%20compressed%20textures%20with%0A%20mipmaps%20in%20OSG%203.4.0&In-Reply-To=%3CCAO-%2BzimB3U%2BM%3DiZX-20ft0_o8vbbLwJ5W09-a%3DtTiBaTfofsVA%40mail.gmail.com%3E"
+       TITLE="[osg-users] INVALID_OPERATION with compressed textures with mipmaps in OSG 3.4.0">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Fri Sep 25 13:58:42 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001597.html">[osg-users] INVALID_OPERATION with compressed textures with mipmaps in OSG 3.4.0
+</A></li>
+        <LI>Next message: <A HREF="001610.html">[osg-users] INVALID_OPERATION with compressed textures with mipmaps	in OSG 3.4.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1612">[ date ]</a>
+              <a href="thread.html#1612">[ thread ]</a>
+              <a href="subject.html#1612">[ subject ]</a>
+              <a href="author.html#1612">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Scott, your fixes did not fix the issues on the OSX with the DDS textures
+... But thanks anyway
+
+On Thu, Sep 24, 2015 at 9:26 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Scott,
+</I>&gt;<i>
+</I>&gt;<i> Thanks for the follow up.
+</I>&gt;<i>
+</I>&gt;<i> Could you post the whole modified file, this way we can avoid any possible
+</I>&gt;<i> copy and past errors.
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 24 September 2015 at 20:13, Davis, Timothy S CTR comnavairsyscom &lt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">timothy.s.davis.ctr at navy.mil</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Sorry.  It keeps trying to encrypt the message.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> While continuing to build a model that results in the problem, I
+</I>&gt;&gt;<i> discovered something I didn't see before.  The IVE model had an incorrect
+</I>&gt;&gt;<i> number of mipmap levels (it had 8) for a 32x32 texture.  It makes sense
+</I>&gt;&gt;<i> that glTexStorage2D would generate INVALID_OPERATION in this case.
+</I>&gt;&gt;<i> Rebuilding the model from a source with uncompressed textures and
+</I>&gt;&gt;<i> recompressing the textures worked.  The original model was converted with a
+</I>&gt;&gt;<i> much older version of OSG, pre OSG 3 for sure.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> So I was barking up the wrong tree:)
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> That addresses my specific issue without needing a change to OSG 3.4.0.
+</I>&gt;&gt;<i> However, I still think it is worth trying for the OSX case.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Trajce
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> In osg/Texture.cpp, function applyTexImage2D(), find the line:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> useTexStorage &amp;= sizedInternalFormat != 0;
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> add the following after the line:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> if ( useTexStorage &amp;&amp; compressed_image &amp;&amp; numMipmapLevels &gt; 2 )
+</I>&gt;&gt;<i> {
+</I>&gt;&gt;<i>     numMipmapLevels -= 2;
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> This is clearly not production quality as it assumes block size is 4 and
+</I>&gt;&gt;<i> complete mipmaps to 1x1.  It should be enough to check the approach.  You
+</I>&gt;&gt;<i> may have to set GL_TEXTURE_MAX_LEVEL if the driver thinks the texture is
+</I>&gt;&gt;<i> incomplete, but I didn't have that issue.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Scott
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150925/35c03c1f/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150925/35c03c1f/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001597.html">[osg-users] INVALID_OPERATION with compressed textures with mipmaps in OSG 3.4.0
+</A></li>
+	<LI>Next message: <A HREF="001610.html">[osg-users] INVALID_OPERATION with compressed textures with mipmaps	in OSG 3.4.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1612">[ date ]</a>
+              <a href="thread.html#1612">[ thread ]</a>
+              <a href="subject.html#1612">[ subject ]</a>
+              <a href="author.html#1612">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

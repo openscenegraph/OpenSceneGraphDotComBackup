@@ -1,0 +1,268 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to disable Antialiasing of an osg::Text
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20disable%20Antialiasing%20of%20an%20osg%3A%3AText&In-Reply-To=%3CCAFN7Y%2BVZEtFxJyVhSF-MSkVryy1WQN%3DvAWPX%3Dq88mVQQc8HyZw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005848.html">
+   <LINK REL="Next"  HREF="281986.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to disable Antialiasing of an osg::Text</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20disable%20Antialiasing%20of%20an%20osg%3A%3AText&In-Reply-To=%3CCAFN7Y%2BVZEtFxJyVhSF-MSkVryy1WQN%3DvAWPX%3Dq88mVQQc8HyZw%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to disable Antialiasing of an osg::Text">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Mar 14 10:26:35 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005848.html">[osg-users] How to disable Antialiasing of an osg::Text
+</A></li>
+        <LI>Next message: <A HREF="281986.html">[osg-users] Height of terrain
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5849">[ date ]</a>
+              <a href="thread.html#5849">[ thread ]</a>
+              <a href="subject.html#5849">[ subject ]</a>
+              <a href="author.html#5849">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Lv,
+
+It looks like you are position the text in a 3D scene and leaving it
+to scale in object coordinates, which is fine, but it does mean that
+the scale will and orientation will vary, this is very different
+challenge for rendering clear text than rendering a fixed font to a
+fixed 2D projection like you have with a typical Qt application.  You
+simple can't compare fonts working in 3D and 2D domains.
+
+That aside to get the best quality of text in a 3d scene you'll
+typically want to aim for a font resolution around the on screen
+resolution that the text will typically be rendered at, in full 3D
+scene this scaling obviously varies so there won't be one ideal
+resolution, you'll just have to pick the best one for your the size of
+your text and the distances you view them at.
+
+Disabling of placing text into the transparent bin could cause real
+problems as the blending of the text could be broken.  Text is put in
+the transparent bin to make sure it's rendered after the rest of the
+3D scene to make sure that the transparent parts of the text are
+correctly blending and the quads text doesn't interfere with with the
+zbuffer.  I don't know whether this is affecting quality for you as
+you don't say anything about what you by &quot;decluttering&quot;.
+
+Robert.
+
+On 14 March 2017 at 17:07, Lv Qing &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">donlvqing at msn.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> Thx Robert!
+</I>&gt;<i>
+</I>&gt;<i>    I use one of osgEarth fuction to rendering my text.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osgText::Text&gt; PowerPlaceNode::createPlaceNodeTextDrawable(const std::string&amp; text,
+</I>&gt;<i>                 const TextSymbol* symbol, const osg::Vec3&amp; positionOffset)
+</I>&gt;<i> {
+</I>&gt;<i>         osg::ref_ptr &lt; osgText::Text &gt; t = new osgText::Text();
+</I>&gt;<i>         osgText::String::Encoding text_encoding = osgText::String::ENCODING_UNDEFINED;
+</I>&gt;<i>         if (symbol &amp;&amp; symbol-&gt;encoding().isSet())
+</I>&gt;<i>         {
+</I>&gt;<i>                 switch (symbol-&gt;encoding().value())
+</I>&gt;<i>                 {
+</I>&gt;<i>                 case TextSymbol::ENCODING_ASCII:
+</I>&gt;<i>                         text_encoding = osgText::String::ENCODING_ASCII;
+</I>&gt;<i>                         break;
+</I>&gt;<i>                 case TextSymbol::ENCODING_UTF8:
+</I>&gt;<i>                         text_encoding = osgText::String::ENCODING_UTF8;
+</I>&gt;<i>                         break;
+</I>&gt;<i>                 case TextSymbol::ENCODING_UTF16:
+</I>&gt;<i>                         text_encoding = osgText::String::ENCODING_UTF16;
+</I>&gt;<i>                         break;
+</I>&gt;<i>                 case TextSymbol::ENCODING_UTF32:
+</I>&gt;<i>                         text_encoding = osgText::String::ENCODING_UTF32;
+</I>&gt;<i>                         break;
+</I>&gt;<i>                 default:
+</I>&gt;<i>                         text_encoding = osgText::String::ENCODING_UTF8;
+</I>&gt;<i>                         break;   //editby lvqing 20140509
+</I>&gt;<i>                 }
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         t-&gt;setText(text, osgText::String::ENCODING_UTF8);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>         if (symbol &amp;&amp; symbol-&gt;pixelOffset().isSet())
+</I>&gt;<i>         {
+</I>&gt;<i>                 t-&gt;setPosition(
+</I>&gt;<i>                                 osg::Vec3(positionOffset.x() + symbol-&gt;pixelOffset()-&gt;x(),
+</I>&gt;<i>                                                 positionOffset.y() + symbol-&gt;pixelOffset()-&gt;y(), positionOffset.z()));
+</I>&gt;<i>         }
+</I>&gt;<i>         else
+</I>&gt;<i>         {
+</I>&gt;<i>                 t-&gt;setPosition(positionOffset);
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         osgText::Font* font = 0L;
+</I>&gt;<i>         if (symbol &amp;&amp; symbol-&gt;font().isSet())
+</I>&gt;<i>         {
+</I>&gt;<i>                 font = osgText::readFontFile(*symbol-&gt;font()); // read font*/
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         t-&gt;setFontResolution(256,256);
+</I>&gt;<i>
+</I>&gt;<i>         t-&gt;setAutoRotateToScreen(false);
+</I>&gt;<i>         t-&gt;setCharacterSizeMode(osgText::Text::OBJECT_COORDS);
+</I>&gt;<i>
+</I>&gt;<i>         if (symbol != NULL)
+</I>&gt;<i>         {
+</I>&gt;<i>                 if (symbol-&gt;size() != NULL)
+</I>&gt;<i>                 {
+</I>&gt;<i>                         t-&gt;setCharacterSize( symbol &amp;&amp; symbol-&gt;size().isSet() ? *symbol-&gt;size() : 20.0f );
+</I>&gt;<i>                 }
+</I>&gt;<i>                 else
+</I>&gt;<i>                 {
+</I>&gt;<i>                         t-&gt;setCharacterSize( 20.0f );
+</I>&gt;<i>                 }
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         if (!font)
+</I>&gt;<i>                 font = Registry::instance()-&gt;getDefaultFont();
+</I>&gt;<i>         if (font)
+</I>&gt;<i>         {
+</I>&gt;<i>                 t-&gt;setFont(font);
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         t-&gt;setColor(symbol &amp;&amp; symbol-&gt;fill().isSet() ? symbol-&gt;fill()-&gt;color() : Color::White);
+</I>&gt;<i>
+</I>&gt;<i>         if (symbol)
+</I>&gt;<i>         {
+</I>&gt;<i>                 // they're the same enum.
+</I>&gt;<i>                 osgText::Text::AlignmentType at = (osgText::Text::AlignmentType) symbol-&gt;alignment().value();
+</I>&gt;<i>                 t-&gt;setAlignment(at);
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         if (symbol &amp;&amp; symbol-&gt;halo().isSet())
+</I>&gt;<i>         {
+</I>&gt;<i>                 t-&gt;setBackdropColor(symbol-&gt;halo()-&gt;color());
+</I>&gt;<i>                 t-&gt;setBackdropType(osgText::Text::OUTLINE);
+</I>&gt;<i>
+</I>&gt;<i>                 if (symbol-&gt;haloOffset() != NULL)
+</I>&gt;<i>                 {
+</I>&gt;<i>                         if (symbol-&gt;haloOffset().isSet())
+</I>&gt;<i>                         {
+</I>&gt;<i>                                 t-&gt;setBackdropOffset(*symbol-&gt;haloOffset(), *symbol-&gt;haloOffset());
+</I>&gt;<i>                         }
+</I>&gt;<i>                 }
+</I>&gt;<i>         }
+</I>&gt;<i>         else if (!symbol)
+</I>&gt;<i>         {
+</I>&gt;<i>                 // if no symbol at all is provided, default to using a black halo.
+</I>&gt;<i>                 t-&gt;setBackdropColor(osg::Vec4(.3, .3, .3, 1));
+</I>&gt;<i>                 t-&gt;setBackdropType(osgText::Text::OUTLINE);
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         // this disables the default rendering bin set by osgText::Font. Necessary if we're
+</I>&gt;<i>         // going to do decluttering.
+</I>&gt;<i>         // TODO: verify that it's still OK to share the font stateset (think so) or does it
+</I>&gt;<i>         // need to be marked DYNAMIC
+</I>&gt;<i>         if (t-&gt;getStateSet())
+</I>&gt;<i>                 t-&gt;getStateSet()-&gt;setRenderBinToInherit();
+</I>&gt;<i>         //osg::StateSet* stateSet = new osg::StateSet();
+</I>&gt;<i>         //t-&gt;setStateSet( stateSet );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> //#if 0 // OBE: the decluttering bin is now set higher up (in OrthoNode)
+</I>&gt;<i>
+</I>&gt;<i>         osg::StateSet* stateSet = t-&gt;getOrCreateStateSet();
+</I>&gt;<i>
+</I>&gt;<i>         if ( symbol &amp;&amp; symbol-&gt;declutter().isSet() )
+</I>&gt;<i>         {
+</I>&gt;<i>                 Decluttering::setEnabled( stateSet, *symbol-&gt;declutter() );
+</I>&gt;<i>         }
+</I>&gt;<i>         else
+</I>&gt;<i>         {
+</I>&gt;<i>         //      stateSet-&gt;setRenderBinToInherit();
+</I>&gt;<i>                 stateSet-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         t-&gt;setStateSet( stateSet );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> #if 0 // OBE: shadergenerator now takes care of all this
+</I>&gt;<i>         // add the static &quot;isText=true&quot; uniform; this is a hint for the annotation shaders
+</I>&gt;<i>         // if they get installed.
+</I>&gt;<i>         static osg::ref_ptr&lt;osg::Uniform&gt; s_isTextUniform = new osg::Uniform(osg::Uniform::BOOL, UNIFORM_IS_TEXT());
+</I>&gt;<i>         s_isTextUniform-&gt;set( true );
+</I>&gt;<i>         stateSet-&gt;addUniform( s_isTextUniform.get() );
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i>         return t;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Lv
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopica88c.php?p=70488#70488">http://forum.openscenegraph.org/viewtopic.php?p=70488#70488</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005848.html">[osg-users] How to disable Antialiasing of an osg::Text
+</A></li>
+	<LI>Next message: <A HREF="281986.html">[osg-users] Height of terrain
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5849">[ date ]</a>
+              <a href="thread.html#5849">[ thread ]</a>
+              <a href="subject.html#5849">[ subject ]</a>
+              <a href="author.html#5849">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

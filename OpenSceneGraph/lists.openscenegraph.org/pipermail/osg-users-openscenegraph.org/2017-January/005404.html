@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20bug%3A%20osgText%20doesn%27t%20work%20on%20MacOSX%20GL4.x%20with%20VAO&In-Reply-To=%3C7f058cfb-a7bc-2e6d-1d02-c524573b28c6%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="281625.html">
+   <LINK REL="Next"  HREF="005406.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20bug%3A%20osgText%20doesn%27t%20work%20on%20MacOSX%20GL4.x%20with%20VAO&In-Reply-To=%3C7f058cfb-a7bc-2e6d-1d02-c524573b28c6%40gmx.de%3E"
+       TITLE="[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Fri Jan 20 12:43:42 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="281625.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+        <LI>Next message: <A HREF="005406.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5404">[ date ]</a>
+              <a href="thread.html#5404">[ thread ]</a>
+              <a href="subject.html#5404">[ subject ]</a>
+              <a href="author.html#5404">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Remo,
+
+A more detailed description on how it fails would be helpful.
+If you're seeing non-textures quads instead of your glyphs you need to 
+adapt your shader as the text-rendering isn't using a normal blending.
+I've attached my default core-profile shader which uses pre-multiplied 
+alpha.
+Additionally I add a default sampler at camera root for the osg_Texture 
+and I do:
+
+for (auto index = 0u; index &lt; mMainViewer-&gt;getNumViews(); ++index )
+             {
+getCamera(index)-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true);
+getCamera(index)-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseVertexAttributeAliasing(true);
+             }
+
+nsRenderer::Helpers::addTexture( 
+stats_handler-&gt;getCamera()-&gt;getOrCreateStateSet(), &quot;osg_Texture&quot;,new 
+osg::Texture2D(nsRenderer::Helpers::getDefaultImage(false)), 0);
+
+Hope that helps
+Sebastian
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I can't render osgText on MacOSX Core Profile:
+</I>&gt;<i>
+</I>&gt;<i> text-&gt;setTextBackdropType(osgText::Text::BackdropType::NONE);
+</I>&gt;<i> text-&gt;setTextBackdropImplementation(osgText::Text::BackdropImplementation::DELAYED_DEPTH_WRITES);
+</I>&gt;<i>      
+</I>&gt;<i> text-&gt;setBackColor( Color( Color::Black, 0.8 ) );
+</I>&gt;<i> text-&gt;setHorizAlign( Control::ALIGN_RIGHT );
+</I>&gt;<i> text-&gt;setVertAlign( Control::ALIGN_BOTTOM );
+</I>&gt;<i> text-&gt;setVisible( true );
+</I>&gt;<i>
+</I>&gt;<i> I've also tried to apply a default shader. But it doesn't work at all.
+</I>&gt;<i>   
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Remo
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic5955.php?p=70020#70020">http://forum.openscenegraph.org/viewtopic.php?p=70020#70020</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-------------- next part --------------
+#version 440
+#extension GL_ARB_enhanced_layouts : enable
+#extension GL_ARB_separate_shader_objects : enable
+
+layout (location=0) out vec4 FragmentData;
+
+layout(location=1) in block
+{
+	mediump vec2 tex_coord;
+	mediump vec4 color;
+} In;
+
+uniform sampler2D osg_Texture;
+
+void main()
+{
+	vec4 diffuse_color = In.color;
+	diffuse_color *=  texture2D(osg_Texture, In.tex_coord).a;
+
+	FragmentData = diffuse_color;
+}
+-------------- next part --------------
+#version 440
+#extension GL_ARB_enhanced_layouts : enable
+#extension GL_ARB_separate_shader_objects : enable
+
+layout (location=0) in vec4 osg_Vertex;
+layout (location=1) in vec3 osg_Normal;
+layout (location=2) in vec4 osg_Color;
+layout (location=3) in vec4 osg_MultiTexCoord0;
+#ifdef HUD_CLIP_PLANES
+layout(shared) uniform instanceData
+{
+	vec4 clipPlane[6];
+};
+#endif
+
+uniform mat4 osg_ModelViewMatrix;
+uniform mat4 osg_ModelViewProjectionMatrix;
+uniform mat4 TextureMatrix;
+
+out gl_PerVertex
+{
+	vec4 gl_Position;
+};
+
+layout(location=1) out block
+{
+	mediump vec2 tex_coord;
+	mediump vec4 color;
+} Out;
+
+void main()
+{
+	Out.color = osg_Color;
+	Out.tex_coord = vec4(osg_MultiTexCoord0).xy;
+	gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;
+
+}
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="281625.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+	<LI>Next message: <A HREF="005406.html">[osg-users] bug: osgText doesn't work on MacOSX GL4.x with VAO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5404">[ date ]</a>
+              <a href="thread.html#5404">[ thread ]</a>
+              <a href="subject.html#5404">[ subject ]</a>
+              <a href="author.html#5404">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

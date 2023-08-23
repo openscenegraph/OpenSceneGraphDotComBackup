@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] CullVisitor object not getting properly deleted
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CullVisitor%20object%20not%20getting%20properly%20deleted&In-Reply-To=%3C521d8f4e797b4bf9be393533b0ecbd9c%40ex13amer-01-ah.ad.mathworks.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003123.html">
+   <LINK REL="Next"  HREF="003130.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] CullVisitor object not getting properly deleted</H1>
+<!--htdig_noindex-->
+    <B>Rick Irons</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CullVisitor%20object%20not%20getting%20properly%20deleted&In-Reply-To=%3C521d8f4e797b4bf9be393533b0ecbd9c%40ex13amer-01-ah.ad.mathworks.com%3E"
+       TITLE="[osg-users] CullVisitor object not getting properly deleted">Rick.Irons at mathworks.com
+       </A><BR>
+    <I>Mon May 23 12:33:01 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003123.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+        <LI>Next message: <A HREF="003130.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3126">[ date ]</a>
+              <a href="thread.html#3126">[ thread ]</a>
+              <a href="subject.html#3126">[ subject ]</a>
+              <a href="author.html#3126">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+The code where the static cast is failing is OSG code (openscenegraph\src\osgUtil\CullVisitor.cpp).  I believe it is fairly recent code that was added just prior to the release of 3.4.0.  Here is the OSG 3.5.1 version of the change&#8230; <A HREF="../../../../trac.openscenegraph.org/projects/osg/changeset/14578#file0">http://trac.openscenegraph.org/projects/osg/changeset/14578#file0</A>
+
+Thanks,
+Rick
+
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Robert Osfield
+Sent: Monday, May 23, 2016 2:02 PM
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+Subject: Re: [osg-users] CullVisitor object not getting properly deleted
+
+Hi Rick,
+The Object that your observer is trying to dynamic_cast&lt;&gt; on is in the throws of being destructed - have a look at the stack trace, I'm not surprised this fails.
+Try removing the use of the dynamic_cast&lt;&gt;, replacing it with a static_cast&lt;&gt;.  As long as you don't dereference and just use it to double check other arrays the it things should be OK.
+As a general note though, it's kind odd bit of code.  What does you _renderStageMap contain?  Just raw C pointers?
+I suspect the code should probably be redesigned to avoid trying to do tricks like using an custom Observer to do house keeping.
+
+Robert.
+
+
+On 23 May 2016 at 17:45, Rick Irons &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Rick.Irons at mathworks.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Rick.Irons at mathworks.com</A>&gt;&gt; wrote:
+Hi all,
+
+I am encountering an issue with a CullVisitor object not being properly deleted in version 3.4.0.  I am encountering this issue when updating from version 3.0.1.
+
+The source of the problem is a failed Referenced to CullVisitor dynamic cast that occurs in the code below&#8230;
+
+        virtual void objectDeleted(void* object)
+        {
+            osg::Referenced* ref = reinterpret_cast&lt;osg::Referenced*&gt;(object);
+            osgUtil::CullVisitor* cv = dynamic_cast&lt;osgUtil::CullVisitor*&gt;(ref);
+            OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_mutex);
+            RenderStageMap::iterator itr = _renderStageMap.find(cv);
+            if (itr!=_renderStageMap.end())
+            {
+                _renderStageMap.erase(cv);
+            }
+        }
+
+The call stack at the time of the failed cast is the following&#8230;
+
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image001.png at 01D1B505.D7E68DD0</A>]
+
+The cv pointer is NULL following the cast.  My suspicion is that the dynamic cast is failing because we are in the destructor of our own object that inherits the OSG CullVisitor object.  I tested this suspicion by confirming that the same dynamic cast will succeed in application code if done immediately before invoking the destructor of our version of the CullVisitor.  This issue is blocking our update to 3.4.0 since it causes numerous unit test failures.
+
+Any suggestions on how to address this issue?
+
+I created the hack below to temporary bypass the problem&#8230;
+
+        virtual void objectDeleted(void* object)
+        {
+            osg::Referenced* ref = reinterpret_cast&lt;osg::Referenced*&gt;(object);
+            osgUtil::CullVisitor* cv = dynamic_cast&lt;osgUtil::CullVisitor*&gt;(ref);
+            OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_mutex);
+            if (cv != NULL)
+            {
+                RenderStageMap::iterator itr = _renderStageMap.find(cv);
+                if (itr!=_renderStageMap.end())
+                {
+                    _renderStageMap.erase(cv);
+                }
+            }
+            else
+            {
+               for(RenderStageMap::iterator itr = _renderStageMap.begin();
+                   itr != _renderStageMap.end();
+                   ++itr)
+               {
+                   osg::Referenced* tmpRef = dynamic_cast&lt;osg::Referenced*&gt;(itr-&gt;first);
+                   if (ref==tmpRef)
+                   {
+                        cv = itr-&gt;first;
+                       _renderStageMap.erase(cv);
+                       break;
+                   }
+               }
+            }
+        }
+
+Thanks,
+Rick
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160523/5a9b82c3/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160523/5a9b82c3/attachment-0002.htm</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: image001.png
+Type: image/png
+Size: 9165 bytes
+Desc: image001.png
+URL: &lt;<A HREF="../attachments/20160523/5a9b82c3/attachment-0003.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160523/5a9b82c3/attachment-0003.png</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003123.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+	<LI>Next message: <A HREF="003130.html">[osg-users] CullVisitor object not getting properly deleted
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3126">[ date ]</a>
+              <a href="thread.html#3126">[ thread ]</a>
+              <a href="subject.html#3126">[ subject ]</a>
+              <a href="author.html#3126">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

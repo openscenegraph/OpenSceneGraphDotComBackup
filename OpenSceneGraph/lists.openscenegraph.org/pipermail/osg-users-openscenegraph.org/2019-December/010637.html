@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Texture Caching Problem with 3.6.3/4
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3Cf779a1bf-e231-4317-8600-565dca7f4670%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010634.html">
+   <LINK REL="Next"  HREF="010653.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Texture Caching Problem with 3.6.3/4</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3Cf779a1bf-e231-4317-8600-565dca7f4670%40googlegroups.com%3E"
+       TITLE="[osg-users] Texture Caching Problem with 3.6.3/4">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Dec 16 09:08:33 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010634.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+        <LI>Next message (by thread): <A HREF="010653.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10637">[ date ]</a>
+              <a href="thread.html#10637">[ thread ]</a>
+              <a href="subject.html#10637">[ subject ]</a>
+              <a href="author.html#10637">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Greg,
+
+Today I worked on improving the ObectCache::releaseGLObjects() 
+implementation so that it removes objects in the scene that are Texture or 
+contain Textures in their subgraph, where the Texture no longer have any 
+associated osg::Image. I believe this resolves the usage case :
+
+  1.  Load the scene graph, with the Texture UnRefImageAfterApply setiings 
+are set to UnrefImageAfterApply, with the loaded textures/scene graphs 
+being cached in the osgDB::ObjectCache.
+  2. Render the scene graph, resulting the in the scene graph images being 
+unref'd from their Textures.
+  3. Close the Window, which cleans up the scene graph GL obects by calling 
+releaseGLObjects()
+  4. Load a new scene graph with textures/objects loaded from disk and 
+where possible from the ObjectCache if previously loaded and cache,  Got 
+back to 2. (Rendering etc.)
+
+I created an example that follows all these steps and it reproduced the 
+problem with the textures appearing black on the second time around when 
+loading an OpenFlight database.  With the fixes to 
+ObjectCache::releaseGLObjects() the unref'd images are automatically 
+removed from the cache as part of step 3. above, so that they aren't shared 
+any more, instead new copies are loaded from disk with their image in place.
+
+This fix is checked into the OpenSceneGraph-3.6 branch.  The commit is:
+
+    
+<A HREF="https://github.com/openscenegraph/OpenSceneGraph/commit/9ae47b921b2184788e6efe85692908bd0ba900a2">https://github.com/openscenegraph/OpenSceneGraph/commit/9ae47b921b2184788e6efe85692908bd0ba900a2</A>
+
+Could you please test this out.  You should be able to remove your own 
+manually clearing of the ObjectCache now, as it will be done automatically 
+when required.
+
+Cheers,
+Robert.
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/f779a1bf-e231-4317-8600-565dca7f4670%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/f779a1bf-e231-4317-8600-565dca7f4670%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191216/1752db61/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191216/1752db61/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010634.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+	<LI>Next message (by thread): <A HREF="010653.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10637">[ date ]</a>
+              <a href="thread.html#10637">[ thread ]</a>
+              <a href="subject.html#10637">[ subject ]</a>
+              <a href="author.html#10637">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

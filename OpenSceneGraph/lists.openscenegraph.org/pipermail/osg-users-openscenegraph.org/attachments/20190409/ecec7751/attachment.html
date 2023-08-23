@@ -1,0 +1,53 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Hi&nbsp;Alberto,&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;You&nbsp;may&nbsp;need&nbsp;to&nbsp;add&nbsp;support&nbsp;for&nbsp;clip&nbsp;planes&nbsp;via&nbsp;gl_ClipVertex&nbsp;or&nbsp;gl_ClipDistance&nbsp;to&nbsp;your&nbsp;shaders&nbsp;(which&nbsp;one&nbsp;depends&nbsp;on&nbsp;GLSL&nbsp;version&nbsp;used&nbsp;-see &lt;a&nbsp;href=&quot;https://stackoverflow.com/questions/19125628/how-does-gl-clipvertex-work-relative-to-gl-clipdistance&quot;&gt;https://stackoverflow.com/questions/19125628/how-does-gl-clipvertex-work-relative-to-gl-clipdistance&lt;/a&gt;).&nbsp;My&nbsp;experience&nbsp;with&nbsp;these&nbsp;vars&nbsp;was&nbsp;not&nbsp;always&nbsp;positive,&nbsp;though.&nbsp;I&nbsp;remember&nbsp;times&nbsp;when&nbsp;I&nbsp;was&nbsp;unable&nbsp;to&nbsp;use&nbsp;them&nbsp;and&nbsp;once&nbsp;had&nbsp;to&nbsp;do&nbsp;my&nbsp;own&nbsp;cliping&nbsp;in&nbsp;vertex&nbsp;shader&nbsp;(=major&nbsp;PITA).&nbsp;But&nbsp;maybe&nbsp;these&nbsp;days&nbsp;newer&nbsp;drivers&nbsp;or&nbsp;OSG&nbsp;version&nbsp;make&nbsp;it&nbsp;easier.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Cheers,&lt;/div&gt;&lt;div&gt;WL&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;wt.,&nbsp;9&nbsp;kwi&nbsp;2019&nbsp;o&nbsp;12:41 Alberto&nbsp;Luaces&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:aluaces@udc.es&quot;&gt;aluaces@udc.es&lt;/a&gt;&gt;&nbsp;napisał(a):&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;want&nbsp;to&nbsp;set&nbsp;a&nbsp;clipping&nbsp;plane&nbsp;for&nbsp;my&nbsp;scene,&nbsp;but&nbsp;it&nbsp;is&nbsp;not&nbsp;working&nbsp;for&lt;br&gt;<br>
+instanced&nbsp;geometries. &nbsp;I&nbsp;have&nbsp;not&nbsp;found&nbsp;any&nbsp;resource&nbsp;telling&nbsp;that&lt;br&gt;<br>
+clipping&nbsp;planes&nbsp;are&nbsp;ignored&nbsp;by&nbsp;GLSL.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Simple&nbsp;test:&nbsp;if&nbsp;I&nbsp;make&nbsp;the&nbsp;following&nbsp;modifications&nbsp;to&nbsp;osgforest,&lt;br&gt;<br>
+&lt;br&gt;<br>
+diff&nbsp;--git&nbsp;a/examples/osgforest/osgforest.cpp&nbsp;b/examples/osgforest/osgforest.cpp&lt;br&gt;<br>
+index&nbsp;5f569de66..d5eb2c0a6&nbsp;100644&lt;br&gt;<br>
+---&nbsp;a/examples/osgforest/osgforest.cpp&lt;br&gt;<br>
++++&nbsp;b/examples/osgforest/osgforest.cpp&lt;br&gt;<br>
+@@&nbsp;-36,6&nbsp;+36,7&nbsp;@@&lt;br&gt;<br>
+ #include&nbsp;&lt;osg/TexEnv&gt;&lt;br&gt;<br>
+ #include&nbsp;&lt;osg/VertexProgram&gt;&lt;br&gt;<br>
+ #include&nbsp;&lt;osg/FragmentProgram&gt;&lt;br&gt;<br>
++#include&nbsp;&lt;osg/ClipNode&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ #include&nbsp;&lt;osgDB/ReadFile&gt;&lt;br&gt;<br>
+ #include&nbsp;&lt;osgDB/FileUtils&gt;&lt;br&gt;<br>
+@@&nbsp;-1487,7&nbsp;+1488,11&nbsp;@@&nbsp;int&nbsp;main(&nbsp;int&nbsp;argc,&nbsp;char&nbsp;**argv&nbsp;)&lt;br&gt;<br>
+ &nbsp; &nbsp; viewer.addEventHandler(new&nbsp;osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; //&nbsp;add&nbsp;model&nbsp;to&nbsp;viewer.&lt;br&gt;<br>
+- &nbsp; &nbsp;viewer.setSceneData(&nbsp;ttm-&gt;createScene(numTreesToCreate,&nbsp;maxNumTreesPerCell)&nbsp;);&lt;br&gt;<br>
++ &nbsp; &nbsp; &nbsp; osg::Node&nbsp;*ttmnode&nbsp;=&nbsp;ttm-&gt;createScene(numTreesToCreate,&nbsp;maxNumTreesPerCell);&lt;br&gt;<br>
++ &nbsp; &nbsp; &nbsp; osg::ClipNode&nbsp;*cn&nbsp;=&nbsp;new&nbsp;osg::ClipNode;&lt;br&gt;<br>
++ &nbsp; &nbsp; &nbsp; cn-&gt;addClipPlane(new&nbsp;osg::ClipPlane(0,&nbsp;osg::Vec4d(1,&nbsp;0,&nbsp;0,&nbsp;-500)));&lt;br&gt;<br>
++ &nbsp; &nbsp; &nbsp; cn-&gt;addChild(ttmnode);&lt;br&gt;<br>
++ &nbsp; &nbsp;viewer.setSceneData(&nbsp;cn&nbsp;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; return&nbsp;viewer.run();&lt;br&gt;<br>
+&lt;br&gt;<br>
+...the&nbsp;terrain&nbsp;and&nbsp;the&nbsp;trees&nbsp;are&nbsp;split&nbsp;by&nbsp;my&nbsp;additional&nbsp;clipping&nbsp;plane,&lt;br&gt;<br>
+except&nbsp;when&nbsp;the&nbsp;trees&nbsp;are&nbsp;instances;&nbsp;in&nbsp;that&nbsp;case&nbsp;they&nbsp;are&nbsp;drawn&nbsp;as&lt;br&gt;<br>
+normal.&lt;br&gt;<br>
+&lt;br&gt;<br>
+How&nbsp;can&nbsp;I&nbsp;make&nbsp;clipping&nbsp;planes&nbsp;work&nbsp;for &nbsp;instanced&nbsp;rendering?&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thanks!&lt;br&gt;<br>
+&lt;br&gt;<br>
+--&nbsp;&lt;br&gt;<br>
+Alberto&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;<br>
+
+</tt>

@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Testing osgUI library
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Testing%20osgUI%20library&In-Reply-To=%3CCAJemmPd9vauqqb8TJNP58uRxf0Hkf0rfTNcia5YNwcK8QCkhFg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271924.html">
+   <LINK REL="Next"  HREF="271926.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Testing osgUI library</H1>
+<!--htdig_noindex-->
+    <B>Rocio Tortajada</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Testing%20osgUI%20library&In-Reply-To=%3CCAJemmPd9vauqqb8TJNP58uRxf0Hkf0rfTNcia5YNwcK8QCkhFg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Testing osgUI library">rocio.tortajada at mirage-tech.com
+       </A><BR>
+    <I>Thu Jan 14 00:37:45 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271924.html">[osg-users] Testing osgUI library
+</A></li>
+        <LI>Next message: <A HREF="271926.html">[osg-users] Dynamic terrains, DatabasePager + PagedLODs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271970">[ date ]</a>
+              <a href="thread.html#271970">[ thread ]</a>
+              <a href="subject.html#271970">[ subject ]</a>
+              <a href="author.html#271970">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I have already tried rotating the GUI, but it doesn't work. When you enter
+the mouse over the 3D TabWidget, you can see the message &quot;Widget::enter()&quot;
+on the console log. But, if you do the same with the TabWidget which is
+inside the HUD camera, you can't see any message.
+We think that the problem is in the method called
+&quot;computeExtentsPositionInLocalCoordinates&quot; of the Widget class (Widget.cpp
+file) on lines;
+
+498    matrix.postMult(camera-&gt;getViewMatrix());
+499    matrix.postMult(camera-&gt;getProjectionMatrix());
+
+because it uses the matrices of the 'default' camera instead of the HUD
+camera's matrices.
+We've replaced the two lines before with the next line. In this way, it
+detects the mouse over the TabWidget which is inside the HUD camera, but
+when I click on the tabs it doesn't work. We could write this line because
+we know the projection matrix of our HUD camera.
+  matrix.postMult(osg::Matrix::ortho2D(0, 1400, 0, 760));
+
+Thank you.
+
+Roc&#237;o
+
+2016-01-05 11:52 GMT+01:00 Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;:
+
+&gt;<i> Hi Rocio,
+</I>&gt;<i>
+</I>&gt;<i> I haven't yet had a chance to test the example (it's holidays here :-)
+</I>&gt;<i> but in principle it should be possible to use osgUI within a HUD as
+</I>&gt;<i> well as in the 3D scene.  One of the motivations for developing osgUI
+</I>&gt;<i> was the need to have a GUI in a 3D scene with full stereo rendering
+</I>&gt;<i> (HMD's and powerwalls) so this is where I've done all the testing.
+</I>&gt;<i>
+</I>&gt;<i> My best guess for why it isn't working in the HUD case is a precision
+</I>&gt;<i> issue with the intersection routines. As a test try rotating the GUI
+</I>&gt;<i> very slightly so it has some depth rather being planner.  If this gets
+</I>&gt;<i> things working then we know that it's an issue with intersection tests
+</I>&gt;<i> and these need to be adapted to handle the planar HUD case.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 23 December 2015 at 12:12, Rocio Tortajada
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rocio.tortajada at mirage-tech.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Hi!
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I've tried the osgUI library. I loaded the TabWidget.lua from the
+</I>&gt;<i> osg-data
+</I>&gt;<i> &gt; into the scene and when I clicked on the tabs it worked as expected
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The problem arises when I added the TabWidget in the HUD camera, as far
+</I>&gt;<i> as
+</I>&gt;<i> &gt; we tested the intersections to the widget seems not to be working. Is the
+</I>&gt;<i> &gt; osgUI library supporting HUD cameras?  Are we missing something?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Find attached an example with my test code, on the left of the scene
+</I>&gt;<i> there
+</I>&gt;<i> &gt; is a 3D TabWidget and on the right there is a TabWidget inside the HUD
+</I>&gt;<i> &gt; camera. The test is very simple, but  if you find it interesting it can
+</I>&gt;<i> be
+</I>&gt;<i> &gt; added to the OSG examples.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Thank you!
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Roc&#237;o
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160114/ef01e025/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160114/ef01e025/attachment.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271924.html">[osg-users] Testing osgUI library
+</A></li>
+	<LI>Next message: <A HREF="271926.html">[osg-users] Dynamic terrains, DatabasePager + PagedLODs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271970">[ date ]</a>
+              <a href="thread.html#271970">[ thread ]</a>
+              <a href="subject.html#271970">[ subject ]</a>
+              <a href="author.html#271970">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

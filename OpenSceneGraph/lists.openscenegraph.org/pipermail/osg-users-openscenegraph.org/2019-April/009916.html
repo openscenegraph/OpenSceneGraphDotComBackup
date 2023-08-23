@@ -1,0 +1,251 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Volume Rendering and Depth Buffer
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20Rendering%20and%20Depth%20Buffer&In-Reply-To=%3CCAGoufmaeXeqaxYnDncmR1Yf_%3DVhA7kr7RmVmHbw7PGx%2BJVER%2Bw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009915.html">
+   <LINK REL="Next"  HREF="009917.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Volume Rendering and Depth Buffer</H1>
+<!--htdig_noindex-->
+    <B>Chris Hanson</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20Rendering%20and%20Depth%20Buffer&In-Reply-To=%3CCAGoufmaeXeqaxYnDncmR1Yf_%3DVhA7kr7RmVmHbw7PGx%2BJVER%2Bw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Volume Rendering and Depth Buffer">xenon at alphapixel.com
+       </A><BR>
+    <I>Mon Apr 15 04:15:37 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009915.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+        <LI>Next message (by thread): <A HREF="009917.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9916">[ date ]</a>
+              <a href="thread.html#9916">[ thread ]</a>
+              <a href="subject.html#9916">[ subject ]</a>
+              <a href="author.html#9916">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Just out of curiousity, what are you volume rendering and what are your
+requirements? We did some interesting volume rendering work a few years ago
+for Iowa State University's Ames Lab.
+
+On Mon, Apr 15, 2019 at 1:08 PM Anna Osvin &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">annieloveowls at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi. In a project that I'm working on I have an osgVolume::VolumeScene
+</I>&gt;<i> containing one volume model and some polygonal models. I need to do some
+</I>&gt;<i> depth buffer checks on that scene, so I've attached depth buffer to viewer
+</I>&gt;<i> camera. When I fetch osg::Image representing depth buffer content,
+</I>&gt;<i> everything is fine, except background values are not calculated properly
+</I>&gt;<i> (they should be 1, but instead it's ~0.15). And when I add osg::Depth(
+</I>&gt;<i> osg::Depth::Function::LESS, zNear, zFar ) attribute to the camera,
+</I>&gt;<i> background values are calculated correctly, but I lose all of the polygonal
+</I>&gt;<i> models data (they are no longer visible, and not presented in depth buffer).
+</I>&gt;<i>
+</I>&gt;<i> Here is function that does depth buffer checking:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> bool pickZBufferIntersection( osgViewer::View&amp; view, bool
+</I>&gt;<i> perspectiveProjection, const osg::Vec2&amp; point2d, osg::Vec3&amp; pickedPoint )
+</I>&gt;<i> {
+</I>&gt;<i>     osg::Camera* camera = view.getCamera();
+</I>&gt;<i>     if ( camera == nullptr )
+</I>&gt;<i>     {
+</I>&gt;<i>         Q_ASSERT_X( false, &quot;bool pickZBufferIntersection( ... )&quot;, &quot;View
+</I>&gt;<i> has no camera.&quot; );
+</I>&gt;<i>         return false;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     const osg::Image* zImage =
+</I>&gt;<i> camera-&gt;getBufferAttachmentMap()[osg::Camera::BufferComponent::DEPTH_BUFFER]._image;
+</I>&gt;<i>     if ( zImage == nullptr )
+</I>&gt;<i>     {
+</I>&gt;<i>         Q_ASSERT_X( false, &quot;bool pickZBufferIntersection( ... )&quot;, &quot;ZBuffer
+</I>&gt;<i> is not attached to view camera.&quot; );
+</I>&gt;<i>         return false;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     osg::Vec3f cameraPos;
+</I>&gt;<i>     osg::Vec3f center;
+</I>&gt;<i>     osg::Vec3f up;
+</I>&gt;<i>     camera-&gt;getViewMatrixAsLookAt( cameraPos, center, up );
+</I>&gt;<i>
+</I>&gt;<i>     osg::Matrixd prInv = osg::Matrixd::inverse(
+</I>&gt;<i> camera-&gt;getProjectionMatrix() );
+</I>&gt;<i>     osg::Matrixd viewInv = osg::Matrixd::inverse( camera-&gt;getViewMatrix()
+</I>&gt;<i> );
+</I>&gt;<i>
+</I>&gt;<i>     const osg::Viewport* viewPort = camera-&gt;getViewport();
+</I>&gt;<i>
+</I>&gt;<i>     int x = point2d.x() - viewPort-&gt;x();
+</I>&gt;<i>     int y = point2d.y() - viewPort-&gt;y();
+</I>&gt;<i>
+</I>&gt;<i>     osg::Vec3 s(0, 0, -1);
+</I>&gt;<i>     s[0] = (point2d[0] / viewPort-&gt;width()) * 2.0 - 1.0;
+</I>&gt;<i>     s[1] = (point2d[1] / viewPort-&gt;height()) * 2.0 - 1.0;
+</I>&gt;<i>     s = s * prInv * viewInv;
+</I>&gt;<i>
+</I>&gt;<i>     osg::Vec3d v = s - cameraPos;
+</I>&gt;<i>
+</I>&gt;<i>     double zNear = 1.0f;
+</I>&gt;<i>     double zFar = 10000.0f;
+</I>&gt;<i>
+</I>&gt;<i>     static uint pickNumber = 0;
+</I>&gt;<i>
+</I>&gt;<i>     double zV, z_n, z;
+</I>&gt;<i>     osg::Vec3f point;
+</I>&gt;<i>
+</I>&gt;<i>     zV = ( (float*)zImage-&gt;data( x, y ) )[ 0 ];
+</I>&gt;<i>
+</I>&gt;<i>     if( perspectiveProjection )
+</I>&gt;<i>     {
+</I>&gt;<i>         z_n = 2.0*zV - 1.0;
+</I>&gt;<i>         z = 2.0 * zNear * zFar / ( zFar + zNear - z_n * ( zFar - zNear ) );
+</I>&gt;<i>
+</I>&gt;<i>         point = cameraPos + v*z;
+</I>&gt;<i>     }
+</I>&gt;<i>     else
+</I>&gt;<i>     {
+</I>&gt;<i>         z = ( zFar - zNear )*zV;
+</I>&gt;<i>         point = s + ( center - cameraPos )*z;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     if( z &gt; zNear + 1e-8 &amp;&amp; z &lt; zFar - 1 - 1e-8 )
+</I>&gt;<i>     {
+</I>&gt;<i>         pickedPoint = point;
+</I>&gt;<i>         return true;
+</I>&gt;<i>     }
+</I>&gt;<i>     return false;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> And here is viewer setup bit:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> QWidget* createViewWidget(osgQt::GraphicsWindowQt* gw,
+</I>&gt;<i> osgVolume::VolumeScene&amp; scene)
+</I>&gt;<i> {
+</I>&gt;<i>     osgViewer::View* view = new osgViewer::View;
+</I>&gt;<i>     /* ... */
+</I>&gt;<i>     osg::Camera* camera = view-&gt;getCamera();
+</I>&gt;<i>     camera-&gt;setGraphicsContext(gw);
+</I>&gt;<i>
+</I>&gt;<i> camera-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+</I>&gt;<i>
+</I>&gt;<i>     const osg::GraphicsContext::Traits* traits = gw-&gt;getTraits();
+</I>&gt;<i>     camera-&gt;setClearColor(osgColor( SCENE3D_BACKGROUND_COLOR ));
+</I>&gt;<i>     camera-&gt;setViewport(new osg::Viewport(0, 0, traits-&gt;width,
+</I>&gt;<i> traits-&gt;height));
+</I>&gt;<i>
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Image&gt; zImage = new osg::Image();
+</I>&gt;<i>     zImage-&gt;allocateImage(1000, 1000, 1, GL_DEPTH_COMPONENT, GL_FLOAT);
+</I>&gt;<i>     camera-&gt;attach(osg::Camera::DEPTH_BUFFER, zImage);
+</I>&gt;<i>
+</I>&gt;<i>     const int orthoRange = 120;
+</I>&gt;<i>     const float zNear = 1.0f;
+</I>&gt;<i>     const float zFar = 10000.0f;
+</I>&gt;<i>     camera-&gt;setProjectionMatrixAsOrtho(-orthoRange, orthoRange,
+</I>&gt;<i> -orthoRange, orthoRange, zNear, zFar);
+</I>&gt;<i>     //camera-&gt;getOrCreateStateSet()-&gt;setAttribute( new osg::Depth(
+</I>&gt;<i> osg::Depth::Function::LESS, zNear, zFar ), osg::StateAttribute::ON |
+</I>&gt;<i> osg::StateAttribute::OVERRIDE );
+</I>&gt;<i>
+</I>&gt;<i>     /* ... */
+</I>&gt;<i>
+</I>&gt;<i>     view-&gt;setSceneData(&amp;scene);
+</I>&gt;<i>     view-&gt;addEventHandler(new osgViewer::StatsHandler);
+</I>&gt;<i>
+</I>&gt;<i>     gw-&gt;setTouchEventsEnabled(true);
+</I>&gt;<i>
+</I>&gt;<i>     return gw-&gt;getGLWidget();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Annie[/img]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic6c59.php?p=75829#75829">http://forum.openscenegraph.org/viewtopic.php?p=75829#75829</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Attachments:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/files/depth_buffer_depthrange_185.png">http://forum.openscenegraph.org//files/depth_buffer_depthrange_185.png</A>
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/files/depth_buffer_154.png">http://forum.openscenegraph.org//files/depth_buffer_154.png</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+-- 
+Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>
+<A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+Training &#8226; Consulting &#8226; Contracting
+3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226;
+GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+Legal/IP &#8226; Forensics &#8226; Imaging &#8226; UAVs &#8226; GIS &#8226; GPS &#8226;
+osgEarth &#8226; Terrain &#8226; Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226;
+iPhone/iPad/iOS &#8226; Android
+@alphapixel &lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt; facebook.com/alphapixel (775)
+623-PIXL [7495]
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190415/56f057ba/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190415/56f057ba/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009915.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+	<LI>Next message (by thread): <A HREF="009917.html">[osg-users] Volume Rendering and Depth Buffer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9916">[ date ]</a>
+              <a href="thread.html#9916">[ thread ]</a>
+              <a href="subject.html#9916">[ subject ]</a>
+              <a href="author.html#9916">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

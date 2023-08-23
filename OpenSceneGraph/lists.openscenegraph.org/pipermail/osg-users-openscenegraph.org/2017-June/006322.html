@@ -1,0 +1,136 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Error with InputStream reading osgb files
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Error%20with%20InputStream%20reading%20osgb%20files&In-Reply-To=%3CCAFN7Y%2BV0xROPT3HnO4HHUP2uc-YWh%2BXoA%2BMe%3DfG8W_zCmdM%3Dsg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006316.html">
+   <LINK REL="Next"  HREF="006327.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Error with InputStream reading osgb files</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Error%20with%20InputStream%20reading%20osgb%20files&In-Reply-To=%3CCAFN7Y%2BV0xROPT3HnO4HHUP2uc-YWh%2BXoA%2BMe%3DfG8W_zCmdM%3Dsg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Error with InputStream reading osgb files">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sun Jun 11 05:05:49 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006316.html">[osg-users] Error with InputStream reading osgb files
+</A></li>
+        <LI>Next message: <A HREF="006327.html">[osg-users] Error with InputStream reading osgb files
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6322">[ date ]</a>
+              <a href="thread.html#6322">[ thread ]</a>
+              <a href="subject.html#6322">[ subject ]</a>
+              <a href="author.html#6322">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Good to hear you've tracked down the problem.  We might be able to
+version to use of long uints for future rev's of the OSG.
+
+On 9 June 2017 at 17:22, Riccardo Corsi &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">riccardo.corsi at kairos3d.it</A>&gt; wrote:
+&gt;<i> Hi again,
+</I>&gt;<i>
+</I>&gt;<i> I think I've found what's going on.
+</I>&gt;<i> Basically the BinaryStreamOperator used to read the osgb format saves the
+</I>&gt;<i> block size currently read with an int - see here - which is not large enough
+</I>&gt;<i> to express very large blocks.
+</I>&gt;<i>
+</I>&gt;<i> I've patched the code with unsigned int (both when writing and reading block
+</I>&gt;<i> size, always on 4 bytes) and I can now write and read correctly the files
+</I>&gt;<i> that showed the problem.
+</I>&gt;<i> Of course unsigned int is not large enough for arbitrarily huge blocks, but
+</I>&gt;<i> at least it doubles the current max size.
+</I>&gt;<i> I'll post a pull request with the patch.
+</I>&gt;<i>
+</I>&gt;<i> Using a type bigger than 4 bytes would make the current files unreadable, so
+</I>&gt;<i> I don't think it's something that can be changed.
+</I>&gt;<i> Riccardo
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Thu, Jun 8, 2017 at 1:15 PM, Riccardo Corsi &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">riccardo.corsi at kairos3d.it</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi all,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm getting an error when reading some (pretty big) osgb files and having
+</I>&gt;&gt;<i> hard time in finding what's causing the issue.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm creating the files myself with osgDB::writeNodeFile, without any error
+</I>&gt;&gt;<i> message when writing them.
+</I>&gt;&gt;<i> The files' contents are only Groups and Geometries with basic data
+</I>&gt;&gt;<i> (vertices, normals, stateset).
+</I>&gt;&gt;<i> The files are created and read with the same osg libraries, version 3.5.3.
+</I>&gt;&gt;<i> The error message I receive on the console (even at DEBUG level) is only:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Error reading file sample.osgb: read error (InputStream: Failed to read
+</I>&gt;&gt;<i> from stream. At osg::Group )
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> with no additional details, as it normally happens when file is not well
+</I>&gt;&gt;<i> formatted.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Additional info:
+</I>&gt;&gt;<i> - I've spotted the issue for big file (2GB or more), but not always from a
+</I>&gt;&gt;<i> given size up. I have some 4GB files working and some 3GB causing the error.
+</I>&gt;&gt;<i> - in some cases, if I create foo.osgb and bar.osgb they are both loaded
+</I>&gt;&gt;<i> correctly, but if I create foo+bar.osgb (writing works ok) I get the error
+</I>&gt;&gt;<i> when reading it.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Unfortunately I cannot share example files.
+</I>&gt;&gt;<i> I'm looking for some pointers on how to investigate further to find the
+</I>&gt;&gt;<i> culprit.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> My configuration is:
+</I>&gt;&gt;<i> - osg 3.5.3
+</I>&gt;&gt;<i> - windows 10
+</I>&gt;&gt;<i> - visual studio 2013
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thank you,
+</I>&gt;&gt;<i> Riccardo
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006316.html">[osg-users] Error with InputStream reading osgb files
+</A></li>
+	<LI>Next message: <A HREF="006327.html">[osg-users] Error with InputStream reading osgb files
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6322">[ date ]</a>
+              <a href="thread.html#6322">[ thread ]</a>
+              <a href="subject.html#6322">[ subject ]</a>
+              <a href="author.html#6322">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,104 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] DEEP_COPY_USERDATA isn't that deep
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20DEEP_COPY_USERDATA%20isn%27t%20that%20deep&In-Reply-To=%3C1571600936.m2f.76837%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010551.html">
+   <LINK REL="Next"  HREF="010553.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] DEEP_COPY_USERDATA isn't that deep</H1>
+<!--htdig_noindex-->
+    <B>Chris Djali</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20DEEP_COPY_USERDATA%20isn%27t%20that%20deep&In-Reply-To=%3C1571600936.m2f.76837%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] DEEP_COPY_USERDATA isn't that deep">krizdjali at gmail.com
+       </A><BR>
+    <I>Sun Oct 20 12:48:56 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010551.html">[osg-users] FBO handle from the Camera renderImplementation
+</A></li>
+        <LI>Next message (by thread): <A HREF="010553.html">[osg-users] [vpb] Untextured LODs in result
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10552">[ date ]</a>
+              <a href="thread.html#10552">[ thread ]</a>
+              <a href="subject.html#10552">[ subject ]</a>
+              <a href="author.html#10552">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+It's been pointed out to me that the DefaultUserDataContainer object list can be a little bit more deeply copied with this change:
+
+
+Code:
+--- a/src/osg/UserDataContainer.cpp
++++ b/src/osg/UserDataContainer.cpp
+@@ -56,7 +56,10 @@ DefaultUserDataContainer::DefaultUserDataContainer(const DefaultUserDataContaine
+         itr != udc._objectList.end();
+         ++itr)
+     {
+-        _objectList.push_back(copyop(itr-&gt;get()));
++        if (copyop.getCopyFlags()&amp;osg::CopyOp::DEEP_COPY_USERDATA)
++            _objectList.push_back(osg::clone(itr-&gt;get(), copyop));
++        else
++            _objectList.push_back(copyop(itr-&gt;get()));
+     }
+ }
+
+
+
+
+This will make _objectList at least point to copies of the objects instead of literally the same objects, which is a step in the right direction, but those copies will still be shallow copies.
+
+Cheers,
+Chris
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic5389.php?p=76837#76837">http://forum.openscenegraph.org/viewtopic.php?p=76837#76837</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010551.html">[osg-users] FBO handle from the Camera renderImplementation
+</A></li>
+	<LI>Next message (by thread): <A HREF="010553.html">[osg-users] [vpb] Untextured LODs in result
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10552">[ date ]</a>
+              <a href="thread.html#10552">[ thread ]</a>
+              <a href="subject.html#10552">[ subject ]</a>
+              <a href="author.html#10552">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

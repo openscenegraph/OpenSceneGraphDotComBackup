@@ -1,0 +1,199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Why does the modified 0SGsimpleGl3 sample render cow.OSg model not show textures?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20does%20the%20modified%200SGsimpleGl3%20sample%20render%0A%20cow.OSg%20model%20not%20show%20textures%3F&In-Reply-To=%3Cmailman.20826.1602391860.3538.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011259.html">
+   <LINK REL="Next"  HREF="011261.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Why does the modified 0SGsimpleGl3 sample render cow.OSg model not show textures?</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20does%20the%20modified%200SGsimpleGl3%20sample%20render%0A%20cow.OSg%20model%20not%20show%20textures%3F&In-Reply-To=%3Cmailman.20826.1602391860.3538.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Why does the modified 0SGsimpleGl3 sample render cow.OSg model not show textures?">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Sat Oct 10 21:50:57 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011259.html">[osg-users]  To set the glContextVersion number in the code, do I need cmake to configure the OSG_GL3_AVAILABLE option?
+</A></li>
+        <LI>Next message (by thread): <A HREF="011261.html">[osg-users] How to use setUseVertexAttributeAliasing?Why is there an error in the model texture display when this function is turn on?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11260">[ date ]</a>
+              <a href="thread.html#11260">[ thread ]</a>
+              <a href="subject.html#11260">[ subject ]</a>
+              <a href="author.html#11260">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osg/GraphicsContext&gt;
+#include &lt;osg/Camera&gt;
+#include &lt;osg/Viewport&gt;
+#include &lt;osg/StateSet&gt;
+#include &lt;osg/Program&gt;
+#include &lt;osg/Shader&gt;
+#include &lt;osgUtil/Optimizer&gt;
+
+void configureShaders( osg::StateSet* stateSet )
+{
+    const std::string vertexSource =
+        &quot;#version 130 \n&quot;
+        &quot; \n&quot;
+        &quot;uniform mat4 osg_ModelViewProjectionMatrix; \n&quot;
+        &quot;uniform mat3 osg_NormalMatrix; \n&quot;
+        &quot;uniform vec3 ecLightDir; \n&quot;
+        &quot; \n&quot;
+        &quot;in vec4 osg_Vertex; \n&quot;
+        &quot;in vec3 osg_Normal; \n&quot;
+&quot;in vec4 osg_MultiTexCoord0; \n&quot;
+        &quot;out vec4 color; \n&quot;
+&quot;out vec2 texCoord; \n&quot;
+        &quot; \n&quot;
+        &quot;void main() \n&quot;
+        &quot;{ \n&quot;
+        &quot;    vec3 ecNormal = normalize( osg_NormalMatrix * osg_Normal ); \n&quot;
+        &quot;    float diffuse = max( dot( ecLightDir, ecNormal ), 0. ); \n&quot;
+        &quot;    color = vec4( vec3( diffuse ), 1. ); \n&quot;
+&quot;    texCoord = osg_MultiTexCoord0.xy; \n&quot;
+        &quot; \n&quot;
+        &quot;    gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex; \n&quot;
+        &quot;} \n&quot;;
+    osg::Shader* vShader = new osg::Shader( osg::Shader::VERTEX, 
+vertexSource );
+
+    const std::string fragmentSource =
+        &quot;#version 130 \n&quot;
+        &quot; \n&quot;
+&quot;in vec2 texCoord; \n&quot;
+        &quot;in vec4 color; \n&quot;
+        &quot;out vec4 fragData; \n&quot;
+&quot;uniform sampler2D tex; \n&quot;
+        &quot; \n&quot;
+        &quot;void main() \n&quot;
+        &quot;{ \n&quot;
+        &quot;    fragData = texture2D(tex,texCoord); \n&quot;
+        &quot;} \n&quot;;
+    osg::Shader* fShader = new osg::Shader( osg::Shader::FRAGMENT, 
+fragmentSource );
+
+    osg::Program* program = new osg::Program;
+    program-&gt;addShader( vShader );
+    program-&gt;addShader( fShader );
+    stateSet-&gt;setAttribute( program );
+
+    osg::Vec3f lightDir( 0., 0.5, 1. );
+    lightDir.normalize();
+    stateSet-&gt;addUniform( new osg::Uniform( &quot;ecLightDir&quot;, lightDir ) );
+stateSet-&gt;addUniform( new osg::Uniform( &quot;tex&quot; ,0 ) );
+}
+
+int main( int argc, char** argv )
+{
+    osg::ArgumentParser arguments( &amp;argc, argv );
+
+    osg::ref_ptr&lt;osg::Node&gt; root = osgDB::readNodeFile(&quot;cow.osg&quot;);
+    if( root == NULL )
+    {
+        osg::notify( osg::FATAL ) &lt;&lt; &quot;Unable to load model from command 
+line.&quot; &lt;&lt; std::endl;
+        return( 1 );
+    }
+
+    osgUtil::Optimizer optimizer;
+    optimizer.optimize(root.get(), osgUtil::Optimizer::ALL_OPTIMIZATIONS  | 
+osgUtil::Optimizer::TESSELLATE_GEOMETRY);
+
+    configureShaders( root-&gt;getOrCreateStateSet() );
+
+    const int width( 800 ), height( 450 );
+    const std::string version( &quot;3.0&quot; );
+    osg::ref_ptr&lt; osg::GraphicsContext::Traits &gt; traits = new 
+osg::GraphicsContext::Traits();
+    traits-&gt;x = 20; traits-&gt;y = 30;
+    traits-&gt;width = width; traits-&gt;height = height;
+    traits-&gt;windowDecoration = true;
+    traits-&gt;doubleBuffer = true;
+    traits-&gt;glContextVersion = version;
+    traits-&gt;readDISPLAY();
+    traits-&gt;setUndefinedScreenDetailsToDefaultScreen();
+    osg::ref_ptr&lt; osg::GraphicsContext &gt; gc = 
+osg::GraphicsContext::createGraphicsContext( traits.get() );
+    if( !gc.valid() )
+    {
+        osg::notify( osg::FATAL ) &lt;&lt; &quot;Unable to create OpenGL v&quot; &lt;&lt; version 
+&lt;&lt; &quot; context.&quot; &lt;&lt; std::endl;
+        return( 1 );
+    }
+
+    osgViewer::Viewer viewer;
+
+    // Create a Camera that uses the above OpenGL context.
+    osg::Camera* cam = viewer.getCamera();
+    cam-&gt;setGraphicsContext( gc.get() );
+    // Must set perspective projection for fovy and aspect.
+    cam-&gt;setProjectionMatrix( osg::Matrix::perspective( 30., 
+(double)width/(double)height, 1., 100. ) );
+    // Unlike OpenGL, OSG viewport does *not* default to window dimensions.
+    cam-&gt;setViewport( new osg::Viewport( 0, 0, width, height ) );
+
+    viewer.setSceneData( root );
+
+    // for non GL3/GL4 and non GLES2 platforms we need enable the osg_ 
+uniforms that the shaders will use,
+    // you don't need thse two lines on GL3/GL4 and GLES2 specific builds 
+as these will be enable by default.
+    gc-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true);
+    gc-&gt;getState()-&gt;setUseVertexAttributeAliasing(true);
+
+    return( viewer.run() );
+}
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/031ecc10-5d72-4004-82d0-23baf6d6fa43n%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/031ecc10-5d72-4004-82d0-23baf6d6fa43n%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20201010/642be04a/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20201010/642be04a/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011259.html">[osg-users]  To set the glContextVersion number in the code, do I need cmake to configure the OSG_GL3_AVAILABLE option?
+</A></li>
+	<LI>Next message (by thread): <A HREF="011261.html">[osg-users] How to use setUseVertexAttributeAliasing?Why is there an error in the model texture display when this function is turn on?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11260">[ date ]</a>
+              <a href="thread.html#11260">[ thread ]</a>
+              <a href="subject.html#11260">[ subject ]</a>
+              <a href="author.html#11260">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,337 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to handle cameras in the scene graph when rendering to framebuffer
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20handle%20cameras%20in%20the%20scene%20graph%20when%0A%20rendering%20to%20framebuffer&In-Reply-To=%3Caabfcc24-1f88-455f-4ef0-456944759273%40texion.eu%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005717.html">
+   <LINK REL="Next"  HREF="005720.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to handle cameras in the scene graph when rendering to framebuffer</H1>
+<!--htdig_noindex-->
+    <B>Werner Modenbach</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20handle%20cameras%20in%20the%20scene%20graph%20when%0A%20rendering%20to%20framebuffer&In-Reply-To=%3Caabfcc24-1f88-455f-4ef0-456944759273%40texion.eu%3E"
+       TITLE="[osg-users] How to handle cameras in the scene graph when rendering to framebuffer">Werner.Modenbach at texion.eu
+       </A><BR>
+    <I>Mon Feb 27 02:34:56 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005717.html">[osg-users] How to handle cameras in the scene graph when rendering to framebuffer
+</A></li>
+        <LI>Next message: <A HREF="005720.html">[osg-users] How to handle cameras in the scene graph when rendering to framebuffer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5719">[ date ]</a>
+              <a href="thread.html#5719">[ thread ]</a>
+              <a href="subject.html#5719">[ subject ]</a>
+              <a href="author.html#5719">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+sorry for the delayed answer. It's carnival time here and so everybody
+is out - except me ;-)
+
+I try to give an as compressed description as possible here.
+
+The scene looks like that:
+     *
+
+* ---------------
+
+*|RootNode|
+
+*---------------
+
+*/\
+
+*------------------------------------
+
+*|ShadowScene||evtl.PPU-Prozessor|
+
+*------------------------------------
+
+*/\
+
+*------------------------------
+
+*|Switchnode||LightSource|
+
+*------------------------------
+
+*/\\\
+
+*--------------------------------
+
+*|User scene||evtl.further|
+
+*---------------|Objects |
+
+* ----------------- The further objects are the wallpaper, a magnifier etc.
+
+
+The main camera is a standard camera with perspective view and a
+trackball manipulator.
+The wallpaper class is like that:
+classCl_3D_Wallpaper:publicosg::Camera{
+
+public:
+
+Cl_3D_Wallpaper(Cl_3Dview_osg*_parent);
+
+/**This Method creates the background image. */
+
+voidsetWallpaper(constQString_path);
+
+protected:
+Cl_3Dview_osg*view;
+QStringpath;
+};
+
+
+Cl_3D_Wallpaper::Cl_3D_Wallpaper(Cl_3Dview_osg*_parent):view(_parent),path(QLatin1String(&quot;&quot;)){
+
+
+setCullingActive(false);
+
+setClearMask(0);
+
+setAllowEventFocus(false);
+
+setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+
+setRenderOrder(osg::Camera::POST_RENDER);
+
+setProjectionMatrix(osg::Matrix::ortho2D(0.0,1.0,0.0,1.0));
+
+setName(getNodeName().toStdString().c_str());
+
+osg::StateSet*ss=getOrCreateStateSet();
+
+ss-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+ss-&gt;setAttributeAndModes(newosg::Depth(osg::Depth::LEQUAL,1.0,1.0));
+
+view-&gt;installDefaultShader(ss);	// In case we are on gl3
+
+}
+
+/**DieseMethodeerzeugteineHintergrundbildanzeige,
+
+*fallsderPfadaufeineBilddateiverweist.
+
+*/
+
+voidCl_3D_Wallpaper::setWallpaper(constQString_path){
+
+          path=_path;
+
+if(!_path.isEmpty()){
+
+//================================================
+
+//DieSzenedesBildeserzeugen
+
+//================================================
+
+osg::Geode*geode=newosg::Geode();
+
+osg::Geometry*geometry=osg::createTexturedQuadGeometry(osg::Vec3(0,0,0),osg::Vec3(1,0,0),osg::Vec3(0,1,0),0,0,1,1);
+
+geode-&gt;addDrawable(geometry);
+
+osg::Texture2D*texture=view-&gt;loadTexture(_path,false);
+
+geode-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(BASE_TEXTURE_UNIT,texture,osg::StateAttribute::ON);
+
+geode-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+addChild(geode);
+
+view-&gt;installDefaultShader(geode-&gt;getOrCreateStateSet());	//In case we are on gl3
+
+}
+
+}
+
+Now the part of getting a frame buffer screenshot:
+
+/**The screen image is rendered at a pregiven dpi*/
+
+QImageCl_3Dview_osg::getHighResQImage(constint_dpi){
+
+doublescale=(double)_dpi/(double)dpi;
+
+//Calculation of image size and tiles per row
+
+intwidth=(int)(view-&gt;getGraphicsWidth());
+
+intheight=(int)(view-&gt;getGraphicsHeight());
+
+intimageWidth=(int)(width*scale);
+
+intimageHeight=(int)(height*scale);
+
+inttiles=(imageWidth-1)/width+1;
+
+         osg::ref_ptr&lt;osg::Image&gt;image=newosg::Image;
+
+
+//Creating the new camera
+    osg::ref_ptr&lt;osg::Camera&gt;  camera=newosg::Camera;
+
+camera-&gt;getOrCreateStateSet()-&gt;setGlobalDefaults();
+
+camera-&gt;setClearColor(view-&gt;getCamera()-&gt;getClearColor());
+
+camera-&gt;setViewport(newosg::Viewport(0,0,width,height));
+
+camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+
+camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+
+camera-&gt;setRenderOrder( osg::Camera::POST_RENDER); camera-&gt;addChild(view-&gt;getCamera()-&gt;getChild(0));	// The root node
+
+osg::ref_ptr&lt;osg::Image&gt;fbImage=newosg::Image;
+
+fbImage-&gt;allocateImage(width,height,1,GL_RGBA,GL_UNSIGNED_BYTE,1);
+
+camera-&gt;attach(osg::Camera::COLOR_BUFFER,fbImage.get(),0,0);
+
+//Setting the new camera a child of the main camera
+
+         view-&gt;getCamera()-&gt;addChild(camera.get());
+
+//Loop over tiles
+    osg::MatrixdviewMatrix=view-&gt;getCamera()-&gt;getViewMatrix();
+
+osg::MatrixdprojectionMatrix=view-&gt;getCamera()-&gt;getProjectionMatrix();
+
+          inty_out=imageHeight-1;
+
+for(introw=0;row&lt;tiles;row++){
+
+                   for(intcol=0;col&lt;tiles;col++){
+
+//Calculateprojectionmatrixoffsetofeachtile
+
+osg::MatrixoffsetMatrix=
+
+osg::Matrix::scale(scale,scale,1.0)*
+
+osg::Matrix::translate(scale-1-2*col,scale-1-2*row,0.0);
+
+camera-&gt;setViewMatrix(viewMatrix);
+
+camera-&gt;setProjectionMatrix(projectionMatrix*offsetMatrix);
+
+view-&gt;frame();
+image=fbImage.get();
+
+//Transferring tile into final image
+	    .......
+
+                   }
+
+y_out-=height;
+
+if(y_out&lt;0)break;
+
+}
+
+view-&gt;getCamera()-&gt;removeChild(camera.get());
+}
+
+
+The rendered image is missing my wallpaper.
+If I add the camera as a slave camera to the main camera I just get an
+empty black image.
+Actually I also don't understand the difference between slave and child
+cameras here. I know you explained it recently :-)
+Why does the slave camera give an empty image but the child camera doesn't?
+
+BTW. I wrote my code here with the background of giving an example to
+others looking for functionality like that.
+
+
+
+
+Am 24.02.2017 um 17:56 schrieb Robert Osfield:
+&gt;<i> Hi Werner,
+</I>&gt;<i>
+</I>&gt;<i> In principle what you are doing should be possible.  What is going
+</I>&gt;<i> wrong in your instance is impossible to say without seeing how you are
+</I>&gt;<i> setting up the viewer Camera's and the in scene graph Camera's.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 24 February 2017 at 16:44, Werner Modenbach
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Werner.Modenbach at texion.eu</A>&gt; wrote:
+</I>&gt;&gt;<i> Hi all,
+</I>&gt;&gt;<i> sorry for so many questions today.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> My scene graph has additional cameras as children somewhere in the scene
+</I>&gt;&gt;<i> graph.
+</I>&gt;&gt;<i> For example a hud camera for a background image.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I do screenshots by adding a slave camera to the main camera which renders
+</I>&gt;&gt;<i> the scene to the FB.
+</I>&gt;&gt;<i> Unfortunately this rendering doesn't show the parts of the nested cameras,
+</I>&gt;&gt;<i> i.e. no
+</I>&gt;&gt;<i> background wallpaper.
+</I>&gt;&gt;<i> What is the recommended way to solve this?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks for any help.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> - Werner -
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170227/50b2b679/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170227/50b2b679/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005717.html">[osg-users] How to handle cameras in the scene graph when rendering to framebuffer
+</A></li>
+	<LI>Next message: <A HREF="005720.html">[osg-users] How to handle cameras in the scene graph when rendering to framebuffer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5719">[ date ]</a>
+              <a href="thread.html#5719">[ thread ]</a>
+              <a href="subject.html#5719">[ subject ]</a>
+              <a href="author.html#5719">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

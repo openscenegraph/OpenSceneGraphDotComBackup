@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG_TEXTURE_POOL_SIZE issue
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG_TEXTURE_POOL_SIZE%20issue&In-Reply-To=%3CCAHhtjQYD%2BJ8D-JT9P6MbXhY4dHgnrDMv8wnPLBAuAq%3DDBt-EAg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004408.html">
+   <LINK REL="Next"  HREF="004410.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG_TEXTURE_POOL_SIZE issue</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG_TEXTURE_POOL_SIZE%20issue&In-Reply-To=%3CCAHhtjQYD%2BJ8D-JT9P6MbXhY4dHgnrDMv8wnPLBAuAq%3DDBt-EAg%40mail.gmail.com%3E"
+       TITLE="[osg-users] OSG_TEXTURE_POOL_SIZE issue">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Sun Oct  9 03:27:44 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004408.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+        <LI>Next message: <A HREF="004410.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4409">[ date ]</a>
+              <a href="thread.html#4409">[ thread ]</a>
+              <a href="subject.html#4409">[ subject ]</a>
+              <a href="author.html#4409">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, Robert. Thanks for quick response.
+
+Perhaps a flag in osg::Texture might be appropriate to declare whether this
+&gt;<i> Texture is
+</I>&gt;<i> suitable for reuse or not.
+</I>
+
+Perhaps. However, I have the feeling that this flag would be equivalent to
+checking if (image != NULL) in current 3.5.5 OSG code base context. I don't
+see how already assigned and active image-less texture coud survive such
+Take operation without a callback (or similar mechanism) to let texture
+owner refresh it before apply. Considering need for supporting multiple
+contexts and fact that such refresh callback would require action in draw
+stage, I see this postulate (for a refresh callback) as hard to implement
+and probably not used by users in practice. So I conclude that (image !=
+NULL) is probably a sufficient check for now ;-). Did I skip some use case ?
+
+Cheers,
+Wojtek
+
+
+2016-10-09 9:31 GMT+02:00 Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;:
+
+&gt;<i> Hi Wojtek,
+</I>&gt;<i>
+</I>&gt;<i> When I implemented the texture pool it never occurred to me that
+</I>&gt;<i> textures in the pool might be assigned to FBO's and not be suitable
+</I>&gt;<i> for reallocation. This is an oversight in it's design.
+</I>&gt;<i>
+</I>&gt;<i> From the description it sounds like the texture pool scheme needs an
+</I>&gt;<i> ability to not place texture's assigned with FBO's into the pool, or
+</I>&gt;<i> at least mark them as unsuitable for reuse.  Perhaps a flag in
+</I>&gt;<i> osg::Texture might be appropriate to declare whether this Texture is
+</I>&gt;<i> suitable for reuse or not.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 8 October 2016 at 23:16, Wojciech Lewandowski
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">w.p.lewandowski at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Hi, Robert,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I believe we encountered an issue (bug?) related to maxTexturePoolSize
+</I>&gt;<i> &gt; handling. Our application is osgEarth + few high res overlays. We set
+</I>&gt;<i> &gt; OSG_TEXTURE_POOL_SIZE = 350 MB. It was recommended to us as one of env
+</I>&gt;<i> vars
+</I>&gt;<i> &gt; to let osgEarth perform optimally. Overlays are rendered as RTT cameras
+</I>&gt;<i> (FBO
+</I>&gt;<i> &gt; + 4K x4K texture2D attachments).  Overlay textures are not refreshed
+</I>&gt;<i> every
+</I>&gt;<i> &gt; frame. They are refreshed when some inputs change but this does not
+</I>&gt;<i> happen
+</I>&gt;<i> &gt; every frame.  And apparently thats the problem with maxTexturePoolSize.
+</I>&gt;<i> When
+</I>&gt;<i> &gt; we pass the texture limit and create new overlay texture, one of
+</I>&gt;<i> currently
+</I>&gt;<i> &gt; used overlay texture GL objects gets stolen. Suddenly new overlay uses
+</I>&gt;<i> that
+</I>&gt;<i> &gt; old GL texture object but old overlay texture is reset, its texture
+</I>&gt;<i> object
+</I>&gt;<i> &gt; is gone and scene looks bad.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I have isolated this issue to handling of maxTexturePoolSize limit in
+</I>&gt;<i> &gt; TextureObjectSet::takeOrGenerate(Texture* texture). I believe I
+</I>&gt;<i> understand
+</I>&gt;<i> &gt; that this policy may work with Textures which have Images attached. Even
+</I>&gt;<i> if
+</I>&gt;<i> &gt; such texture has its GL object reset it may allocate or reuse new one and
+</I>&gt;<i> &gt; reload the data from Image when its applied again. But there is no such
+</I>&gt;<i> &gt; chance for texture which was dynamically rendered in FBO (and in fact
+</I>&gt;<i> still
+</I>&gt;<i> &gt; attached to that FBO). In our app there is a multitude of textures with
+</I>&gt;<i> &gt; images associated. Their GL objects can be safely &quot;borrowed&quot; if  memory
+</I>&gt;<i> &gt; limit is passed. But non of them is taken and unfortunately we are hit
+</I>&gt;<i> &gt; exactly where it hurts the most: in our FBO overlays.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; So my question is: Is this a bug or we missed some flag to prevent
+</I>&gt;<i> texture
+</I>&gt;<i> &gt; from scraping in TextureObjectSet::takeOrGenerate ?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Cheers,
+</I>&gt;<i> &gt; Wojtek Lewandowski
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-</A>
+</I>&gt;<i> openscenegraph.org
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161009/0a32c418/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161009/0a32c418/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004408.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+	<LI>Next message: <A HREF="004410.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4409">[ date ]</a>
+              <a href="thread.html#4409">[ thread ]</a>
+              <a href="subject.html#4409">[ subject ]</a>
+              <a href="author.html#4409">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

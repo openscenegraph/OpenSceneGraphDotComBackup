@@ -1,0 +1,66 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Hartwig,&lt;br&gt;&lt;br&gt;&lt;/div&gt;As&nbsp;far&nbsp;as&nbsp;I&nbsp;can&nbsp;tell&nbsp;the&nbsp;code&nbsp;and&nbsp;comment&nbsp;is&nbsp;correct,&nbsp;the&nbsp;unref&nbsp;afterwards&nbsp;is&nbsp;to&nbsp;catch&nbsp;cases&nbsp;like:&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;osg::Group*&nbsp;parent&nbsp;=&nbsp;new&nbsp;osg::Group;&lt;/div&gt;&lt;div&gt;osg::Node*&nbsp;child&nbsp;=&nbsp;new&nbsp;osg::Geode;&lt;/div&gt;&lt;div&gt;parent-&gt;addChild(child);&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;osg::ref_ptr&lt;osg::Node&gt;&nbsp;ptr&nbsp;=&nbsp;parent;&nbsp;//&nbsp;takes&nbsp;a&nbsp;reference&nbsp;to&nbsp;pararent&lt;br&gt;&lt;br&gt;&lt;/div&gt;ptr&nbsp;=&nbsp;parent-&gt;getChild(0);&nbsp;//&nbsp;should&nbsp;take&nbsp;a&nbsp;references&nbsp;to&nbsp;child&nbsp;and&nbsp;then&nbsp;unref&nbsp;the&nbsp;parent&nbsp;deleting&nbsp;it&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;div&gt;Now&nbsp;think&nbsp;what&nbsp;would&nbsp;happen&nbsp;if&nbsp;you&nbsp;unref&nbsp;first...&nbsp;it&nbsp;would&nbsp;delete&nbsp;the&nbsp;parent&nbsp;and&nbsp;it&#39;s&nbsp;child,&nbsp;then&nbsp;you&#39;d&nbsp;assign&nbsp;a&nbsp;dangling&nbsp;pointer.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;If&nbsp;the&nbsp;compiler&#39;s&nbsp;optimizer&nbsp;is&nbsp;breaking&nbsp;this&nbsp;then...&nbsp;it&#39;s&nbsp;a&nbsp;terrible&nbsp;compiler. &nbsp;It&nbsp;does&nbsp;highlight&nbsp;how&nbsp;subtle&nbsp;ref&nbsp;counting&nbsp;can&nbsp;be,&nbsp;and&nbsp;how&nbsp;much&nbsp;optimizers&nbsp;can&#39;t&nbsp;just&nbsp;blindly&nbsp;do&nbsp;certain&nbsp;types&nbsp;of&nbsp;optimization&nbsp;like&nbsp;re-ordering.&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;24&nbsp;October&nbsp;2017&nbsp;at&nbsp;23:34,&nbsp;Hartwig&nbsp;Wiesmann&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:hartwig.wiesmann@skywind.eu&quot;&nbsp;target=&quot;_blank&quot;&gt;hartwig.wiesmann@skywind.eu&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+in&nbsp;ref_ptr&nbsp;you&nbsp;find&nbsp;the&nbsp;following&nbsp;code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;template&lt;class&nbsp;Other&gt;&nbsp;void&nbsp;assign(const&nbsp;ref_ptr&lt;Other&gt;&amp;&nbsp;rp)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(_ptr==rp._ptr)&nbsp;return;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;T*&nbsp;tmp_ptr&nbsp;=&nbsp;_ptr;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_ptr&nbsp;=&nbsp;rp._ptr;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(_ptr)&nbsp;_ptr-&gt;ref();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;unref&nbsp;second&nbsp;to&nbsp;prevent&nbsp;any&nbsp;deletion&nbsp;of&nbsp;any&nbsp;object&nbsp;which&nbsp;might&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;be&nbsp;referenced&nbsp;by&nbsp;the&nbsp;other&nbsp;object.&nbsp;i.e&nbsp;rp&nbsp;is&nbsp;child&nbsp;of&nbsp;the&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;original&nbsp;_ptr.&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(tmp_ptr)&nbsp;tmp_ptr-&gt;unref();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;was&nbsp;puzzled&nbsp;by&nbsp;the&nbsp;comment:&nbsp;actually,&nbsp;there&nbsp;is&nbsp;nothing&nbsp;that&nbsp;prevents&nbsp;an&nbsp;optimiser&nbsp;to&nbsp;re-write&nbsp;the&nbsp;code&nbsp;to&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(tmp_ptr)&nbsp;tmp_ptr-&gt;unref();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(_ptr)&nbsp;_ptr-&gt;ref();&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+or&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; _ptr-&gt;unref();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_ptr&nbsp;=&nbsp;rp._ptr;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(_ptr)&nbsp;_ptr-&gt;ref();&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+It&nbsp;seems&nbsp;to&nbsp;be&nbsp;that&nbsp;it&nbsp;has&nbsp;not&nbsp;happened,&nbsp;yet,&nbsp;respectively&nbsp;the&nbsp;scenario&nbsp;described&nbsp;in&nbsp;the&nbsp;comment&nbsp;did&nbsp;not&nbsp;occur,&nbsp;but&nbsp;this&nbsp;does&nbsp;not&nbsp;mean&nbsp;that&nbsp;it&nbsp;cannot&nbsp;happen,&nbsp;or?&lt;br&gt;<br>
+Actually,&nbsp;I&nbsp;do&nbsp;not&nbsp;see&nbsp;a&nbsp;solution&nbsp;for&nbsp;the&nbsp;described&nbsp;scenario,&nbsp;so&nbsp;probably&nbsp;the&nbsp;comment&nbsp;should&nbsp;be&nbsp;removed&nbsp;or&nbsp;changed?&nbsp;But&nbsp;in&nbsp;this&nbsp;case&nbsp;the&nbsp;code&nbsp;can&nbsp;be&nbsp;simplified,&nbsp;too.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Hartwig[/code]&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=72242#72242&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.&lt;wbr&gt;org/viewtopic.php?p=72242#&lt;wbr&gt;72242&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

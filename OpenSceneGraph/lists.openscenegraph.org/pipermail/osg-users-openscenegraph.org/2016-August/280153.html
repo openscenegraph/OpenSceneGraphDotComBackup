@@ -1,0 +1,107 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] ShapeDrawable refactored,	now subclasses from osg::Geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ShapeDrawable%20refactored%2C%0A%09now%20subclasses%20from%20osg%3A%3AGeometry&In-Reply-To=%3CCAFN7Y%2BU2h9Z1yyd-2VKfY11YuTHdwdMHPcbo4zQBBUq8SNh6ig%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003933.html">
+   <LINK REL="Next"  HREF="280157.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] ShapeDrawable refactored,	now subclasses from osg::Geometry</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ShapeDrawable%20refactored%2C%0A%09now%20subclasses%20from%20osg%3A%3AGeometry&In-Reply-To=%3CCAFN7Y%2BU2h9Z1yyd-2VKfY11YuTHdwdMHPcbo4zQBBUq8SNh6ig%40mail.gmail.com%3E"
+       TITLE="[osg-users] ShapeDrawable refactored,	now subclasses from osg::Geometry">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Aug 17 13:49:54 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003933.html">[osg-users] Problems with osgFX::Outline node
+</A></li>
+        <LI>Next message: <A HREF="280157.html">[osg-users] Render to texture ONLY?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280153">[ date ]</a>
+              <a href="thread.html#280153">[ thread ]</a>
+              <a href="subject.html#280153">[ subject ]</a>
+              <a href="author.html#280153">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi All,
+
+As part of the Vertex Array Object support work that I have been doing
+on the git vertex_array_object branch I have tackled a long time issue
+with ShapeDrawable.
+
+I have refactored ShapeDrawable so that it now subclasses from
+osg::Geometry and builds all the vertex, normal, texcoord and color
+arrays and primitives that are required to render the attached
+osg::Shape.  This means fast paths are all used for the first with
+ShapeDrawable.
+
+To do the building of the required vertex array and primitive sets I
+have created an osg::BuildShapeGeometryVisitor that can now be found
+in the include/osg/Shape header.  The ShapeDrawable uses this visitor
+to do it's work.  This visitor is a ShapeVisitor rather than a
+NodeVisitor, so it's something you give to a shape to visitor i.e.
+
+osg::ref_ptr&lt;osg::Geometry&gt; geometry = new osg::Geometry;
+osg::BuildShapeGeometryVisitor dsv(geometry, tessellationHints);
+ shape-&gt;accept(dsv);
+
+This fills in the geometry so it can then be attached to the scene
+graph and render, intersected etc.  The visitor can be run on multiple
+Shape objects passing once it's initialized with it's geometry pointer
+so can place multiple Shape's into a single geometry.
+
+The ShapeDrawable also support CompositeShape so you can do the
+multiple shapes in a singel osg::Geometry via this route as well.
+
+The advantage with this new osg::Geometry based ShapeDrawable and
+BuildShapeGeometryVisitor is that nothing needs to be computed on the
+fly anymore so intersections and rendering are all faster.  It's also
+fully compatible with VBO's and VAO's.
+
+So... for the first time the OSG will be able to render shape efficiently.
+
+This is all checked in the vertex_array_object branch, once this
+branch is stable and tested out in the community I'll merge with git
+master and will then be part of the up coming OSG-3.6 release.
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003933.html">[osg-users] Problems with osgFX::Outline node
+</A></li>
+	<LI>Next message: <A HREF="280157.html">[osg-users] Render to texture ONLY?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280153">[ date ]</a>
+              <a href="thread.html#280153">[ thread ]</a>
+              <a href="subject.html#280153">[ subject ]</a>
+              <a href="author.html#280153">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

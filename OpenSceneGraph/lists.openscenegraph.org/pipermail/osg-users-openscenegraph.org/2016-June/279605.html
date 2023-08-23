@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Cannot stop rendering slave camera
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Cannot%20stop%20rendering%20slave%20camera&In-Reply-To=%3C1465981647.m2f.67631%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279602.html">
+   <LINK REL="Next"  HREF="003384.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Cannot stop rendering slave camera</H1>
+<!--htdig_noindex-->
+    <B>Etienne de Sarrieu</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Cannot%20stop%20rendering%20slave%20camera&In-Reply-To=%3C1465981647.m2f.67631%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Cannot stop rendering slave camera">etienne.desarrieu at altran.com
+       </A><BR>
+    <I>Wed Jun 15 02:07:27 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279602.html">[osg-users] OSG on Android with NDK 12 and clang++
+</A></li>
+        <LI>Next message: <A HREF="003384.html">[osg-users] Cannot stop rendering slave camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279605">[ date ]</a>
+              <a href="thread.html#279605">[ thread ]</a>
+              <a href="subject.html#279605">[ subject ]</a>
+              <a href="author.html#279605">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+Due to performance consumption, I am trying to disable rendering of a slave camera, but it seems impossible. The camera is _pov_camera, and is defined as below :
+
+
+Code:
+void MySensor::initialize()
+{
+   Sensor::initialize();
+   
+   // Master camera depth texture
+   _input_depth = new osg::Texture2D();
+   _input_depth-&gt;setTextureSize(_w, _h);
+   _input_depth-&gt;setInternalFormat(GL_DEPTH_COMPONENT24);
+   _input_depth-&gt;setSourceFormat(GL_DEPTH_COMPONENT);
+   _input_depth-&gt;setSourceType(GL_FLOAT);
+   _input_depth-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
+   _input_depth-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
+   _view-&gt;getCamera()-&gt;attach(osg::Camera::DEPTH_BUFFER, _input_depth);
+   
+   // Point of view depth texture
+   _pov_depth = new osg::Texture2D();
+   _pov_depth-&gt;setTextureSize(_w, _h);
+   _pov_depth-&gt;setInternalFormat(GL_DEPTH_COMPONENT24);
+   _pov_depth-&gt;setSourceFormat(GL_DEPTH_COMPONENT);
+   _pov_depth-&gt;setSourceType(GL_FLOAT);
+   _pov_depth-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+   _pov_depth-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+   
+   // Point of view camera
+   _pov_camera = new osg::Camera();
+   _pov_camera-&gt;setViewport(0., 0., _w, _h);
+   _pov_camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+   _pov_camera-&gt;setClearColor(Color(1., 0., 0., 1.));
+   _pov_camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   _pov_camera-&gt;setCullMask(Sensor::EXT);
+   _pov_camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+   _pov_camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+   _pov_camera-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+   _pov_camera-&gt;attach(osg::Camera::DEPTH_BUFFER, _pov_depth);
+   _pov_camera-&gt;setGraphicsContext(_view-&gt;getCamera()-&gt;getGraphicsContext());
+   //_was_on = false;_autor=false;
+   _view-&gt;addSlave(_pov_camera, true);
+   
+   _pov_camera-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(new osg::CullFace(osg::CullFace::FRONT));
+
+(...)
+}
+
+
+
+
+The _pov_camera is used to compute shadows on a map. But it consumes much resources from CPU whereas I only compute shadows from time to time.
+
+I tried to remove slave camera after using it :
+
+Code:
+
+		   int result = _view-&gt;findSlaveIndexForCamera(_pov_camera);
+		   if (result &lt; _view-&gt;getNumSlaves())
+		   {
+			   _view-&gt;removeSlave(result);
+		   }
+		   static_cast&lt;osgViewer::Renderer*&gt;(_pov_camera-&gt;getRenderer())-&gt;setDone(true);
+
+
+
+
+After using it but it does not change anything (whereas if I do not add the slave camera at the beginning performances are OK...). Why removing slave camera does not permit to roll back completely on adding it?
+Do you know a way to disable my _pov_camera?
+
+Thank you!
+
+Cheers,
+Etienne
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicb9c3.php?p=67631#67631">http://forum.openscenegraph.org/viewtopic.php?p=67631#67631</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279602.html">[osg-users] OSG on Android with NDK 12 and clang++
+</A></li>
+	<LI>Next message: <A HREF="003384.html">[osg-users] Cannot stop rendering slave camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279605">[ date ]</a>
+              <a href="thread.html#279605">[ thread ]</a>
+              <a href="subject.html#279605">[ subject ]</a>
+              <a href="author.html#279605">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

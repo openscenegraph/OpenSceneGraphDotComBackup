@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] RayTracedTechnique hangs with Intel HD Graphics	-	Update
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RayTracedTechnique%20hangs%20with%20Intel%20HD%20Graphics%0A%09-%09Update&In-Reply-To=%3C1504257962359.44370%40csiro.au%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006713.html">
+   <LINK REL="Next"  HREF="006722.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] RayTracedTechnique hangs with Intel HD Graphics	-	Update</H1>
+<!--htdig_noindex-->
+    <B>Clement.Chu at csiro.au</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RayTracedTechnique%20hangs%20with%20Intel%20HD%20Graphics%0A%09-%09Update&In-Reply-To=%3C1504257962359.44370%40csiro.au%3E"
+       TITLE="[osg-users] RayTracedTechnique hangs with Intel HD Graphics	-	Update">Clement.Chu at csiro.au
+       </A><BR>
+    <I>Fri Sep  1 02:26:04 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006713.html">[osg-users] RayTracedTechnique hangs with Intel HD Graphics -	Update
+</A></li>
+        <LI>Next message: <A HREF="006722.html">[osg-users] RayTracedTechnique hangs with Intel HD Graphics -	Update
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6715">[ date ]</a>
+              <a href="thread.html#6715">[ thread ]</a>
+              <a href="subject.html#6715">[ subject ]</a>
+              <a href="author.html#6715">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+
+  Since I don't know how to debug or print message in shader code, I am not sure what exact value of vertex.  I guess the value of vertex is not in the range (0.0 to 1.0), so texture3D method cannot get correct color value by coordinate.  In file volume_frag.cpp,  variable texcoord is assigned from vertex data. If vertex data is not the 0.0f to 1.0f range, variable color (type vec4) will become strange value.  Even I added some codes to make sure values of color.x, color.y, color.z and color.w  in the range (0.0 to 1.0), it still cause the crash. Unless vertex is in the range (0.0 to 1.0). So far, this problem occurs in Intel HD Graphics 520 or above.  My old laptop is Intel HD Graphics 3000, but it works fine and Nvidia cards work fine too.
+
+
+
+Regards,
+Clement Chu
+________________________________
+From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; on behalf of Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+Sent: Friday, 1 September 2017 18:29
+To: OpenSceneGraph Users
+Subject: Re: [osg-users] RayTracedTechnique hangs with Intel HD Graphics - Update
+
+Hi Clement,
+
+The numerical issue you have found causing a crash is a curious one.
+
+The gl_Vertex isn't a normalized on any system, osgVolume::RayTracedTechnique does use a unit cube for it's geometry though, so the vertex data should all be in the 0.0f to 1.0f range.  Perhaps the intel driver/hardware combination is resulting in some numerical precision issue so that the values are going slightly outside the 0 to 1.0f range, but even if it does I wouldn't expect the fragment shaders to suddenly have problems.
+
+Is there are specific line in the shader that you think is cause the crash?
+
+FYI, osgVolume checks for the shader/volume.vert and shader/volume.frag filenames first then fallsback to the built in shaders that are found in the src/osgVolume/Shaders/volume_frag.cpp.  The shader/volume.frag can be found in OpenSceneGraph-Data/shader so if you have this available and it's on the OSG_FILE_PATH then you should be able to edit the shader files without recompiling the application.
+
+Robert.
+
+Robert.
+
+On 1 September 2017 at 08:11, &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Clement.Chu at csiro.au</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Clement.Chu at csiro.au</A>&gt;&gt; wrote:
+Hi,
+
+   Finally I found where causes the problem.  For some reasons, gl_Vertex is not normalized.  I looked at osg shader source code (src\osgVolume\Shaders).  For example, in file volume_frag.cpp,
+
+vec4 t0 = vertexPos;
+vec4 te = cameraPos;
+
+// by default te did to check the range (0 and 1), but t0 did not.
+// If I added  some codes to check the range, then the problem is completed gone.
+
+if (t0.x&lt;0.0) t0.x = 0.0; if (t0.x&gt;1.0) t0.x = 1.0;
+if (t0.y&lt;0.0) t0.y = 0.0; if (t0.y&gt;1.0) t0.y = 1.0;
+f (t0.z&lt;0.0) t0.z = 0.0; if (t0.z&gt;1.0) t0.z = 1.0;
+
+
+I believe the problem is related to GLSL version and latest Intel HD Graphics driver is using higher version of GLSL, but gl_Vertex does not normalize or the value is just over 1 or less then 0 (eg. 1.00001).  Then it causes the crash when running the sampling loop.  I am not an expert on GLSL, so I would like to confirm the best solution to handle this problem. Thanks.
+
+
+Regards,
+Clement Chu
+
+________________________________________
+From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt;&gt; on behalf of <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Clement.Chu at csiro.au</A> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Clement.Chu at csiro.au</A>&gt;
+Sent: Wednesday, 30 August 2017 17:31
+To: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+Subject: [ExternalEmail] [osg-users] RayTracedTechnique hangs with Intel HD Graphics
+
+Hi,
+
+   My program uses RayTracedTechnique for volume rendering, but it hangs with Intel HD graphics 520, 530 and 620. My old laptop works fine which is using Intel HD Graphic 3000.  Other machines with Nvidia cards are working fine too.  I believe the problem is on shaders in the sampling loop.  My program is using osg 3.2.3.  I also tried to upgrade to osg 3.4.1, but the same problem occurred with Intel HD Graphic 520, 530 and 620.  Do anyone have similar problem and any solution to fix it?  Many thanks.
+
+
+Regards,
+Clement Chu
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170901/b58f3b56/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170901/b58f3b56/attachment.htm</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006713.html">[osg-users] RayTracedTechnique hangs with Intel HD Graphics -	Update
+</A></li>
+	<LI>Next message: <A HREF="006722.html">[osg-users] RayTracedTechnique hangs with Intel HD Graphics -	Update
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6715">[ date ]</a>
+              <a href="thread.html#6715">[ thread ]</a>
+              <a href="subject.html#6715">[ subject ]</a>
+              <a href="author.html#6715">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

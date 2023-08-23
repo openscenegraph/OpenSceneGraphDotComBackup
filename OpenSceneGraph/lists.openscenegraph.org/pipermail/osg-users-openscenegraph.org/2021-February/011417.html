@@ -1,0 +1,197 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Correct time to check shader/program info log
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Correct%20time%20to%20check%20shader/program%20info%20log&In-Reply-To=%3CCAHhtjQa21xk9on-tv7g4P5LZ9Lks2xHiUzg9NQJnihf8Qs6RMQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011412.html">
+   <LINK REL="Next"  HREF="011413.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Correct time to check shader/program info log</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Correct%20time%20to%20check%20shader/program%20info%20log&In-Reply-To=%3CCAHhtjQa21xk9on-tv7g4P5LZ9Lks2xHiUzg9NQJnihf8Qs6RMQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Correct time to check shader/program info log">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Wed Feb 24 12:21:15 PST 2021</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011412.html">[osg-users] Correct time to check shader/program info log
+</A></li>
+        <LI>Next message (by thread): <A HREF="011413.html">[osg-users] What does this OsgAnimation: : Vec3CubicBezier three p, I, o parameters  mean?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11417">[ date ]</a>
+              <a href="thread.html#11417">[ thread ]</a>
+              <a href="subject.html#11417">[ subject ]</a>
+              <a href="author.html#11417">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi James,
+
+Its not direct answer to your questions but a code snippet overloading
+Program which I used to change shader variant depending on compilation/link
+result (from most advanced to more basic fallbacks).  This approach was
+quite simple I tested Program compilation result including compilation/link
+log obtained from PCP(PerContextProgram ?) by simply checking if my Program
+was really applied after Program::apply() and if not adopted fallback to
+less demanding shaders. Not sure if this will solve your problem but
+perhaps will be a step forward to proper solution.
+
+class MyProgram: public osg::Program
+{
+public:
+    MyProgram( ): _shaderVariant( DefaultShaderVariant )
+    {
+        osg::Shader * vertShader = osgDB::readShaderFile(
+osg::Shader::VERTEX, &quot;MyVertexShader.glsl&quot; );
+        osg::Shader * fragShader = osgDB::readShaderFile(
+osg::Shader::FRAGMENT, &quot;MyFragmentShader.glsl&quot; );
+
+        addShader( vertShader );
+        addShader( fragShader );
+
+        notified.resize( DefaultShaderVariant + 1 );
+    }
+
+    void setDigitDefine( std::string MACRO, int DIGIT ) const
+    {
+          //  For brevity code removed but
+          //  this function simply checks shader sources and
+          //   finds all ocurences of
+          // #define MACRO DEFAULT_DIGIT
+          //  and replaces them  to
+          // #define MACRO DIGIT
+          // to select shader codepath dependant on macro value
+    }
+
+    void apply( osg::State&amp; state ) const
+    {
+        while( _shaderVariant &gt; 0 )
+        {
+            osg::Program::apply( state );
+
+            // Break if program was applied ie its not null
+            if( state.getLastAppliedProgramObject() != NULL )
+            {
+                if( !notified[0] )
+                {
+                    std::cout&lt;&lt; &quot;INFO: MyProgram - GLSL Compilation
+Succeeded.&quot; &lt;&lt; std::endl;
+                    std::cout&lt;&lt; &quot;  Shader variant: &quot; &lt;&lt; _shaderVariant &lt;&lt;
+std::endl;
+                    std::cout&lt;&lt; &quot;  GL Vendor:      &quot; &lt;&lt;
+glGetString(GL_VENDOR) &lt;&lt; std::endl;
+                    std::cout&lt;&lt; &quot;  GL Renderer:    &quot; &lt;&lt;
+glGetString(GL_RENDERER) &lt;&lt; std::endl;
+                    std::cout&lt;&lt; &quot;  GL Version:     &quot; &lt;&lt;
+glGetString(GL_VERSION) &lt;&lt; std::endl;
+                    notified[0] = true;
+                }
+                break;
+            }
+
+            if( !notified[_shaderVariant] )
+            {
+                std::string infoLog;
+                getPCP( state )-&gt;getInfoLog( infoLog );
+                std::cout&lt;&lt; &quot;ERROR: MyProgram - GLSL Compilation Failed.&quot;
+&lt;&lt; std::endl;
+                std::cout&lt;&lt; &quot;  Shader variant: &quot; &lt;&lt; _shaderVariant &lt;&lt;
+std::endl;
+                std::cout&lt;&lt; &quot;  GL Vendor: &quot; &lt;&lt; glGetString(GL_VENDOR) &lt;&lt;
+std::endl;
+                std::cout&lt;&lt; &quot;  GL Renderer: &quot; &lt;&lt; glGetString(GL_RENDERER)
+&lt;&lt; std::endl;
+                std::cout&lt;&lt; &quot;  GL Version: &quot; &lt;&lt; glGetString(GL_VERSION) &lt;&lt;
+std::endl;
+                std::cout&lt;&lt; infoLog &lt;&lt; std::endl;
+
+                notified[_shaderVariant] = true;
+            }
+
+            // Switch to fallback variants if program link failed
+            setDigitDefine( &quot;SHADER_VARIANT&quot;, --_shaderVariant );
+        }
+    }
+
+protected:
+    mutable int _shaderVariant;
+    static const int DefaultShaderVariant = 2;
+    mutable std::vector&lt; bool &gt; notified;
+};
+
+Cheers,
+Wojtek Lewandowski
+
+&#347;r., 24 lut 2021 o 10:30 James Turner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">zakalawe at mac.com</A>&gt; napisa&#322;(a):
+
+&gt;<i> Hello,
+</I>&gt;<i>
+</I>&gt;<i> I&#8217;m trying to extract shader compile and link info logs at runtime, so I
+</I>&gt;<i> can log+report them.
+</I>&gt;<i>
+</I>&gt;<i> I note osg::Program::getGlProgramInfoLog exists, obviously it takes a
+</I>&gt;<i> context ID since the PerContextProgram is what has the actual errors.
+</I>&gt;<i>
+</I>&gt;<i> Two things I need help with:
+</I>&gt;<i>
+</I>&gt;<i> 1) does the program log also contain shader compile errors, or is this
+</I>&gt;<i> only the link log? I don&#8217;t see a corresponding APi on osg::Shader, is why I
+</I>&gt;<i> ask
+</I>&gt;<i>
+</I>&gt;<i> 2) *when* can I call the log functions and expect to get valid results?
+</I>&gt;<i> Given the OSg drawing model, obviously the log won&#8217;t be available
+</I>&gt;<i> immediately. Do I need to use a DrawCallback to check the log after the
+</I>&gt;<i> first time the Program has been used?
+</I>&gt;<i>
+</I>&gt;<i> I looked for examples of using getGlProgramInfoLog but unfortunately
+</I>&gt;<i> couldn't find any, maybe pointing me at one would answer both of these
+</I>&gt;<i> points.
+</I>&gt;<i>
+</I>&gt;<i> Kind regards,
+</I>&gt;<i> James Turner
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20210224/9d4d65b4/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20210224/9d4d65b4/attachment.html</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011412.html">[osg-users] Correct time to check shader/program info log
+</A></li>
+	<LI>Next message (by thread): <A HREF="011413.html">[osg-users] What does this OsgAnimation: : Vec3CubicBezier three p, I, o parameters  mean?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11417">[ date ]</a>
+              <a href="thread.html#11417">[ thread ]</a>
+              <a href="subject.html#11417">[ subject ]</a>
+              <a href="author.html#11417">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

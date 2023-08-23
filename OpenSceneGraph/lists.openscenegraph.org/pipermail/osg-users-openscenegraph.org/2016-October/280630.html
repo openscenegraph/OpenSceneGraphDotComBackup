@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG_TEXTURE_POOL_SIZE issue
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG_TEXTURE_POOL_SIZE%20issue&In-Reply-To=%3CCAHhtjQZD0_rx2FTkBobPSXhLOnV1cCy7x10EiFT0eVci7EBiag%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280622.html">
+   <LINK REL="Next"  HREF="004408.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG_TEXTURE_POOL_SIZE issue</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG_TEXTURE_POOL_SIZE%20issue&In-Reply-To=%3CCAHhtjQZD0_rx2FTkBobPSXhLOnV1cCy7x10EiFT0eVci7EBiag%40mail.gmail.com%3E"
+       TITLE="[osg-users] OSG_TEXTURE_POOL_SIZE issue">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Sat Oct  8 15:16:15 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280622.html">[osg-users] How to get points lying on a plane cutting a point	cloud?
+</A></li>
+        <LI>Next message: <A HREF="004408.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280630">[ date ]</a>
+              <a href="thread.html#280630">[ thread ]</a>
+              <a href="subject.html#280630">[ subject ]</a>
+              <a href="author.html#280630">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, Robert,
+
+I believe we encountered an issue (bug?) related to maxTexturePoolSize
+handling. Our application is osgEarth + few high res overlays. We set
+OSG_TEXTURE_POOL_SIZE = 350 MB. It was recommended to us as one of env vars
+to let osgEarth perform optimally. Overlays are rendered as RTT cameras
+(FBO + 4K x4K texture2D attachments).  Overlay textures are not refreshed
+every frame. They are refreshed when some inputs change but this does not
+happen every frame.  And apparently thats the problem with
+maxTexturePoolSize. When we pass the texture limit and create new overlay
+texture, one of currently used overlay texture GL objects gets stolen.
+Suddenly new overlay uses that old GL texture object but old overlay
+texture is reset, its texture object is gone and scene looks bad.
+
+I have isolated this issue to handling of maxTexturePoolSize limit in
+TextureObjectSet::takeOrGenerate(Texture* texture). I believe I understand
+that this policy may work with Textures which have Images attached. Even if
+such texture has its GL object reset it may allocate or reuse new one and
+reload the data from Image when its applied again. But there is no such
+chance for texture which was dynamically rendered in FBO (and in fact still
+attached to that FBO). In our app there is a multitude of textures with
+images associated. Their GL objects can be safely &quot;borrowed&quot; if  memory
+limit is passed. But non of them is taken and unfortunately we are hit
+exactly where it hurts the most: in our FBO overlays.
+
+So my question is: Is this a bug or we missed some flag to prevent texture
+from scraping in TextureObjectSet::takeOrGenerate ?
+
+Cheers,
+Wojtek Lewandowski
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161009/54856271/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161009/54856271/attachment-0001.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280622.html">[osg-users] How to get points lying on a plane cutting a point	cloud?
+</A></li>
+	<LI>Next message: <A HREF="004408.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280630">[ date ]</a>
+              <a href="thread.html#280630">[ thread ]</a>
+              <a href="subject.html#280630">[ subject ]</a>
+              <a href="author.html#280630">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

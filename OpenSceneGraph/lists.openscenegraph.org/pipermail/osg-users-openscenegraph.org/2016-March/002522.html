@@ -1,0 +1,163 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Running OSG models on OpenGLES2.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Running%20OSG%20models%20on%20OpenGLES2.0&In-Reply-To=%3CE439C2F435589E4DA34D847245F141A4B1EB4864%40XSJ-PSEXMBX01.xlnx.xilinx.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002520.html">
+   <LINK REL="Next"  HREF="002523.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Running OSG models on OpenGLES2.0</H1>
+<!--htdig_noindex-->
+    <B>Hyun Kwon</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Running%20OSG%20models%20on%20OpenGLES2.0&In-Reply-To=%3CE439C2F435589E4DA34D847245F141A4B1EB4864%40XSJ-PSEXMBX01.xlnx.xilinx.com%3E"
+       TITLE="[osg-users] Running OSG models on OpenGLES2.0">hyun.kwon at xilinx.com
+       </A><BR>
+    <I>Mon Mar 14 01:16:27 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002520.html">[osg-users] Running OSG models on OpenGLES2.0
+</A></li>
+        <LI>Next message: <A HREF="002523.html">[osg-users] Running OSG models on OpenGLES2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2522">[ date ]</a>
+              <a href="thread.html#2522">[ thread ]</a>
+              <a href="subject.html#2522">[ subject ]</a>
+              <a href="author.html#2522">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sebastian,
+
+Thanks for the reply.
+
+________________________________
+From: osg-users [<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] on behalf of Sebastian Messerschmidt [<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A>]
+Sent: Sunday, March 13, 2016 4:03 AM
+To: OpenSceneGraph Users
+Subject: Re: [osg-users] Running OSG models on OpenGLES2.0
+
+Hi Hyun,
+
+
+Hi Chris,
+
+I tried most of examples. Now I'm focusing on glsl_simple.osgt as it looks simple, but only the second row of shapes shows. If I modify the vertex shader a little, I get to see both first/second row.
+Can you tell us which platform you are using?  You usually don't have to add precision qualifiers to make shaders work.
+
+I have Xilinx ZynqMP SoC with MALI 400MP, and I'm running Ubuntu on it. I also have Yocto built rootfs. I've integrated the MALI OpenGLES2 library/driver there, and I'm building OSG manually. It fails to compile if I don't add the precision for float &amp; int in shaders. The OSG build configuration is more or less as below (it's for 3.4.0), with some addition to point to EGL/OPENGLES2 libraries and headers:
+
+cmake \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DBUILD_OSG_EXAMPLES=ON \
+                -DOPENGL_PROFILE=GLES2 \
+                -DOPENGL_glu_LIBRARY= \
+                -DGL_HEADER_HAS_GLINT64:INTERNAL=0 \
+                -DGL_HEADER_HAS_GLUINT64:INTERNAL=0 \
+                -DOSG_GLU_AVAILABLE=OFF \
+                -DOSG_GL1_AVAILABLE=OFF \
+                -DOSG_GL2_AVAILABLE=OFF \
+                -DOSG_GL3_AVAILABLE=OFF \
+                -DOSG_GLES1_AVAILABLE=OFF \
+                -DOSG_GLES2_AVAILABLE=ON \
+                -DOPENGL_egl_LIBRARY='-lEGL' \
+                -DOPENGL_LIBRARY='-lGLESv2' \
+                -DOSG_GL_DISPLAYLISTS_AVAILABLE=OFF \
+                -DOSG_GL_MATRICES_AVAILABLE=OFF \
+                -DOSG_GL_VERTEX_FUNCS_AVAILABLE=OFF \
+                -DOSG_GL_VERTEX_ARRAY_FUNCS_AVAILABLE=OFF \
+                -DOSG_GL_FIXED_FUNCTION_AVAILABLE=OFF \
+                -DOSG_CPP_EXCEPTIONS_AVAILABLE=OFF \
+                -DPOPPLER_HAS_CAIRO_EXITCODE=0 \
+
+I've received some OSG model (file.osg) from someone, and I was able to run it on the desktop (OpenGL). I was told the OSG model runs on OpenGLES2.0. For me to run it on OpenGLES2, I added the precision qualifiers to build, but the result still doesn't look correct. I'm not sure if more / what modification is needed. For example, I modified the OSG shader generator, but it didn't help. Does OSG layers completely abstract underlying APIs (OpenGL, OpenGLES,,,), meaning the OSG models are API independent? or does each OSG model have some API specific code? For example, I don't see any precision qualifiers in OSG examples, and does that mean those models are not for OpenGLES2.0?
+OSG doesn't completely abstract the APIs, but it can be built specifically to work with OpenGL ES, by using the compiler flags you used. You will however have to put some work into it, since you will have to write shaders. Since you are not telling us which &quot;shader generator&quot; you are using, it is hard to guess what you are trying to achieve.
+There is not something like &quot;models for OpenGLES2.0&quot;. You will have to write appropriate shaders and might have to run some visitors to change fixed function pipeline functions in to uniforms/attributes of the model.
+For instance osg::Material is not working outside the compatibility -profiles, so might have to run a visitor, that parses osg::Material instances and replaces them with uniforms or per-vertex attributes which you will have to evaluate in the shader.
+
+
+I'm trying to figure out where the issue comes from: OSG model, OSG layers, OpenGLES library.
+
+Chris asked you for an example model that is not working. You mentioned the glsl-simple model, which from a glance doesn't have ES-compatible code. The easiest thing to do is to start with a model(preferably not containing shaders) and a simple ES-Shader.
+Unfortunately the examples here are relatively rare. Might be a great opportunity to create some minimalistic core/ES-based shader example and to extend the OpenGL-ES pseudo loader.
+
+If there are already OSG models confirmed to work with OpenGLES2, I'd use those to validate my platform. But, none of examples in OpenSceneGraph-Data shows correct results on my platform (nothing displayed except the glsl_simple.osgt) comparing to results from desktop with OpenGL. Once my platform is confirmed to work, I will be able to focus on debugging the model. With lack of OSG / shader experience, I can't easily tell where the issue comes from, and I'm looking for references for validation.
+
+Thanks,
+-hyun
+
+Thanks,
+-hyun
+
+
+Cheers
+Sebastian
+
+________________________________
+From: osg-users [<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt;] on behalf of Chris Hanson [<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">xenon at alphapixel.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">xenon at alphapixel.com</A>&gt;]
+Sent: Friday, March 11, 2016 5:27 PM
+To: OpenSceneGraph Users
+Subject: Re: [osg-users] Running OSG models on OpenGLES2.0
+
+OGL ES requires a shader.&#8203;
+
+Many of the OSG-Data models don't have shaders built into them, and will not transform and rasterize as a result.
+
+Which OSG model did you try that had most surfaces transparent?
+
+
+This email and any attachments are intended for the sole use of the named recipient(s) and contain(s) confidential information that may be proprietary, privileged or copyrighted under applicable law. If you are not the intended recipient, do not read, copy, or forward this email message or any attachments. Delete this email message and any attachments immediately.
+
+
+
+
+_______________________________________________
+
+osg-users mailing list
+
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+
+
+
+This email and any attachments are intended for the sole use of the named recipient(s) and contain(s) confidential information that may be proprietary, privileged or copyrighted under applicable law. If you are not the intended recipient, do not read, copy, or forward this email message or any attachments. Delete this email message and any attachments immediately.
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160314/a9754569/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160314/a9754569/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002520.html">[osg-users] Running OSG models on OpenGLES2.0
+</A></li>
+	<LI>Next message: <A HREF="002523.html">[osg-users] Running OSG models on OpenGLES2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2522">[ date ]</a>
+              <a href="thread.html#2522">[ thread ]</a>
+              <a href="subject.html#2522">[ subject ]</a>
+              <a href="author.html#2522">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

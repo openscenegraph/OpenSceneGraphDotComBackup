@@ -1,0 +1,156 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] using modern shaders with osg - setting vertex	attribute layout
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20using%20modern%20shaders%20with%20osg%20-%20setting%20vertex%0A%09attribute%20layout&In-Reply-To=%3C1504260813.m2f.71586%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006717.html">
+   <LINK REL="Next"  HREF="006719.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] using modern shaders with osg - setting vertex	attribute layout</H1>
+<!--htdig_noindex-->
+    <B>antiro black</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20using%20modern%20shaders%20with%20osg%20-%20setting%20vertex%0A%09attribute%20layout&In-Reply-To=%3C1504260813.m2f.71586%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] using modern shaders with osg - setting vertex	attribute layout">antiro42 at gmail.com
+       </A><BR>
+    <I>Fri Sep  1 03:13:33 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006717.html">[osg-users] using modern shaders with osg - setting vertex attribute layout
+</A></li>
+        <LI>Next message: <A HREF="006719.html">[osg-users] using modern shaders with osg - setting vertex attribute layout
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6718">[ date ]</a>
+              <a href="thread.html#6718">[ thread ]</a>
+              <a href="subject.html#6718">[ subject ]</a>
+              <a href="author.html#6718">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sebastian,
+
+Thanks for the quick response. The osg_XXX matrices work perfectly. The setUseVertexAttributeAliasing() however does not seem to work. Where I had some output before, now don't get anything with it enabled
+
+Does osg always give the exact layout which you posted? or is this dependent on the data that is loaded? 
+
+for refence, here is a stripped down version of a geometry pass which I'm currently testing with (all 3 outputs are black with the attributeAliasing turned on):
+
+
+Code:
+#version 330 core
+layout (location = 0) in vec4 position;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec4 color;
+layout (location = 3) in vec4 texCoords;
+
+/*OSG input layout
+layout(location = 0) in vec4 osg_Vertex;
+layout(location = 1) in vec3 osg_Normal;
+layout(location = 2) in vec4 osg_Color;
+layout(location = 3)in vec4 osg_MultiTexCoord0;
+layout(location = 4)in vec4 osg_MultiTexCoord1;*/
+
+out vec3 Normal;
+out vec2 TexCoords;
+out vec3 WorldPos;
+
+uniform mat4 osg_ModelViewMatrix;
+uniform mat3 osg_NormalMatrix;
+uniform mat4 osg_ProjectionMatrix;
+
+
+void main()
+{
+    gl_Position = osg_ProjectionMatrix * osg_ModelViewMatrix * position;
+    WorldPos = (osg_ModelViewMatrix * position).xyz;
+    Normal = osg_NormalMatrix * normal;
+    TexCoords = texCoords.xy;
+}
+
+
+
+and the fragment shader:
+
+Code:
+#version 330
+
+in vec2 TexCoords;
+in vec3 Normal;
+in vec3 WorldPos;
+
+layout (location = 0) out vec3 gWorldPos;
+layout (location = 1) out vec4 gColorSpec;
+layout (location = 2) out vec3 gNormalOut;
+
+uniform vec3 gDiffuseColor=vec3(1,0,0);
+
+void main()
+{
+    gWorldPos = WorldPos;
+    gColorSpec.rgb=gDiffuseColor;
+    gNormalOut = normalize(Normal);
+}
+
+
+
+For the actual creation and compilation of the shader program I'm using the EffectCompositor recipe from the OSG cookbook.
+
+Thank you!
+
+Cheers,
+antiro[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicd53b.php?p=71586#71586">http://forum.openscenegraph.org/viewtopic.php?p=71586#71586</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006717.html">[osg-users] using modern shaders with osg - setting vertex attribute layout
+</A></li>
+	<LI>Next message: <A HREF="006719.html">[osg-users] using modern shaders with osg - setting vertex attribute layout
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6718">[ date ]</a>
+              <a href="thread.html#6718">[ thread ]</a>
+              <a href="subject.html#6718">[ subject ]</a>
+              <a href="author.html#6718">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

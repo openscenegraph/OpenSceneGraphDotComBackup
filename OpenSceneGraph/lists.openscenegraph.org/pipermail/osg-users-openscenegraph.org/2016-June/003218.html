@@ -1,0 +1,225 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] PagedLOD and page in/out detection
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20PagedLOD%20and%20page%20in/out%20detection&In-Reply-To=%3CCAO-%2Bzi%3Do7iZ6FW0%2BftVwxYG%2Bj23eUsB_acr0YKui23_%3DCSj_KQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003217.html">
+   <LINK REL="Next"  HREF="279442.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] PagedLOD and page in/out detection</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20PagedLOD%20and%20page%20in/out%20detection&In-Reply-To=%3CCAO-%2Bzi%3Do7iZ6FW0%2BftVwxYG%2Bj23eUsB_acr0YKui23_%3DCSj_KQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] PagedLOD and page in/out detection">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Fri Jun  3 11:19:14 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003217.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+        <LI>Next message: <A HREF="279442.html">[osg-users] OpenSceneGraph-3.5.3 developer release tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3218">[ date ]</a>
+              <a href="thread.html#3218">[ thread ]</a>
+              <a href="subject.html#3218">[ subject ]</a>
+              <a href="author.html#3218">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+thanks for the *hints* :) ... Reading the code is always the best option
+:<i>-). I found the thing while reading the code you pointed me to. It is this
+</I>thing that when set up properly per the database, then it works nicely ..
+
+viewer-&gt;getDatabasePager()-&gt;setTargetMaximumNumberOfPageLOD(...);
+
+Thanks again!
+
+Cheers,
+Nick
+
+p.s. I still like my simple hack :-). I will keep it and not do it the
+proper way this time ;-)
+
+On Fri, Jun 3, 2016 at 7:51 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Nick,
+</I>&gt;<i>
+</I>&gt;<i> It's *really* inefficient to use an update callback to do this type of
+</I>&gt;<i> task, I can not recommend going this path, it's waste of both our time
+</I>&gt;<i> trying to coax it to do something useful.
+</I>&gt;<i>
+</I>&gt;<i> The right way of doing it is by overriding the
+</I>&gt;<i> DatabasePager::updateSceneGraph() method or implementing you own
+</I>&gt;<i> equivalent method in the Viewer::updateTraversak() in place of current
+</I>&gt;<i> calls to updateceneSceneGraph().
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 3 June 2016 at 18:28, Trajce Nikolov NICK
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Hi Robert,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; this is my update callback .. And I know for sure it was working. I just
+</I>&gt;<i> did
+</I>&gt;<i> &gt; a clean app (modified osgviewer with only this callback installed in the
+</I>&gt;<i> &gt; root PagedLODs) and I never see a Paged Out tile ... I am limited to not
+</I>&gt;<i> &gt; having the possibility to make a custom DatabasePager or it will go
+</I>&gt;<i> really
+</I>&gt;<i> &gt; complicated. The root PagedLOD can have only one or zero children (that
+</I>&gt;<i> is
+</I>&gt;<i> &gt; the test database I am testing it against)
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; struct UpdateCallback : public osg::NodeCallback
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt; UpdateCallback()
+</I>&gt;<i> &gt; : _numChildren(0)
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt; osg::PagedLOD* plod = dynamic_cast&lt;osg::PagedLOD*&gt;(node);
+</I>&gt;<i> &gt; if (plod)
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt; if (plod-&gt;getNumChildren() != _numChildren)
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt; _numChildren = plod-&gt;getNumChildren();
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; if (_numChildren)
+</I>&gt;<i> &gt; std::cout &lt;&lt; &quot;Paged in&quot; &lt;&lt; std::endl;
+</I>&gt;<i> &gt; else
+</I>&gt;<i> &gt; std::cout &lt;&lt; &quot;Paged out&quot; &lt;&lt; std::endl;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; traverse(node, nv);
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; protected:
+</I>&gt;<i> &gt; int _numChildren;
+</I>&gt;<i> &gt; };
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; On Fri, Jun 3, 2016 at 6:49 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; wrote:
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Hi Nick,
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; There isn't a feature directly built into osg::PageLOD or
+</I>&gt;<i> &gt;&gt; DatabasePager for this.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; What you could do is look at the  creating a custom DatabasePager that
+</I>&gt;<i> &gt;&gt; overrides the following method:
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;        /** Merge the changes to the scene graph by calling calling
+</I>&gt;<i> &gt;&gt; removeExpiredSubgraphs then addLoadedDataToSceneGraph.
+</I>&gt;<i> &gt;&gt;           * Note, must only be called from single thread update phase.
+</I>&gt;<i> */
+</I>&gt;<i> &gt;&gt;         virtual void updateSceneGraph(const osg::FrameStamp&amp;
+</I>&gt;<i> frameStamp);
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Within this you could add your own tracking of when things are merge or
+</I>&gt;<i> &gt;&gt; removed.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Robert.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; On 3 June 2016 at 17:15, Trajce Nikolov NICK
+</I>&gt;<i> &gt;&gt; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt;&gt; &gt; Hi Community,
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; I was looking for a way to detect when PagedLOD gets its children
+</I>&gt;<i> paged
+</I>&gt;<i> &gt;&gt; &gt; in/out. So I installed an update callback and based on a difference in
+</I>&gt;<i> &gt;&gt; &gt; the
+</I>&gt;<i> &gt;&gt; &gt; children number I was able to know when such change occurred. And this
+</I>&gt;<i> &gt;&gt; &gt; was
+</I>&gt;<i> &gt;&gt; &gt; working with a code an year ago.
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; Now it doesn't .. Any clue or hint how to detect such changes?
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; Thanks a bunch as always!
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; Cheers,
+</I>&gt;<i> &gt;&gt; &gt; Nick
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; --
+</I>&gt;<i> &gt;&gt; &gt; trajce nikolov nick
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt; _______________________________________________
+</I>&gt;<i> &gt;&gt; &gt; osg-users mailing list
+</I>&gt;<i> &gt;&gt; &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt; &gt;
+</I>&gt;<i> &gt;&gt; _______________________________________________
+</I>&gt;<i> &gt;&gt; osg-users mailing list
+</I>&gt;<i> &gt;&gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; --
+</I>&gt;<i> &gt; trajce nikolov nick
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160603/1dcd04e9/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160603/1dcd04e9/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003217.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+	<LI>Next message: <A HREF="279442.html">[osg-users] OpenSceneGraph-3.5.3 developer release tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3218">[ date ]</a>
+              <a href="thread.html#3218">[ thread ]</a>
+              <a href="subject.html#3218">[ subject ]</a>
+              <a href="author.html#3218">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

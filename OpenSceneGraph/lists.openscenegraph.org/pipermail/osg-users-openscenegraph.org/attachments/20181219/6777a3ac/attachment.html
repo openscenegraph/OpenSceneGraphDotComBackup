@@ -1,0 +1,378 @@
+#include <osg/Drawable>
+#include <osg/Geometry>
+#include <osg/Geode>
+#include <osg/ClipNode>
+#include <osgUtil/LineSegmentIntersector>
+
+#include <osgParticle/ExplosionEffect>
+#include <osgParticle/ExplosionDebrisEffect>
+#include <osgParticle/SmokeEffect>
+#include <osgParticle/SmokeTrailEffect>
+#include <osgParticle/FireEffect>
+#include <osgParticle/PrecipitationEffect>
+
+#include <osgEarthAnnotation/GeoPositionNode>
+#include <osgEarth/ScreenSpaceLayout>
+
+#include <osgEarth/Registry>
+#include <osgEarth/ShaderGenerator>
+
+#include "SpecialEffects.h"
+
+
+///////////////////////////////////////////////////////////////////////////////
+SpecialEffects::SpecialEffects(osgEarth::MapNode *mapNode)
+{
+	mMapNode = mapNode;
+
+	osgEarth::ScreenSpaceLayoutOptions options = osgEarth::ScreenSpaceLayout::getOptions();
+	options.renderOrder() = 15;
+	osgEarth::ScreenSpaceLayout::setOptions(options);
+
+	mMinGeomLod = 0.0f;
+	mMaxGeomLod = 12000000.0f;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+SpecialEffects::~SpecialEffects()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+osg::Vec3 SpecialEffects::ComputeTerrainIntersection(osg::Node* subgraph,
+												float x, float y)
+{
+	const osg::BoundingSphere& bs = subgraph->getBound();
+	float zMax = bs.center().z() + bs.radius();
+	float zMin = bs.center().z() - bs.radius();
+
+	osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector =
+		new osgUtil::LineSegmentIntersector(osg::Vec3(x, y, zMin), osg::Vec3(x, y, zMax));
+
+	osgUtil::IntersectionVisitor iv(intersector.get());
+
+	subgraph->accept(iv);
+
+	if (intersector->containsIntersections())
+	{
+		return intersector->getFirstIntersection().getWorldIntersectPoint();
+	}
+
+	return osg::Vec3(x, y, 0.0f);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void SpecialEffects::SetWindVector(float xVal, float yVal, float zVal)
+{
+	mWindVector.x() = xVal;
+	mWindVector.y() = yVal;
+	mWindVector.z() = zVal;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void SpecialEffects::GetWindVector(float &xVal, float &yVal, float &zVal)
+{
+	xVal = mWindVector.x();
+	yVal = mWindVector.y();
+	zVal = mWindVector.z();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+int SpecialEffects::CreateExplosion(osg::Group *parentGroup, double centerLat,
+	double centerLon, double altitude, float intensity,
+	bool useSmokeTrailEffect)
+{
+	int status = -1;
+
+	if (parentGroup != NULL)
+	{
+		osg::Vec3d position = { 0.0, 0.0, 0.0 };
+
+		bool handleMovingModels = false;
+
+		float scale = 100.0; //  10.0f * ((float)rand() / (float)RAND_MAX);
+
+		// create the model effect
+
+		osgParticle::ExplosionEffect* explosion = new osgParticle::ExplosionEffect(position, scale, intensity);
+		osgParticle::ExplosionDebrisEffect* explosionDebri = new osgParticle::ExplosionDebrisEffect(position, scale, intensity);
+		osgParticle::FireEffect* fire = new osgParticle::FireEffect(position, scale, intensity);
+
+		osgParticle::ParticleEffect* smoke = 0;
+
+		if (useSmokeTrailEffect == true)
+		{
+			smoke = new osgParticle::SmokeTrailEffect(position, scale, intensity);
+		}
+		else
+		{
+			smoke = new osgParticle::SmokeEffect(position, scale, intensity);
+		}
+
+		explosion->setWind(mWindVector);
+
+		explosionDebri->setWind(mWindVector);
+		smoke->setWind(mWindVector);
+		fire->setWind(mWindVector);
+
+#define JASONS_METHOD
+#ifdef JASONS_METHOD
+		osgEarth::GeoTransform* transform = new osgEarth::GeoTransform;
+		osgEarth::SpatialReference *geoSRS = (osgEarth::SpatialReference *)mMapNode->getMapSRS()->getGeographicSRS();
+		transform->setPosition(osgEarth::GeoPoint(geoSRS, centerLon, centerLat, altitude));
+
+		parentGroup->addChild(transform);
+
+		transform->addChild(explosion);
+		transform->addChild(explosionDebri);
+		transform->addChild(smoke);
+		transform->addChild(fire);
+
+		// Tell the particle systems not to use their local particle system for rendering. We'll be sticking them under the transform as well
+		// to improve precision.
+		fire->setUseLocalParticleSystem(false);
+		explosion->setUseLocalParticleSystem(false);
+		explosionDebri->setUseLocalParticleSystem(false);
+		smoke->setUseLocalParticleSystem(false);
+
+		// Add the particle systems to the transform.
+		transform->addChild(explosion->getParticleSystem());
+		transform->addChild(explosionDebri->getParticleSystem());
+		transform->addChild(smoke->getParticleSystem());
+		transform->addChild(fire->getParticleSystem());
+
+		osgEarth::Registry::shaderGenerator().run(transform);
+
+#else
+		parentGroup->addChild(explosion);
+		parentGroup->addChild(explosionDebri);
+		parentGroup->addChild(smoke);
+		parentGroup->addChild(fire);
+
+		osg::Geode* geode = new osg::Geode;
+
+		if (geode != NULL)
+		{
+			geode->addDrawable(explosion->getParticleSystem());
+			geode->addDrawable(explosionDebri->getParticleSystem());
+			geode->addDrawable(smoke->getParticleSystem());
+			geode->addDrawable(fire->getParticleSystem());
+
+			osgEarth::Registry::shaderGenerator().run(geode);
+
+			osgEarth::Annotation::GeoPositionNode *effectGeode = new osgEarth::Annotation::GeoPositionNode();
+
+			if (effectGeode != NULL)
+			{
+				osgEarth::SpatialReference *geoSRS = (osgEarth::SpatialReference *)mMapNode->getMapSRS()->getGeographicSRS();
+
+				if (geoSRS != NULL)
+				{
+					effectGeode->setPosition(osgEarth::GeoPoint(geoSRS, centerLon, centerLat, altitude));
+
+					effectGeode->getPositionAttitudeTransform()->addChild(geode);
+					//		effectGeode->getPositionAttitudeTransform()->setScale(osg::Vec3d(100.0f, 100.0f, 100.0f));
+
+					parentGroup->addChild(effectGeode);
+				}
+			}
+		}
+#endif // JASONS_METHOD
+
+	}
+
+	return(status);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+int SpecialEffects::AddSnow(osg::Group *parentGroup, double minLat,
+	double minLon, double minAlt, double maxLat, double maxLon, double maxAlt,
+	float intensity)
+{
+	int status = -1;
+
+	if (parentGroup != NULL)
+	{
+		osg::ref_ptr<osgParticle::PrecipitationEffect> precipitationEffect =
+			new osgParticle::PrecipitationEffect;
+
+		if (precipitationEffect != NULL)
+		{
+			precipitationEffect->snow(intensity);
+			precipitationEffect->rain(0.0f);
+
+			osg::Vec3 cellSize = { 5.0f, 5.0f, 5.0f };
+
+			precipitationEffect->setCellSize(cellSize);
+
+			precipitationEffect->setParticleSize(0.1f);
+			precipitationEffect->setMaximumParticleDensity(0.1f);
+			precipitationEffect->setParticleSpeed(0.5f);
+
+			osg::Vec4 color(0.01, 0.01, 0.01, 0.01);
+
+			precipitationEffect->getFog()->setColor(color);
+
+			precipitationEffect->setWind(mWindVector);
+
+			osgEarth::Registry::shaderGenerator().run(precipitationEffect);
+
+			float clipDistance = 0.0f;
+
+			if (clipDistance != 0.0)
+			{
+				osg::ref_ptr<osg::ClipNode> clipNode = new osg::ClipNode;
+				clipNode->addClipPlane(new osg::ClipPlane(0));
+				clipNode->getClipPlane(0)->setClipPlane(0.0, 0.0, -1.0, -clipDistance);
+				clipNode->setReferenceFrame(osg::ClipNode::ABSOLUTE_RF);
+				clipNode->addChild(precipitationEffect.get());
+
+				osg::Group *mapGroup = mMapNode->getLayerNodeGroup();
+
+				mapGroup->addChild(clipNode);
+			}
+			else
+			{
+				//				parentGroup->addChild(precipitationEffect.get());
+
+				if (mMinGeomLod != mMaxGeomLod)
+				{
+					osg::LOD* lod = new osg::LOD();
+
+					if (lod != NULL)
+					{
+						std::string lodLabel = "snow";
+						lodLabel += "_lod";
+						lod->setName(lodLabel);
+						lod->addChild(precipitationEffect.get(), mMinGeomLod, mMaxGeomLod);
+
+						osg::Group *mapGroup =  mMapNode->getLayerNodeGroup();
+
+						osg::PositionAttitudeTransform *pat = new osg::PositionAttitudeTransform();
+						pat->addChild(lod);
+
+						float roll = 0.0f;
+						float pitch = -45.0f;
+						float heading = 0.0f;
+
+						osg::Quat orientation =
+							osg::Quat(osg::DegreesToRadians(roll), osg::Vec3(0, 1, 0)) *
+							osg::Quat(osg::DegreesToRadians(pitch), osg::Vec3(1, 0, 0)) *
+							osg::Quat(osg::DegreesToRadians(heading), osg::Vec3(0, 0, -1));
+
+						pat->setAttitude(orientation);
+						mapGroup->addChild(pat);
+					}
+				}
+			}
+		}
+	}
+
+	return(status);
+}
+///////////////////////////////////////////////////////////////////////////////
+int SpecialEffects::AddRain(osg::Group *parentGroup, double minLat,
+	double minLon, double minAlt, double maxLat, double maxLon, double maxAlt,
+	float intensity)
+{
+	int status = -1;
+
+	if (parentGroup != NULL)
+	{
+		osg::ref_ptr<osgParticle::PrecipitationEffect> precipitationEffect =
+			new osgParticle::PrecipitationEffect;
+
+		if (precipitationEffect != NULL)
+		{
+			precipitationEffect->snow(0.0f);
+			precipitationEffect->rain(intensity);
+
+			osg::Vec3 cellSize = { 5.0f, 5.0f, 5.0f };
+
+			precipitationEffect->setCellSize(cellSize);
+
+			precipitationEffect->setParticleSize(0.1f);
+			precipitationEffect->setMaximumParticleDensity(0.3f);
+
+			precipitationEffect->setWind(mWindVector);
+
+			float clipDistance = 0.0f;
+
+			if (clipDistance != 0.0)
+			{
+				osg::ref_ptr<osg::ClipNode> clipNode = new osg::ClipNode;
+				clipNode->addClipPlane(new osg::ClipPlane(0));
+				clipNode->getClipPlane(0)->setClipPlane(0.0, 0.0, -1.0, -clipDistance);
+				clipNode->setReferenceFrame(osg::ClipNode::ABSOLUTE_RF);
+				clipNode->addChild(precipitationEffect.get());
+
+				osg::Group *mapGroup = mMapNode->getLayerNodeGroup();
+
+				mapGroup->addChild(clipNode);
+			}
+			else
+			{
+				if (mMinGeomLod != mMaxGeomLod)
+				{
+					osg::LOD* lod = new osg::LOD();
+
+					if (lod != NULL)
+					{
+						std::string lodLabel = "rain";
+						lodLabel += "_lod";
+						lod->setName(lodLabel);
+						lod->addChild(precipitationEffect.get(), mMinGeomLod, mMaxGeomLod);
+
+						osg::Group *mapGroup = mMapNode->getLayerNodeGroup();
+
+						mapGroup->addChild(lod);
+					}
+				}
+			}
+
+		}
+	}
+
+	return(status);
+}
+
+#ifdef LATER
+
+try to use the code below with a sattelite image cloud extract to create a model of a cloud
+  use the satellite image as initial the texture overlay
+
+osg::Geode* terrainGeode = new osg::Geode;
+// create terrain
+{
+	osg::ref_ptr<osg::StateSet> stateset = new osg::StateSet();
+	osg::ref_ptr<osg::Image> image = osgDB::readRefImageFile("Images/lz.rgb");
+	if (image)
+	{
+		osg::Texture2D* texture = new osg::Texture2D;
+		texture->setImage(image);
+		stateset->setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+	}
+
+	terrainGeode->setStateSet(stateset);
+
+	float size = 1000; // 10km;
+	float scale = size / 39.0f; // 10km;
+	float z_scale = scale*3.0f;
+
+	osg::HeightField* grid = new osg::HeightField;
+	grid->allocate(38, 39);
+	grid->setXInterval(scale);
+	grid->setYInterval(scale);
+
+	for (unsigned int r = 0; r<39; ++r)
+	{
+		for (unsigned int c = 0; c<38; ++c)
+		{
+			grid->setHeight(c, r, z_scale*vertex[r + c * 39][2]);
+		}
+	}
+	terrainGeode->addDrawable(new osg::ShapeDrawable(grid));
+
+	root->addChild(terrainGeode);
+#endif // LATER

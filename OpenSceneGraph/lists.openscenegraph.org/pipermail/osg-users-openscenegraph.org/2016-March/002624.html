@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] setUseVertexAttributeAliasing and frame buffer objects not working together
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20setUseVertexAttributeAliasing%20and%20frame%20buffer%0A%20objects%20not%20working%20together&In-Reply-To=%3CCAFN7Y%2BV4dzbBnAkQsE9i%2BcUjt7xABhb3Sqzfo_A1%3DnZ1YEbDaQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002621.html">
+   <LINK REL="Next"  HREF="278848.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] setUseVertexAttributeAliasing and frame buffer objects not working together</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20setUseVertexAttributeAliasing%20and%20frame%20buffer%0A%20objects%20not%20working%20together&In-Reply-To=%3CCAFN7Y%2BV4dzbBnAkQsE9i%2BcUjt7xABhb3Sqzfo_A1%3DnZ1YEbDaQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] setUseVertexAttributeAliasing and frame buffer objects not working together">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Mar 29 01:19:31 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002621.html">[osg-users] setUseVertexAttributeAliasing and frame buffer	objects not working together
+</A></li>
+        <LI>Next message: <A HREF="278848.html">[osg-users] Possibility of a OSG 3.4.1 Release
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2624">[ date ]</a>
+              <a href="thread.html#2624">[ thread ]</a>
+              <a href="subject.html#2624">[ subject ]</a>
+              <a href="author.html#2624">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chris,
+
+It's hard to know what is causing problems in your case as you don't
+provide enough information to know what might be amiss.  In general, one
+wouldn't normally combine the built-in usage with vertex aliasing - the
+later is used to get the OSG to built alteranatives to the built-ins that
+are no longer available in OpenGL-ES 2.x onwards and OpenGL 3.0 core
+profile onwards.
+
+Robert.
+
+
+
+On 29 March 2016 at 04:33, Chris Kuliukas &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">chris at kuliukas.com</A>&gt; wrote:
+
+&gt;<i> Wow, can't believe my luck at stumbling into the solution for this so
+</I>&gt;<i> quickly..
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>         osgViewer::Viewer::Windows windows;
+</I>&gt;<i>         viewer.getWindows(windows);
+</I>&gt;<i>         for(osgViewer::Viewer::Windows::iterator itr = windows.begin();
+</I>&gt;<i>                 itr != windows.end();
+</I>&gt;<i>                 ++itr)
+</I>&gt;<i>         {
+</I>&gt;<i>                 osg::State *s=(*itr)-&gt;getState();
+</I>&gt;<i>                 s-&gt;resetVertexAttributeAlias(false, 8); // &lt;-- This line
+</I>&gt;<i>                 s-&gt;setUseModelViewAndProjectionUniforms(true);
+</I>&gt;<i>                 s-&gt;setUseVertexAttributeAliasing(true);
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Here is a before / after: <A HREF="http://imgur.com/a/aWoKB">http://imgur.com/a/aWoKB</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> It looks like if you use vertex attribute aliasing it compacts the uniform
+</I>&gt;<i> slots by default, which screws up all fixed transform stuff (which I guess
+</I>&gt;<i> expects them to be in their usual spots).
+</I>&gt;<i> s-&gt;resetVertexAttributeAlias(false, 8); prevents it from compacting the
+</I>&gt;<i> uniform slots, and it all works.
+</I>&gt;<i>
+</I>&gt;<i> ------------------------
+</I>&gt;<i> <A HREF="http://www.hrwallingford.com/facilities/ship-simulation-centre">http://www.hrwallingford.com/facilities/ship-simulation-centre</A> (
+</I>&gt;<i> <A HREF="http://www.hrwallingford.com/facilities/ship-simulation-centre">http://www.hrwallingford.com/facilities/ship-simulation-centre</A>)
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicd73e.php?p=66647#66647">http://forum.openscenegraph.org/viewtopic.php?p=66647#66647</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160329/8c835802/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160329/8c835802/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002621.html">[osg-users] setUseVertexAttributeAliasing and frame buffer	objects not working together
+</A></li>
+	<LI>Next message: <A HREF="278848.html">[osg-users] Possibility of a OSG 3.4.1 Release
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2624">[ date ]</a>
+              <a href="thread.html#2624">[ thread ]</a>
+              <a href="subject.html#2624">[ subject ]</a>
+              <a href="author.html#2624">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

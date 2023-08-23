@@ -1,0 +1,79 @@
+#include <osgViewer/Viewer>
+#include <osg/Texture2D>
+#include <osg/State>
+
+#include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
+#include <osgDB/FileNameUtils>
+
+#include <iostream>
+
+#include <osg/GraphicsContext>
+
+using namespace std;
+
+int main( int argc, char **argv )
+{
+	if (argc < 2)
+	{
+		printf("Usage: %s texfiles\n", argv[0] );
+		exit(1);
+	}
+
+	// create a graphics context to allow us to use OpenGL to compress textures.
+	osg::ref_ptr<osg::GraphicsContext::Traits> traits = new osg::GraphicsContext::Traits;
+	traits->x = 1;
+	traits->y = 1;
+	traits->width = 1;
+	traits->height = 1;
+	traits->alpha = 8;
+	traits->windowDecoration = false;
+	traits->doubleBuffer = true;
+	traits->sharedContext = 0;
+	traits->pbuffer = true;
+
+	osg::ref_ptr<osg::GraphicsContext> gfx = osg::GraphicsContext::createGraphicsContext(traits.get());
+	if (!gfx || !gfx->valid())
+	{
+		osg::notify(osg::NOTICE)<<"Error: unable to create graphics window"<<std::endl;
+		return 1;
+	}
+
+	gfx->realize();
+	gfx->makeCurrent();
+
+	for (int c=1;c<argc;c++) {
+		osg::ref_ptr< osg::Image > image = osgDB::readImageFile( argv[c] );
+		if (image.valid()) {
+			int nc,sx,sy;
+			nc = image->getPixelSizeInBits()/8;
+			sx = image->s();
+			sy = image->t();
+			
+			// Original Code
+			//osg::ref_ptr< osg::State > state = new osg::State;
+			
+			// Robert correction
+			// if valid
+			osg::ref_ptr <osg::State> state = gfx->getState();
+			
+			osg::ref_ptr< osg::Texture2D > texture = new osg::Texture2D;
+			texture->setInternalFormatMode( osg::Texture::USE_S3TC_DXT5_COMPRESSION );
+
+			texture->setImage( image.get() );
+
+			texture->apply( *state.get() );
+
+			image->readImageFromCurrentTexture( 0, true );
+
+			std::string compressedName = osgDB::getNameLessExtension( argv[c] ) + ".dds";
+			osgDB::writeImageFile( *image, compressedName );
+			cout<<compressedName<<" true "<<nc<<" "<<sx<<" "<<sy<<endl;
+		}
+		else {
+			printf("Error: image not valid\n");
+		}
+	}
+	
+	return 0;
+}

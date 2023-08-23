@@ -1,0 +1,231 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osg::Text::setBackdropType crash with a single character string
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%3A%3AText%3A%3AsetBackdropType%20crash%20with%20a%20single%0A%20character%20string&In-Reply-To=%3Cb0d7086b-80e1-a4cc-f2e6-c249c8fb1182%40dynadream.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006930.html">
+   <LINK REL="Next"  HREF="006932.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osg::Text::setBackdropType crash with a single character string</H1>
+<!--htdig_noindex-->
+    <B>Carlo Lanzotti - DynaDream</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%3A%3AText%3A%3AsetBackdropType%20crash%20with%20a%20single%0A%20character%20string&In-Reply-To=%3Cb0d7086b-80e1-a4cc-f2e6-c249c8fb1182%40dynadream.com%3E"
+       TITLE="[osg-users] osg::Text::setBackdropType crash with a single character string">clanzotti at dynadream.com
+       </A><BR>
+    <I>Tue Sep 26 07:41:41 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="006930.html">[osg-users] osg::Text::setBackdropType crash with a single character string
+</A></li>
+        <LI>Next message (by thread): <A HREF="006932.html">[osg-users] osg::Text::setBackdropType crash with a single character string
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6931">[ date ]</a>
+              <a href="thread.html#6931">[ thread ]</a>
+              <a href="subject.html#6931">[ subject ]</a>
+              <a href="author.html#6931">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+thank you for the more compact workaround, better than my slow module 
+solution.
+
+P.S. If it can be of help while debugging, I found that the non module 4 
+size show up even when using special characters (like . , ; etc...).
+
+Best Regards,
+
+Carlo Lanzotti
+
+Il 26/09/2017 13:30, Robert Osfield ha scritto:
+&gt;<i> Hi Carlo,
+</I>&gt;<i>
+</I>&gt;<i> I haven't had a chance to look at the issue yet.&#160; Glad you've found a 
+</I>&gt;<i> workaround.
+</I>&gt;<i>
+</I>&gt;<i> I have just had a quick look at the text_improvements branch of master 
+</I>&gt;<i> than I'm currently working on and it's 
+</I>&gt;<i> Text::computeAverageGlyphWidthAndHeight() has the same code still in 
+</I>&gt;<i> place so looks likely to suffer from the same bug. The code assumes 
+</I>&gt;<i> that the number of _coords is a multiple of four, outwardly this would 
+</I>&gt;<i> look like a reasonable assumption given the way that osgText used 
+</I>&gt;<i> quads for rendering glyphs.
+</I>&gt;<i>
+</I>&gt;<i> From a quick code review I haven't yet spotted why the number _coords 
+</I>&gt;<i> isn't always a multiple of 4.&#160; I will need to add some debug output to 
+</I>&gt;<i> track when the number multiple of 4 case is happening, whether this 
+</I>&gt;<i> itself is a bug or whether it's just a corner case.
+</I>&gt;<i>
+</I>&gt;<i> The code that is crashing though, the offending four loop:
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160; for (i = 0; i &lt; _coords-&gt;size(); i += 4)
+</I>&gt;<i>
+</I>&gt;<i> Could probably be written:
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160; for (i = 0; i+3 &lt; _coords-&gt;size(); i += 4)
+</I>&gt;<i>
+</I>&gt;<i> This should work and be a bit simpler than your workaround.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 26 September 2017 at 10:36, Carlo Lanzotti - DynaDream 
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">clanzotti at dynadream.com</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">clanzotti at dynadream.com</A>&gt;&gt; wrote:
+</I>&gt;<i>
+</I>&gt;<i>     Hi all,
+</I>&gt;<i>
+</I>&gt;<i>     We had to temporarly fix this problem as we have to go in
+</I>&gt;<i>     production. The problem is in
+</I>&gt;<i>     osg::Text::computeAverageGlyphWidthAndHeight() line 602:
+</I>&gt;<i>
+</I>&gt;<i>     &#160;&#160;&#160; for (i = 0; i &lt; _coords-&gt;size(); i += 4)
+</I>&gt;<i>
+</I>&gt;<i>     sometime it happens that _coords-&gt;size() is not multiple of 4
+</I>&gt;<i>     leading to an out of range access to the _coords array. To avoid
+</I>&gt;<i>     the crash I fixed this way:
+</I>&gt;<i>
+</I>&gt;<i>     &#160;&#160;&#160; unsigned int sz = _coords-&gt;size() - (_coords-&gt;size() % 4);
+</I>&gt;<i>
+</I>&gt;<i>     &#160;&#160;&#160; for (i = 0; i &lt; sz; i += 4)
+</I>&gt;<i>     &#160;&#160;&#160; {
+</I>&gt;<i>     &#160;&#160;&#160; &#160;&#160;&#160; ...
+</I>&gt;<i>     &#160;&#160;&#160; }
+</I>&gt;<i>
+</I>&gt;<i>     Of course this need to be fixed in some other way as it avoid the
+</I>&gt;<i>     crash but probably do not give the correct result.
+</I>&gt;<i>
+</I>&gt;<i>     Best Regards,
+</I>&gt;<i>
+</I>&gt;<i>     Carlo Lanzotti
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     Il 20/09/2017 18:35, Carlo Lanzotti ha scritto:
+</I>&gt;&gt;<i>     Hi Robert,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     I&#8217;ve not tried other OS combinations yet but I made that simple
+</I>&gt;&gt;<i>     test in the osgtext sample too and the crash happens.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     I&#8217;ll see if I can reproduce it on OSX.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     Thank you.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     Carlo Lanzotti
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     Il giorno 20 set 2017, alle ore 17:23, Robert Osfield
+</I>&gt;&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;&gt; ha
+</I>&gt;&gt;<i>     scritto:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>     Hi Carlo,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>     On 20 September 2017 at 15:40, Carlo Lanzotti - DynaDream
+</I>&gt;&gt;&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">clanzotti at dynadream.com</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">clanzotti at dynadream.com</A>&gt;&gt; wrote:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>         OSG Version: 3.4.1 64 bit, Visual Studio 2017, Windows 10,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>     Have you tried any other OSG+OS combinations? Is so they exhibit
+</I>&gt;&gt;&gt;<i>     the problem?
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>     FYI, there are so major internal changes to osgText since 3.4.x
+</I>&gt;&gt;&gt;<i>     so there is changes that OSG master will address this issue.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>     Cheers,
+</I>&gt;&gt;&gt;<i>     Robert.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>     _______________________________________________
+</I>&gt;&gt;&gt;<i>     osg-users mailing list
+</I>&gt;&gt;&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;&gt;&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>&gt;
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     _______________________________________________
+</I>&gt;&gt;<i>     osg-users mailing list
+</I>&gt;&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>&gt;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     -- 
+</I>&gt;<i>     Carlo Lanzotti
+</I>&gt;<i>
+</I>&gt;<i>     DynaDream - Dynamic Laboratory
+</I>&gt;<i>
+</I>&gt;<i>     <A HREF="http://www.dynadream.com/">http://www.dynadream.com</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     _______________________________________________
+</I>&gt;<i>     osg-users mailing list
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>&gt;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+-- 
+Carlo Lanzotti
+
+DynaDream - Dynamic Laboratory
+
+<A HREF="http://www.dynadream.com/">http://www.dynadream.com</A>
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170926/fdd15495/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170926/fdd15495/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="006930.html">[osg-users] osg::Text::setBackdropType crash with a single character string
+</A></li>
+	<LI>Next message (by thread): <A HREF="006932.html">[osg-users] osg::Text::setBackdropType crash with a single character string
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6931">[ date ]</a>
+              <a href="thread.html#6931">[ thread ]</a>
+              <a href="subject.html#6931">[ subject ]</a>
+              <a href="author.html#6931">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

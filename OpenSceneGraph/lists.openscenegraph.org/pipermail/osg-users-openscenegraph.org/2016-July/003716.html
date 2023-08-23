@@ -1,0 +1,135 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [build] OSG Build Error on Mac OSX with XCode 7 and CMake 3.4 (or greater)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20OSG%20Build%20Error%20on%20Mac%20OSX%20with%20XCode%207%20and%0A%20CMake%203.4%20%28or%20greater%29&In-Reply-To=%3CCAFN7Y%2BX6udP04vxCY6DX7eVheHt2wnrEKnm7xGJbUfj4%2BcM2fQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279938.html">
+   <LINK REL="Next"  HREF="003737.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [build] OSG Build Error on Mac OSX with XCode 7 and CMake 3.4 (or greater)</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20OSG%20Build%20Error%20on%20Mac%20OSX%20with%20XCode%207%20and%0A%20CMake%203.4%20%28or%20greater%29&In-Reply-To=%3CCAFN7Y%2BX6udP04vxCY6DX7eVheHt2wnrEKnm7xGJbUfj4%2BcM2fQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] [build] OSG Build Error on Mac OSX with XCode 7 and CMake 3.4 (or greater)">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Jul 18 00:42:00 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279938.html">[osg-users] [build] OSG Build Error on Mac OSX with XCode 7 and	CMake 3.4 (or greater)
+</A></li>
+        <LI>Next message: <A HREF="003737.html">[osg-users] [build] OSG Build Error on Mac OSX with XCode 7 and	CMake 3.4 (or greater)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3716">[ date ]</a>
+              <a href="thread.html#3716">[ thread ]</a>
+              <a href="subject.html#3716">[ subject ]</a>
+              <a href="author.html#3716">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Ravi,
+
+The OSX build support in the OSG has evolved over the year as has
+CMake, but on the OSG side we've been in largely in maintenance mode
+w.r.t our CMake build system i.e. we've tinkered with it to keep
+things building.
+
+On the OSX side I can't personally pitch in as I don't have an Mac and
+don't have the OSX expertise to guide development, this means I have
+to rely upon the community to do the testing and guide developments on
+the OSX side.  Unfortunately Mac's are a lesser used platform so the
+pool of developers that can pitch in is smaller so the likelyhood of a
+break as the platforms evolve is higher.  This does mean OSX users
+need to be more active relative to the wider OSG community to keep
+things working, so I welcome yourself and others ptiching in.
+
+With OSG-3.6 looming getting things sorted on all platforms is
+crucial, if they are changes we need to make on the OSX side then I'm
+open to suggestion/merging changes as required.
+
+On thing I raised a couple of months back was the prospect of
+increasing the minimum CMake version to 2.8.  This may help things on
+the OSX side.
+
+Robert.
+
+Robert.
+
+
+
+On 18 July 2016 at 07:17, Ravi Mathur &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ravidavi at utexas.edu</A>&gt; wrote:
+&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> I'm surprised nobody has seen this yet, but OSG does not build on OSX when using XCode 7 and CMake 3.4+. Specifically, the Configure step can be run once, but cannot ever be run again unless the CMake cache is deleted. The error through by CMake is the infamous:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> CMAKE_OSX_DEPLOYMENT_TARGET is '10.10' but CMAKE_OSX_SYSROOT:
+</I>&gt;<i>    &quot;&quot;
+</I>&gt;<i>   is not set to a MacOSX SDK with a recognized version.  Either set
+</I>&gt;<i>   CMAKE_OSX_SYSROOT to a valid SDK or set CMAKE_OSX_DEPLOYMENT_TARGET to
+</I>&gt;<i>   empty.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> After hours of debugging, I found that this error only happens on CMake 3.4 and onward, which led me to see what changed in in that version. Basically, the OS initialization phase of CMake has changed how it uses the CMAKE_OSX_ARCHITECTURES variable, which according to CMake documentation (<A HREF="https://cmake.org/cmake/help/v3.5/variable/CMAKE_OSX_ARCHITECTURES.html">https://cmake.org/cmake/help/v3.5/variable/CMAKE_OSX_ARCHITECTURES.html</A>) should be set before the first call to PROJECT(). In OSG's CMakeLists.txt file, that variable is set waaaay down in line 1114:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> SET(CMAKE_OSX_ARCHITECTURES &quot;x86_64&quot; CACHE STRING &quot;Build architectures for OSX&quot; FORCE)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> So the fact that this ever worked was just good fortune, but it seems our luck has run out. Commenting out that line, or equivalently removing the FORCE flag, fixes the Configure-stage error for all versions of CMake.
+</I>&gt;<i>
+</I>&gt;<i> Any thoughts on this? I think if CMAKE_OSX_ARCHITECTURES must be set in OSG, it should really be set before the first call to PROJECT. If we no longer have an OSX maintainer, then I can take a crack at coming up with a solution.
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i> Ravi
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic2292.php?p=68155#68155">http://forum.openscenegraph.org/viewtopic.php?p=68155#68155</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279938.html">[osg-users] [build] OSG Build Error on Mac OSX with XCode 7 and	CMake 3.4 (or greater)
+</A></li>
+	<LI>Next message: <A HREF="003737.html">[osg-users] [build] OSG Build Error on Mac OSX with XCode 7 and	CMake 3.4 (or greater)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3716">[ date ]</a>
+              <a href="thread.html#3716">[ thread ]</a>
+              <a href="subject.html#3716">[ subject ]</a>
+              <a href="author.html#3716">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

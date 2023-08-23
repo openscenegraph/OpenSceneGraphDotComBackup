@@ -1,0 +1,180 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Render multiple PRE_RENDER cameras to FBO
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20multiple%20PRE_RENDER%20cameras%20to%20FBO&In-Reply-To=%3C1542123723.m2f.75191%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009373.html">
+   <LINK REL="Next"  HREF="009375.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Render multiple PRE_RENDER cameras to FBO</H1>
+<!--htdig_noindex-->
+    <B>ivar out</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20multiple%20PRE_RENDER%20cameras%20to%20FBO&In-Reply-To=%3C1542123723.m2f.75191%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Render multiple PRE_RENDER cameras to FBO">ivarout at gmail.com
+       </A><BR>
+    <I>Tue Nov 13 07:42:03 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009373.html">[osg-users] [3rdparty] Could not find plugin to load objects
+</A></li>
+        <LI>Next message (by thread): <A HREF="009375.html">[osg-users] Render multiple PRE_RENDER cameras to FBO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9374">[ date ]</a>
+              <a href="thread.html#9374">[ thread ]</a>
+              <a href="subject.html#9374">[ subject ]</a>
+              <a href="author.html#9374">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I'm having trouble properly rendering a couple of cameras to an FBO. I have two PRE_RENDER cameras that use a FBO and render to a texture. The color buffer seems to be reset before rendering the second camera though. This is my code:
+
+Code:
+
+osg::Group* root = new osg::Group;
+
+osg::Camera* backgroundCamera = new osg::Camera;
+osg::Camera* sceneCamera = new osg::Camera;
+osg::Camera* finalCamera = new osg::Camera;
+	
+root-&gt;addChild(backgroundCamera);
+root-&gt;addChild(sceneCamera);
+root-&gt;addChild(finalCamera);
+
+//-----------------------------------------
+// create texture to render to 
+//-----------------------------------------
+osg::ref_ptr&lt;osg::Texture2D&gt; tex = new osg:
+tex-&gt;setSourceType(GL_FLOAT);
+tex-&gt;setSourceFormat(GL_RGBA);
+tex-&gt;setInternalFormat(GL_RGBA);
+tex-&gt;setTextureSize(512, 512);
+
+//-------------------------------------------------------------------
+// add geometry to background camera
+//-------------------------------------------------------------------
+osg::Geometry* background = osg::createTexturedQuadGeometry(osg::Vec3(), osg::Vec3(0, 1.0f, 0), osg::Vec3(1.0f, 0, 0));
+osg::ref_ptr&lt;osg::Vec4Array&gt; colors = new osg::Vec4Array;
+colors-&gt;push_back(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+colors-&gt;push_back(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+colors-&gt;push_back(osg::Vec4(0, 0, 0, 1.0f));
+colors-&gt;push_back(osg::Vec4(0, 0, 0, 1.0));
+background-&gt;setColorArray(colors.get());
+background-&gt;setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+osg::Geode* geode = new osg::Geode;
+geode-&gt;addChild(background);
+backgroundCamera-&gt;addChild(geode);
+
+backgroundCamera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+backgroundCamera-&gt;setViewport(0, 0, tex-&gt;getTextureWidth(), tex-&gt;getTextureHeight());
+backgroundCamera-&gt;attach(osg::Camera::COLOR_BUFFER, tex.get(), 0, 0, true, 512, 512);
+backgroundCamera-&gt;setRenderOrder(osg::Camera::PRE_RENDER, 0);
+backgroundCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+backgroundCamera-&gt;setProjectionMatrixAsOrtho2D(0.0f, 1.0f, 0.0f, 1.0f);
+backgroundCamera-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, FALSE);
+backgroundCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+backgroundCamera-&gt;setClearColor(osg::Vec4(0, 0, 0, 1));
+
+//-------------------------------------------------------------------
+// CREATE Camera to display scene
+//-------------------------------------------------------------------
+sceneCamera-&gt;setRenderOrder(osg::Camera::PRE_RENDER, 1);
+osg::Node* node = osgDB::readNodeFile(&quot;C:\\Software\\OpenSceneGraph-3.6.0\\Models\\cessna.osg&quot;);
+sceneCamera-&gt;addChild(node);
+sceneCamera-&gt;setViewMatrixAsLookAt(osg::Vec3(100, 0, 0), osg::Vec3(), osg::Vec3(0, 0, 1));
+sceneCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT); //don't clear color buffer please
+sceneCamera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+sceneCamera-&gt;attach(osg::Camera::COLOR_BUFFER, tex.get(), 0, 0, true, 512, 512);
+sceneCamera-&gt;setViewport(0, 0, tex-&gt;getTextureWidth(), tex-&gt;getTextureHeight());
+
+//-------------------------------------------------------------------
+// CREATE Camera to display texture
+//-------------------------------------------------------------------
+finalCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+finalCamera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0, 1.0f, 0, 1.0f));
+osg::Geometry* geom = osg::createTexturedQuadGeometry(osg::Vec3(), osg::Vec3(1.0f, 0.0f, 0.0f),	osg::Vec3(0.0f, 1.0f, 0.0f));
+osg::ref_ptr&lt;osg::Geode&gt; quad = new osg::Geode;
+quad-&gt;addDrawable(geom);
+finalCamera-&gt;addChild(quad.get());
+
+// add shaders that draw the texture on the quad
+osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+program-&gt;addShader(osgDB::readShaderFile(&quot;shader.frag&quot;));
+program-&gt;addShader(osgDB::readShaderFile(&quot;shader.vert&quot;));
+osg::StateSet* stateset = finalCamera-&gt;getOrCreateStateSet();
+stateset-&gt;setTextureAttributeAndModes(0, tex.get());
+stateset-&gt;setAttributeAndModes(program.get());
+stateset-&gt;addUniform(new osg::Uniform(&quot;myTexture&quot;, 0));
+
+osgViewer::Viewer viewer;
+viewer.setSceneData(root);
+return viewer.run();
+
+
+
+
+Either the background or scene camera can correctly be rendered to the FBO (by commenting the other out) but not both at the same time. Does anyone understand why this doesn't work? When I render to FRAME_BUFFER it works perfectly fine, but I figured since I don't want the texture rendered on screen an FBO would be a more efficient option perhaps? 
+
+Thanks!
+
+Cheers,
+ivar
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicfec2.php?p=75191#75191">http://forum.openscenegraph.org/viewtopic.php?p=75191#75191</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009373.html">[osg-users] [3rdparty] Could not find plugin to load objects
+</A></li>
+	<LI>Next message (by thread): <A HREF="009375.html">[osg-users] Render multiple PRE_RENDER cameras to FBO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9374">[ date ]</a>
+              <a href="thread.html#9374">[ thread ]</a>
+              <a href="subject.html#9374">[ subject ]</a>
+              <a href="author.html#9374">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

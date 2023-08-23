@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Loading problem, OpenVR integration
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Loading%20problem%2C%20OpenVR%20integration&In-Reply-To=%3C1478249381.m2f.69237%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004680.html">
+   <LINK REL="Next"  HREF="280883.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Loading problem, OpenVR integration</H1>
+<!--htdig_noindex-->
+    <B>Lorenzo Valente</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Loading%20problem%2C%20OpenVR%20integration&In-Reply-To=%3C1478249381.m2f.69237%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Loading problem, OpenVR integration">oneiros.valente at gmail.com
+       </A><BR>
+    <I>Fri Nov  4 01:49:41 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004680.html">[osg-users] Loading problem, OpenVR integration
+</A></li>
+        <LI>Next message: <A HREF="280883.html">[osg-users] [build] Proper CMAKE settings for ZLIB,	bogus &quot;optimized.lib&quot; in link
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4690">[ date ]</a>
+              <a href="thread.html#4690">[ thread ]</a>
+              <a href="subject.html#4690">[ subject ]</a>
+              <a href="author.html#4690">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Problem solved!  :D 
+As guessed by Robert, the GL objects were not compiled properly.
+
+In the old desktop-version of the software the compilation of the scene was performed by a osgUtil::GLObjectsVisitor created and launched in a subclass of osg::Camera::DrawCallback, which was assigned to the main camera as a &quot;preDrawCallback&quot; (I don't know if this is the right approach but it works and I don't want to mess up with the old system :) ).
+It works fine but it relies on the renderer of a single main camera, the very camera that osgopenvrviewer deactivates (<A HREF="https://github.com/ChrisDenham/osgopenvrviewer/blob/master/src/openvrviewer.cpp#L61">https://github.com/ChrisDenham/osgopenvrviewer/blob/master/src/openvrviewer.cpp#L61</A>)! It means that in the VR environment that preDrawCallback was never called and the compilation was never performed.
+
+The solution? I simply assigned the same callback also to every slave camera present in the view (in the osgopenvrviewer case these are two RTT cameras, one for the left eye and one for the right eye):
+
+Code:
+for (unsigned i = 0; i &lt; view-&gt;getNumSlaves(); ++i)
+{
+   osgViewer::View::Slave&amp; slave = view-&gt;getSlave(i);
+   if (slave._camera.valid())
+   {
+         slave._camera-&gt;setPostDrawCallback(compilationCallback);
+   }
+}
+
+
+
+I used &quot;setPostDrawCallback&quot; because a preDrawCallback was apparently already assigned (replacing it resulted in a full deactivation of the rendering, black screen).
+Is this wrong on any level? It works like a charm, no more frame drops :D
+
+Thank you very much guys, your help pointed me to the right direction.
+A special thanks to Robert!
+
+Cheers!
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4c1b.php?p=69237#69237">http://forum.openscenegraph.org/viewtopic.php?p=69237#69237</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004680.html">[osg-users] Loading problem, OpenVR integration
+</A></li>
+	<LI>Next message: <A HREF="280883.html">[osg-users] [build] Proper CMAKE settings for ZLIB,	bogus &quot;optimized.lib&quot; in link
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4690">[ date ]</a>
+              <a href="thread.html#4690">[ thread ]</a>
+              <a href="subject.html#4690">[ subject ]</a>
+              <a href="author.html#4690">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

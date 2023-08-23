@@ -1,0 +1,191 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] ClipNode Opposite Behavior
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ClipNode%20Opposite%20Behavior&In-Reply-To=%3CCANfcm6a4206t27hSWQzhX5jiZZay5S81RqUp_KgJkfm9X0nFXw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000934.html">
+   <LINK REL="Next"  HREF="000947.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] ClipNode Opposite Behavior</H1>
+<!--htdig_noindex-->
+    <B>Glenn Waldron</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ClipNode%20Opposite%20Behavior&In-Reply-To=%3CCANfcm6a4206t27hSWQzhX5jiZZay5S81RqUp_KgJkfm9X0nFXw%40mail.gmail.com%3E"
+       TITLE="[osg-users] ClipNode Opposite Behavior">gwaldron at gmail.com
+       </A><BR>
+    <I>Sun Jul 26 06:46:22 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000934.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+        <LI>Next message: <A HREF="000947.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#940">[ date ]</a>
+              <a href="thread.html#940">[ thread ]</a>
+              <a href="subject.html#940">[ subject ]</a>
+              <a href="author.html#940">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Erick,
+gl_FragCoord is almost certainly not what you want (Google it). Try
+something like this:
+
+Vertex shader:
+
+uniform vec3 center;
+varying float dist;
+void main()
+{
+    vec4 vertex = gl_ModelViewMatrix * gl_Vertex;
+    dist = length(center - vertex.xyz);
+}
+
+Fragment shader:
+
+uniform float rad;
+varying float dist;
+void main()
+{
+    if ( rad &lt; dist )
+        discard;
+    else
+        gl_FragColor = ...;
+}
+
+
+
+Glenn Waldron / @glennwaldron
+
+On Fri, Jul 24, 2015 at 9:22 AM, Erik Hensens &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ehensens at hunter.com</A>&gt; wrote:
+
+&gt;<i> Thanks Christian. It's funny you mention that because since I'm not
+</I>&gt;<i> setting the color, the quad looks like an old television tuned to a
+</I>&gt;<i> frequency not in service, i.e. &quot;static&quot; or &quot;snow&quot;. I think every time the
+</I>&gt;<i> quad is rendered each fragment's color is set to whatever value is in some
+</I>&gt;<i> uninitialized portion of memory, and each fragment changes color each time
+</I>&gt;<i> it is rendered. Quite a funny effect!
+</I>&gt;<i>
+</I>&gt;<i> I added the following line to set the color, and now it is always blue,
+</I>&gt;<i> but it's still not putting a hole in my quad, it's all there or all gone
+</I>&gt;<i> depending on whether I say if (fDist &lt; rad) or if (fDist &gt; rad):
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> // The fragment shader program source code
+</I>&gt;<i> std::string szFragSource(
+</I>&gt;<i> &quot;uniform vec3 center;\n&quot;
+</I>&gt;<i> &quot;uniform float rad;\n&quot;
+</I>&gt;<i> &quot;void main()\n&quot;
+</I>&gt;<i> &quot;{\n&quot;
+</I>&gt;<i> &quot;float fDistX = gl_FragCoord.x - center.x;\n&quot;
+</I>&gt;<i> &quot;float fDistY = gl_FragCoord.y - center.y;\n&quot;
+</I>&gt;<i> &quot;float fDistZ = gl_FragCoord.z - center.z;\n&quot;
+</I>&gt;<i> &quot;float fDist = sqrt(fDistX * fDistX + fDistY * fDistY + fDistZ *
+</I>&gt;<i> fDistZ);\n&quot;
+</I>&gt;<i> &quot;gl_FragColor = vec4(0.0,0.0,1.0,1.0);\n&quot;
+</I>&gt;<i> &quot;if (fDist &lt; rad) discard;\n&quot;
+</I>&gt;<i> &quot;}\n&quot;
+</I>&gt;<i> );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Any other ideas about why my code doesn't achieve what I want? For
+</I>&gt;<i> example, am I using gl_FragCoord correctly? Are there other errors in my
+</I>&gt;<i> frag source?
+</I>&gt;<i>
+</I>&gt;<i> Thanks again!
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> cbuchner1 wrote:
+</I>&gt;<i> &gt; I believe your fragment shader is not setting the output fragment color
+</I>&gt;<i> at all, which is a minimum requirement for a fragment shader to work.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Christian
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; 2015-07-23 23:59 GMT+02:00 Erik Hensens &lt; ()&gt;:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; &gt; Sorry for the triplicate post, I received an error message on trying
+</I>&gt;<i> to post until I removed the quotes...
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; ------------------
+</I>&gt;<i> &gt; &gt; Read this topic online here:
+</I>&gt;<i> &gt; &gt; <A HREF="../../../../forum.openscenegraph.org/viewtopic9e36.php?p=64458#64458">http://forum.openscenegraph.org/viewtopic.php?p=64458#64458</A> (
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic9e36.php?p=64458#64458">http://forum.openscenegraph.org/viewtopic.php?p=64458#64458</A>)
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; _______________________________________________
+</I>&gt;<i> &gt; &gt; osg-users mailing list
+</I>&gt;<i> &gt; &gt;  ()
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> (<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> )
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;  ------------------
+</I>&gt;<i> &gt; Post generated by Mail2Forum
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopice1d7.php?p=64467#64467">http://forum.openscenegraph.org/viewtopic.php?p=64467#64467</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150726/f81ec093/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150726/f81ec093/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000934.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+	<LI>Next message: <A HREF="000947.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#940">[ date ]</a>
+              <a href="thread.html#940">[ thread ]</a>
+              <a href="subject.html#940">[ subject ]</a>
+              <a href="author.html#940">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

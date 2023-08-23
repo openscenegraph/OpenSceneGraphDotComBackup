@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Using callbacks for all graph modifications?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20callbacks%20for%20all%20graph%20modifications%3F&In-Reply-To=%3CCAFN7Y%2BUuK7eBsEUpL2muXT-Z22P%3DOFWVHL%2Ba-JjvzvRTHDtj0Q%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006603.html">
+   <LINK REL="Next"  HREF="006608.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Using callbacks for all graph modifications?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20callbacks%20for%20all%20graph%20modifications%3F&In-Reply-To=%3CCAFN7Y%2BUuK7eBsEUpL2muXT-Z22P%3DOFWVHL%2Ba-JjvzvRTHDtj0Q%40mail.gmail.com%3E"
+       TITLE="[osg-users] Using callbacks for all graph modifications?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Aug 19 09:00:04 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006603.html">[osg-users] Using callbacks for all graph modifications?
+</A></li>
+        <LI>Next message: <A HREF="006608.html">[osg-users] Using callbacks for all graph modifications?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6606">[ date ]</a>
+              <a href="thread.html#6606">[ thread ]</a>
+              <a href="subject.html#6606">[ subject ]</a>
+              <a href="author.html#6606">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Antonie,
+
+On 18 August 2017 at 22:25, Antoine Rennuit &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">antoinerennuit at hotmail.com</A>&gt;
+wrote:
+
+&gt;<i> I understand the design difference you mentioni and it is relevant.
+</I>&gt;<i>
+</I>&gt;<i> Now from my readings of the beginners' guide, I understood that callbacks
+</I>&gt;<i> were needed to enforce thread safety. Your answer suggests that it is not
+</I>&gt;<i> the case. Can you confirm? i.e. do you confirm I can modify the OSG objects
+</I>&gt;<i> in a direct way (without callbacks) before calling Viewer::frame() and
+</I>&gt;<i> expect a correct rendering behavior?
+</I>&gt;<i>
+</I>
+Using update callbacks assists with making scene graph updates thread safe
+but it's not a necessity, not even a guarantee.  It all depends upon the
+threading model you are using in viewer and when you are modifying what
+data.
+
+ If you are running the viewer SingleThreaded then the old threads that the
+OSG will create will be if you are using a paged database, in which case
+the OSG will automatically start background threads for reading the data.
+These don't impact most work on applications as it all happening in
+background with data local to that paging threads and is only merged during
+the update traversal, the viewer handles this all safely for you.
+
+If your are using CullDrawThreadPerContext you also don't need to worry
+about threading in the update phase (outside viewer.renderingTraversals()
+that's part of viewer.frame()) as all threads that are doing the rendering
+only run for the duration of the renderingTraversals() so you'll be safe
+modifying nodes and geometry/state outside of frame as well.
+
+It's only in DrawThreadPerContext and
+CullThreadPerCameraDrawThreadPerContext threading models that you need to
+be careful about modifying the geometry/state in the scene graph as these
+elements of the scene graph may be read from in the draw thread that can
+still be running when renderingTraversals() finishes.  If you want to
+modify geometry/state you need to set the DataVariance on the geometry and
+state you are modifying to DYANMIC.  This applies to using callbacks or
+modifying the scene graph outwith viewer.frame().
+
+You are free to modify nodes in the scene graph in the main loop/update and
+event traversals in all threading models.
+
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170819/ee1d6d0f/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170819/ee1d6d0f/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006603.html">[osg-users] Using callbacks for all graph modifications?
+</A></li>
+	<LI>Next message: <A HREF="006608.html">[osg-users] Using callbacks for all graph modifications?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6606">[ date ]</a>
+              <a href="thread.html#6606">[ thread ]</a>
+              <a href="subject.html#6606">[ subject ]</a>
+              <a href="author.html#6606">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

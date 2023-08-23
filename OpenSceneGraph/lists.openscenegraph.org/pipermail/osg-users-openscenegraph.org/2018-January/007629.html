@@ -1,0 +1,332 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] GLES link error for unidentified Program
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GLES%20link%20error%20for%20unidentified%20Program&In-Reply-To=%3CCAFN7Y%2BXfdCsdnjYtgM1BdBtscWMsPn5Q7XHqaQAZmoxJ06Wgfg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007628.html">
+   <LINK REL="Next"  HREF="007630.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] GLES link error for unidentified Program</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GLES%20link%20error%20for%20unidentified%20Program&In-Reply-To=%3CCAFN7Y%2BXfdCsdnjYtgM1BdBtscWMsPn5Q7XHqaQAZmoxJ06Wgfg%40mail.gmail.com%3E"
+       TITLE="[osg-users] GLES link error for unidentified Program">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Jan 25 01:40:21 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007628.html">[osg-users] GLES link error for unidentified Program
+</A></li>
+        <LI>Next message (by thread): <A HREF="007630.html">[osg-users] GLES link error for unidentified Program
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7629">[ date ]</a>
+              <a href="thread.html#7629">[ thread ]</a>
+              <a href="subject.html#7629">[ subject ]</a>
+              <a href="author.html#7629">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Alessandro,
+
+I tested the models under my GL2 build of the OSG and the dump1.osgt
+worked fine for me without any errors.  I don't have time to test GLES
+right now.
+
+The vertex shader doesn't provide any hint for the precision, it might
+be the the GLES drivers GLSL compiler is having an issue with that.
+
+Also when targeting just GLES you always have to use the OSG's version
+of gl_ModelViewMatrix, gl_Vertex etc, so you'll need to use
+osg_ModelViewMatrix, osg_Vertex etc.  The osg::State class will by
+default be remapping these for you with the GLES2+ build so behind the
+scenes this is being handled for you.  While you should be aware that
+this is happening, I don't think it's related to the issue you are
+seeing.  If you want to keep the shaders portable to GL2 then leaving
+the gl_ModelViewMatrix in place is fine.
+
+The master version of the OSG now provide support for inject
+environmental values via osg::DisplaySettings::setValues(..), and
+provides some defaults for these like OSG_GLSL_VERSION and
+$OSG_PRECISSION_FLOAT tailored for the build type such as GL/GL3/GLES.
+You can see this in action in the text.vert now in OpenSceneGraph-Data
+master and OSG master (and recent dev release):
+
+$OSG_GLSL_VERSION
+$OSG_PRECISION_FLOAT
+
+$OSG_VARYING_OUT vec2 texCoord;
+$OSG_VARYING_OUT vec4 vertexColor;
+
+void main(void)
+{
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    texCoord = gl_MultiTexCoord0.xy;
+    vertexColor = gl_Color;
+}
+
+It might be that it would be appropriate to use these to help with
+future shaders to allow you to port between platforms easily.
+
+Robert.
+
+On 24 January 2018 at 16:18, Alessandro Terenzi &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">a.terenzi at gmail.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i> I used to work with OSG 3.4.0 (stable) and now I'm trying version 3.5.10 on iOS (trying both GLES 2 and 3) but now I having the following error when the first frame is drawn:
+</I>&gt;<i>
+</I>&gt;<i> glLinkProgram 0x1c41cda70&quot;&quot; FAILED
+</I>&gt;<i> Program &quot;&quot; infolog:
+</I>&gt;<i> ERROR: OpenGL ES requires exactly one vertex and one fragment shader to validly link.
+</I>&gt;<i>
+</I>&gt;<i> Note that I have only one quad to which I apply a texture, I'm using a single 'vertex' and 'fragment shader' and there's only on 'program' around. The same code works fine with OSG 3.4.0 and even though with version 3.5.10 there is the above error, the texture is nonetheless displayed.
+</I>&gt;<i>
+</I>&gt;<i> If I use a more verbose notification level I see that my program &quot;BckProgram&quot; is compiled and linked correctly but then another program with empty name is tried to be linked and it is the one for which I'm receiving the above error, but I did not create a second program anywhere... am I missing something?
+</I>&gt;<i>
+</I>&gt;<i> And here's the verbose log:
+</I>&gt;<i>
+</I>&gt;<i> View::init()
+</I>&gt;<i> cull()
+</I>&gt;<i> cull() got SceneView 0x106510300
+</I>&gt;<i> ShaderComposer::~ShaderComposer() 0x1c02d7450
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> end cull() 0x1065101f0
+</I>&gt;<i> draw() got SceneView 0x106510300
+</I>&gt;<i> Renderer::compile()
+</I>&gt;<i> State::convertShaderSourceToOsgBuiltIns()
+</I>&gt;<i> ++Before Converted source
+</I>&gt;<i> varying vec2 texcoord;
+</I>&gt;<i> void main(void)
+</I>&gt;<i> {
+</I>&gt;<i>     texcoord = gl_MultiTexCoord0.xy;
+</I>&gt;<i>     gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> ++++++++
+</I>&gt;<i> -------- Converted source
+</I>&gt;<i> attribute vec4 osg_MultiTexCoord0;
+</I>&gt;<i> attribute vec4 osg_Vertex;
+</I>&gt;<i> uniform mat4 osg_ModelViewProjectionMatrix;
+</I>&gt;<i> varying vec2 texcoord;
+</I>&gt;<i> void main(void)
+</I>&gt;<i> {
+</I>&gt;<i>     texcoord = osg_MultiTexCoord0.xy;
+</I>&gt;<i>     gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> ----------------
+</I>&gt;<i>
+</I>&gt;<i> Compiling A :VERTEX source:
+</I>&gt;<i>     1: attribute vec4 osg_MultiTexCoord0;
+</I>&gt;<i>     2: attribute vec4 osg_Vertex;
+</I>&gt;<i>     3: uniform mat4 osg_ModelViewProjectionMatrix;
+</I>&gt;<i>     4: varying vec2 texcoord;
+</I>&gt;<i>     5: void main(void)
+</I>&gt;<i>     6: {
+</I>&gt;<i>     7:     texcoord = osg_MultiTexCoord0.xy;
+</I>&gt;<i>     8:     gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;
+</I>&gt;<i>     9: }
+</I>&gt;<i>
+</I>&gt;<i> State::convertShaderSourceToOsgBuiltIns()
+</I>&gt;<i> ++Before Converted source
+</I>&gt;<i> precision mediump float;
+</I>&gt;<i> uniform sampler2D texture0;
+</I>&gt;<i> varying vec2 texcoord;
+</I>&gt;<i> void main(void)
+</I>&gt;<i> {
+</I>&gt;<i>     gl_FragColor = texture2D( texture0, vec2(texcoord.x, 1.0-texcoord.y));
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> ++++++++
+</I>&gt;<i> -------- Converted source
+</I>&gt;<i> precision mediump float;
+</I>&gt;<i> uniform sampler2D texture0;
+</I>&gt;<i> varying vec2 texcoord;
+</I>&gt;<i> void main(void)
+</I>&gt;<i> {
+</I>&gt;<i>     gl_FragColor = texture2D( texture0, vec2(texcoord.x, 1.0-texcoord.y));
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> ----------------
+</I>&gt;<i>
+</I>&gt;<i> Compiling A :FRAGMENT source:
+</I>&gt;<i>     1: precision mediump float;
+</I>&gt;<i>     2: uniform sampler2D texture0;
+</I>&gt;<i>     3: varying vec2 texcoord;
+</I>&gt;<i>     4: void main(void)
+</I>&gt;<i>     5: {
+</I>&gt;<i>     6:     gl_FragColor = texture2D( texture0, vec2(texcoord.x, 1.0-texcoord.y));
+</I>&gt;<i>     7: }
+</I>&gt;<i>
+</I>&gt;<i> Linking osg::Program &quot;BckProgram&quot; id=3 contextID=0
+</I>&gt;<i> State's vertex attrib binding 2, osg_Color
+</I>&gt;<i> State's vertex attrib binding 12, osg_FogCoord
+</I>&gt;<i> State's vertex attrib binding 3, osg_MultiTexCoord0
+</I>&gt;<i> State's vertex attrib binding 4, osg_MultiTexCoord1
+</I>&gt;<i> State's vertex attrib binding 5, osg_MultiTexCoord2
+</I>&gt;<i> State's vertex attrib binding 6, osg_MultiTexCoord3
+</I>&gt;<i> State's vertex attrib binding 7, osg_MultiTexCoord4
+</I>&gt;<i> State's vertex attrib binding 8, osg_MultiTexCoord5
+</I>&gt;<i> State's vertex attrib binding 9, osg_MultiTexCoord6
+</I>&gt;<i> State's vertex attrib binding 10, osg_MultiTexCoord7
+</I>&gt;<i> State's vertex attrib binding 1, osg_Normal
+</I>&gt;<i> State's vertex attrib binding 11, osg_SecondaryColor
+</I>&gt;<i> State's vertex attrib binding 0, osg_Vertex
+</I>&gt;<i> Program &quot;BckProgram&quot; link succeeded, infolog:
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_MultiTexCoord7' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_MultiTexCoord5' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_SecondaryColor' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_MultiTexCoord1' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_MultiTexCoord6' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_FogCoord' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_Normal' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_Color' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_MultiTexCoord4' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_MultiTexCoord2' to match BindAttributeLocation request.
+</I>&gt;<i> WARNING: Could not find vertex shader attribute 'osg_MultiTexCoord3' to match BindAttributeLocation request.
+</I>&gt;<i>
+</I>&gt;<i>         Uniform &quot;texture0&quot; loc=4 size=1 type=sampler2D
+</I>&gt;<i>         Uniform &quot;osg_ModelViewProjectionMatrix&quot; loc=0 size=1 type=mat4
+</I>&gt;<i>         Attrib &quot;osg_MultiTexCoord0&quot; loc=3 size=1
+</I>&gt;<i>         Attrib &quot;osg_Vertex&quot; loc=0 size=1
+</I>&gt;<i>
+</I>&gt;<i> Created new 0x1c41294c0 TextureObject, _numOfTextureObjects 1
+</I>&gt;<i> Warning: detected OpenGL error 'invalid enumerant' at after stateset.compileGLObjects in GLObjectsVisitor::apply(osg::StateSet&amp; stateset)
+</I>&gt;<i> OpenGL extension '' is not supported.
+</I>&gt;<i> Adding parent0x1c02327e0
+</I>&gt;<i> Adding parent0x1c02327e0
+</I>&gt;<i> RenderStage::runCameraSetUp(osg::RenderInfo&amp; renderInfo) 0x1063270e0
+</I>&gt;<i> Setting up osg::Camera::FRAME_BUFFER
+</I>&gt;<i> GLBufferObjectSet::GLBufferObjectSet _profile._size=80
+</I>&gt;<i>     Allocating new glBufferData(), _allocatedSize=80
+</I>&gt;<i> 2018-01-24 16:58:10.501060+0100 CameraCaptureExample[7697:6519318] deviceOrientationDidChange: 5
+</I>&gt;<i> Created new 0x1c41296a0 TextureObject, _numOfTextureObjects 1
+</I>&gt;<i> Warning: detected OpenGL error 'invalid enumerant' at after RenderBin::draw(..)
+</I>&gt;<i> Linking osg::Program &quot;&quot; id=4 contextID=0
+</I>&gt;<i> State's vertex attrib binding 2, osg_Color
+</I>&gt;<i> State's vertex attrib binding 12, osg_FogCoord
+</I>&gt;<i> State's vertex attrib binding 3, osg_MultiTexCoord0
+</I>&gt;<i> State's vertex attrib binding 4, osg_MultiTexCoord1
+</I>&gt;<i> State's vertex attrib binding 5, osg_MultiTexCoord2
+</I>&gt;<i> State's vertex attrib binding 6, osg_MultiTexCoord3
+</I>&gt;<i> State's vertex attrib binding 7, osg_MultiTexCoord4
+</I>&gt;<i> State's vertex attrib binding 8, osg_MultiTexCoord5
+</I>&gt;<i> State's vertex attrib binding 9, osg_MultiTexCoord6
+</I>&gt;<i> State's vertex attrib binding 10, osg_MultiTexCoord7
+</I>&gt;<i> State's vertex attrib binding 1, osg_Normal
+</I>&gt;<i> State's vertex attrib binding 11, osg_SecondaryColor
+</I>&gt;<i> State's vertex attrib binding 0, osg_Vertex
+</I>&gt;<i> glLinkProgram 0x1c41cda70&quot;&quot; FAILED
+</I>&gt;<i> Program &quot;&quot; infolog:
+</I>&gt;<i> ERROR: OpenGL ES requi2018-01-24 16:58:10.503075+0100 CameraCaptureExample[7697:6519318] ...
+</I>&gt;<i> res exactly one vertex and one fragment shader to validly link.
+</I>&gt;<i>
+</I>&gt;<i> Program &quot;&quot; infolog:
+</I>&gt;<i> ERROR: OpenGL ES requires exactly one vertex and one fragment shader to validly link.
+</I>&gt;<i>
+</I>&gt;<i> cull()
+</I>&gt;<i> cull() got SceneView 0x106326740
+</I>&gt;<i> ShaderComposer::~ShaderComposer() 0x1c02d74c0
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> Uniform Adding parent
+</I>&gt;<i> end cull() 0x1065101f0
+</I>&gt;<i> end draw() 0x1065101f0
+</I>&gt;<i> draw() 0x1065101f0
+</I>&gt;<i> draw() got SceneView 0x106326740
+</I>&gt;<i> OpenGL extension '' is not supported.
+</I>&gt;<i> Adding parent0x1c02327e0
+</I>&gt;<i> Adding parent0x1c02327e0
+</I>&gt;<i> RenderStage::runCameraSetUp(osg::RenderInfo&amp; renderInfo) 0x106327d30
+</I>&gt;<i> Setting up osg::Camera::FRAME_BUFFER
+</I>&gt;<i> 2018-01-24 16:58:10.510586+0100 CameraCaptureExample[7697:6519318] ...
+</I>&gt;<i> cull()
+</I>&gt;<i> cull() got SceneView 0x106510300
+</I>&gt;<i> end cull() 0x1065101f0
+</I>&gt;<i> end draw() 0x1065101f0
+</I>&gt;<i> draw() 0x1065101f0
+</I>&gt;<i> draw() got SceneView 0x106510300
+</I>&gt;<i> end draw() 0x1065101f0
+</I>&gt;<i>
+</I>&gt;<i> After this the cull/draw calls repeat without errors.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i> Alessandro
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicc788.php?p=72854#72854">http://forum.openscenegraph.org/viewtopic.php?p=72854#72854</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007628.html">[osg-users] GLES link error for unidentified Program
+</A></li>
+	<LI>Next message (by thread): <A HREF="007630.html">[osg-users] GLES link error for unidentified Program
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7629">[ date ]</a>
+              <a href="thread.html#7629">[ thread ]</a>
+              <a href="subject.html#7629">[ subject ]</a>
+              <a href="author.html#7629">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

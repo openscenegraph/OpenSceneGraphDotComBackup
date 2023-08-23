@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problem reading unclamped float values and non-standard internal formats PBO
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20reading%20unclamped%20float%20values%20and%20non-standard%0A%20internal%20formats%20PBO&In-Reply-To=%3CCAKrV3-nXO3LnhngSXcav%3Dag1k-foUO3D%3Dct5THvf%2BzBMeo70Ag%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010542.html">
+   <LINK REL="Next"  HREF="010544.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problem reading unclamped float values and non-standard internal formats PBO</H1>
+<!--htdig_noindex-->
+    <B>Omar &#193;lvarez</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20reading%20unclamped%20float%20values%20and%20non-standard%0A%20internal%20formats%20PBO&In-Reply-To=%3CCAKrV3-nXO3LnhngSXcav%3Dag1k-foUO3D%3Dct5THvf%2BzBMeo70Ag%40mail.gmail.com%3E"
+       TITLE="[osg-users] Problem reading unclamped float values and non-standard internal formats PBO">omar.alvarez at cinfo.es
+       </A><BR>
+    <I>Mon Oct 14 07:19:56 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010542.html">[osg-users] osgViewer GraphicsWindowX11 Event Handling
+</A></li>
+        <LI>Next message (by thread): <A HREF="010544.html">[osg-users] what should I dirty when I change ColorArray on the fly?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10543">[ date ]</a>
+              <a href="thread.html#10543">[ thread ]</a>
+              <a href="subject.html#10543">[ subject ]</a>
+              <a href="author.html#10543">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I am trying to render to texture and read the results with an osg::Image.
+When I use standard internal formats like GL_RGB it works ok. The problem
+appears when I try to for example use GL_FLOAT with GL_RGB16, etc.
+
+When I get my image back the internal format is not what I want (the one
+that I set up in the texture) and I see errors like:
+
+error pixelFormat = 805b
+ContextData::incrementContextIDUsageCount(0) to 2
+Warning: detected OpenGL error 'invalid value' at after
+stateset.compileGLObjects in GLObjectsVisitor::apply(osg::StateSet&amp;
+stateset)
+
+Here is my PBO setup code:
+
+osg::Camera::RenderTargetImplementation renderTargetImplementation
+= renderTargetImplementation = osg::Camera::PIXEL_BUFFER;
+
+    _camera-&gt;setName(label);
+    // viewport set in configure() method
+    _camera-&gt;setClearColor(osg::Vec4(0., 1., 1., 1.));
+    _camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    _camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    _camera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+    _camera-&gt;setRenderTargetImplementation(renderTargetImplementation);
+    _camera-&gt;setViewport(new osg::Viewport(0,0,viewport_size.x(),
+viewport_size.y()));
+    _camera-&gt;getOrCreateStateSet()-&gt;setAttribute(new
+osg::ClampColor(GL_FALSE, GL_FALSE, GL_FALSE),
+    osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE |
+osg::StateAttribute::PROTECTED);
+
+// Render to texture
+    _texture = new osg::Texture2D();
+    _texture-&gt;setTextureSize(viewport_size.x(), viewport_size.y());
+    _texture-&gt;setInternalFormat(GL_RGB16);
+    _texture-&gt;setSourceType(GL_FLOAT);
+    _texture-&gt;setSourceFormat(GL_RGB);
+    _texture-&gt;setFilter(osg::Texture::MIN_FILTER,osg::Texture::NEAREST);
+    _texture-&gt;setFilter(osg::Texture::MAG_FILTER,osg::Texture::NEAREST);
+    _texture-&gt;setWrap(osg::Texture::WRAP_S,osg::Texture::CLAMP_TO_EDGE);
+    _texture-&gt;setWrap(osg::Texture::WRAP_T,osg::Texture::CLAMP_TO_EDGE);
+    _texture-&gt;setWrap(osg::Texture::WRAP_R,osg::Texture::CLAMP_TO_EDGE);
+
+    // attach the texture and use it as the color buffer.
+    _camera-&gt;attach(osg::Camera::COLOR_BUFFER, _texture);
+
+I am also having trouble with clamped values, when it does work, values are
+clamped in the range [0,1] although I have disabled clamping.
+
+Anyone knows how to setup a PBO to read unclamped values in non-standard
+formats (GL_RGBUI16, GL_RGB16F...)?
+
+Is this supported in OSG?
+
+Cheers,
+
+Omar.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191014/1be2b750/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191014/1be2b750/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010542.html">[osg-users] osgViewer GraphicsWindowX11 Event Handling
+</A></li>
+	<LI>Next message (by thread): <A HREF="010544.html">[osg-users] what should I dirty when I change ColorArray on the fly?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10543">[ date ]</a>
+              <a href="thread.html#10543">[ thread ]</a>
+              <a href="subject.html#10543">[ subject ]</a>
+              <a href="author.html#10543">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Most efficient way to get the gl_ModelViewMatrix of	PREVIOUS frame?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Most%20efficient%20way%20to%20get%20the%20gl_ModelViewMatrix%20of%0A%09PREVIOUS%20frame%3F&In-Reply-To=%3C1466668583.m2f.67747%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279646.html">
+   <LINK REL="Next"  HREF="279647.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Most efficient way to get the gl_ModelViewMatrix of	PREVIOUS frame?</H1>
+<!--htdig_noindex-->
+    <B>Philipp Meyer</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Most%20efficient%20way%20to%20get%20the%20gl_ModelViewMatrix%20of%0A%09PREVIOUS%20frame%3F&In-Reply-To=%3C1466668583.m2f.67747%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Most efficient way to get the gl_ModelViewMatrix of	PREVIOUS frame?">philipp.meyer at fh-bielefeld.de
+       </A><BR>
+    <I>Thu Jun 23 00:56:23 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279646.html">[osg-users] Most efficient way to get the gl_ModelViewMatrix of	PREVIOUS frame?
+</A></li>
+        <LI>Next message: <A HREF="279647.html">[osg-users] [osgPlugins] fbx plugin compile error
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3449">[ date ]</a>
+              <a href="thread.html#3449">[ thread ]</a>
+              <a href="subject.html#3449">[ subject ]</a>
+              <a href="author.html#3449">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+so here is a little update on my current progress. I have a working solution, but im not 100% happy with it as it is pretty messy and offers bad performance.
+
+The basic idea is to assign a uniform variable to each and every transform node of the scene graph, storing its total modelMatrix so it can be accessed by the shader.
+
+1) After building the scene graph, traverse through all nodes. Once a transform node is found, create a uniform and attach it to it. Also add an entry into a global map variable, linking the created uniform with a list of transform nodes (all parents of the current node).
+2) Then, with every frame, iterate through the uniform map and calculate the current model matrices based on the matrix transform list.
+
+This works, but there are several drawbacks:
+
+1) If the scene graph is modified in any way after buidling the map, it will yield wrong results. So with every change of the scene graph, the map needs to be rebuilt.
+2) If multiple parents share the same transform node and it is not an identity matrix transform (with no effect), the approach wont work at all because there is no unique stateset for that transform.
+3) Somewhat bad performance, lots of CPU load and bottlenecking.
+
+If anyone has a better idea about how to obtain the model matrix of the PREVIOUS frame in the vertex shader, please let me know.
+
+
+Code:
+void MDRT::MotionDeskRT::updatePreviousFrameModelMatrices(
+		const osg::Matrix &amp;viewMatrix) {
+	if (modelMatrixUniformMap.empty()) {
+		buildModelMatrixUniformMap(sceneRoot,
+				std::vector&lt;osg::MatrixTransform*&gt;());
+	}
+
+	osg::Matrix modelMatrix;
+
+	for (const auto &amp; pair : modelMatrixUniformMap) {
+		osg::Uniform *mmUniform = pair.first;
+		const auto &amp;mtList = pair.second;
+		const size_t mtListLen = mtList.size();
+
+		modelMatrix = mtList[0]-&gt;getMatrix();
+		for (size_t i = 1; i &lt; mtListLen; ++i) {
+			modelMatrix = mtList[i]-&gt;getMatrix() * modelMatrix;
+		}
+		//modelViewMatrix = modelViewMatrix * viewMatrix;
+
+		mmUniform-&gt;set(modelMatrix);
+	}
+}
+
+void MDRT::MotionDeskRT::buildModelMatrixUniformMap(osg::Node* root,
+		const std::vector&lt;osg::MatrixTransform*&gt; &amp;matrixTransforms) {
+
+	//all of the below only works if no matrix transforms with a matrix != identity are shared.
+	//otherwise, all use the same state set, which will make it impossible
+	//to have a unique uniform storing the individual overall transform of a MT node.
+	osg::Group *group = dynamic_cast&lt;osg::Group*&gt;(root);
+	if (!group) {
+		return; //is leaf and not MT
+	}
+
+	const unsigned int childCount = group-&gt;getNumChildren();
+	osg::MatrixTransform *mt = dynamic_cast&lt;osg::MatrixTransform*&gt;(group);
+
+	if (mt &amp;&amp; mt-&gt;getMatrix() != osg::Matrix::identity()) {
+		//is matrix transform, update modelview matrix
+		auto modifiedMatrixTransforms = matrixTransforms;
+		if (mt-&gt;getReferenceFrame()
+				!= osg::Transform::ReferenceFrame::RELATIVE_RF) {
+			//this mt doesnt use relative reference frame, and therefore ignores all parent MTs when calculating the final model matrix.
+			modifiedMatrixTransforms.clear();
+		}
+		modifiedMatrixTransforms.push_back(mt);
+
+		osg::Uniform *mmUniform = mt-&gt;getOrCreateStateSet()-&gt;getOrCreateUniform(
+				&quot;oldModelMatrix&quot;, osg::Uniform::Type::FLOAT_MAT4, 1);
+
+		modelMatrixUniformMap[mmUniform] = modifiedMatrixTransforms;
+
+		for (unsigned int cid = 0; cid &lt; childCount; ++cid) {
+			buildModelMatrixUniformMap(group-&gt;getChild(cid),
+					modifiedMatrixTransforms);
+		}
+
+		return;
+	}
+
+	for (unsigned int cid = 0; cid &lt; childCount; ++cid) {
+		buildModelMatrixUniformMap(group-&gt;getChild(cid), matrixTransforms);
+	}
+
+}
+
+
+
+
+Thank you!
+
+Cheers,
+Philipp
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic81c8.php?p=67747#67747">http://forum.openscenegraph.org/viewtopic.php?p=67747#67747</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279646.html">[osg-users] Most efficient way to get the gl_ModelViewMatrix of	PREVIOUS frame?
+</A></li>
+	<LI>Next message: <A HREF="279647.html">[osg-users] [osgPlugins] fbx plugin compile error
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3449">[ date ]</a>
+              <a href="thread.html#3449">[ thread ]</a>
+              <a href="subject.html#3449">[ subject ]</a>
+              <a href="author.html#3449">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

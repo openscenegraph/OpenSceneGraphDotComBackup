@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Volume image crash on the latest version of Nvidia	driver
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20image%20crash%20on%20the%20latest%20version%20of%20Nvidia%0A%09driver&In-Reply-To=%3CCAFN7Y%2BUY%3D5N%2B7kRs9jza%2BTr18yi2NMKZvw_bRnHF3rRvhqa7bA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001085.html">
+   <LINK REL="Next"  HREF="001093.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Volume image crash on the latest version of Nvidia	driver</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20image%20crash%20on%20the%20latest%20version%20of%20Nvidia%0A%09driver&In-Reply-To=%3CCAFN7Y%2BUY%3D5N%2B7kRs9jza%2BTr18yi2NMKZvw_bRnHF3rRvhqa7bA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Volume image crash on the latest version of Nvidia	driver">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Aug  5 10:10:42 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001085.html">[osg-users] Volume image crash on the latest version of Nvidia	driver
+</A></li>
+        <LI>Next message: <A HREF="001093.html">[osg-users] Volume image crash on the latest version of Nvidia	driver
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1087">[ date ]</a>
+              <a href="thread.html#1087">[ thread ]</a>
+              <a href="subject.html#1087">[ subject ]</a>
+              <a href="author.html#1087">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Clement,
+
+I have tried Julian's suggested approach of assign the num_iterations to an
+int and it works, simplify his original suggestion I get:
+
+Original shader line that results in hang:
+
+float num_iterations = ceil(length((te-t0).xyz)/SampleDensityValue);
+
+Revised shader line that works fine:
+
+int num_iterations = ceil(length((te-t0).xyz)/SampleDensityValue);
+
+Now, these both should result in the same value, as ceil rounds to an
+integer value, abeit within the scope of floating point math.
+
+Curiously the modern MultiPassTechnique shaders work fine too and they use
+an int.  Originally I didn't use an int for the num_iterations as early
+GLSL implementations didn't fully support int's.
+
+I think the best solution would be to modify the shaders to all use int's
+for the num_iterations as a general coding approach using int's is sound.
+It shouldn't however be need a float should work in this context just as
+well as a int.  What I suspect is that at certain values there is some kind
+of numerical bug on the GPU or perhaps driver that is resulting in an
+invalid float point value.  Casting from float to int seems to nip this
+error in the bud so it doesn't propagate.
+
+It's end of day here so I'll have to make the changes and test them
+tomorrow and will update OpenSceneGraph-Data and OSG-3.2, OSG-3.4 an
+OSG-svn/trunk branches.
+
+Robert.
+
+Robert.
+
+
+
+
+
+On 5 August 2015 at 17:46, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi Clement,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 5 August 2015 at 17:06, &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Clement.Chu at csiro.au</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i>   Thanks for your help to test the problem.  Please find the attachment
+</I>&gt;&gt;<i> of my test data.   I tested with my laptop (Nvidia NVS 5200M with driver
+</I>&gt;&gt;<i> 353.62) and used osg 3.2.1 x64 windows version.  The command is:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> osgviewer t1.osg
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thanks for the model.
+</I>&gt;<i>
+</I>&gt;<i> I've run it on my Kubuntu system with Geforce GTX 760 + 346.59 drives and
+</I>&gt;<i> get a hang on my system when I rotate the view.  This happens with OSG
+</I>&gt;<i> svn/trunk (equivalent to OSG-3.4).  When I run osgvolume t1.dds I get the
+</I>&gt;<i> hang as well.  Given the nature of the hang and how it locks out the whole
+</I>&gt;<i> desktop it all points to GPU/driver issue of some kind.
+</I>&gt;<i>
+</I>&gt;<i> If I run:
+</I>&gt;<i>
+</I>&gt;<i>   osgvolume t1.dds --multi-pass
+</I>&gt;<i>
+</I>&gt;<i> I don't get any hang.  The osgVolume::MultiPassTechnique is only part of
+</I>&gt;<i> OSG-3.4 so you won't have this option when using OSG3.2.1.  By default
+</I>&gt;<i> osgvolume still defaults to the old RayTracedTechnique that you'll be
+</I>&gt;<i> familiar with, so I would suspect an issue with how the GPU is managing the
+</I>&gt;<i> RayTracedTechnique GLSL shaders.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The thread that Julian Valentin linked discusses potentially the same
+</I>&gt;<i> issue, although the GLSL code Julian suggesting could be changed looks
+</I>&gt;<i> valid and the fix a workaround to otherwise valid code.  I will do a review
+</I>&gt;<i> of the shaders to see I can spot a problem.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150805/b302f3f3/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150805/b302f3f3/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001085.html">[osg-users] Volume image crash on the latest version of Nvidia	driver
+</A></li>
+	<LI>Next message: <A HREF="001093.html">[osg-users] Volume image crash on the latest version of Nvidia	driver
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1087">[ date ]</a>
+              <a href="thread.html#1087">[ thread ]</a>
+              <a href="subject.html#1087">[ subject ]</a>
+              <a href="author.html#1087">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

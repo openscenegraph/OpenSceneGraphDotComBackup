@@ -1,0 +1,366 @@
+#pragma once
+
+#include <osg/BlendFunc>
+#include <osg/BufferObject>
+#include <osg/Camera>
+#include <osg/ComputeBoundsVisitor>
+#include <osg/Depth>
+#include <osg/Geode>
+#include <osg/Geometry>
+#include <osg/Group>
+#include <osg/io_utils>
+#include <osg/Material>
+#include <osg/Math> 
+#include <osg/MatrixTransform>
+#include <osg/NodeCallback>
+#include <osg/Notify>
+#include <osg/Point>
+#include <osg/PolygonMode>
+#include <osg/PolygonOffset>
+#include <osg/Projection>
+#include <osg/Shape>
+#include <osg/ShapeDrawable>
+#include <osg/TexEnv>
+#include <osg/Texture2D>
+#include <osg/VertexProgram>
+
+#include <osgDB/ConvertUTF>
+#include <osgDB/ReadFile>
+#include <osgDB/Registry>
+#include <osgDB/FileUtils>
+#include <osgDB/WriteFile>
+//#include <osgDB/DatabasePager>
+
+#include <osgGA/Device>
+#include <osgGA/GUIEventAdapter>
+#include <osgGA/GUIEventHandler>
+#include <osgGA/TrackballManipulator>
+
+#include <osgText/Text>
+#include <osgText/Font>
+
+#include <osgUtil/Optimizer>
+
+#include <osgViewer/CompositeViewer>
+#include <osgViewer/Viewer>
+#include <osgViewer/api/win32/GraphicsWindowWin32>
+#include <osgViewer/ViewerEventHandlers>
+
+
+#include <sstream>
+#include <tchar.h>
+
+
+#ifdef _DEBUG
+#pragma comment(lib, "osgd.lib")
+#pragma comment(lib, "osgDBd.lib")
+#pragma comment(lib, "osgGAd.lib")
+#pragma comment(lib, "osgTextd.lib")
+#pragma comment(lib, "osgUtild.lib")
+#pragma comment(lib, "osgViewerd.lib")
+#pragma comment(lib, "openThreadsd.lib")
+#else
+#pragma comment(lib, "osg.lib")
+#pragma comment(lib, "osgDB.lib")
+#pragma comment(lib, "osgGA.lib")
+#pragma comment(lib, "osgText.lib")
+#pragma comment(lib, "osgUtil.lib")
+#pragma comment(lib, "osgViewer.lib")
+#pragma comment(lib, "openThreads.lib")
+#endif
+
+using namespace std;
+using namespace osg;
+using namespace osgGA;
+using namespace osgText;
+
+ShapeDrawable* createSphere(float cx, float cy, float cz, float r);
+
+Geometry* createRect(float cx, float cy, float cz, float r, Vec4 color=Vec4(1, 1, 1, 1), float s = 1, float t = 1);
+
+Geometry* createRect(float x0, float y0, float z, float w, float h, Vec4 color=Vec4(1, 1, 1, 1), float s = 1, float t = 1);
+
+Geometry* createCircle(float x, float y, float z, float r, Vec4 color=Vec4(1, 0, 0, 1), int numSegments = 18);
+
+
+
+Geometry* createRect(float x0, float y0, float z, float w, float h, Vec4 color, float s, float t)
+{
+    Geometry *geom = new Geometry;
+    Vec3Array *v = new Vec3Array;
+    v->push_back( Vec3(x0, y0+h, z) );   //0
+    v->push_back( Vec3(x0, y0, z) );     //1
+    v->push_back( Vec3(x0+w, y0+h, z) ); //2
+    v->push_back( Vec3(x0+w, y0, z) );   //3
+
+    Vec2Array *uv = new Vec2Array;
+    uv->push_back( Vec2(0, t) );
+    uv->push_back( Vec2(0, 0) );
+    uv->push_back( Vec2(s, t) );
+    uv->push_back( Vec2(s, 0) );
+
+    Vec4Array *c = new Vec4Array;
+    c->push_back(color);
+
+    Vec3Array *n = new Vec3Array;
+    n->push_back(Vec3(0, 0, 1));
+
+    geom->setVertexArray(v);
+    geom->setColorArray(c, Array::BIND_OVERALL);
+    geom->setNormalArray(n, Array::BIND_OVERALL);
+    geom->setTexCoordArray(0, uv, Array::BIND_PER_VERTEX);
+    geom->addPrimitiveSet( new DrawArrays(PrimitiveSet::TRIANGLE_STRIP, 0, v->size()) );
+
+    return geom;
+}
+
+Geometry* createCircle(float x, float y, float z, float r, Vec4 color, int numSegments)
+{
+    Geometry *geom = new Geometry;
+
+    float angle = 0;
+    float angleDelta = osg::PI*2.0f/(float)numSegments;
+
+    Vec3Array *v = new Vec3Array;
+    Vec2Array *uv = new Vec2Array;
+
+    for(int i=0; i<numSegments; ++i)
+    {
+        Vec3 pnt(x+r*cos(angle), y+r*sin(angle), z);
+        v->push_back( pnt );
+
+        Vec2 texCoord((cos(angle) + 1.0)*0.5, (sin(angle) + 1.0)*0.5);
+        uv->push_back( texCoord );
+
+        angle += angleDelta;
+    }
+
+    Vec4Array *c = new Vec4Array;
+    c->push_back(color);
+
+    Vec3Array *n = new Vec3Array;
+    n->push_back(Vec3(0, 0, 1));
+
+    geom->setVertexArray(v);
+    geom->setColorArray(c, Array::BIND_OVERALL);
+    geom->setNormalArray(n, Array::BIND_OVERALL);
+    geom->setTexCoordArray(0, uv, Array::BIND_PER_VERTEX);
+    geom->addPrimitiveSet( new DrawArrays(PrimitiveSet::POLYGON, 0, v->size()) );
+
+    return geom;
+}
+
+Program* createProgram(char *fname1, char *fname2)
+{
+    osg::Shader * vpShader = Shader::readShaderFile( osg::Shader::VERTEX, fname1 );
+    osg::Shader * fpShader = Shader::readShaderFile( osg::Shader::FRAGMENT, fname2 );
+
+    osg::Program * program = new osg::Program;
+    program->addShader(vpShader);
+    program->addShader(fpShader);
+
+    return program;
+}
+
+int testTextDepth()
+{
+    float dp = 0.0, offset = 0.001;
+    float cx = 0, cy = 0, w = 100, h = 100, r = 100;
+    float dp1, dp2, dp3, dp4, dp5, dp6;
+
+    osgViewer::Viewer viewer;
+
+    osgText::Font *font = osgText::readFontFile("simsun.ttc");
+    if(!font)
+    {
+        osg::notify(osg::FATAL)<<"load font failed"<<std::endl;
+        return -1;
+    }
+
+    dp1 = dp + offset;
+    dp2 = dp + offset*3.0f;
+    dp3 = dp+offset*2.5f;
+    dp += 0.5;
+    dp4 = dp + offset;
+    dp5 = dp + offset*3.0f;
+    dp6 = dp + offset*2.5f;
+
+
+    //////////////////////////////////////////////////////////////////////////
+    // node 1
+    dp = 0.0;
+    Geometry *geom1 = createRect(cx, cy, 0, w, h);
+    StateSet *ss1 = geom1->getOrCreateStateSet();
+    ss1->addUniform( new osg::Uniform("index", 0), StateAttribute::ON | StateAttribute::PROTECTED);
+    ss1->addUniform( new osg::Uniform("brushColor", Vec4(1, 0, 0, 1)), StateAttribute::ON | StateAttribute::PROTECTED);
+    Depth *depth1 = new osg::Depth(Depth::LEQUAL, 0.0, dp1);
+    ss1->setAttributeAndModes(depth1, StateAttribute::ON | StateAttribute::PROTECTED);
+    Material *mat = new Material;
+    mat->setAmbient(Material::FRONT_AND_BACK, Vec4(1,0,0,1));
+    mat->setDiffuse(Material::FRONT_AND_BACK, Vec4(0.8,0,0,1));
+    mat->setSpecular(Material::FRONT_AND_BACK, Vec4(1,0,0,1));
+    ss1->setAttributeAndModes(mat, StateAttribute::ON);
+
+    Geometry *geom2 = createRect(cx+0.5*w, cy+0.5*h, 0, w, h);
+    StateSet *ss2 = geom2->getOrCreateStateSet();
+    ss2->addUniform( new osg::Uniform("index", 0), StateAttribute::ON | StateAttribute::PROTECTED );
+    ss2->addUniform( new osg::Uniform("brushColor", Vec4(1, 1, 0, 1)), StateAttribute::ON | StateAttribute::PROTECTED );
+    Depth *depth2 = new osg::Depth(Depth::LEQUAL, 0.0, dp2);
+    ss2->setAttributeAndModes(depth2, StateAttribute::ON | StateAttribute::PROTECTED);
+
+    //text node
+    osgText::Text *textNode1 = new osgText::Text();
+    textNode1->setFont(font);
+    textNode1->setText(L"ÌìµØÐþ»Æ ÓîÖæºé»Ä");
+    textNode1->setCharacterSize(48);
+    textNode1->setPosition(Vec3(0, 50, 0));
+    textNode1->setDrawMode(osgText::TextBase::TEXT | osgText::TextBase::FILLEDBOUNDINGBOX);
+    StateSet *ss3 = textNode1->getOrCreateStateSet();
+    ss3->addUniform( new osg::Uniform("index", 1), StateAttribute::ON | StateAttribute::PROTECTED);
+    ss3->addUniform( new osg::Uniform("isText", 1), StateAttribute::ON | StateAttribute::PROTECTED);
+    ss3->addUniform( new osg::Uniform("textColor", Vec4(1, 0, 0, 1)), StateAttribute::ON | StateAttribute::PROTECTED);
+    ss3->addUniform( new osg::Uniform("boxColor", Vec4(0, 1, 0, 1)), StateAttribute::ON | StateAttribute::PROTECTED);
+    Depth *depth3 = new osg::Depth(Depth::LEQUAL, 0.0, dp3);
+    ss3->setAttributeAndModes(depth3, StateAttribute::ON | StateAttribute::PROTECTED);
+
+#define _NODE2 1
+#if _NODE2
+    //////////////////////////////////////////////////////////////////////////
+    // node 2
+    Geometry *geom4 = createRect(cx, cy, 0, w, h);
+    StateSet *ss4 = geom4->getOrCreateStateSet();
+    ss4->addUniform( new osg::Uniform("index", 0), StateAttribute::ON | StateAttribute::PROTECTED);
+    ss4->addUniform( new osg::Uniform("brushColor", Vec4(1, 0, 0, 1)), StateAttribute::ON | StateAttribute::PROTECTED);
+    Depth *depth4 = new osg::Depth(Depth::LEQUAL, 0.0, dp4);
+    ss4->setAttributeAndModes(depth4, StateAttribute::ON | StateAttribute::PROTECTED);
+
+    Geometry *geom5 = createCircle(cx+0.5*w, cy+0.5*h, 0, w);
+    StateSet *ss5 = geom5->getOrCreateStateSet();
+    ss5->addUniform( new osg::Uniform("index", 0), StateAttribute::ON | StateAttribute::PROTECTED );
+    ss5->addUniform( new osg::Uniform("brushColor", Vec4(1, 1, 0, 1)), StateAttribute::ON | StateAttribute::PROTECTED );
+    Depth *depth5 = new osg::Depth(Depth::LEQUAL, 0.0, dp5);
+    ss5->setAttributeAndModes(depth5, StateAttribute::ON | StateAttribute::PROTECTED);
+
+    //text node
+    osgText::Text *textNode2 = new osgText::Text();
+    textNode2->setFont(font);
+    textNode2->setText(L"ÎÄ±¾²âÊÔ 1234 ABCD efgh");
+    textNode2->setCharacterSize(48);
+    textNode2->setPosition(Vec3(0, 50, 0));
+    textNode2->setDrawMode(osgText::TextBase::TEXT | osgText::TextBase::FILLEDBOUNDINGBOX);
+    StateSet *ss6 = textNode2->getOrCreateStateSet();
+    ss6->addUniform( new osg::Uniform("index", 1), StateAttribute::ON | StateAttribute::PROTECTED);
+    ss6->addUniform( new osg::Uniform("isText", 1), StateAttribute::ON | StateAttribute::PROTECTED);
+    ss6->addUniform( new osg::Uniform("textColor", Vec4(1, 0, 0, 1)), StateAttribute::ON | StateAttribute::PROTECTED);
+    ss6->addUniform( new osg::Uniform("boxColor", Vec4(0, 1, 0, 1)), StateAttribute::ON | StateAttribute::PROTECTED);
+    Depth *depth6 = new osg::Depth(Depth::LEQUAL, 0.0, dp6);
+    ss6->setAttributeAndModes(depth6, StateAttribute::ON | StateAttribute::PROTECTED);
+
+#endif
+
+    // root node
+    MatrixTransform *root = new MatrixTransform;
+    root->setMatrix(Matrix::rotate(inDegrees(90.0f), Vec3(1, 0, 0)));
+    viewer.setSceneData( root );
+
+    Geode *geode = new Geode;
+    geode->addDrawable(geom1);
+    geode->addDrawable(geom2);
+    geode->addDrawable(textNode1);
+
+    MatrixTransform *mt1 = new MatrixTransform;
+    mt1->addChild(geode);
+    root->addChild(mt1);
+
+#if _NODE2
+    Geode *geode2 = new Geode;
+    geode2->addDrawable(geom4);
+    geode2->addDrawable(geom5);
+    geode2->addDrawable(textNode2);
+
+    MatrixTransform *mt2 = new MatrixTransform;
+    mt2->addChild(geode2);
+    mt2->setMatrix(Matrix::translate(0, 3*h, 0));
+    root->addChild(mt2);
+#endif
+
+    StateSet *ss = root->getOrCreateStateSet();
+    Program *p = createProgram("shader/base.glslv", "shader/base.glslf");
+    ss->setAttributeAndModes(p, StateAttribute::ON | StateAttribute::OVERRIDE);
+    Depth *depth0 = new osg::Depth(Depth::ALWAYS, 0.0, 1.0);
+    ss->setAttributeAndModes(depth0, StateAttribute::ON | StateAttribute::PROTECTED | StateAttribute::OVERRIDE);
+
+    //viewer.realize();
+    viewer.setCameraManipulator(new osgGA::TrackballManipulator());
+    Camera *cam = viewer.getCamera();
+    cam->setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+    viewer.run();
+
+    return 0;
+}
+
+#if 1
+int _tmain(int argc, _TCHAR* argv[])
+{
+    osg::ApplicationUsage::instance();
+    osg::DisplaySettings *ds = osg::DisplaySettings::instance().get();
+    ds->setNumMultiSamples(4);
+    ds->setDepthBuffer(true);
+
+    testTextDepth();
+
+    return 0;
+}
+#endif
+
+#if 0
+FILE base.glsv
+#ifdef GL_ES
+precision lowp float;
+#endif
+
+varying vec2 uv;
+
+void main(void)
+{
+    gl_Position   = gl_ModelViewProjectionMatrix * gl_Vertex;
+    uv = gl_MultiTexCoord0.xy;
+}
+
+FILE base.glsf
+#ifdef GL_ES
+precision lowp float;
+#endif
+
+uniform int index;
+uniform int isText;
+
+uniform vec4 brushColor;
+uniform sampler2D brushTex;
+uniform vec4 textColor;
+uniform vec4 boxColor;
+
+varying vec2 uv;
+
+void main()
+{
+    vec2 texsize = vec2(100, 100);
+    if(index==0)
+    {
+        gl_FragColor = brushColor;
+    }
+    else
+    {
+        if(isText==0)
+            gl_FragColor = texture2D(brushTex, uv);
+        else
+        {
+            vec4 color = texture2D(brushTex, uv);
+            color = mix(textColor, color, 1.0-color.a);
+            color = mix(boxColor, color, color.a);
+            gl_FragColor = color;
+        }
+    }
+}
+#endif

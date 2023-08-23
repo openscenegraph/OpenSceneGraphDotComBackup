@@ -1,0 +1,238 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] VBO Bug with 3.6.1 and Normal Arrays
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAG7xrZdut%3DJ0v2x5iyGfKELNVqQL0_KJmJVqT%2B4Lrm%3DxBvJA-A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008432.html">
+   <LINK REL="Next"  HREF="008437.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] VBO Bug with 3.6.1 and Normal Arrays</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAG7xrZdut%3DJ0v2x5iyGfKELNVqQL0_KJmJVqT%2B4Lrm%3DxBvJA-A%40mail.gmail.com%3E"
+       TITLE="[osg-users] VBO Bug with 3.6.1 and Normal Arrays">l.voerman at rug.nl
+       </A><BR>
+    <I>Mon Jun 11 07:25:41 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008432.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+        <LI>Next message (by thread): <A HREF="008437.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8433">[ date ]</a>
+              <a href="thread.html#8433">[ thread ]</a>
+              <a href="subject.html#8433">[ subject ]</a>
+              <a href="author.html#8433">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Daniel,
+I don't understand why your modification to addPrimitiveSet() resolves your
+issue with the openflight plugin, as it's called before the proper array
+bindings have been set (src\osgPlugins\OpenFlight\GeometryRecords.cpp line
+601)
+Can your problem be avoided by changing
+if (geometry-&gt;getColorArray())
+geometry-&gt;getColorArray()-&gt;setBinding(osg::Array::BIND_PER_VERTEX);
+to
+if (geometry-&gt;getColorArray()) geometry-&gt;setColorArray(
+geometry-&gt;getColorArray(), osg::Array::BIND_PER_VERTEX);
+and
+if (geometry-&gt;getNormalArray())
+geometry-&gt;getNormalArray()-&gt;setBinding(osg::Array::BIND_PER_VERTEX);
+by
+if (geometry-&gt;getNormalArray()) geometry-&gt;setNormalArray(
+geometry-&gt;getNormalArray(), osg::Array::BIND_PER_VERTEX);
+
+(both changes appear two times in
+src\osgPlugins\OpenFlight\GeometryRecords.cpp )
+Regards, Laurens.
+
+On Mon, Jun 11, 2018 at 3:37 PM, Daniel Emminizer, Code 5773 &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dan.emminizer at nrl.navy.mil</A>&gt; wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> I am back from travel and looking at this again.  Didn't get a response on
+</I>&gt;<i> last set of questions about this crash.  Sorry to distract from the Vulkan
+</I>&gt;<i> work -- it sounds interesting, and I'm watching your progress there
+</I>&gt;<i> excitedly.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Core problem seems to be that Array::setBinding() can change after
+</I>&gt;<i> Geometry::set*Array().  Geometry::set*Array() is responsible for calling
+</I>&gt;<i> addVertexBufferObjectIfRequired(), and doesn't have enough information to
+</I>&gt;<i> correctly do so.
+</I>&gt;<i>
+</I>&gt;<i> During the draw traversal, as a result, the Array::getBinding() flag does
+</I>&gt;<i> not match the VBO state in Geometry.
+</I>&gt;<i>
+</I>&gt;<i> One solution is to create the VBO as needed (using
+</I>&gt;<i> addVertexBufferObjectIfRequired) sometime between the start of cull phase
+</I>&gt;<i> and before the Geometry::drawImplementation().  But drawImplementation()
+</I>&gt;<i> is const, and not a place where this can happen.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Another possible solution that might help is to modify
+</I>&gt;<i> Geometry::setPrimitiveSet() and addPrimitiveSet() to call
+</I>&gt;<i> addVertexBufferObjectIfRequired() on the various arrays.  I prototyped
+</I>&gt;<i> this solution locally and it resolved the issue in the FLT loader.  I know
+</I>&gt;<i> it's not perfect, but most places I've seen that would trigger this bug
+</I>&gt;<i> have defined an array binding by the time a primitive set is added.
+</I>&gt;<i>
+</I>&gt;<i> Should I submit a PR for this approach?  It keeps binary compatibility and
+</I>&gt;<i> is fairly straightforward, and helps my immediate crash out of FLT and most
+</I>&gt;<i> of the other use cases I've encountered.
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i>
+</I>&gt;<i>  - Dan
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> &gt; -----Original Message-----
+</I>&gt;<i> &gt; From: Daniel Emminizer, Code 5773
+</I>&gt;<i> &gt; Sent: Monday, June 04, 2018 8:45 AM
+</I>&gt;<i> &gt; To: OpenSceneGraph Users
+</I>&gt;<i> &gt; Subject: RE: [osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Hi Robert,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The file you sent is identical to the one I sent.  Was that
+</I>&gt;<i> intentional?  You also
+</I>&gt;<i> &gt; mention Cessna; do you have the examples mixed up perhaps?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The bug will manifest if the geometry's normal array (and presumably fog,
+</I>&gt;<i> &gt; colors, etc) are set before the array binding type is set.  It's
+</I>&gt;<i> entirely possible
+</I>&gt;<i> &gt; to have correctly loaded models.  I only ran across this because the
+</I>&gt;<i> &gt; OpenFlight loader sets the binding late.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; This bug prints on console:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Warning: detected OpenGL error 'invalid operation' at after
+</I>&gt;<i> &gt; drawable.compileGLObjects() call in GLObjectsVisitor::apply(osg::
+</I>&gt;<i> Drawable&amp;
+</I>&gt;<i> &gt; drawable)
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; No change in error message with with OSG_GL_ERROR_CHECKING=on.  No
+</I>&gt;<i> &gt; change in error message with --ro, with --reset, or with --ro --reset.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I am building OSG 3.6.1 (and tried OpenSceneGraph-3.6) in core profile on
+</I>&gt;<i> &gt; Windows 10.  Video card data is:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Vendor = NVIDIA Corporation
+</I>&gt;<i> &gt; Renderer = NVS 510/PCIe/SSE2
+</I>&gt;<i> &gt; Version = 3.3.0 NVIDIA 388.19
+</I>&gt;<i> &gt; GLSL Version = 330
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Responses from me will be slow this week; my email access will be spotty.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Hope this helps.  Thanks,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;  - Dan
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; &gt; -----Original Message-----
+</I>&gt;<i> &gt; &gt; From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On
+</I>&gt;<i> &gt; &gt; Behalf Of Robert Osfield
+</I>&gt;<i> &gt; &gt; Sent: Sunday, June 03, 2018 6:11 AM
+</I>&gt;<i> &gt; &gt; To: OpenSceneGraph Users
+</I>&gt;<i> &gt; &gt; Subject: Re: [osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; Hi Dan,
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; On 1 June 2018 at 16:01, Daniel Emminizer, Code 5773
+</I>&gt;<i> &gt; &gt; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dan.emminizer at nrl.navy.mil</A>&gt; wrote:
+</I>&gt;<i> &gt; &gt; &gt; Attached is a demo of the problem that generates a console warning.
+</I>&gt;<i> &gt; &gt; More complex scenes can cause crashes.  The red triangle has the
+</I>&gt;<i> problem,
+</I>&gt;<i> &gt; &gt; but the green one does not.
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; I have built the example, and to help with test have changed the #ifdef
+</I>&gt;<i> &gt; &gt; blocks to ones that check arguments.read(&quot;--ro&quot;) for the
+</I>&gt;<i> RealizerOperation
+</I>&gt;<i> &gt; &gt; usage and &quot;--reset&quot; for the
+</I>&gt;<i> &gt; &gt; resetVertexAttributeAlias.   Attached is the modified file.
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; If you run the test with --ro and have it use the custom
+</I>&gt;<i> RealizerOperation I
+</I>&gt;<i> &gt; &gt; see a completely red cessna.  If I used --ro and --reset I see
+</I>&gt;<i> multi-colour
+</I>&gt;<i> &gt; &gt; (blue, red etc) one, if I run without any options I see the
+</I>&gt;<i> multi-colour one.
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; I don't see any command line warnings though.  I'm testing under
+</I>&gt;<i> Kubuntu
+</I>&gt;<i> &gt; &gt; with OSG-3.6 branch, my drive info is:
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; OpenGL vendor string: NVIDIA Corporation OpenGL renderer string:
+</I>&gt;<i> &gt; GeForce
+</I>&gt;<i> &gt; &gt; GTX 760/PCIe/SSE2 OpenGL core profile version string: 4.5.0 NVIDIA
+</I>&gt;<i> &gt; 384.111
+</I>&gt;<i> &gt; &gt; OpenGL core profile shading language version string: 4.50 NVIDIA
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; I don't yet have any idea what is going wrong, it's obviously very odd
+</I>&gt;<i> that
+</I>&gt;<i> &gt; the
+</I>&gt;<i> &gt; &gt; custom RealizeOperation is having an effect when it does nothing
+</I>&gt;<i> itself.
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; Before I start diving deeper I'd like to know what others are seeing
+</I>&gt;<i> with
+</I>&gt;<i> &gt; &gt; these different combinations and if any errors are being printed in the
+</I>&gt;<i> &gt; &gt; console, if so what are they.  Also let us know the OSG version and
+</I>&gt;<i> &gt; driver/OS
+</I>&gt;<i> &gt; &gt; details.
+</I>&gt;<i> &gt; &gt;
+</I>&gt;<i> &gt; &gt; Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180611/d4c3f586/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180611/d4c3f586/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008432.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+	<LI>Next message (by thread): <A HREF="008437.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8433">[ date ]</a>
+              <a href="thread.html#8433">[ thread ]</a>
+              <a href="subject.html#8433">[ subject ]</a>
+              <a href="author.html#8433">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

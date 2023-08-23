@@ -1,0 +1,122 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Texture Caching Problem with 3.6.3/4
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3CCAFN7Y%2BXzTpV%2B5H-x-dU-HSWL%2B80PaDcxTuHB7J3B%3DJgJXsShcQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010632.html">
+   <LINK REL="Next"  HREF="010637.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Texture Caching Problem with 3.6.3/4</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3CCAFN7Y%2BXzTpV%2B5H-x-dU-HSWL%2B80PaDcxTuHB7J3B%3DJgJXsShcQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Texture Caching Problem with 3.6.3/4">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Dec 11 06:13:38 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010632.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+        <LI>Next message (by thread): <A HREF="010637.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10634">[ date ]</a>
+              <a href="thread.html#10634">[ thread ]</a>
+              <a href="subject.html#10634">[ subject ]</a>
+              <a href="author.html#10634">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>On Wed, 11 Dec 2019 at 13:04, Greg D &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">g.danaha at networkharbor.com</A>&gt; wrote:
+
+&gt;<i> I don't understand exactly what the cache does.
+</I>&gt;<i>
+</I>
+The clue is in the name, ObjectCache is cache of Objects so they can be
+reused.
+
+The cache is useful for avoid objects being loaded multiple ties,
+especially important for textures as they consume a large amount of GPU
+memory so maintaining duplicates can cripple performance.
+
+
+&gt;<i>   If it has an expiration time and objects are removed after a minute or
+</I>&gt;<i> so (which seems to happen) it would appear it is a short-term cache,
+</I>&gt;<i> perhaps to increase efficiency when the model is loading,
+</I>&gt;<i>
+</I>
+The amount of time objects in cache are retained for is controlled by the
+osgDB::Registry::setExpiryDelay(double), it defaults to 10 seconds, you can
+set it programmatically or set the default via OSG_EXPIRY_DELAY env var.
+
+
+
+&gt;<i> before it is rendered, such as re-using already loaded texture images and
+</I>&gt;<i> so forth.  If it is for long-term caching (keeping models in memory even
+</I>&gt;<i> after another model is loaded) that would be counter productive in our
+</I>&gt;<i> application, since the user might load several different large model files
+</I>&gt;<i> in a minute in some situations, and keeping all those models in memory
+</I>&gt;<i> would be problematic.  My preference would be to disable caching
+</I>&gt;<i> altogether, unless it is a short-term cache to make loading more efficient,
+</I>&gt;<i> in which case clearing the cache after the first render solves my problem.
+</I>&gt;<i>
+</I>&gt;<i> I have set the osgDB::Options to CACHE_NONE but it does not appear to have
+</I>&gt;<i> any effect on caching.  The OpenFlight model and its textures are always
+</I>&gt;<i> loaded from the cache if the cache contains objects.
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osgDB::Options&gt; dbOptions = new osgDB::Options();
+</I>&gt;<i> dbOptions-&gt;setObjectCacheHint(osgDB::Options::CACHE_NONE);
+</I>&gt;<i>
+</I>&gt;<i> osgDB::readNodeFile(fileName, dbOptions);
+</I>&gt;<i>
+</I>&gt;<i> Is this not the correct way to disable caching?
+</I>&gt;<i>
+</I>
+It's a ObjectCacheHint so plugns can be free to ignore the hint if they
+want to use the cache for their own requirements.
+
+Robert.
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/CAFN7Y+XzTpV+5H-x-dU-HSWL+80PaDcxTuHB7J3B%3DJgJXsShcQ%40mail.gmail.com.">https://groups.google.com/d/msgid/osg-users/CAFN7Y%2BXzTpV%2B5H-x-dU-HSWL%2B80PaDcxTuHB7J3B%3DJgJXsShcQ%40mail.gmail.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191211/9d29b747/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191211/9d29b747/attachment-0001.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010632.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+	<LI>Next message (by thread): <A HREF="010637.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10634">[ date ]</a>
+              <a href="thread.html#10634">[ thread ]</a>
+              <a href="subject.html#10634">[ subject ]</a>
+              <a href="author.html#10634">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

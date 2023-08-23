@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] obj file coordinate is different from what osgearth display
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20obj%20file%20coordinate%20is%20different%20from%20what%20osgearth%0A%20display&In-Reply-To=%3Cmailman.1241.1588147767.4146.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011010.html">
+   <LINK REL="Next"  HREF="011006.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] obj file coordinate is different from what osgearth display</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20obj%20file%20coordinate%20is%20different%20from%20what%20osgearth%0A%20display&In-Reply-To=%3Cmailman.1241.1588147767.4146.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] obj file coordinate is different from what osgearth display">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Wed Apr 29 01:09:24 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011010.html">[osg-users] obj file coordinate is different from what osgearth display
+</A></li>
+        <LI>Next message (by thread): <A HREF="011006.html">[osg-users]  openscenegraph.org under going maintainance
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11012">[ date ]</a>
+              <a href="thread.html#11012">[ thread ]</a>
+              <a href="subject.html#11012">[ subject ]</a>
+              <a href="author.html#11012">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>So what I have done in reading a point cloud from a .ply file with point 
+coordinate in WGS84 (Lat-Long-Height), is that I iterate over each vertex 
+and convert the coordinates into ECEF format given the functions from 
+osgEarth:
+
+for(uint elementIdx = 0; elementIdx &lt; vertArray-&gt;getNumElements(); ++elementIdx)
+{
+      //--- read current vertex from array
+
+osg::Vec3d llhVert = static_cast&lt;osg::Vec3&gt;((*vertArray)[elementIdx]);
+
+
+      //--- initialize geopoint
+      osgEarth::GeoPoint geoPoint;
+      geoPoint = osgEarth::GeoPoint(osgEarth::SpatialReference::get(&quot;epsg:4326&quot;, &quot;egm96&quot;),
+                                    llhVert.x(), llhVert.y(), llhVert.z(),
+                                    osgEarth::ALTMODE_ABSOLUTE);
+
+      //--- convert geopoint into ecef point
+      osg::Vec3d ecefVert;
+      geoPoint.toWorld(ecefVert);
+
+      //--- save vertex
+      (*vertArray)[elementIdx] = ecefVert;
+
+}
+
+
+
+
+Am Mittwoch, 29. April 2020 05:49:35 UTC+2 schrieb wu:
+&gt;<i>
+</I>&gt;<i> Can you provide some ideas? I am a novice for osgearth. I use readNodeFile 
+</I>&gt;<i> fnction to read obj  file and display (wgs84), then use writeNodeFile to 
+</I>&gt;<i> write obj file then display in cesiumlab.
+</I>&gt;<i>
+</I>&gt;<i> On Tuesday, April 28, 2020 at 7:02:27 PM UTC+8, Boitumelo Ruf wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Yes, but internally it will transform the wgs84 coordinates to ECEF in 
+</I>&gt;&gt;<i> order to place them inside the eucledian coordinate system of osg. Look at: 
+</I>&gt;&gt;<i> <A HREF="../../../../forum.osgearth.org/LIDAR-data-visualization-td7592224.html">http://forum.osgearth.org/LIDAR-data-visualization-td7592224.html</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Am Dienstag, 28. April 2020 12:29:01 UTC+2 schrieb wu:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> my osgearth coordinate system use the wgs84 not ECEF
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> On Tuesday, April 28, 2020 at 5:12:29 PM UTC+8, Boitumelo Ruf wrote:
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Have you checked the osgEarth forum: <A HREF="../../../../forum.osgearth.org/index.html">http://forum.osgearth.org/</A>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> osgEarth uses an Earth-Centered-Earth-Fixed (ECEF) eucledian coordinate 
+</I>&gt;&gt;&gt;&gt;<i> system. Maybe you would need to transform the coordinates inside your .obj 
+</I>&gt;&gt;&gt;&gt;<i> file first.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Am Dienstag, 28. April 2020 11:03:38 UTC+2 schrieb wu:
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> obj file coordinate is different from what osgearth display&#65281;
+</I>&gt;&gt;&gt;&gt;&gt;<i> i use osgearth  display my pipe (wgs84)
+</I>&gt;&gt;&gt;&gt;&gt;<i> pipe display correct&#65292;but  obj Exported is Incorrect&#12290;I checked some 
+</I>&gt;&gt;&gt;&gt;&gt;<i> information but found no reason&#65281;
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/f89a9df4-79d4-4124-a0db-191667bd4251%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/f89a9df4-79d4-4124-a0db-191667bd4251%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200429/20dccf95/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200429/20dccf95/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011010.html">[osg-users] obj file coordinate is different from what osgearth display
+</A></li>
+	<LI>Next message (by thread): <A HREF="011006.html">[osg-users]  openscenegraph.org under going maintainance
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11012">[ date ]</a>
+              <a href="thread.html#11012">[ thread ]</a>
+              <a href="subject.html#11012">[ subject ]</a>
+              <a href="author.html#11012">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

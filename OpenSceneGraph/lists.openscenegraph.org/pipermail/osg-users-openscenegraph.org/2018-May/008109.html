@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Getting the main camera.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Getting%20the%20main%20camera.&In-Reply-To=%3C2438722196A70147905EB5B327A5159F01ED2564%40HDXDSP55.us.lmco.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008108.html">
+   <LINK REL="Next"  HREF="008110.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Getting the main camera.</H1>
+<!--htdig_noindex-->
+    <B>Rowley, Marlin R</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Getting%20the%20main%20camera.&In-Reply-To=%3C2438722196A70147905EB5B327A5159F01ED2564%40HDXDSP55.us.lmco.com%3E"
+       TITLE="[osg-users] Getting the main camera.">marlin.r.rowley at lmco.com
+       </A><BR>
+    <I>Wed May  2 10:58:44 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008108.html">[osg-users] Getting the main camera.
+</A></li>
+        <LI>Next message (by thread): <A HREF="008110.html">[osg-users] Getting the main camera.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8109">[ date ]</a>
+              <a href="thread.html#8109">[ thread ]</a>
+              <a href="subject.html#8109">[ subject ]</a>
+              <a href="author.html#8109">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Here is a more informed email of what I'm trying to accomplish:
+
+We have some old code that inherits from the ShadowMapTechnique to do most of it's work which is based on the fixed-function pipeline.  It uses the shadow map's camera for projection of textures (among other things) and we are redesigning it so that the base class is independent of the shadow map class.  I thought I had everything working when I gutted out this function in the ViewData override function called addShadowReceivingTexGen():
+
+_texgen-&gt;setMode(osg::TexGen::EYE_LINEAR);
+
+// compute the matrix which takes a vertex from view coords into tex coords
+_texgen-&gt;setPlanesFromMatrix(
+              mClampCallback-&gt;getLastProjection() *
+              osg::Matrix::translate(1.0, 1.0, 1.0) *
+              osg::Matrix::scale(0.5f, 0.5f, 0.5f));
+
+osg::RefMatrix * refMatrix = new osg::RefMatrix
+              (_camera-&gt;getInverseViewMatrix() * *_cv-&gt;getModelViewMatrix());
+
+_cv-&gt;getRenderStage()-&gt;getPositionalStateContainer()-&gt;
+              addPositionedTextureAttribute
+              (*_shadowTextureUnitPtr, refMatrix, _texgen.get());
+
+This is evidently stored in OpenGL's built-in variables because it's used in the vertex shader like this:
+
+{
+gl_TexCoord[1].s = dot(ecPosition, gl_EyePlaneS[1]);
+gl_TexCoord[1].t = dot(ecPosition, gl_EyePlaneT[1]);
+gl_TexCoord[1].p = dot(ecPosition, gl_EyePlaneR[1]);
+gl_TexCoord[1].q = dot(ecPosition, gl_EyePlaneQ[1]);
+}
+
+My new solution for the addShadowReceivingTexGen() is a simple updateTextureCoordinates() function:
+
+mTexGenMatrix = mCamera-&gt;getViewMatrix() *mCamera-&gt;getProjectionMatrix() * osg::Matrixd::translate(osg::Vec3d(1.0, 1.0, 1.0)) *
+osg::Matrixd::scale(0.5, 0.5, 0.5);
+
+And in the new vertex shader, I do this:
+
+TexCoords[0] = TexGenMatrix0 * gl_Vertex;
+
+Which goes from modelspace all the way to clip space.  This works on simple objects created at the origin in modelspace, but it does NOT work with an entire world with large terrain.
+
+I'd like to continue NOT using the gl_EyePlaneSTRQ and just doing a regular transformation.  However, going back to the old code for any clues is leading me nowhere.  I traced the 'addPositionedTextureAttribute' to this:
+
+virtual void addPositionedTextureAttribute(unsigned int textureUnit, osg::RefMatrix* matrix,const osg::StateAttribute* attr)
+{
+_texAttrListMap[textureUnit].push_back(AttrMatrixPair(attr,matrix));
+}
+
+.. but I'm not sure what it's doing here.  The attr is the texgen object but that's used to store a matrix.  So what does the vertex shader 'see' from this function?
+
+I apologize for the long and drawn out email but I've been thinking on this for a few hours now and am really new to OpenGL and not sure what some of this code is trying to do.
+
+Thanks,
+
+-M
+
+----------------------------------------
+Marlin Rowley
+Software Engineer, Staff
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>]
+Missiles and Fire Control
+972-603-1931 (office)
+214-926-0622 (mobile)
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Rowley, Marlin R (US)
+Sent: Wednesday, May 2, 2018 12:05 PM
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+Subject: EXTERNAL: [osg-users] Getting the main camera.
+
+Is there a way to get a pointer to the main rendering camera without passing the Viewer around through classes and functions?
+
+Thanks,
+
+-M
+
+----------------------------------------
+Marlin Rowley
+Software Engineer, Staff
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>]
+Missiles and Fire Control
+972-603-1931 (office)
+214-926-0622 (mobile)
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180502/6bec6ba2/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180502/6bec6ba2/attachment.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: image001.jpg
+Type: image/jpeg
+Size: 3114 bytes
+Desc: image001.jpg
+URL: &lt;<A HREF="../attachments/20180502/6bec6ba2/attachment.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180502/6bec6ba2/attachment.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008108.html">[osg-users] Getting the main camera.
+</A></li>
+	<LI>Next message (by thread): <A HREF="008110.html">[osg-users] Getting the main camera.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8109">[ date ]</a>
+              <a href="thread.html#8109">[ thread ]</a>
+              <a href="subject.html#8109">[ subject ]</a>
+              <a href="author.html#8109">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,236 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20porting%20from%20osg-3.4.0%20to%20osg-3.6.0&In-Reply-To=%3CCAFN7Y%2BWB4_Tj7C1cpMiZESii%2B0T7EX_BFPKVdaou-awpa36jPA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009103.html">
+   <LINK REL="Next"  HREF="009112.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20porting%20from%20osg-3.4.0%20to%20osg-3.6.0&In-Reply-To=%3CCAFN7Y%2BWB4_Tj7C1cpMiZESii%2B0T7EX_BFPKVdaou-awpa36jPA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Sep 13 00:11:35 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009103.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+        <LI>Next message (by thread): <A HREF="009112.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9105">[ date ]</a>
+              <a href="thread.html#9105">[ thread ]</a>
+              <a href="subject.html#9105">[ subject ]</a>
+              <a href="author.html#9105">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Herman,
+
+To make sure that shadow techniques properly handling applications
+opening new windows and properly handle clean up they need to
+implement the resizeGLObjectBuffers(..) and releaseGLObjects(..)
+methods.  In 3.6.x to ensure this is done these methods are pure
+virtual forcing the subclasses to implement them.  The ShadowTechnique
+implementation looks like:
+
+        /** Resize any per context GLObject buffers to specified size. */
+        virtual void resizeGLObjectBuffers(unsigned int maxSize) = 0;
+
+        /** If State is non-zero, this function releases any
+associated OpenGL objects for
+           * the specified graphics context. Otherwise, releases OpenGL objects
+           * for all graphics contexts. */
+        virtual void releaseGLObjects(osg::State* = 0) const = 0;
+
+META_Object can only be used with concrete classes so you can't use it
+in this for ShadowTechnique.
+
+For the custom ShadowTechnique you simply need to provide
+resizeGLObjectBuffers(..) and releaseGLObjects(..).  To see what they
+would need to be have a look at the various ShadowTechnique subclasses
+in src/osgShadow.
+
+Cheers,
+Robert.
+On Thu, 13 Sep 2018 at 07:48, Herman Varma &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hermanvarma at eastlink.ca</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hello I am having trouble porting  Ben Discoe&#8217;s VTP software from openSceneGraph-3.4.0 to osg-3.6.2
+</I>&gt;<i>
+</I>&gt;<i> The problem lies in implementing the macro to replace META_object in shadowTechnique.h as depicted below.
+</I>&gt;<i> . Can someone point out where my problem is.
+</I>&gt;<i>
+</I>&gt;<i> /** CSimpleInterimShadowTechnique provides an implementation of a depth map shadow tuned to the needs of VTP.*/
+</I>&gt;<i> class CSimpleInterimShadowTechnique : public osgShadow::ShadowTechnique
+</I>&gt;<i> {
+</I>&gt;<i> public:
+</I>&gt;<i>
+</I>&gt;<i> //  working **********************  in openSceneGraph-3.4.0
+</I>&gt;<i> //     CSimpleInterimShadowTechnique();
+</I>&gt;<i> //     CSimpleInterimShadowTechnique(const
+</I>&gt;<i> //        CSimpleInterimShadowTechnique&amp; es, const osg::CopyOp&amp;
+</I>&gt;<i> //        copyop=osg::CopyOp::SHALLOW_COPY);
+</I>&gt;<i> //     META_Object(osgShadow, CSimpleInterimShadowTechnique);
+</I>&gt;<i> //***********************************************************
+</I>&gt;<i>
+</I>&gt;<i> // Macro not working *****************in openSceneGraph-3.6.2
+</I>&gt;<i>        CSimpleInterimShadowTechnique();
+</I>&gt;<i>        CSimpleInterimShadowTechnique(const CSimpleInterimShadowTechnique&amp; es, const osg::CopyOp&amp; copyop = osg::CopyOp::SHALLOW_COPY);
+</I>&gt;<i>
+</I>&gt;<i>        virtual bool isSameKindAs(const osg::Object* obj) const { return dynamic_cast&lt;const CSimpleInterimShadowTechnique*&gt;(obj) != NULL; } \
+</I>&gt;<i>        virtual const char* libraryName() const { return &quot;osgShadow&quot;; }\
+</I>&gt;<i>        virtual const char* className() const { return &quot;CSimpleInterimShadowTechnique&quot;; }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> //**************************************************************
+</I>&gt;<i>
+</I>&gt;<i> In the new implementation I am getting a C2259 error
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): error C2259: 'CSimpleInterimShadowTechnique': cannot instantiate abstract class
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: due to following members:
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: 'osg::Object *osg::Object::cloneType(void) const': is abstract
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\apis\openscenegraph-3.6.2\build\include\osg\object(80): note: see declaration of 'osg::Object::cloneType'
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: 'osg::Object *osg::Object::clone(const osg::CopyOp &amp;) const': is abstract
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\apis\openscenegraph-3.6.2\build\include\osg\object(84): note: see declaration of 'osg::Object::clone'
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: 'void osgShadow::ShadowTechnique::resizeGLObjectBuffers(unsigned int)': is abstract
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\apis\openscenegraph-3.6.2\build\include\osgshadow\shadowtechnique(66): note: see declaration of 'osgShadow::ShadowTechnique::resizeGLObjectBuffers'
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: 'void osgShadow::ShadowTechnique::releaseGLObjects(osg::State *) const': is abstract
+</I>&gt;<i>
+</I>&gt;<i> 2&gt;c:\apis\openscenegraph-3.6.2\build\include\osgshadow\shadowtechnique(71): note: see declaration of 'osgShadow::ShadowTechnique::releaseGLObjects'
+</I>&gt;<i>
+</I>&gt;<i> The area where the error manifests is in this section of nodeOSG.cpp
+</I>&gt;<i>
+</I>&gt;<i> //////////////////////////////////////////////////////////////////////
+</I>&gt;<i> // vtShadow
+</I>&gt;<i> //
+</I>&gt;<i>
+</I>&gt;<i> vtShadow::vtShadow(const int ShadowTextureUnit, int LightNumber) :
+</I>&gt;<i>        m_ShadowTextureUnit(ShadowTextureUnit), m_LightNumber(LightNumber)
+</I>&gt;<i> {
+</I>&gt;<i>        setReceivesShadowTraversalMask(ReceivesShadowTraversalMask);
+</I>&gt;<i>        setCastsShadowTraversalMask(CastsShadowTraversalMask);
+</I>&gt;<i>
+</I>&gt;<i> #if VTLISPSM
+</I>&gt;<i>        osg::ref_ptr&lt;CLightSpacePerspectiveShadowTechnique&gt; pShadowTechnique = new CLightSpacePerspectiveShadowTechnique;
+</I>&gt;<i>        // No need to set the BaseTextureUnit as the default of zero is OK for us
+</I>&gt;<i>        // But the ShadowTextureUnit might be different (default 1)
+</I>&gt;<i>        pShadowTechnique-&gt;setShadowTextureUnit(m_ShadowTextureUnit);
+</I>&gt;<i>        pShadowTechnique-&gt;setLightNumber(m_LightNumber);
+</I>&gt;<i> #else
+</I>&gt;<i>        //errorC2259 cannot instantiate abstract class in openSceneGraph-3.6.2
+</I>&gt;<i>        //statement working in osg-3.4.0
+</I>&gt;<i>        osg::ref_ptr&lt;CSimpleInterimShadowTechnique&gt; pShadowTechnique = new CSimpleInterimShadowTechnique;//*****************************Error here
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i> #if !VTLISPSM
+</I>&gt;<i> #if VTDEBUGSHADOWS
+</I>&gt;<i>        // add some instrumentation
+</I>&gt;<i>        pShadowTechnique-&gt;m_pParent = this;
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i>        pShadowTechnique-&gt;SetLightNumber(LightNumber);
+</I>&gt;<i>        pShadowTechnique-&gt;SetShadowTextureUnit(m_ShadowTextureUnit);
+</I>&gt;<i>        pShadowTechnique-&gt;SetShadowSphereRadius(50.0);
+</I>&gt;<i> #endif
+</I>&gt;<i>        setShadowTechnique(pShadowTechnique.get());
+</I>&gt;<i>
+</I>&gt;<i>        SetOsgNode(this);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> Help would be appreciated
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Herman
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic3748.php?p=74726#74726">http://forum.openscenegraph.org/viewtopic.php?p=74726#74726</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009103.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+	<LI>Next message (by thread): <A HREF="009112.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9105">[ date ]</a>
+              <a href="thread.html#9105">[ thread ]</a>
+              <a href="subject.html#9105">[ subject ]</a>
+              <a href="author.html#9105">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

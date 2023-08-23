@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Screen Space 2D Axis Alligned Bounding Box (AABB)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Screen%20Space%202D%20Axis%20Alligned%20Bounding%20Box%20%28AABB%29&In-Reply-To=%3C1491942679.m2f.70741%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="282298.html">
+   <LINK REL="Next"  HREF="282289.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Screen Space 2D Axis Alligned Bounding Box (AABB)</H1>
+<!--htdig_noindex-->
+    <B>James Takarashy</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Screen%20Space%202D%20Axis%20Alligned%20Bounding%20Box%20%28AABB%29&In-Reply-To=%3C1491942679.m2f.70741%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Screen Space 2D Axis Alligned Bounding Box (AABB)">jakub.kolesik at me.com
+       </A><BR>
+    <I>Tue Apr 11 13:31:19 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="282298.html">[osg-users] Lighting
+</A></li>
+        <LI>Next message: <A HREF="282289.html">[osg-users] Having an issue with OSG plugins error.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282287">[ date ]</a>
+              <a href="thread.html#282287">[ thread ]</a>
+              <a href="subject.html#282287">[ subject ]</a>
+              <a href="author.html#282287">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I have some trouble generating a screen space 2D bounding box for my nodes. 
+
+
+Code:
+
+Matrix viewMat = camera-&gt;getViewMatrix();
+Matrix projMat = camera-&gt;getProjectionMatrix();
+Viewport* vp = camera-&gt;getViewport();
+Matrix vpMa = vp-&gt;computeWindowMatrix();
+
+// Returns root scene graph node of the Object.
+osg::Node* node = data.object-&gt;getRoot();
+
+osg::ComputeBoundsVisitor cbv;
+node-&gt;accept(cbv);
+osg::BoundingBox bb = cbv.getBoundingBox();
+
+// Skipping node since BB is invalid
+if (!bb.valid())
+{
+ continue;
+}
+
+notify(&quot;World BBox x: %f %f, y:%f %f, z:%f %f&quot;, bb.xMin(), bb.xMax(), bb.yMin(), bb.yMax(), bb.zMin(), bb.zMax());
+
+// Generate all 8 points of our AxisAligned BoundingBox in World Space
+typedef std::vector&lt;osg::Vec3d&gt; BBoxPoints;
+BBoxPoints bBoxPoints;
+
+bBoxPoints.push_back(osg::Vec3d(bb.xMin(), bb.yMin(), bb.zMin()));
+bBoxPoints.push_back(osg::Vec3d(bb.xMin(), bb.yMin(), bb.zMax()));
+bBoxPoints.push_back(osg::Vec3d(bb.xMin(), bb.yMax(), bb.zMin()));
+bBoxPoints.push_back(osg::Vec3d(bb.xMin(), bb.yMax(), bb.zMax()));
+bBoxPoints.push_back(osg::Vec3d(bb.xMax(), bb.yMin(), bb.zMin()));
+bBoxPoints.push_back(osg::Vec3d(bb.xMax(), bb.yMin(), bb.zMax()));
+bBoxPoints.push_back(osg::Vec3d(bb.xMax(), bb.yMax(), bb.zMin()));
+bBoxPoints.push_back(osg::Vec3d(bb.xMax(), bb.yMax(), bb.zMax()));
+
+BBoxPoints::iterator it = bBoxPoints.begin();
+for (; it != bBoxPoints.end(); ++it)
+{
+    osg::Vec3d&amp; point = *it;
+
+    // Transform world space point -&gt; view space -&gt; clip space -&gt; screen space
+    point = point * viewMat * projMat * vpMat;
+}
+
+bool pointsInitialized = false;
+osg::Vec3d minScreenSpace(0.0, 0.0, 0.0), maxScreenSpace(0.0, 0.0, 0.0);
+for (it = bBoxPoints.begin(); it != bBoxPoints.end(); ++it)
+{
+    osg::Vec3d&amp; point = *it;
+
+    if (pointsInitialized)
+    {
+        minScreenSpace = osg::Vec3d(min(minScreenSpace.x(), point.x()),
+                                                         min(minScreenSpace.y(), point.y()),
+                                                         min(minScreenSpace.z(), point.z()));
+
+        maxScreenSpace = osg::Vec3d(max(maxScreenSpace.x(), point.x()),
+                                                          max(maxScreenSpace.y(), point.y()),
+                                                          max(maxScreenSpace.z(), point.z()));
+    }
+    else
+    {
+         minScreenSpace = point;
+         maxScreenSpace = point;
+         pointsInitialized = true;
+    }
+}
+
+notify(&quot;minScreenSpace: %f %f %f, maxScreenSpace: %f %f %f&quot;,
+          minScreenSpace.x(), minScreenSpace.y(), minScreenSpace.z(),
+          maxScreenSpace.x(), maxScreenSpace.y(), maxScreenSpace.z());
+
+
+
+
+If I draw my BoundingBox, the results I get are wrong since they are positioned higher than the actual object. Also, they seem bigger than the actual BBox.
+Is there something I'm missing in my calculation? Some rotation of the object or flipping of coordinates when the object is facing away from the camera? I thought my code is rotation independent, but one never knows.
+
+So if you spot something missing I would be really happy!
+Thank you!
+
+Cheers,
+James
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic98fc.php?p=70741#70741">http://forum.openscenegraph.org/viewtopic.php?p=70741#70741</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="282298.html">[osg-users] Lighting
+</A></li>
+	<LI>Next message: <A HREF="282289.html">[osg-users] Having an issue with OSG plugins error.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282287">[ date ]</a>
+              <a href="thread.html#282287">[ thread ]</a>
+              <a href="subject.html#282287">[ subject ]</a>
+              <a href="author.html#282287">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

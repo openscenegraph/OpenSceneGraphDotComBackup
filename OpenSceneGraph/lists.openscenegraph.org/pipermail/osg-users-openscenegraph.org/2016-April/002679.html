@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] about the state of the BVH plug-in,	when used with CMU MoCap files
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20about%20the%20state%20of%20the%20BVH%20plug-in%2C%0A%09when%20used%20with%20CMU%20MoCap%20files&In-Reply-To=%3CCALm6U%2BqabTXnPSA7UemajOJ%3Dmi93DLw8nfRiD3qezU%2BVGJ%2BaZQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002677.html">
+   <LINK REL="Next"  HREF="002681.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] about the state of the BVH plug-in,	when used with CMU MoCap files</H1>
+<!--htdig_noindex-->
+    <B>Christian Buchner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20about%20the%20state%20of%20the%20BVH%20plug-in%2C%0A%09when%20used%20with%20CMU%20MoCap%20files&In-Reply-To=%3CCALm6U%2BqabTXnPSA7UemajOJ%3Dmi93DLw8nfRiD3qezU%2BVGJ%2BaZQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] about the state of the BVH plug-in,	when used with CMU MoCap files">christian.buchner at gmail.com
+       </A><BR>
+    <I>Fri Apr  1 07:45:36 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002677.html">[osg-users] about the state of the BVH plug-in,	when used with CMU MoCap files
+</A></li>
+        <LI>Next message: <A HREF="002681.html">[osg-users] about the state of the BVH plug-in, when used with CMU MoCap files
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2679">[ date ]</a>
+              <a href="thread.html#2679">[ thread ]</a>
+              <a href="subject.html#2679">[ subject ]</a>
+              <a href="author.html#2679">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I've tried the OSG 3.2 branch and this version exhibited the same problem.
+
+Then I had a closer look at the BVH files supplied by that web site. I am
+finding that it defines
+rotational parameters always in the order Z, Y,  X.  That is different from
+the sequence I expect
+from various online sources that use Z, X, Y.
+
+in the plugin code, hence I adjust the sequence of keyValues read from the
+file to read z, y, x
+in this order.
+
+            if ( ch&amp;0x08 ) fr.readSequence( keyValue[2] );  // Z
+            if ( ch&amp;0x20 ) fr.readSequence( keyValue[1] );  // Y
+            if ( ch&amp;0x10 ) fr.readSequence( keyValue[0] );  // X
+
+But this alone wasn't sufficient to get correct results.
+
+I also had to swap the order in which we generate the rotation matrix to
+X*Y*Z.
+
+            osg::Matrix rotMat =
+
+osg::Matrix::rotate(osg::DegreesToRadians(keyValue[0]),
+osg::Vec3(1.0,0.0,0.0))
+                               *
+osg::Matrix::rotate(osg::DegreesToRadians(keyValue[1]),
+osg::Vec3(0.0,1.0,0.0))
+                               *
+osg::Matrix::rotate(osg::DegreesToRadians(keyValue[2]),
+osg::Vec3(0.0,0.0,1.0));
+
+This appears to be the opposite order in which the above Euler angles are
+specified.
+
+Now the animations play out correctly, as far as I can tell.
+
+I will have to do some more online research to understand whether the BVH
+spec actually allows
+to specify rotation in an arbitrary order and what the definitive answer
+about the sequence of applying
+the Euler angles is.
+
+The first change could certainly determined automatically from the input
+file, but whether or not the
+sequence of matrix multiplications shall always occur in the opposite order
+is up for debate.
+
+I might propose a suitable patch to the BVH plug-in later.
+
+Christian
+
+
+
+2016-04-01 14:38 GMT+02:00 Christian Buchner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian.buchner at gmail.com</A>&gt;:
+
+&gt;<i>
+</I>&gt;<i> This is how I call the osganimationviewer to display a skeleton from the
+</I>&gt;<i> motion data.
+</I>&gt;<i>
+</I>&gt;<i> osganimationviewer --drawbone C:\mocap\motionbuilder\01\01_02.bvh -O solids
+</I>&gt;<i>
+</I>&gt;<i> Just the result is a bit unexpected...
+</I>&gt;<i>
+</I>&gt;<i> 2016-04-01 14:33 GMT+02:00 Christian Buchner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian.buchner at gmail.com</A>&gt;
+</I>&gt;<i> :
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi all,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I've been trying to get the BVH files from this site to import into the
+</I>&gt;&gt;<i> current OSG 3.4 branch
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> <A HREF="https://sites.google.com/a/cgspeed.com/cgspeed/motion-capture/cmu-bvh-conversion">https://sites.google.com/a/cgspeed.com/cgspeed/motion-capture/cmu-bvh-conversion</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> These are conversions of the original motion capture data that CMU
+</I>&gt;&gt;<i> provides for free in a different format, optimized for the three
+</I>&gt;&gt;<i> applications MotionBuilder, DAZ Studio and 3DS MAX.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I've tried replaying the animations in osganimationviewer using the
+</I>&gt;&gt;<i> --drawbone flag. Usually one needs to zoom out the camera to get the full
+</I>&gt;&gt;<i> skeleton into view. The issue that I am having is that I see weird and
+</I>&gt;&gt;<i> unexpected rotations of the entire skeleton, as well as specific joints -
+</I>&gt;&gt;<i> regardless of the version of the BVH files I download.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Has the OpenSceneGraph BVH plug-in ever worked on these mocap files?
+</I>&gt;&gt;<i> Could it be that a code regression has recently broken the plug-in?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Christian
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160401/d66ef86e/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160401/d66ef86e/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002677.html">[osg-users] about the state of the BVH plug-in,	when used with CMU MoCap files
+</A></li>
+	<LI>Next message: <A HREF="002681.html">[osg-users] about the state of the BVH plug-in, when used with CMU MoCap files
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2679">[ date ]</a>
+              <a href="thread.html#2679">[ thread ]</a>
+              <a href="subject.html#2679">[ subject ]</a>
+              <a href="author.html#2679">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

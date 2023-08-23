@@ -1,0 +1,155 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgViewer crashes at inserting string into stream inside Renderer::draw() (Win10, osg3.2.0, compiler vc10)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgViewer%20crashes%20at%20inserting%20string%20into%20stream%0A%20inside%20Renderer%3A%3Adraw%28%29%20%28Win10%2C%20osg3.2.0%2C%20compiler%20vc10%29&In-Reply-To=%3Cmailman.79881.1585634256.7169.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010896.html">
+   <LINK REL="Next"  HREF="010920.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgViewer crashes at inserting string into stream inside Renderer::draw() (Win10, osg3.2.0, compiler vc10)</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgViewer%20crashes%20at%20inserting%20string%20into%20stream%0A%20inside%20Renderer%3A%3Adraw%28%29%20%28Win10%2C%20osg3.2.0%2C%20compiler%20vc10%29&In-Reply-To=%3Cmailman.79881.1585634256.7169.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] osgViewer crashes at inserting string into stream inside Renderer::draw() (Win10, osg3.2.0, compiler vc10)">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Wed Mar 18 07:13:17 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010896.html">[osg-users] osgViewer crashes at inserting string into stream inside Renderer::draw() (Win10, osg3.2.0, compiler vc10)
+</A></li>
+        <LI>Next message (by thread): <A HREF="010920.html">[osg-users] osgViewer crashes at inserting string into stream inside Renderer::draw() (Win10, osg3.2.0, compiler vc10)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10919">[ date ]</a>
+              <a href="thread.html#10919">[ thread ]</a>
+              <a href="subject.html#10919">[ subject ]</a>
+              <a href="author.html#10919">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello everyone,
+
+recently I encountered a sporadic crash in my App at same position upon 
+calling function Renderer::draw() in osgViewer/Renderer.cpp. The crash 
+happend at 
+
+*  DEBUG_MESSAGE&lt;&lt;&quot;draw() got SceneView &quot;&lt;&lt;sceneView&lt;&lt;std::endl; *(screenshots 
+of callstack are attached)
+ 
+and triggerd an exception via a string of basic streambuf operations very 
+deep down to msvcp100d.dll in dbgheap.c
+
+        * /**
+*         * If this ASSERT fails, a bad pointer has been passed in. It may 
+be*
+*         * totally bogus, or it may have been allocated from another heap.*
+*         * The pointer MUST come from the 'local' heap.*
+*         */*
+*        _ASSERTE(_CrtIsValidHeapPointer(pUserData)); * ----&gt; assertion 
+error thrown, the heap pointer is invalid
+
+In debug session I checked the call stack step by step and found that when 
+putting &quot;*draw() got SceneView*&quot; in stringbuffer, functoin overflow of 
+std::basic_stringbuf is triggerd, and subsequently
+the deallocate step at :
+                        *if (_Mystate &amp; _Allocated)*
+* _Al.deallocate(_Oldptr, _Oldsize);*
+* _Mystate |= _Allocated;*
+was executed. it tried to deallocate the buffer, pointed by &quot;_Oldptr&quot; with 
+size &quot;_Oldsize&quot;. But the size is smaller than the actual buffer length. 
+Therefore the assertion error above was thrown.
+
+Info to my App:
+I enhance the viewer with osgWidget::WindowManager. My App recieves 
+external data cyclic and renders boxes and lines in one data transmission 
+framework. The API of this framework calls my viewer to render every 20ms, 
+an example of this call:
+   framework::call_on_cycle () {  // main thread
+                   // process and storing incoming data
+                   process_data();
+                   myViewer-&gt;frame();
+ }
+ 
+My App runs at DrawThreadPerContext mode and updates drawables in callback 
+and setting them as DYNAMIC.
+
+Is there anyone ever facing similar Problem? Or any ideas to analyse or 
+sort this out? I will really appreciate any help.
+
+Thank you
+
+Regards,
+Yuan
+
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/b0bac75e-6cdb-47f7-9ede-1e8aa931af4c%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/b0bac75e-6cdb-47f7-9ede-1e8aa931af4c%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200318/a51f017b/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200318/a51f017b/attachment-0001.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: crash_callstack_1.png
+Type: image/png
+Size: 99065 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200318/a51f017b/attachment-0004.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200318/a51f017b/attachment-0004.png</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: crash_callstack_2.png
+Type: image/png
+Size: 99259 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200318/a51f017b/attachment-0005.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200318/a51f017b/attachment-0005.png</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: crash_callstack_3.png
+Type: image/png
+Size: 96742 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200318/a51f017b/attachment-0006.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200318/a51f017b/attachment-0006.png</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: crash_callstack_4.png
+Type: image/png
+Size: 106125 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200318/a51f017b/attachment-0007.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200318/a51f017b/attachment-0007.png</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010896.html">[osg-users] osgViewer crashes at inserting string into stream inside Renderer::draw() (Win10, osg3.2.0, compiler vc10)
+</A></li>
+	<LI>Next message (by thread): <A HREF="010920.html">[osg-users] osgViewer crashes at inserting string into stream inside Renderer::draw() (Win10, osg3.2.0, compiler vc10)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10919">[ date ]</a>
+              <a href="thread.html#10919">[ thread ]</a>
+              <a href="subject.html#10919">[ subject ]</a>
+              <a href="author.html#10919">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

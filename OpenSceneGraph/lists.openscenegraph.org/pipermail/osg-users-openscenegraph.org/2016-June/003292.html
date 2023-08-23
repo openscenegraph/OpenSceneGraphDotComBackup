@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Use of getCameraContainingPosition in OSG 3.4.0	(deprecated?)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Use%20of%20getCameraContainingPosition%20in%20OSG%203.4.0%0A%09%28deprecated%3F%29&In-Reply-To=%3CCAFN7Y%2BUaU5sZTJotTEL_Gi_caC2YmmBxaKcOza%2BVMkScOycH3Q%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279513.html">
+   <LINK REL="Next"  HREF="003333.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Use of getCameraContainingPosition in OSG 3.4.0	(deprecated?)</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Use%20of%20getCameraContainingPosition%20in%20OSG%203.4.0%0A%09%28deprecated%3F%29&In-Reply-To=%3CCAFN7Y%2BUaU5sZTJotTEL_Gi_caC2YmmBxaKcOza%2BVMkScOycH3Q%40mail.gmail.com%3E"
+       TITLE="[osg-users] Use of getCameraContainingPosition in OSG 3.4.0	(deprecated?)">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Jun  8 07:53:52 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279513.html">[osg-users] Use of getCameraContainingPosition in OSG 3.4.0	(deprecated?)
+</A></li>
+        <LI>Next message: <A HREF="003333.html">[osg-users] Use of getCameraContainingPosition in OSG	3.4.0	(deprecated?)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3292">[ date ]</a>
+              <a href="thread.html#3292">[ thread ]</a>
+              <a href="subject.html#3292">[ subject ]</a>
+              <a href="author.html#3292">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Rick.
+
+I deprecated the function as the interpretation of how it should
+behave is ambiguous for certain combinations of viewer Camera set up -
+it simply can't guarantee to give the correct camera and x,y location
+that you might be expecting as the interface doesn't provide enough
+information for the function to work correctly in all cases as it has
+to make assumptions for this missing data.  For simple viewers you
+won't hit up against this but as you add more complex set ups set as
+multiple overlapping cameras/distortion correction etc. exactly how a
+mouse coordinate maps can varying widely.
+
+The resolve the task of where a mouse coordinate maps
+osgGA::GUEventAdapter now &quot;has a&quot; stack of  PointerData that hold how
+the coordinate maps to the successive camera's in the stake.  If you
+look at View you'll now see computeIntersections(..) methods that take
+the GUIEventAdapter object directly rather than the orphaned x,y mouse
+cooridnates.  This extra information enables the intersection
+traversal correctly.
+
+The PonterData holds the Camera information, if you look at the
+View::computeIntersections(..) methods you'll see how it's used:
+
+bool View::computeIntersections(const osgGA::GUIEventAdapter&amp; ea,
+osgUtil::LineSegmentIntersector::Intersections&amp;
+intersections,osg::Node::NodeMask traversalMask)
+{
+#if 1
+    if (ea.getNumPointerData()&gt;=1)
+    {
+        const osgGA::PointerData* pd =
+ea.getPointerData(ea.getNumPointerData()-1);
+        const osg::Camera* camera = pd-&gt;object.valid() ?
+pd-&gt;object-&gt;asCamera() : 0;
+        if (camera)
+        {
+            return computeIntersections(camera,
+osgUtil::Intersector::PROJECTION, pd-&gt;getXnormalized(),
+pd-&gt;getYnormalized(), intersections, traversalMask);
+        }
+    }
+#endif
+    return computeIntersections(ea.getX(), ea.getY(), intersections,
+traversalMask);
+}
+
+The old code is still there as a fallback, the new bit is in the #if 1
+#endif block.
+
+I realise this will seem like an extra level of complexity, but for
+most users they shouldn't be using the getCameraContainingPosition()
+method directly and won't need to look at the PointerData either.
+What the PointerData gives you is a robust way of getting the mouse
+position relative to the active cameras.
+
+Robert.
+
+
+
+
+
+
+
+Robert.
+
+On 8 June 2016 at 15:34, Rick Irons &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Rick.Irons at mathworks.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> We are working on updating an application from OSG 3.0.1 to 3.4.0.  We have
+</I>&gt;<i> previously relied on getCameraContainingPosition() for selection, but now we
+</I>&gt;<i> are noticing that the function is marked as deprecated.  Can someone
+</I>&gt;<i> identify the deprecation plan for this API?  Is it still safe to use with
+</I>&gt;<i> the understanding that it will not be available in a future release?  Or,
+</I>&gt;<i> should we stop using the function now?  Our efforts to locate information on
+</I>&gt;<i> the deprecation of this API have not been successful.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I am asking since the function is not behaving as expected following our
+</I>&gt;<i> update.  It is not clear if this behavior is due to the function no longer
+</I>&gt;<i> being supported or if some changes on our end are necessary to use the 3.4.0
+</I>&gt;<i> version of the API.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thanks for any help you can offer.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Rick
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279513.html">[osg-users] Use of getCameraContainingPosition in OSG 3.4.0	(deprecated?)
+</A></li>
+	<LI>Next message: <A HREF="003333.html">[osg-users] Use of getCameraContainingPosition in OSG	3.4.0	(deprecated?)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3292">[ date ]</a>
+              <a href="thread.html#3292">[ thread ]</a>
+              <a href="subject.html#3292">[ subject ]</a>
+              <a href="author.html#3292">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

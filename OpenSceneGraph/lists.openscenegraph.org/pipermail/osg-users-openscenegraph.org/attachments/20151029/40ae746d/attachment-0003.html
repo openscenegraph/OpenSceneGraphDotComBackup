@@ -1,0 +1,76 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Radu,&lt;br&gt;&lt;br&gt;&lt;/div&gt;What&nbsp;errors&nbsp;do&nbsp;you&nbsp;see&nbsp;with&nbsp;your&nbsp;build&nbsp;when&nbsp;you&nbsp;don&#39;t&nbsp;include&nbsp;the&nbsp;IF(MACOS_VERSION_LIST_LENGTH&nbsp;EQUAL&nbsp;&quot;3&quot;)&nbsp;block&nbsp;to&nbsp;avoid&nbsp;querying&nbsp;the&nbsp;MACOS_VERSION_PATCH?&lt;br&gt;&lt;br&gt;&lt;/div&gt;With&nbsp;this&nbsp;block&nbsp;I&#39;d&nbsp;be&nbsp;inclined&nbsp;to&nbsp;use&nbsp;GREATER&nbsp;2,&nbsp;rather&nbsp;than&nbsp;EQUAL&nbsp;3&nbsp;just&nbsp;in&nbsp;case&nbsp;the&nbsp;MACOS&nbsp;implementation&nbsp;adds&nbsp;a&nbsp;forth&nbsp;element&nbsp;to&nbsp;the&nbsp;list.&lt;br&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;28&nbsp;October&nbsp;2015&nbsp;at&nbsp;14:07,&nbsp;Radu&nbsp;Popescu&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:radu.popescu@pix4d.com&quot;&nbsp;target=&quot;_blank&quot;&gt;radu.popescu@pix4d.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+We&nbsp;are&nbsp;using&nbsp;OSG&nbsp;for&nbsp;a&nbsp;cross-platform&nbsp;application&nbsp;that&nbsp;runs&nbsp;on&nbsp;Windows,&nbsp;Linux&nbsp;and&nbsp;Mac&nbsp;OS&nbsp;X&nbsp;(10.10&nbsp;and&nbsp;10.11).&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;application&nbsp;uses&nbsp;OSG&nbsp;3.4&nbsp;and&nbsp;Qt&nbsp;4.8&nbsp;and&nbsp;we&nbsp;had&nbsp;to&nbsp;apply&nbsp;some&nbsp;patches&nbsp;to&nbsp;get&nbsp;this&nbsp;setup&nbsp;working.&nbsp;We&nbsp;maintain&nbsp;a&nbsp;public&nbsp;Git&nbsp;clone,&nbsp;based&nbsp;on&nbsp;the&nbsp;GitHub&nbsp;mirror&nbsp;of&nbsp;OpenSceneGraph.&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;don&#39;t&nbsp;have&nbsp;enough&nbsp;posts&nbsp;on&nbsp;this&nbsp;forum&nbsp;to&nbsp;include&nbsp;a&nbsp;link&nbsp;to&nbsp;the&nbsp;repo.&nbsp;I&nbsp;can&nbsp;share&nbsp;it&nbsp;by&nbsp;private&nbsp;messages&nbsp;or&nbsp;some&nbsp;other&nbsp;way,&nbsp;if&nbsp;anybody&nbsp;is&nbsp;interested.&lt;br&gt;<br>
+&lt;br&gt;<br>
+We&nbsp;are&nbsp;using&nbsp;this&nbsp;Git&nbsp;clone&nbsp;internally&nbsp;and&nbsp;we&nbsp;haven&#39;t&nbsp;had&nbsp;the&nbsp;time&nbsp;to&nbsp;clean&nbsp;it&nbsp;up&nbsp;and&nbsp;submit&nbsp;these&nbsp;changes&nbsp;back&nbsp;upstream&nbsp;(we&#39;re&nbsp;not&nbsp;even&nbsp;sure&nbsp;all&nbsp;the&nbsp;changes&nbsp;we&#39;ve&nbsp;made&nbsp;are&nbsp;general&nbsp;enough&nbsp;to&nbsp;be&nbsp;integrated&nbsp;upstream).&lt;br&gt;<br>
+&lt;br&gt;<br>
+Here&nbsp;is&nbsp;a&nbsp;patch&nbsp;that&nbsp;could&nbsp;help&nbsp;with&nbsp;the&nbsp;compilation:&lt;br&gt;<br>
+&lt;br&gt;<br>
+diff&nbsp;--git&nbsp;a/CMakeLists.txt&nbsp;b/CMakeLists.txt&lt;br&gt;<br>
+index&nbsp;ce2815b..3e496c1&nbsp;100644&lt;br&gt;<br>
+---&nbsp;a/CMakeLists.txt&lt;br&gt;<br>
++++&nbsp;b/CMakeLists.txt&lt;br&gt;<br>
+@@&nbsp;-180,7&nbsp;+180,13&nbsp;@@&nbsp;IF(APPLE)&lt;br&gt;<br>
+ &nbsp; &nbsp; STRING(REPLACE&nbsp;&quot;.&quot;&nbsp;&quot;;&quot;&nbsp;MACOS_VERSION_LIST&nbsp;${OSG_OSX_SDK_NAME})&lt;br&gt;<br>
+ &nbsp; &nbsp; LIST(GET&nbsp;MACOS_VERSION_LIST&nbsp;0&nbsp;MACOS_VERSION_MAJOR)&lt;br&gt;<br>
+ &nbsp; &nbsp; LIST(GET&nbsp;MACOS_VERSION_LIST&nbsp;1&nbsp;MACOS_VERSION_MINOR)&lt;br&gt;<br>
+- &nbsp; &nbsp;LIST(GET&nbsp;MACOS_VERSION_LIST&nbsp;2&nbsp;MACOS_VERSION_PATCH)&lt;br&gt;<br>
++&lt;br&gt;<br>
++ &nbsp; &nbsp;LIST(LENGTH&nbsp;MACOS_VERSION_LIST&nbsp;MACOS_VERSION_LIST_LENGTH)&lt;br&gt;<br>
++ &nbsp; &nbsp;IF(MACOS_VERSION_LIST_LENGTH&nbsp;EQUAL&nbsp;&quot;3&quot;)&lt;br&gt;<br>
++ &nbsp; &nbsp; &nbsp; &nbsp;LIST(GET&nbsp;MACOS_VERSION_LIST&nbsp;2&nbsp;MACOS_VERSION_PATCH)&lt;br&gt;<br>
++ &nbsp; &nbsp;ELSE()&lt;br&gt;<br>
++ &nbsp; &nbsp; &nbsp; &nbsp;SET(MACOS_VERSION_PATCH&nbsp;&quot;0&quot;)&lt;br&gt;<br>
++ &nbsp; &nbsp;ENDIF()&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; SET(OSG_OSX_SDK_NAME&nbsp;&quot;macosx${MACOS_VERSION_MAJOR}.${MACOS_VERSION_MINOR}&quot;)&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Additionally,&nbsp;here&nbsp;are&nbsp;the&nbsp;CMake&nbsp;configuration&nbsp;flags&nbsp;we&nbsp;are&nbsp;using&nbsp;to&nbsp;compile&nbsp;OSG:&lt;br&gt;<br>
+&lt;br&gt;<br>
+cmake&nbsp;\&lt;br&gt;<br>
+-DCMAKE_BUILD_TYPE=Release&nbsp;\&lt;br&gt;<br>
+-DOPENGL_PROFILE=&quot;GLCORE&quot;&nbsp;\&lt;br&gt;<br>
+-DCMAKE_EXE_LINKER_FLAGS=&quot;-stdlib=libc++&quot;&nbsp;\&lt;br&gt;<br>
+-DCMAKE_MODULE_LINKER_FLAGS=&quot;-stdlib=libc++&quot;&nbsp;\&lt;br&gt;<br>
+-DCMAKE_SHARED_LINKER_FLAGS=&quot;-stdlib=libc++&quot;&nbsp;\&lt;br&gt;<br>
+-DCMAKE_OSX_ARCHITECTURES=&quot;x86_64&quot;&nbsp;\&lt;br&gt;<br>
+-DOSG_DEFAULT_IMAGE_PLUGIN_FOR_OSX=&quot;imageio&quot;&nbsp;\&lt;br&gt;<br>
+-DOSG_WINDOWING_SYSTEM=&quot;Cocoa&quot;&nbsp;\&lt;br&gt;<br>
+-DDESIRED_QT_VERSION=4&nbsp;\&lt;br&gt;<br>
+-DQT_QMAKE_EXECUTABLE=/usr/bin/qmake&nbsp;\&lt;br&gt;<br>
+-DDYNAMIC_OPENSCENEGRAPH=OFF&nbsp;\&lt;br&gt;<br>
+-DDYNAMIC_OPENTHREADS=OFF&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;hope&nbsp;this&nbsp;helps!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Best&nbsp;regards,&lt;br&gt;<br>
+Radu&lt;br&gt;<br>
+&lt;br&gt;<br>
+----------------------&lt;br&gt;<br>
+Radu&nbsp;Popescu&lt;br&gt;<br>
+Software&nbsp;Engineer&lt;br&gt;<br>
+Pix4D&nbsp;SA&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;/span&gt;&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=65477#65477&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=65477#65477&lt;/a&gt;&lt;br&gt;<br>
+&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAbout%20VertexArrayObject%20Branch%5D%20FeedBack%20and%0A%09Insight&In-Reply-To=%3CCAFN7Y%2BUTLtgUj2VgsS8h6A%3DZwUKFMVpg6UtrU-Sf1AvBXNJFRg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003893.html">
+   <LINK REL="Next"  HREF="003910.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAbout%20VertexArrayObject%20Branch%5D%20FeedBack%20and%0A%09Insight&In-Reply-To=%3CCAFN7Y%2BUTLtgUj2VgsS8h6A%3DZwUKFMVpg6UtrU-Sf1AvBXNJFRg%40mail.gmail.com%3E"
+       TITLE="[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Aug 15 01:42:27 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003893.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+        <LI>Next message: <A HREF="003910.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3894">[ date ]</a>
+              <a href="thread.html#3894">[ thread ]</a>
+              <a href="subject.html#3894">[ subject ]</a>
+              <a href="author.html#3894">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Julien et. al,
+
+On 14 August 2016 at 23:21, Julien Valentin &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">julienvalentin51 at gmail.com</A>&gt; wrote:
+&gt;<i> Recently Robert opens a new branch for the integaration of VAO in osg.
+</I>
+To check it out have a look at the VAO branch:
+
+  git checkout vertex_array_object
+
+Then rebuild the OSG,  To enable use of VAO you can set the a new env
+var OSG_VERTEX_BUFFER_HINT to VAO.  i.e.
+
+  export OSG_VERTEX_BUFFER_HINT=VAO
+  osgviewer cow.osgt
+
+
+The approach I have taken is to have one Vertex Array Object per
+osg:Drawable and not share them.  Design and speed wise I feel this is
+the best balance as the OpenGL VAO is intended to make setting vertex
+arrays lightweight, since the OSG set's arrays within osg::Geometry
+then the natural affinity of VAO is to sit alongside the existing
+vertex array calls.  You don't share vertex array set up between
+osg::Geometry so there is no need to force sharing of VAO's, they can
+happily just sit there a be used when enabled but otherwise ignored.
+
+What could be an advantage to share is the Vertex Buffer Objects's
+between osg::Geometry.  This is already possible (on OSG-3.0 onwards)
+if you assign the osg::VertexBufferObject and osg::ElementBufferObject
+to the osg:Array and osg::PrimitiveSet before hand rather than rely
+upon the osg::Geometry to assign it's own.  The new VAO support in the
+vertex_array_object branch still supports this so you can share VBO's
+between osg::Geometry, while each osg::Geometry has it's own VAO.
+
+The design I have gone for takes into account the need for the feature
+to work with existing codes as much as possible without adaptation.
+This hasn't been trivial to do, I don't know yet how close I am to
+this goal but I've got the majority of the OSG working well.  Wider
+testing out in the community will reveal how well it's working.
+
+Performance wise, In city model I'm used for testing the I'm seeing up
+to a 30% boost in framerate when comparing VAO+VBO's vs VBO's.  Alas
+DisplayLists are still king for this model, looks like NVidia drivers
+do a great job in optimizing display lists even today.  The city model
+I'm testing has lots of separate osg::Geoemetry, with the model
+originally loaded from OpenFlight.
+
+&gt;<i>
+</I>&gt;<i> I've thrown a fast look at it,but have not tested yet  -not enough HD space:/ so I can't give a full feedback
+</I>&gt;<i> I can only compare with my own impl with this reduced perspective, I don't understand all so don't be regardant if i misunderstood the code.
+</I>&gt;<i>
+</I>&gt;<i> In my implementation:
+</I>&gt;<i> -I assumed the only way to fully take care of the performance bonus of VAO in osg was to share BO among geometries.
+</I>&gt;<i>  I use a singleton to manage bo sets involved in vaos, it concatenates bufferdata in these bo and so bos and vao are shared among geometries
+</I>&gt;<i> -However concatenate arrays in a bo brings a problem of offset in bo so i have to quit glDrawElementsXXX to glDrawElemntsXXXbasevertex
+</I>&gt;<i> So each arrays of a geometry must have the same start index in the bufferobjects and geometries should share the same bo set as often as possible
+</I>&gt;<i>
+</I>&gt;<i> I did a test in debug build (on a GTX640) with a triangle indexed city and the default useVBO
+</I>&gt;<i> it originally frames at 40FPS
+</I>&gt;<i> +adding bo sharing among geometries : 55FPS
+</I>&gt;<i> +adding useVAO 70FPS (The Draw charge drops from 12 to 6 even if i unbind vao after each geom draw)
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="https://github/">https://github</A> dot com/mp3butcher/OpenSceneGraph
+</I>&gt;<i>
+</I>&gt;<i> In the current branch:
+</I>&gt;<i> -I like the idea of deporting vao in state..It seams a good place for them for state sorting.
+</I>&gt;<i> -But I haven't spot the way intended to share VAO among Geometries:
+</I>&gt;<i> *bo affectation to geoms is not managed (so do we have to assume user is in charge of sharing bo correctly among geoms?)
+</I>&gt;<i> *it seams primset doesn't take the way of basevertex draw calls so I'm asking myself how could we manage basevertex when geoms arrays share same bos
+</I>&gt;<i>
+</I>&gt;<i> I opened this thread, in order others can share their point view on the subject. What do you think of the current branch? How do you see the vao integration in osg? Which approach should be the flexier
+</I>
+When going from the approach I took with the vertex_array_object
+branch I reviewed your and other previous VAO approaches but felt they
+wouldn't quite meet the requirements.  I feel sharing VAO between
+osg::Geometry is not a good design/performance solution, lots of pain
+and I'm doubtful of a gain that can justify the extra complexity.
+VAO's are lightweight objects in OpenGL, having lots of them is cheap
+and makes the cost of vertex array dispatch much cheaper.
+
+For testing you really have to compare performance in a release build
+as a debug build adds a huge overhead to cull and draw dispatch.
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003893.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+	<LI>Next message: <A HREF="003910.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3894">[ date ]</a>
+              <a href="thread.html#3894">[ thread ]</a>
+              <a href="subject.html#3894">[ subject ]</a>
+              <a href="author.html#3894">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

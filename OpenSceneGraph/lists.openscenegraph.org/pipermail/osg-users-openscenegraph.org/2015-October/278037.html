@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSGNode VBO Control
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSGNode%20VBO%20Control&In-Reply-To=%3C1445956823.m2f.65456%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001813.html">
+   <LINK REL="Next"  HREF="001815.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSGNode VBO Control</H1>
+<!--htdig_noindex-->
+    <B>Ignitus Boyone</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSGNode%20VBO%20Control&In-Reply-To=%3C1445956823.m2f.65456%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] OSGNode VBO Control">IgnitusBoyone at Gmail.com
+       </A><BR>
+    <I>Tue Oct 27 07:40:23 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001813.html">[osg-users] Setting update callback for osgSim::LightPointNode has no effect
+</A></li>
+        <LI>Next message: <A HREF="001815.html">[osg-users] OSGNode VBO Control
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278037">[ date ]</a>
+              <a href="thread.html#278037">[ thread ]</a>
+              <a href="subject.html#278037">[ subject ]</a>
+              <a href="author.html#278037">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I'm starting to work my way through the source for Geometry and Drawable, but more experienced minds might be able to point me in the right directions sooner.
+
+I'm working on a AR HUD and because a later point in the project might require the  loading of complex models to represent avatars or vehicles inside the AR space we have chosen to use OSG as a starting point. The current UI is currently relatively primitive and basically consist entirely of billboards of varying textures with minor text glyphs to indicate various properties. 
+
+I've implemented most of the billboards in a single VBO based Geometry node.  Because the target hardware is lacking I wanted to play with partial updates to the VBO contents based on our current draw performance.  First pass I simply created a post function for manually controlling where in the draw thread buffer transfers occur, but it has become apparent to me from profiling that this might only be marking the VBO as dirty and the actual upload occurring during the next draw frame. 
+
+
+
+Code:
+	void OSGVboMarker::post()
+   {
+		if (m_frontVBO.isInitialized &amp;&amp; m_bDirtyBit)
+		{
+			m_swapLock.lock();
+			int count = m_frontVBO.vertices-&gt;size();
+			m_pGeometry-&gt;setVertexArray( m_frontVBO.vertices );
+
+			m_pGeometry-&gt;setNormalArray(m_frontVBO.normal, osg::Array::BIND_OVERALL);
+			m_pGeometry-&gt;setColorArray(m_frontVBO.color, osg::Array::BIND_OVERALL);
+			
+			m_pGeometry-&gt;setTexCoordArray(0,m_frontVBO.texCoords, osg::Array::BIND_PER_VERTEX);
+			
+			m_pGeometry-&gt;setVertexAttribArray(5, m_frontVBO.centers, osg::Array::BIND_PER_VERTEX);
+			m_pGeometry-&gt;setVertexAttribArray(6, m_frontVBO.scaleValues, osg::Array::BIND_PER_VERTEX);
+			
+			m_pDrawArrays-&gt;setCount(count);
+			m_pDrawArrays-&gt;set(osg::PrimitiveSet::QUADS, 0, count);
+
+
+
+
+So, I have two questions related to the above. 
+
+1. When do modified VBO nodes push memory to the card.
+2. Is it possible to manually control this operation and possibly do sub buffer updates. 
+... 
+
+Thank you!
+
+Cheers,
+Ignitus
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicad51.php?p=65456#65456">http://forum.openscenegraph.org/viewtopic.php?p=65456#65456</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001813.html">[osg-users] Setting update callback for osgSim::LightPointNode has no effect
+</A></li>
+	<LI>Next message: <A HREF="001815.html">[osg-users] OSGNode VBO Control
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278037">[ date ]</a>
+              <a href="thread.html#278037">[ thread ]</a>
+              <a href="subject.html#278037">[ subject ]</a>
+              <a href="author.html#278037">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

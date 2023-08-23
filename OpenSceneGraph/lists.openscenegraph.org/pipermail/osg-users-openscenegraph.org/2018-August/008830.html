@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [HELP] Properly using osg::VertexAttribDivisor for basic geometry instancing
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BHELP%5D%20Properly%20using%20osg%3A%3AVertexAttribDivisor%20for%0A%20basic%20geometry%20instancing&In-Reply-To=%3Cee6e7ac2afb476591356a6fac76d1868%40cock.li%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008961.html">
+   <LINK REL="Next"  HREF="008831.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [HELP] Properly using osg::VertexAttribDivisor for basic geometry instancing</H1>
+<!--htdig_noindex-->
+    <B>ppsychrite at cock.li</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BHELP%5D%20Properly%20using%20osg%3A%3AVertexAttribDivisor%20for%0A%20basic%20geometry%20instancing&In-Reply-To=%3Cee6e7ac2afb476591356a6fac76d1868%40cock.li%3E"
+       TITLE="[osg-users] [HELP] Properly using osg::VertexAttribDivisor for basic geometry instancing">ppsychrite at cock.li
+       </A><BR>
+    <I>Wed Aug  1 05:16:50 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008961.html">[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</A></li>
+        <LI>Next message (by thread): <A HREF="008831.html">[osg-users] [HELP] Properly using osg::VertexAttribDivisor for basic geometry instancing
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8830">[ date ]</a>
+              <a href="thread.html#8830">[ thread ]</a>
+              <a href="subject.html#8830">[ subject ]</a>
+              <a href="author.html#8830">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>hello sorry if i did this wrong but i dont know how to use mailing lists
+
+so ive been trying to do modern glsl/opengl 3.3+ with osg::Geometry and 
+osg::Stateset and it's been working OK for basic triangle except for 
+implementing instanced array data
+am I doing it the wrong way? here's the .cpp code for it and for me it 
+seems well enough and fine, position and color works fine
+
+
+	osg::Vec3 coords[] = {
+		{ -0.05f,0.05f,0.f },
+		{ 0.05f,-0.05f,0.f },
+		{ 0.05f,0.05f,1.f }
+	};
+	osg::Vec3 colors[] = {
+		{1.f,0.f,0.f},
+		{0.f,1.f,0.f},
+		{0.f,0.f,1.f}
+	};
+
+	osg::Vec2 instancetranslations[] = {
+		{ 0.0f, 0.0f },
+		{ 0.1f, 0.0f },
+		{ 0.2f, 0.0f }
+	};
+
+	osg::Vec3Array *pos = new osg::Vec3Array(sizeof(coords) / 
+sizeof(osg::Vec3), coords);
+	osg::Vec3Array *color = new osg::Vec3Array(sizeof(colors) / 
+sizeof(osg::Vec3), colors);
+	osg::Vec2Array *translation = new 
+osg::Vec2Array(sizeof(instancetranslations) / sizeof(osg::Vec2), 
+instancetranslations);
+
+	osg::Geometry *vao = new osg::Geometry();
+	vao-&gt;setUseDisplayList(false);
+	vao-&gt;setUseVertexArrayObject(true);
+	vao-&gt;setUseVertexBufferObjects(true);
+
+	vao-&gt;setVertexAttribArray(0, pos, osg::Array::BIND_PER_VERTEX);
+	vao-&gt;setVertexAttribArray(1, color, osg::Array::BIND_PER_VERTEX);
+	vao-&gt;setVertexAttribArray(2, translation);
+
+	vao-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLES, 0, 3, 3)); //3 
+instances
+
+	osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+
+	program-&gt;addShader(osgDB::readShaderFile(&quot;shaders/basic.vert&quot;));
+	program-&gt;addShader(osgDB::readShaderFile(&quot;shaders/basic.frag&quot;));
+
+  	osg::StateSet *stateset = geom-&gt;getOrCreateStateSet();
+	stateset-&gt;setAttributeAndModes(program.get());
+	stateset-&gt;setAttribute(new osg::VertexAttribDivisor(2, 1)); //set 3rd 
+array as per-instance
+
+here's the vertex shader code for it:
+
+
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+layout (location = 2) in vec2 aTrans;
+
+out vec3 color;
+
+void main()
+{
+     color = aColor;
+     gl_Position = vec4(aPos.x+ aTrans.x,aPos.y+ aTrans.y,aPos.z,1.0);
+}
+
+
+aTrans doesn't move the triangle at all, it's just one. I know it isn't 
+the shaders fault because instead of adding aTrans to aPos I've done 
+(gl_InstanceID * 0.1f) and it's worked perfectly, seeing 3 instanced 
+triangles
+
+what am i doing wrong/how could i get per-instanced array working?
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008961.html">[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</A></li>
+	<LI>Next message (by thread): <A HREF="008831.html">[osg-users] [HELP] Properly using osg::VertexAttribDivisor for basic geometry instancing
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8830">[ date ]</a>
+              <a href="thread.html#8830">[ thread ]</a>
+              <a href="subject.html#8830">[ subject ]</a>
+              <a href="author.html#8830">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

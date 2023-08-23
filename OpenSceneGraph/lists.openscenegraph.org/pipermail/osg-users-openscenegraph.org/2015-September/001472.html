@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] automatically merge close-by geometries to reduce cull/draw overhead?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20automatically%20merge%20close-by%20geometries%20to%20reduce%0A%20cull/draw%20overhead%3F&In-Reply-To=%3CCAFN7Y%2BVaRWbuX39rxMHp78c%3DDeqAg3V-vsk_F4319%2B0VMZZZRQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001469.html">
+   <LINK REL="Next"  HREF="277680.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] automatically merge close-by geometries to reduce cull/draw overhead?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20automatically%20merge%20close-by%20geometries%20to%20reduce%0A%20cull/draw%20overhead%3F&In-Reply-To=%3CCAFN7Y%2BVaRWbuX39rxMHp78c%3DDeqAg3V-vsk_F4319%2B0VMZZZRQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] automatically merge close-by geometries to reduce cull/draw overhead?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Sep  8 07:44:39 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001469.html">[osg-users] automatically merge close-by geometries to reduce cull/draw overhead?
+</A></li>
+        <LI>Next message: <A HREF="277680.html">[osg-users] bug in primitiveset.cpp?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1472">[ date ]</a>
+              <a href="thread.html#1472">[ thread ]</a>
+              <a href="subject.html#1472">[ subject ]</a>
+              <a href="author.html#1472">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Christian,
+
+On 8 September 2015 at 15:26, Christian Buchner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian.buchner at gmail.com</A>
+&gt;<i> wrote:
+</I>
+&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> My building's aren't (yet) textured, so that removes the need for a
+</I>&gt;<i> texture atlas. However they are individually shaped (being created from an
+</I>&gt;<i> ESRI shape file essentially), so instancing is ruled out.
+</I>&gt;<i>
+</I>&gt;<i> I might try to group the buildings into tiles of equal size, trying to run
+</I>&gt;<i> the osgUtil::Optimizer with MERGE_GEOMETRY and MERGE_DRAWABLES individually
+</I>&gt;<i> on each tile. Let's see how that goes. If it is too slow, I will have to
+</I>&gt;<i> refactor my code that generates buildings.
+</I>&gt;<i>
+</I>&gt;<i> Also I am wondering what the SPATIALIZE_GROUPS feature of the optimizer
+</I>&gt;<i> does.
+</I>&gt;<i>
+</I>
+All these merge/specialize visitors work on flat osg::Geode and osg::Group
+respectively.
+
+While you potentially could try and co-opt these classes to help you they
+are bandages that can be applied to crappy scene graphs to try and prevent
+the worst offences they make from affecting performance.  With 3rd party
+scene graphs created by modelling tools with little clue of real-time scene
+graph needs this is best you can get.  Running the Optimizer classes might
+improve bad scene graphs but it can't avoid creating more fragment memory,
+and it can't make the most optimal solutions for all types of data.
+
+Creating efficient scene graphs from the start is ABSOLUTELY the most
+efficient way to use the OSG and OpenGL.  In your case you should be
+creating an efficient scene graph right from the start and their should be
+no need to run *any* of the osgUtil::Optimizer classes.   To keep asking
+about using the Optimizer you are effectively saying, no no I want to
+create crappy scene graphs and let the other code do it's best to fix it up.
+
+I don't want to help you make bad scene graphs.  I want to help you make
+efficient scene graphs.
+
+Robert
+
+
+
+
+On 8 September 2015 at 15:26, Christian Buchner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian.buchner at gmail.com</A>
+&gt;<i> wrote:
+</I>
+&gt;<i>
+</I>&gt;<i> My building's aren't (yet) textured, so that removes the need for a
+</I>&gt;<i> texture atlas. However they are individually shaped (being created from an
+</I>&gt;<i> ESRI shape file essentially), so instancing is ruled out.
+</I>&gt;<i>
+</I>&gt;<i> I might try to group the buildings into tiles of equal size, trying to run
+</I>&gt;<i> the osgUtil::Optimizer with MERGE_GEOMETRY and MERGE_DRAWABLES individually
+</I>&gt;<i> on each tile. Let's see how that goes. If it is too slow, I will have to
+</I>&gt;<i> refactor my code that generates buildings.
+</I>&gt;<i>
+</I>&gt;<i> Also I am wondering what the SPATIALIZE_GROUPS feature of the optimizer
+</I>&gt;<i> does.
+</I>&gt;<i>
+</I>&gt;<i> Christian
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> 2015-09-07 12:32 GMT+02:00 Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi Christian,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Since you are creating the building yourself I would recommend that you
+</I>&gt;&gt;<i> build them grouped to start off with rather than post process them.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The first step I'd tack would be to create a texture atlas from the wall
+</I>&gt;&gt;<i> and roof textures and then just create a single osg::Geometry and
+</I>&gt;&gt;<i> associated osg::StateSet.   This will half the number of Drawables and
+</I>&gt;&gt;<i> state changes.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> If you have a set of roof and wall textures then see if you create a
+</I>&gt;&gt;<i> single texture atlas from them so that you can then reuse the same
+</I>&gt;&gt;<i> osg::StateSet between separate Drawables.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Then final step would be to merge groups of Drawables that are in
+</I>&gt;&gt;<i> geographical location.  The osgforest example does grouping of randomly
+</I>&gt;&gt;<i> placed trees so have a look at ways of doing this.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Another approach you could take would be to create a single osg::Geometry
+</I>&gt;&gt;<i> and then use instances to repeat the building geometry and provide a size
+</I>&gt;&gt;<i> for a shader to scale the geometry and place it in it's final position.
+</I>&gt;&gt;<i> Again the osgforest has a code path that does this so have a look at this.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 7 September 2015 at 10:50, Christian Buchner &lt;
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian.buchner at gmail.com</A>&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Hi,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> we're using code loading some buildings (outline and height), creating a
+</I>&gt;&gt;&gt;<i> Geode with a two drawables per individual building - one drawable for the
+</I>&gt;&gt;&gt;<i> walls, one for the roof polygon. This has served us well to display a few
+</I>&gt;&gt;&gt;<i> hundred to a few thousand buildings.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Fast forward to current date. Our client has sent us a new geo data set
+</I>&gt;&gt;&gt;<i> containing 55000 building polygons. Once you zoom out the camera to show
+</I>&gt;&gt;&gt;<i> most of these buildings, frame rates drop into the low single digit, mostly
+</I>&gt;&gt;&gt;<i> due to all the culling effort done by the CPU (maybe also from the large
+</I>&gt;&gt;&gt;<i> number of draw calls). D'oh!
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Are there any specific features within OSG to group close by geodes, and
+</I>&gt;&gt;&gt;<i> to merge their drawables?
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I know the osgUtil::Optimize has flags for merging geodes and drawables,
+</I>&gt;&gt;&gt;<i> but I guess it would not automatically merge only very close objects.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> What path should I try to take for tackling this problem, if possible
+</I>&gt;&gt;&gt;<i> using built-in OSG features?
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Christian
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150908/3325ece2/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150908/3325ece2/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001469.html">[osg-users] automatically merge close-by geometries to reduce cull/draw overhead?
+</A></li>
+	<LI>Next message: <A HREF="277680.html">[osg-users] bug in primitiveset.cpp?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1472">[ date ]</a>
+              <a href="thread.html#1472">[ thread ]</a>
+              <a href="subject.html#1472">[ subject ]</a>
+              <a href="author.html#1472">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

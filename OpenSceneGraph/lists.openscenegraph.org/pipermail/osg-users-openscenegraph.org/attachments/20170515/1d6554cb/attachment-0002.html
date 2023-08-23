@@ -1,0 +1,124 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;br&gt;Here&nbsp;is&nbsp;the&nbsp;solution:&lt;br&gt;&lt;br&gt;text-&gt;setFontResolution(18,18);&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;2017-04-25&nbsp;17:13&nbsp;GMT+05:00&nbsp;Volckaert,&nbsp;Guy&nbsp;(CA&nbsp;-&nbsp;MTS)&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:Guy.Volckaert@meggitt.com&quot;&nbsp;target=&quot;_blank&quot;&gt;Guy.Volckaert@meggitt.com&lt;/a&gt;&gt;&lt;/span&gt;:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&#39;m&nbsp;using&nbsp;OSG&nbsp;v3.4.0&nbsp;and&nbsp;I&nbsp;resolved&nbsp;this&nbsp;issue&nbsp;by&nbsp;adding&nbsp;a&nbsp;glTexParameteri(&nbsp;GL_TEXTURE_2D,&nbsp;GL_TEXTURE_MIN_FILTER,...)&nbsp;before&nbsp;calling&nbsp;glTexSubImage2D()&nbsp;in&nbsp;glyph.cpp.&nbsp;This&nbsp;problem&nbsp;was&nbsp;occurring&nbsp;if&nbsp;I&nbsp;was&nbsp;using&nbsp;an&nbsp;Intel&nbsp;video&nbsp;driver.&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;Glyph::subload()&nbsp;const&lt;br&gt;<br>
+{&lt;br&gt;<br>
+[...]&lt;br&gt;<br>
+&lt;br&gt;<br>
+//&nbsp;MTSI_BEGIN&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;This&nbsp;line&nbsp;was&nbsp;added&nbsp;to&nbsp;resolve&nbsp;a&nbsp;problem&nbsp;with&nbsp;intel&nbsp;chipsets.&nbsp;In&nbsp;essence,&nbsp;some&nbsp;of&nbsp;the&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;numeric&nbsp;glyphs&nbsp;would&nbsp;not&nbsp;display&nbsp;correctly.&nbsp;They&nbsp;would&nbsp;appear&nbsp;grey&nbsp;or&nbsp;transparent.&lt;br&gt;<br>
+ &nbsp; &nbsp;if(&nbsp;getTexture()&nbsp;)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;glTexParameteri(&nbsp;GL_TEXTURE_2D,&nbsp;GL_TEXTURE_MIN_FILTER,&nbsp;getTexture()-&gt;getFilter(&nbsp;osg::Texture::MIN_FILTER&nbsp;)&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+//&nbsp;MTSI_END&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;glTexSubImage2D(GL_TEXTURE_2D,&lt;wbr&gt;0,&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_texturePosX,_texturePosY,&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;s(),t(),&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;(GLenum)getPixelFormat(),&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;(GLenum)getDataType(),&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;data());&lt;br&gt;<br>
+[...]&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;GlyphTexture::apply(osg::&lt;wbr&gt;State&amp;&nbsp;state)&nbsp;const&lt;br&gt;<br>
+{&lt;br&gt;<br>
+[...]&lt;br&gt;<br>
+//&nbsp;MTSI_BEGIN&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;This&nbsp;line&nbsp;was&nbsp;added&nbsp;to&nbsp;resolve&nbsp;a&nbsp;problem&nbsp;with&nbsp;intel&nbsp;chipsets.&nbsp;In&nbsp;essence,&nbsp;some&nbsp;of&nbsp;the&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;numeric&nbsp;glyphs&nbsp;would&nbsp;not&nbsp;display&nbsp;correctly.&nbsp;They&nbsp;would&nbsp;appear&nbsp;grey&nbsp;or&nbsp;transparent.&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glTexParameteri(&nbsp;GL_TEXTURE_2D,&nbsp;GL_TEXTURE_MIN_FILTER,&nbsp;_min_filter);&lt;br&gt;<br>
+//&nbsp;MTSI_END&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;Subload&nbsp;the&nbsp;image&nbsp;once&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glTexSubImage2D(&nbsp;GL_TEXTURE_2D,&nbsp;0,&nbsp;0,&nbsp;0,&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;getTextureWidth(),&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;getTextureHeight(),&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;OSGTEXT_GLYPH_FORMAT,&nbsp;GL_UNSIGNED_BYTE,&nbsp;local_data);&lt;br&gt;<br>
+[...]&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+Regards,&lt;br&gt;<br>
+&lt;div&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+-----Original&nbsp;Message-----&lt;br&gt;<br>
+From:&nbsp;osg-users&nbsp;[mailto:&lt;a&nbsp;href=&quot;mailto:osg-users-bounces@lists.openscenegraph.org&quot;&gt;osg-users-bounces@&lt;wbr&gt;lists.openscenegraph.org&lt;/a&gt;]&nbsp;On&nbsp;Behalf&nbsp;Of&nbsp;Tim&nbsp;Hartter&lt;br&gt;<br>
+Sent:&nbsp;April-25-17&nbsp;7:29&nbsp;AM&lt;br&gt;<br>
+To:&nbsp;OpenSceneGraph&nbsp;Users&lt;br&gt;<br>
+Subject:&nbsp;Re:&nbsp;[osg-users]&nbsp;Vanishing&nbsp;letters&nbsp;in&nbsp;osg::Text&lt;br&gt;<br>
+&lt;br&gt;<br>
+Setting&nbsp;OSG_TEXT_INCREMENTAL_&lt;wbr&gt;SUBLOADING&nbsp;to&nbsp;off&nbsp;does&nbsp;not&nbsp;make&nbsp;a&nbsp;difference&nbsp;and&nbsp;YES&nbsp;it&nbsp;happens&nbsp;on&nbsp;Intel&nbsp;cards&nbsp;(not&nbsp;on&nbsp;Nvidia)&nbsp;(Win&nbsp;7&nbsp;OSG&nbsp;3.4)&lt;br&gt;<br>
+&lt;br&gt;<br>
+Maybe&nbsp;the&nbsp;patched&nbsp;OSG&nbsp;text&nbsp;works&nbsp;better...&lt;br&gt;<br>
+&lt;br&gt;<br>
+Mit&nbsp;AquaMail&nbsp;Android&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://www.aqua-mail.com&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://www.aqua-mail.com&lt;/a&gt;&nbsp;gesendet&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Am&nbsp;25.&nbsp;April&nbsp;2017&nbsp;10:18:21&nbsp;vorm.&nbsp;schrieb&nbsp;Robert&nbsp;Osfield&lt;br&gt;<br>
+&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&gt;&nbsp;On&nbsp;25&nbsp;April&nbsp;2017&nbsp;at&nbsp;06:34,&nbsp;Wouter&nbsp;Roos&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:rooswouter@gmail.com&quot;&gt;rooswouter@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&gt;&nbsp;I&#39;ve&nbsp;experienced&nbsp;a&nbsp;similar&nbsp;issue&nbsp;lately&nbsp;where&nbsp;we&nbsp;were&nbsp;running&nbsp;a&lt;br&gt;<br>
+&gt;&gt;&nbsp;project&nbsp;on&nbsp;lower&nbsp;spec&nbsp;systems&nbsp;with&nbsp;only&nbsp;an&nbsp;integrated&nbsp;GPU.&nbsp;On&nbsp;those&lt;br&gt;<br>
+&gt;&gt;&nbsp;systems&nbsp;the&nbsp;frame&nbsp;rate&nbsp;would&nbsp;not&nbsp;show&nbsp;properly,&nbsp;having&nbsp;the&nbsp;same&nbsp;issue&lt;br&gt;<br>
+&gt;&gt;&nbsp;as&nbsp;described&nbsp;here,&nbsp;with&nbsp;some&nbsp;numbers&nbsp;not&nbsp;showing&nbsp;properly.&lt;br&gt;<br>
+&gt;&gt;&nbsp;I&nbsp;did&nbsp;a&nbsp;test&nbsp;on&nbsp;my&nbsp;laptop,&nbsp;and&nbsp;when&nbsp;I&nbsp;force&nbsp;it&nbsp;to&nbsp;use&nbsp;the&nbsp;integrated&lt;br&gt;<br>
+&gt;&gt;&nbsp;GPU&lt;br&gt;<br>
+&gt;&gt;&nbsp;(4600)&nbsp;the&nbsp;problems&nbsp;shows&nbsp;up&nbsp;as&nbsp;well.&nbsp;If&nbsp;I&nbsp;switch&nbsp;to&nbsp;use&nbsp;the&nbsp;GTX970M&lt;br&gt;<br>
+&gt;&gt;&nbsp;everything&nbsp;is&nbsp;fine&nbsp;again.&nbsp;This&nbsp;is&nbsp;all&nbsp;on&nbsp;Windows&nbsp;10,&nbsp;osg&nbsp;3.4.0&nbsp;I&lt;br&gt;<br>
+&gt;&gt;&nbsp;haven&#39;t&nbsp;done&nbsp;any&nbsp;further&nbsp;investigation&nbsp;as&nbsp;the&nbsp;project&nbsp;is&nbsp;not&nbsp;using&lt;br&gt;<br>
+&gt;&gt;&nbsp;any&nbsp;Text&nbsp;objects,&nbsp;but&nbsp;maybe&nbsp;this&nbsp;might&nbsp;help&nbsp;somehow.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Some&nbsp;hardware/drivers&nbsp;don&#39;t&nbsp;support&nbsp;texture&nbsp;sub-loading&nbsp;correctly&nbsp;so&lt;br&gt;<br>
+&gt;&nbsp;the&nbsp;osgText&nbsp;subloading&nbsp;of&nbsp;new&nbsp;glyphs&nbsp;could&nbsp;cause&nbsp;problems,&nbsp;perhaps&lt;br&gt;<br>
+&gt;&nbsp;this&nbsp;is&nbsp;what&nbsp;you&nbsp;are&nbsp;seeing. &nbsp;It&#39;s&nbsp;problem&nbsp;that&nbsp;originally&nbsp;occurred&nbsp;on&lt;br&gt;<br>
+&gt;&nbsp;Radeon&#39;s&nbsp;and&nbsp;some&nbsp;SGI&nbsp;hardware&nbsp;so&nbsp;there&nbsp;is&nbsp;a&nbsp;workaround&nbsp;in&nbsp;osgText&lt;br&gt;<br>
+&gt;&nbsp;that&nbsp;detects&nbsp;these&nbsp;combinations&nbsp;in&nbsp;drivers,&nbsp;you&nbsp;can&nbsp;also&nbsp;enable&nbsp;the&lt;br&gt;<br>
+&gt;&nbsp;workaround&nbsp;by&nbsp;setting&nbsp;the&nbsp;env&nbsp;var&nbsp;OSG_TEXT_INCREMENTAL_&lt;wbr&gt;SUBLOADING&nbsp;to&lt;br&gt;<br>
+&gt;&nbsp;OFF&nbsp;i.e.&nbsp;under&nbsp;bash&nbsp;you&#39;d&nbsp;do:&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; export&nbsp;OSG_TEXT_INCREMENTAL_&lt;wbr&gt;SUBLOADING=OFF&lt;br&gt;<br>
+&gt; &nbsp; osgtext&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Under&nbsp;windows&nbsp;I&nbsp;think&nbsp;it&#39;s&nbsp;something&nbsp;like:&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; set&nbsp;OSG_TEXT_INCREMENTAL_&lt;wbr&gt;SUBLOADING=OFF&lt;br&gt;<br>
+&gt; &nbsp; osgtext&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;The&nbsp;OSG&nbsp;master&nbsp;version&nbsp;has&nbsp;a&nbsp;had&nbsp;a&nbsp;major&nbsp;rewrite&nbsp;of&nbsp;osgText&nbsp;so&nbsp;it&nbsp;no&lt;br&gt;<br>
+&gt;&nbsp;longer&nbsp;uses&nbsp;the&nbsp;texture&nbsp;subloading&nbsp;as&nbsp;may&nbsp;well&nbsp;just&nbsp;work&nbsp;out&nbsp;of&nbsp;the&lt;br&gt;<br>
+&gt;&nbsp;box&nbsp;on&nbsp;the&nbsp;Intel&nbsp;GPU/drivers&nbsp;that&nbsp;you&nbsp;have.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Robert.&lt;br&gt;<br>
+&gt;&nbsp;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+&gt;&nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph&lt;/a&gt;.&lt;br&gt;<br>
+&gt;&nbsp;org&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+______________________________&lt;wbr&gt;__&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;This&nbsp;e-mail&nbsp;may&nbsp;contain&nbsp;proprietary&nbsp;information&nbsp;and/or&nbsp;copyright&nbsp;material.&nbsp;This&nbsp;e-mail&nbsp;is&nbsp;intended&nbsp;for&nbsp;the&nbsp;use&nbsp;of&nbsp;the&nbsp;addressee&nbsp;only.&nbsp;Any&nbsp;unauthorized&nbsp;use&nbsp;may&nbsp;be&nbsp;unlawful.&nbsp;If&nbsp;you&nbsp;receive&nbsp;this&nbsp;e-mail&nbsp;by&nbsp;mistake,&nbsp;please&nbsp;advise&nbsp;the&nbsp;sender&nbsp;immediately&nbsp;by&nbsp;using&nbsp;the&nbsp;reply&nbsp;facility&nbsp;in&nbsp;your&nbsp;e-mail&nbsp;software.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Information&nbsp;contained&nbsp;in&nbsp;and/or&nbsp;attached&nbsp;to&nbsp;this&nbsp;document&nbsp;may&nbsp;be&nbsp;subject&nbsp;to&nbsp;export&nbsp;control&nbsp;regulations&nbsp;of&nbsp;the&nbsp;European&nbsp;Community,&nbsp;USA,&nbsp;or&nbsp;other&nbsp;countries.&nbsp;Each&nbsp;recipient&nbsp;of&nbsp;this&nbsp;document&nbsp;is&nbsp;responsible&nbsp;to&nbsp;ensure&nbsp;that&nbsp;usage&nbsp;and/or&nbsp;transfer&nbsp;of&nbsp;any&nbsp;information&nbsp;contained&nbsp;in&nbsp;this&nbsp;document&nbsp;complies&nbsp;with&nbsp;all&nbsp;relevant&nbsp;export&nbsp;control&nbsp;regulations.&nbsp;If&nbsp;you&nbsp;are&nbsp;in&nbsp;any&nbsp;doubt&nbsp;about&nbsp;the&nbsp;export&nbsp;control&nbsp;restrictions&nbsp;that&nbsp;apply&nbsp;to&nbsp;this&nbsp;information,&nbsp;please&nbsp;contact&nbsp;the&nbsp;sender&nbsp;immediately.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Be&nbsp;aware&nbsp;that&nbsp;Meggitt&nbsp;may&nbsp;monitor&nbsp;incoming&nbsp;and&nbsp;outgoing&nbsp;e-mails&nbsp;to&nbsp;ensure&nbsp;compliance&nbsp;with&nbsp;the&nbsp;Meggitt&nbsp;IT&nbsp;Use&nbsp;policy.&lt;br&gt;<br>
+&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_signature&quot;&nbsp;data-smartmail=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;--------------------------------&lt;/div&gt;&lt;div&gt;Maxim&nbsp;Gammer&lt;br&gt;&lt;/div&gt;&lt;div&gt;+79199510073&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+
+</tt>

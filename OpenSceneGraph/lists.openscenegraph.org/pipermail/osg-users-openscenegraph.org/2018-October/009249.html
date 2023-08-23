@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] About Interleaved Array Support
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20About%20Interleaved%20Array%20Support&In-Reply-To=%3CCAFN7Y%2BUBoX3KPFHq4J9Qao47O7WW83%2BsUZLK6HXvQ-gY5gFZVw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009246.html">
+   <LINK REL="Next"  HREF="009250.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] About Interleaved Array Support</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20About%20Interleaved%20Array%20Support&In-Reply-To=%3CCAFN7Y%2BUBoX3KPFHq4J9Qao47O7WW83%2BsUZLK6HXvQ-gY5gFZVw%40mail.gmail.com%3E"
+       TITLE="[osg-users] About Interleaved Array Support">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Oct 10 04:20:52 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009246.html">[osg-users] About Interleaved Array Support
+</A></li>
+        <LI>Next message (by thread): <A HREF="009250.html">[osg-users] About Interleaved Array Support
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9249">[ date ]</a>
+              <a href="thread.html#9249">[ thread ]</a>
+              <a href="subject.html#9249">[ subject ]</a>
+              <a href="author.html#9249">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Julien,
+
+I considered interleaved support in the past and decided against it as
+the value it provided isn't that great and it limits how many classes
+can process the geometry as it's an non standard form.
+
+Modern graphics card cope just fine with non interleaved data so what
+is your motivation?
+
+Cheers,
+Robert.
+On Wed, 10 Oct 2018 at 10:50, Julien Valentin
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">julienvalentin51 at gmail.com</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi,
+</I>&gt;<i> I have an implementation of InterleavedGeometry : public Drawable
+</I>&gt;<i> I think it's really something missing for a long time in osg
+</I>&gt;<i> Would it worse a pr...?
+</I>&gt;<i>
+</I>&gt;<i> here's a sample usage  to review chosen api
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>     ///test interleavedGeometry
+</I>&gt;<i>     InterleavedGeometry * igeom=new InterleavedGeometry();
+</I>&gt;<i>     igeom-&gt;setUseDisplayList(false);
+</I>&gt;<i>     igeom-&gt;setUseVertexBufferObjects(true);
+</I>&gt;<i>     igeom-&gt;setUseVertexArrayObject(true);
+</I>&gt;<i>
+</I>&gt;<i>     struct example{
+</I>&gt;<i>         float pos[3],norm[3],texcoor[3],padding[3];//add 3 float padding for mem alignement
+</I>&gt;<i>     };
+</I>&gt;<i>     unsigned int stride=sizeof(struct example);
+</I>&gt;<i>     osg::ref_ptr&lt;osg::BufferTemplate&lt; std::vector&lt;example&gt;  &gt; &gt;  hostarray=new osg::BufferTemplate&lt; std::vector&lt;example&gt;  &gt;;
+</I>&gt;<i>     hostarray-&gt;resize(4);
+</I>&gt;<i>     hostarray-&gt;setBinding(osg::Array::BIND_PER_VERTEX);
+</I>&gt;<i>     hostarray-&gt;setBufferObject(new osg::VertexBufferObject);
+</I>&gt;<i>   InterleavedGeometry::RangedBufferData *rbd=new InterleavedGeometry::RangedBufferData;
+</I>&gt;<i>   InterleavedGeometry::RangeDesc interleaveddesc;
+</I>&gt;<i>   interleaveddesc.push_back(InterleavedGeometry::SubDataDesc(GL_FLOAT,3,0));
+</I>&gt;<i>   interleaveddesc.push_back(InterleavedGeometry::SubDataDesc(GL_FLOAT,3,3*sizeof(GLfloat)));
+</I>&gt;<i>   interleaveddesc.push_back(InterleavedGeometry::SubDataDesc(GL_FLOAT,3,6*sizeof(GLfloat)));
+</I>&gt;<i>   igeom-&gt;addRangedBufferData(0,2,hostarray,interleaveddesc,stride );
+</I>&gt;<i>
+</I>&gt;<i>     for(int j=0;j&lt;2;j++){
+</I>&gt;<i>         for(int i=0;i&lt;2;i++){
+</I>&gt;<i>             for(int k=0;k&lt;3;k++){
+</I>&gt;<i>         float * fdata=igeom-&gt;getRangedBufferData(0)-&gt;data&lt;float&gt;(i*2+j,k);
+</I>&gt;<i>        *fdata++=float(i)*1.0f;
+</I>&gt;<i>        *fdata++=float(j)*1.0f;
+</I>&gt;<i>        *fdata++=0;
+</I>&gt;<i>        }
+</I>&gt;<i>     }
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Julien[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------------
+</I>&gt;<i> Twirling twirling twirling toward freedom
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic62aa.php?p=75058#75058">http://forum.openscenegraph.org/viewtopic.php?p=75058#75058</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009246.html">[osg-users] About Interleaved Array Support
+</A></li>
+	<LI>Next message (by thread): <A HREF="009250.html">[osg-users] About Interleaved Array Support
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9249">[ date ]</a>
+              <a href="thread.html#9249">[ thread ]</a>
+              <a href="subject.html#9249">[ subject ]</a>
+              <a href="author.html#9249">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

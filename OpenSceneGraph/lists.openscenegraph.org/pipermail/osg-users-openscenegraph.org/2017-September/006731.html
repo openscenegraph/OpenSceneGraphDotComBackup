@@ -1,0 +1,421 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Setting the transform matrices
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Setting%20the%20transform%20matrices&In-Reply-To=%3C1504320494.m2f.71599%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006820.html">
+   <LINK REL="Next"  HREF="006938.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Setting the transform matrices</H1>
+<!--htdig_noindex-->
+    <B>Chris Kuliukas</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Setting%20the%20transform%20matrices&In-Reply-To=%3C1504320494.m2f.71599%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Setting the transform matrices">chris at kuliukas.com
+       </A><BR>
+    <I>Fri Sep  1 19:48:14 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="006820.html">[osg-users] LIDAR plugin
+</A></li>
+        <LI>Next message (by thread): <A HREF="006938.html">[osg-users] Setting the transform matrices
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6731">[ date ]</a>
+              <a href="thread.html#6731">[ thread ]</a>
+              <a href="subject.html#6731">[ subject ]</a>
+              <a href="author.html#6731">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Oops, forgot that most readers are on the mailing list. Here is the code which breaks with vertex attrib aliasing:
+
+
+Code:
+/* -*-c++-*- OpenSceneGraph - Copyright (C) 1998-2010 Robert Osfield
+ *
+ * This application is open source and may be redistributed and/or modified
+ * freely and without restriction, both in commercial and non commercial applications,
+ * as long as this copyright notice is maintained.
+ *
+ * This application is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+*/
+
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgUtil/Optimizer&gt;
+#include &lt;osg/CoordinateSystemNode&gt;
+
+#include &lt;osg/Switch&gt;
+#include &lt;osg/Types&gt;
+#include &lt;osgText/Text&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+#include &lt;osgGA/TrackballManipulator&gt;
+#include &lt;osgGA/FlightManipulator&gt;
+#include &lt;osgGA/DriveManipulator&gt;
+#include &lt;osgGA/KeySwitchMatrixManipulator&gt;
+#include &lt;osgGA/StateSetManipulator&gt;
+#include &lt;osgGA/AnimationPathManipulator&gt;
+#include &lt;osgGA/TerrainManipulator&gt;
+#include &lt;osgGA/SphericalManipulator&gt;
+
+#include &lt;osgGA/Device&gt;
+
+#include &lt;iostream&gt;
+
+#include &lt;osg/ShapeDrawable&gt;
+#include &lt;osg/MatrixTransform&gt;
+#include &lt;osg/Point&gt;
+#include &lt;osg/PointSprite&gt;
+
+
+#include &lt;osgParticle/ParticleSystem&gt;
+#include &lt;osgParticle/ParticleSystemUpdater&gt;
+#include &lt;osgParticle/ModularEmitter&gt;
+#include &lt;osgParticle/ModularProgram&gt;
+
+#include &lt;osgParticle/AccelOperator&gt;
+#include &lt;osgParticle/DampingOperator&gt;
+#include &lt;osgParticle/BounceOperator&gt;
+#include &lt;osgParticle/SinkOperator&gt;
+
+void createFountainEffect(osgParticle::ModularEmitter* emitter, osgParticle::ModularProgram* program)
+{
+	// Emit specific number of particles every frame
+	osg::ref_ptr&lt;osgParticle::RandomRateCounter&gt; rrc = new osgParticle::RandomRateCounter;
+	rrc-&gt;setRateRange(500, 2000);
+
+	// Accelerate particles in the given gravity direction.
+	osg::ref_ptr&lt;osgParticle::AccelOperator&gt; accel = new osgParticle::AccelOperator;
+	accel-&gt;setToGravity();
+
+	// Multiply each particle's velocity by a damping constant.
+	osg::ref_ptr&lt;osgParticle::DampingOperator&gt; damping = new osgParticle::DampingOperator;
+	damping-&gt;setDamping(0.9f);
+
+	// Bounce particles off objects defined by one or more domains.
+	// Supported domains include triangle, rectangle, plane, disk and sphere.
+	// Since a bounce always happens instantaneously, it will not work correctly with unstable delta-time.
+	// At present, even the floating error of dt (which are applied to ParticleSystem and Operator separately)
+	// causes wrong bounce results. Some one else may have better solutions for this.
+	osg::ref_ptr&lt;osgParticle::BounceOperator&gt; bounce = new osgParticle::BounceOperator;
+	bounce-&gt;setFriction(-0.05);
+	bounce-&gt;setResilience(0.35);
+	bounce-&gt;addDiskDomain(osg::Vec3(0.0f, 0.0f, -2.0f), osg::Z_AXIS, 8.0f);
+	bounce-&gt;addPlaneDomain(osg::Plane(osg::Z_AXIS, 5.0f));
+
+	// Kill particles going inside/outside of specified domains.
+	osg::ref_ptr&lt;osgParticle::SinkOperator&gt; sink = new osgParticle::SinkOperator;
+	sink-&gt;setSinkStrategy(osgParticle::SinkOperator::SINK_OUTSIDE);
+	sink-&gt;addSphereDomain(osg::Vec3(), 20.0f);
+
+	emitter-&gt;setCounter(rrc.get());
+	program-&gt;addOperator(accel.get());
+	program-&gt;addOperator(damping.get());
+	program-&gt;addOperator(bounce.get());
+	program-&gt;addOperator(sink.get());
+}
+
+const std::string OSG_DATA_FOLDER(&quot;C:/Users/User/Desktop/OpenSceneGraph/OpenSceneGraph-Data/&quot;);
+
+int main(int argc, char** argv)
+{
+
+	auto useVertexAttributeAliasing = false;
+	auto useModelViewAndProjectionUniforms = true;
+	bool useShaders = false;
+	if (argc &gt; 1) {
+		auto caseNo = atoi(argv[1]);
+		// 8 pemutations of 3 options, 0-7
+		// Case 4 : Black cow
+		// Case 5 : Black cow, purple particle smoke
+		// Case 6 : Black cow
+		useVertexAttributeAliasing = (0x4 &amp; caseNo)!=0;
+		useModelViewAndProjectionUniforms = (0x2 &amp; caseNo) != 0;
+		useShaders = (0x1 &amp; caseNo) != 0;
+	}
+
+	// use an ArgumentParser object to manage the program arguments.
+	osg::ArgumentParser arguments(&amp;argc, argv);
+
+	osgViewer::Viewer viewer(arguments);
+
+	std::string textureFile(OSG_DATA_FOLDER + &quot;Images/smoke.rgb&quot;);
+	while (arguments.read(&quot;--texture&quot;, textureFile)) {}
+
+	float pointSize = 20.0f;
+	while (arguments.read(&quot;--point&quot;, pointSize)) {}
+
+	double visibilityDistance = -1.0f;
+	while (arguments.read(&quot;--visibility&quot;, visibilityDistance)) {}
+
+	bool customShape = false;
+	while (arguments.read(&quot;--enable-custom&quot;)) { customShape = true; }
+
+	unsigned int helpType = 0;
+	if ((helpType = arguments.readHelpType()))
+	{
+		arguments.getApplicationUsage()-&gt;write(std::cout, helpType);
+		return 1;
+	}
+
+	// report any errors if they have occurred when parsing the program arguments.
+	if (arguments.errors())
+	{
+		arguments.writeErrorMessages(std::cout);
+		return 1;
+	}
+
+	// set up the camera manipulators.
+	{
+		osg::ref_ptr&lt;osgGA::KeySwitchMatrixManipulator&gt; keyswitchManipulator = new osgGA::KeySwitchMatrixManipulator;
+
+		keyswitchManipulator-&gt;addMatrixManipulator('1', &quot;Trackball&quot;, new osgGA::TrackballManipulator());
+		keyswitchManipulator-&gt;addMatrixManipulator('2', &quot;Flight&quot;, new osgGA::FlightManipulator());
+		keyswitchManipulator-&gt;addMatrixManipulator('3', &quot;Drive&quot;, new osgGA::DriveManipulator());
+		keyswitchManipulator-&gt;addMatrixManipulator('4', &quot;Terrain&quot;, new osgGA::TerrainManipulator());
+		keyswitchManipulator-&gt;addMatrixManipulator('5', &quot;Orbit&quot;, new osgGA::OrbitManipulator());
+		keyswitchManipulator-&gt;addMatrixManipulator('6', &quot;FirstPerson&quot;, new osgGA::FirstPersonManipulator());
+		keyswitchManipulator-&gt;addMatrixManipulator('7', &quot;Spherical&quot;, new osgGA::SphericalManipulator());
+
+		std::string pathfile;
+		double animationSpeed = 1.0;
+		while (arguments.read(&quot;--speed&quot;, animationSpeed)) {}
+		char keyForAnimationPath = '8';
+		while (arguments.read(&quot;-p&quot;, pathfile))
+		{
+			osgGA::AnimationPathManipulator* apm = new osgGA::AnimationPathManipulator(pathfile);
+			if (apm || !apm-&gt;valid())
+			{
+				apm-&gt;setTimeScale(animationSpeed);
+
+				unsigned int num = keyswitchManipulator-&gt;getNumMatrixManipulators();
+				keyswitchManipulator-&gt;addMatrixManipulator(keyForAnimationPath, &quot;Path&quot;, apm);
+				keyswitchManipulator-&gt;selectMatrixManipulator(num);
+				++keyForAnimationPath;
+			}
+		}
+
+		viewer.setCameraManipulator(keyswitchManipulator.get());
+	}
+
+	// add the state manipulator
+	viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()));
+
+	// add the thread model handler
+	viewer.addEventHandler(new osgViewer::ThreadingHandler);
+
+	// add the window size toggle handler
+	viewer.addEventHandler(new osgViewer::WindowSizeHandler);
+
+	// add the stats handler
+	viewer.addEventHandler(new osgViewer::StatsHandler);
+
+	// add the help handler
+	viewer.addEventHandler(new osgViewer::HelpHandler(arguments.getApplicationUsage()));
+
+	// add the record camera path handler
+	viewer.addEventHandler(new osgViewer::RecordCameraPathHandler);
+
+	// add the LOD Scale handler
+	viewer.addEventHandler(new osgViewer::LODScaleHandler);
+
+	// add the screen capture handler
+	viewer.addEventHandler(new osgViewer::ScreenCaptureHandler);
+
+	// load the data
+	osg::ref_ptr&lt;osg::Node&gt; loadedModel = osgDB::readRefNodeFiles(arguments);
+
+	// any option left unread are converted into errors to write out later.
+	arguments.reportRemainingOptionsAsUnrecognized();
+
+	// report any errors if they have occurred when parsing the program arguments.
+	if (arguments.errors())
+	{
+		arguments.writeErrorMessages(std::cout);
+		return 1;
+	}
+
+	/***
+	Customize particle template and system attributes
+	***/
+	osg::ref_ptr&lt;osgParticle::ParticleSystem&gt; ps = new osgParticle::ParticleSystem;
+
+	ps-&gt;getDefaultParticleTemplate().setLifeTime(5.0f);
+
+	if (customShape)
+	{
+		// osgParticle now supports making use of customized drawables. The draw() method will be executed
+		// and display lists will be called for each particle. It is always a huge consumption of memory, and
+		// hardly to use shaders to render them, so please be careful using this feature.
+		ps-&gt;getDefaultParticleTemplate().setShape(osgParticle::Particle::USER);
+		ps-&gt;getDefaultParticleTemplate().setDrawable(new osg::ShapeDrawable(new osg::Box(osg::Vec3(), 1.0f)));
+		useShaders = false;
+	}
+	else
+	{
+		// The shader only supports rendering points at present.
+		ps-&gt;getDefaultParticleTemplate().setShape(osgParticle::Particle::POINT);
+	}
+
+	// Set the visibility distance of particles, due to their Z-value in the eye coordinates.
+	// Particles that are out of the distance (or behind the eye) will not be rendered.
+	ps-&gt;setVisibilityDistance(visibilityDistance);
+
+	if (useShaders)
+	{
+		// Set using local GLSL shaders to render particles.
+		// At present, this is slightly efficient than ordinary methods. The bottlenack here seems to be the cull
+		// traversal time. Operators go through the particle list again and again...
+		ps-&gt;setDefaultAttributesUsingShaders(textureFile, true, 0);
+	}
+	else
+	{
+		// The default methods uses glBegin()/glEnd() pairs. Fortunately the GLBeginEndAdapter does improve the
+		// process, which mimics the immediate mode with glDrawArrays().
+		ps-&gt;setDefaultAttributes(textureFile, true, false, 0);
+
+		// Without the help of shaders, we have to sort particles to make the visibility distance work. Sorting is
+		// also useful in rendering transparent particles in back-to-front order.
+		if (visibilityDistance&gt;0.0)
+			ps-&gt;setSortMode(osgParticle::ParticleSystem::SORT_BACK_TO_FRONT);
+	}
+
+	// At last, to make the point sprite work, we have to set the points size and the sprite attribute.
+	osg::StateSet* stateset = ps-&gt;getOrCreateStateSet();
+	stateset-&gt;setAttribute(new osg::Point(pointSize));
+	stateset-&gt;setTextureAttributeAndModes(0, new osg::PointSprite, osg::StateAttribute::ON);
+
+	/***
+	Construct other particle system elements, including the emitter and program
+	***/
+	osg::ref_ptr&lt;osgParticle::ModularEmitter&gt; emitter = new osgParticle::ModularEmitter;
+	emitter-&gt;setParticleSystem(ps.get());
+
+	osg::ref_ptr&lt;osgParticle::ModularProgram&gt; program = new osgParticle::ModularProgram;
+	program-&gt;setParticleSystem(ps.get());
+
+	createFountainEffect(emitter.get(), program.get());
+
+	/***
+	Add the entire particle system to the scene graph
+	***/
+	osg::ref_ptr&lt;osg::MatrixTransform&gt; parent = new osg::MatrixTransform;
+	parent-&gt;addChild(emitter.get());
+	parent-&gt;addChild(program.get());
+
+	// The updater can receive particle systems as child drawables now. The addParticleSystem() method
+	// is still usable, with which we should define another geode to contain a particle system.
+	osg::ref_ptr&lt;osgParticle::ParticleSystemUpdater&gt; updater = new osgParticle::ParticleSystemUpdater;
+	//updater-&gt;addDrawable( ps.get() );
+
+	osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+	root-&gt;addChild(parent.get());
+	root-&gt;addChild(updater.get());
+
+	// FIXME 2010.9.19: the updater can't be a drawable; otehrwise the ParticleEffect will not work properly. why?
+	updater-&gt;addParticleSystem(ps.get());
+
+	osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+	geode-&gt;addDrawable(ps.get());
+	root-&gt;addChild(geode.get());
+
+	std::string cowFile(OSG_DATA_FOLDER + &quot;cow.osg&quot;);
+	auto cow = osgDB::readNodeFile(cowFile);
+	root-&gt;addChild(cow);
+	
+	viewer.setSceneData(root);
+
+	viewer.realize();
+
+	auto cams = std::vector&lt;osg::Camera*&gt;();
+
+
+	viewer.getCameras(cams, false);
+	for (int i = 0; i &lt; cams.size(); i++) {
+		if(cams.at(i)-&gt;getGraphicsContext() ) cams.at(i)-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseVertexAttributeAliasing(useVertexAttributeAliasing);
+		if (cams.at(i)-&gt;getGraphicsContext()) cams.at(i)-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(useModelViewAndProjectionUniforms);
+	}
+
+	viewer.run();
+
+
+}
+
+
+
+------------------------
+<A HREF="http://www.hrwallingford.com/facilities/ship-simulation-centre">http://www.hrwallingford.com/facilities/ship-simulation-centre</A> (<A HREF="http://www.hrwallingford.com/facilities/ship-simulation-centre">http://www.hrwallingford.com/facilities/ship-simulation-centre</A>)
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicecaf.php?p=71599#71599">http://forum.openscenegraph.org/viewtopic.php?p=71599#71599</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="006820.html">[osg-users] LIDAR plugin
+</A></li>
+	<LI>Next message (by thread): <A HREF="006938.html">[osg-users] Setting the transform matrices
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6731">[ date ]</a>
+              <a href="thread.html#6731">[ thread ]</a>
+              <a href="subject.html#6731">[ subject ]</a>
+              <a href="author.html#6731">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

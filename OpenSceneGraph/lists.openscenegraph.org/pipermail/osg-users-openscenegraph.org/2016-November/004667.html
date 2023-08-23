@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Loading problem, OpenVR integration
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Loading%20problem%2C%20OpenVR%20integration&In-Reply-To=%3CCAFN7Y%2BVGaerCzZOwUKu%2BXX-BZshCv4SD%3DQ%3D-NYnr7rso%3DzDkbQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280882.html">
+   <LINK REL="Next"  HREF="004670.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Loading problem, OpenVR integration</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Loading%20problem%2C%20OpenVR%20integration&In-Reply-To=%3CCAFN7Y%2BVGaerCzZOwUKu%2BXX-BZshCv4SD%3DQ%3D-NYnr7rso%3DzDkbQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Loading problem, OpenVR integration">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Nov  3 01:10:10 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280882.html">[osg-users] Loading problem, OpenVR integration
+</A></li>
+        <LI>Next message: <A HREF="004670.html">[osg-users] Loading problem, OpenVR integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4667">[ date ]</a>
+              <a href="thread.html#4667">[ thread ]</a>
+              <a href="subject.html#4667">[ subject ]</a>
+              <a href="author.html#4667">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Lorenzo,
+
+The performance constraints on immersive stereo display systems are
+pretty well the tightest in graphics, even small glitchs can be lead
+to unpleasant experience.  Couple this with rendering more than twice
+as much data (two eyes and distortion correction passes) means that
+you don't have much wiggle room to make sure things run sweetly. Good
+VR isn't easy so you'll need to be patient with learning the issues
+and how to resolve them, as a dev new to the area you've jumped in the
+deep end :-)
+
+Is the scene static or is your application adding new scene graph
+objects through the lifetime of the application?
+
+It's only new objects that you need to compile to make sure that the
+graphics objects are created and ready to download to the GPU?
+
+The other issue might be that the graphic objects have are all
+compiled already but not download to the GPU.  Also if the GPU memory
+is full the driver has to start moving graphics objects in/out of GPU
+memory on the fly which can cause big frame drops.
+
+What specifically you need to do to resolve the problem depends
+entirely where the actual bottleneck is, we can't answer this without
+knowing more about what is happening your scene graph, how much
+headroom you have on the GPU to handle the extra memory usage,
+bandwidth and compute work.
+
+Robert.
+
+On 2 November 2016 at 17:00, Lorenzo Valente &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">oneiros.valente at gmail.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I'm working on a Virtual Reality project that involves the rendering of a OSG scene in an Oculus Rift CV1 device using the OpenVR library. All these technologies are pretty new to me so everything is as exciting as frustrating :)
+</I>&gt;<i> My code is based on the Chris Denham &quot;osgopenvrviewer&quot; project (you can find it on Github)
+</I>&gt;<i>
+</I>&gt;<i> So, my starting point is a osgViewer::View that contains my immersive scene. I managed to render it in the headset display by doing this:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> osg::ref_ptr&lt;OpenVRViewer&gt; vrViewer = new OpenVRViewer(myView, myDevice, myRealizeOperation);
+</I>&gt;<i> osg::ref_ptr&lt;osg::Node&gt; sceneData = myView-&gt;getSceneData();
+</I>&gt;<i> vrViewer-&gt;addChild(sceneData);
+</I>&gt;<i> myView-&gt;setSceneData(vrViewer);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> So far so good, the render quality and the stereo effect are perfect.
+</I>&gt;<i> The problems start when I move my head to look around in the scene: it looks like the objects outside my first view frustum are not ready when the application starts, so I get serious frame drops when I see these objects for the first time. These frame drops are particulary annoying in the headset, where a frame drop freezes the view for a fraction of second multiple times, causing a very ugly effect.
+</I>&gt;<i>
+</I>&gt;<i> This happens only the first time I look around: after a first &quot;scan&quot; of the scene, everything works smoothly and nice.
+</I>&gt;<i>
+</I>&gt;<i> The system I'm working on started as a simple desktop application with a single view/camera and I couldn't reproduce these problems in the no-VR version. I can look around very fast using a gamepad without losing any frame.
+</I>&gt;<i> So, I guess the problem is in the OpenVR integration.
+</I>&gt;<i>
+</I>&gt;<i> Is there anyone who already had this kind of issues? Do you have an idea on how to manage pre-loading of the entire scene before the realtime simulation starts?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Lorenzo
+</I>&gt;<i>
+</I>&gt;<i> P.S. I see that many people solved this problem using osgViewer::Renderer-&gt;setCompileOnNextDraw(true) but I think it is not enough in my case. I have two RTT slave cameras for VR rendering (left eye and right eye) and I saw that the &quot;setSceneData&quot; method internally calls &quot;setCompileOnNextDraw&quot; on every slave camera in the viewer.
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopiceedd.php?p=69205#69205">http://forum.openscenegraph.org/viewtopic.php?p=69205#69205</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280882.html">[osg-users] Loading problem, OpenVR integration
+</A></li>
+	<LI>Next message: <A HREF="004670.html">[osg-users] Loading problem, OpenVR integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4667">[ date ]</a>
+              <a href="thread.html#4667">[ thread ]</a>
+              <a href="subject.html#4667">[ subject ]</a>
+              <a href="author.html#4667">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

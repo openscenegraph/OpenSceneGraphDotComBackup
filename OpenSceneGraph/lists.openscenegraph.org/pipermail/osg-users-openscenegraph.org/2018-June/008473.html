@@ -1,0 +1,191 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Visualizing triangle data
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Visualizing%20triangle%20data&In-Reply-To=%3CCAFN7Y%2BV9_X37GKgLGOQER4uz9AhjtC6O%2Bi2Oa9SBFCYu7Nf1aA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008471.html">
+   <LINK REL="Next"  HREF="008475.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Visualizing triangle data</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Visualizing%20triangle%20data&In-Reply-To=%3CCAFN7Y%2BV9_X37GKgLGOQER4uz9AhjtC6O%2Bi2Oa9SBFCYu7Nf1aA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Visualizing triangle data">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Jun 14 03:05:07 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008471.html">[osg-users] Visualizing triangle data
+</A></li>
+        <LI>Next message (by thread): <A HREF="008475.html">[osg-users] Visualizing triangle data
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8473">[ date ]</a>
+              <a href="thread.html#8473">[ thread ]</a>
+              <a href="subject.html#8473">[ subject ]</a>
+              <a href="author.html#8473">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sam,
+
+On a quick read of your code I can't see a problem.  Does this work OK?
+
+It's perfectly find to just use DrawArrays without indices like you
+have done. You can mix both DrawArrays and DrawElementsUShort in a
+single osg::Geometry as well.
+
+I'm not clear on what issue you are having.
+
+Cheers,
+Robert.
+On Thu, 14 Jun 2018 at 09:24, Sam Brkopac &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">brkopac at gmail.com</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> I have the mesh setup correctly using the DrawElementsUShort. My question was regarding drawing the walkable triangles that are attached to the mesh. These don't have indices and just consist of the vertex information. Here was my approach to draw them.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> for (size_t index = 0; index &lt; sno.mystery_section_count(); index++)
+</I>&gt;<i> {
+</I>&gt;<i>     const auto * mystery_section = sno.mystery()-&gt;at(index);
+</I>&gt;<i>
+</I>&gt;<i>     const auto triangleSectionCount = mystery_section-&gt;triangle_section_count();
+</I>&gt;<i>
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Geode&gt; flags = new osg::Geode;
+</I>&gt;<i>     grouping-&gt;addChild(flags);
+</I>&gt;<i>
+</I>&gt;<i>     const osg::Vec4 non(1.0f, 0.0f, 0.0f, 0.5f); // red for non-walkable
+</I>&gt;<i>     const osg::Vec4 floor(0.0f, 1.0f, 0.0f, 0.5f); // green for walkable
+</I>&gt;<i>     const osg::Vec4 water(0.0f, 0.0f, 1.0f, 0.5f); // blue for water
+</I>&gt;<i>
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Vec4Array&gt; color(new osg::Vec4Array(1));
+</I>&gt;<i>
+</I>&gt;<i>     switch (mystery_section-&gt;floor())
+</I>&gt;<i>     {
+</I>&gt;<i>     case sno_t::floor_t::FLOOR_IGNORED:
+</I>&gt;<i>         (*color)[0] = non;
+</I>&gt;<i>         break;
+</I>&gt;<i>     case sno_t::floor_t::FLOOR_FLOOR:
+</I>&gt;<i>         (*color)[0] = floor;
+</I>&gt;<i>         break;
+</I>&gt;<i>     case sno_t::floor_t::FLOOR_WATER:
+</I>&gt;<i>         (*color)[0] = water;
+</I>&gt;<i>         break;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     for (size_t j = 0; j &lt; triangleSectionCount; j++)
+</I>&gt;<i>     {
+</I>&gt;<i>         const auto * triangle_section = mystery_section-&gt;triangle_section()-&gt;at(j);
+</I>&gt;<i>
+</I>&gt;<i>         const auto * triangleA = triangle_section-&gt;triangle()-&gt;a();
+</I>&gt;<i>         const auto * triangleB = triangle_section-&gt;triangle()-&gt;b();
+</I>&gt;<i>         const auto * triangleC = triangle_section-&gt;triangle()-&gt;c();
+</I>&gt;<i>
+</I>&gt;<i>         // setup the vertices based on the triangles
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Vec3Array&gt; vertices(new osg::Vec3Array(3));
+</I>&gt;<i>         (*vertices)[0] = osg::Vec3(triangleA-&gt;x(), triangleA-&gt;y(), triangleA-&gt;z());
+</I>&gt;<i>         (*vertices)[1] = osg::Vec3(triangleB-&gt;x(), triangleB-&gt;y(), triangleB-&gt;z());
+</I>&gt;<i>         (*vertices)[2] = osg::Vec3(triangleC-&gt;x(), triangleC-&gt;y(), triangleC-&gt;z());
+</I>&gt;<i>
+</I>&gt;<i>         // setup our geometry
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Geometry&gt; geometry(new osg::Geometry);
+</I>&gt;<i>         geometry-&gt;setVertexArray(vertices);
+</I>&gt;<i>         geometry-&gt;setColorArray(color);
+</I>&gt;<i>         geometry-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+</I>&gt;<i>         geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLES, 0, 3));
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Geode&gt; geode(new osg::Geode);
+</I>&gt;<i>         geode-&gt;addDrawable(geometry);
+</I>&gt;<i>         geode-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+</I>&gt;<i>         geode-&gt;getOrCreateStateSet()-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+</I>&gt;<i>         geode-&gt;getOrCreateStateSet()-&gt;setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+</I>&gt;<i>
+</I>&gt;<i>         // prevent z-fighting.
+</I>&gt;<i>         osg::ref_ptr&lt;osg::PolygonOffset&gt; polyOffset = new osg::PolygonOffset;
+</I>&gt;<i>         polyOffset-&gt;setFactor(-1.0f);
+</I>&gt;<i>         polyOffset-&gt;setUnits(-1.0f);
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::PolygonMode&gt; polyMode = new osg::PolygonMode;
+</I>&gt;<i>         polyMode-&gt;setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL);
+</I>&gt;<i>         geode-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(polyOffset, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+</I>&gt;<i>         geode-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(polyMode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+</I>&gt;<i>
+</I>&gt;<i>         flags-&gt;addChild(geode);
+</I>&gt;<i>     }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> If you have any feedback on the methodology, I'd love to hear it.
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i> Sam[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic66c3.php?p=74070#74070">http://forum.openscenegraph.org/viewtopic.php?p=74070#74070</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008471.html">[osg-users] Visualizing triangle data
+</A></li>
+	<LI>Next message (by thread): <A HREF="008475.html">[osg-users] Visualizing triangle data
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8473">[ date ]</a>
+              <a href="thread.html#8473">[ thread ]</a>
+              <a href="subject.html#8473">[ subject ]</a>
+              <a href="author.html#8473">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

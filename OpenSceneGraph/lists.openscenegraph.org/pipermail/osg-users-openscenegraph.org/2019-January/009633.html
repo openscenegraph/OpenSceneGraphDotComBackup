@@ -1,0 +1,294 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Deleting still referenced object
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3CCAGoufmYWJ6UGQd0m8uOf_%3D53DoAAC9cY08phCbuRZJYLwYzqrQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009631.html">
+   <LINK REL="Next"  HREF="009644.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Deleting still referenced object</H1>
+<!--htdig_noindex-->
+    <B>Chris Hanson</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3CCAGoufmYWJ6UGQd0m8uOf_%3D53DoAAC9cY08phCbuRZJYLwYzqrQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Deleting still referenced object">xenon at alphapixel.com
+       </A><BR>
+    <I>Tue Jan 22 13:12:51 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009631.html">[osg-users] Deleting still referenced object
+</A></li>
+        <LI>Next message (by thread): <A HREF="009644.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9633">[ date ]</a>
+              <a href="thread.html#9633">[ thread ]</a>
+              <a href="subject.html#9633">[ subject ]</a>
+              <a href="author.html#9633">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Would it make sense to custom hack a BUNCH of asserts into the suspect code
+to validate all possible assumptions at runtime and maybe pinpoint
+erroneous conditions prior to hitting the actual crash?
+
+On Tue, Jan 22, 2019 at 9:42 PM Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Richard,
+</I>&gt;<i>
+</I>&gt;<i> Sorry to hear your are battling this issue.  I've read through, and
+</I>&gt;<i> had a quick look at simgear master but could find the
+</I>&gt;<i> loadUsingReaderWriter() implementation in ModelRegistry.cxx that you
+</I>&gt;<i> mention.  Are you working on a branch or not checked something in yet?
+</I>&gt;<i>
+</I>&gt;<i> As a general comment, if you could use the OpenSceneGraph-3.6 branch
+</I>&gt;<i> rather than master it should give you a more stable and tested OSG
+</I>&gt;<i> base to work from.  I'd also recommend checking the whole model
+</I>&gt;<i> loading/processing path to make sure all the methods are taking and
+</I>&gt;<i> passing back ref_ptr&lt;&gt; rather than C pointer.  In my quick check I
+</I>&gt;<i> spotted a osg::Node* OptimizeModelPolicy::optimize() method that be
+</I>&gt;<i> something could be the type of thing to convert across to ref_ptr&lt;&gt;.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On Tue, 22 Jan 2019 at 17:58, Richard Harrison &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rjh at zaretto.com</A>&gt; wrote:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I've just got another of these problems.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; This is after changing all of the osgDB::read into osgDB::readRef
+</I>&gt;<i> &gt; (simgear commit cb024dd82d4c384df0b599640a98e762fbf66688) and 5days of
+</I>&gt;<i> &gt; flight time testing (not all the same run, FG was restarted many
+</I>&gt;<i> &gt; times) I've hit what looks like a the same problem as I originally
+</I>&gt;<i> &gt; reported; i.e. the expiry appears to be something that has just been
+</I>&gt;<i> &gt; loaded and expired at the same time. I'm keeping my debug session open
+</I>&gt;<i> &gt; to allow further investigation in case questions.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I'm surprised that the fixes didn't work as they looked to me as
+</I>&gt;<i> &gt; though they should fix the problem I'm immediately suspecting that
+</I>&gt;<i> &gt; maybe there are other things that we're doing that are interfering
+</I>&gt;<i> &gt; with the thread safety mechanisms.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Having dug into what's happening; the DatabasePager is currently
+</I>&gt;<i> &gt; loading Models/Airport/cargoim.xml; which is defined in
+</I>&gt;<i> &gt; project3000/Objects/w010n50/w002n52/2925458.stg; and the ObjectCache
+</I>&gt;<i> &gt; is expiring Models/Aircraft/Cessna172_red.ac; Looking at the pertinent
+</I>&gt;<i> &gt; part of the .stg it is a fair conclusion that the DatabasePager has
+</I>&gt;<i> &gt; just loaded two Cessna172_red.ac models
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; OBJECT_SHARED Models/Aircraft/Cessna172_red.ac -1.47630 52.37373 82.02
+</I>&gt;<i> &gt; 223.53
+</I>&gt;<i> &gt; OBJECT_SHARED Models/Aircraft/Cessna172_red.ac -1.47560 52.37443 81.34
+</I>&gt;<i> 345.5
+</I>&gt;<i> &gt; OBJECT_SHARED Models/lib/trailer-fedex.ac -1.48893 52.36957 84.13 314.01
+</I>&gt;<i> &gt; OBJECT_SHARED Models/Airport/cargoim.xml -1.47436 52.36886 79.91 188.47
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The actual .ac model load is happening in SGReaderWriteXML.cxx line 341
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;      modelResult = osgDB::readRefNodeFile(modelpath.local8BitStr(),
+</I>&gt;<i> &gt; options.get());
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; which will end up in ModelRegistry.cxx line 866
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;      loadUsingReaderWriter(const std::string&amp; fileName,
+</I>&gt;<i> &gt;                            const osgDB::Options* opt)
+</I>&gt;<i> &gt;      {
+</I>&gt;<i> &gt;          using namespace osgDB;
+</I>&gt;<i> &gt;          ReaderWriter* rw =
+</I>&gt;<i> &gt;              Registry::instance()
+</I>&gt;<i> &gt;              -&gt;getReaderWriterForExtension
+</I>&gt;<i> &gt;                (osgDB::getFileExtension(fileName));
+</I>&gt;<i> &gt;          if (!rw)
+</I>&gt;<i> &gt;              return ReaderWriter::ReadResult(); // FILE_NOT_HANDLED
+</I>&gt;<i> &gt;          return rw-&gt;readNode(fileName, opt);
+</I>&gt;<i> &gt;      }
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I think it is correct in this instance to use the (ac3d) via the
+</I>&gt;<i> &gt; registry and readNode.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The only other thing that looks a bit odd is the way we are requesting
+</I>&gt;<i> &gt; the same .stg file multiple times; maybe that is tripping something up
+</I>&gt;<i> &gt; in our code; but I don't think that's the cause of the deleting whilst
+</I>&gt;<i> &gt; still in use.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;    [0..162] i:/flightgear/project3000/Objects/w010n50/w002n52/2925458.stg
+</I>&gt;<i> &gt;    [163..178]
+</I>&gt;<i> i:/flightgear/project3000/Objects/w010n50/w002n52/2925458.stg
+</I>&gt;<i> &gt;    [179..] i:/flightgear/terrasync/Terrain/w010n50/w002n52/2925458.stg
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; -------------------
+</I>&gt;<i> &gt; On 17/01/2019 14:39, Voerman, L. wrote the following questions:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;  &gt; - did the problematic node come out of the cache, or did it come
+</I>&gt;<i> &gt; fresh from disk?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; It's hard to tell because as far as I can tell the problematic load has
+</I>&gt;<i> &gt; finished and the pager has moved onto the next item.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;  &gt; - Is the parent group (and it's _children vector) still sane?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Looking at the node that is being expired it all looks good; the
+</I>&gt;<i> &gt; reference count is 3; so there remains the mystery of how this can
+</I>&gt;<i> &gt; happen.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;          oitr (
+</I>&gt;<i> &gt;                  (&quot;Models/Aircraft/Cessna172_red.ac&quot;,
+</I>&gt;<i> &gt;                  {_ptr=0x0 &lt;NULL&gt; }),
+</I>&gt;<i> &gt;                  ({_ptr=0x2441e8bc800 {_children={ size=0x5 } } },
+</I>&gt;<i> &gt;                  5002.8604968999998))
+</I>&gt;<i> &gt;          first   &quot;Models/Aircraft/Cessna172_red.ac&quot;
+</I>&gt;<i> &gt;          second  {_ptr=0x0 &lt;NULL&gt; }
+</I>&gt;<i> &gt;          second  ({_ptr=0x2441e8bc800 {_children={ size=0x5 } } },
+</I>&gt;<i> &gt;                   5002.8604968999998)
+</I>&gt;<i> &gt;              first   {_ptr=0x2441e8bc800 {_children={ size=0x5 } } } o
+</I>&gt;<i> &gt;                       sg::ref_ptr&lt;osg::Object&gt;
+</I>&gt;<i> &gt;              _ptr    0x2441e8bc800 {_children={ size=0x5 } }
+</I>&gt;<i> &gt;                      osg::Object * {osg160-osg.dll!osg::Group}
+</I>&gt;<i> &gt;          [osg::Group]
+</I>&gt;<i> &gt;              {_children={ size=0x5 } } osg160-osg.dll!osg::Group
+</I>&gt;<i> &gt;                  osg::Node   {...}
+</I>&gt;<i> &gt;                      osg::Object
+</I>&gt;<i> &gt;                      {
+</I>&gt;<i> &gt; _name=&quot;I:\flightgear\terrasync\Models\Aircraft\Cessna172_red.ac&quot;
+</I>&gt;<i> &gt;            _dataVariance=STATIC (0x1) ...
+</I>&gt;<i> &gt;                      }
+</I>&gt;<i> &gt;              _initialBound
+</I>&gt;<i> &gt;              {_center={_v=0x2441e8bc848 {0.0, 0.0, 0.0} } _radius=-1.0 }
+</I>&gt;<i> &gt;              _boundingSphere {
+</I>&gt;<i> &gt;                  _center={_v=0x2441e8bc860 {0.0, 0.0, 0.0} }
+</I>&gt;<i> &gt;                  _radius=-1.0 }
+</I>&gt;<i> &gt;              _boundingSphereComputed false   bool
+</I>&gt;<i> &gt;              _parents    { size=0x2 }
+</I>&gt;<i> &gt;              _numChildrenRequiringUpdateTraversal
+</I>&gt;<i> &gt;              _cullingActive  true
+</I>&gt;<i> &gt;              _nodeMask   0xffffdfff
+</I>&gt;<i> &gt;              _children   { size=0x5 }
+</I>&gt;<i> &gt;              osg::Referenced {_observerSet={_ptr=0x0 }
+</I>&gt;<i> &gt;              _refCount={_value=0x3 } }
+</I>&gt;<i> &gt;              _dataVariance   STATIC (0x1)
+</I>&gt;<i> &gt;              _userDataContainer  0x0
+</I>&gt;<i> &gt;          second  5002.8604968999998
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;  &gt; - If the parent node is still sane, can you match it to the file on
+</I>&gt;<i> &gt;  &gt; disk and possibly tell what sort of node the problem appears in?  -
+</I>&gt;<i> &gt;  &gt; What is the file format of the file on disk? Do you have (use)
+</I>&gt;<i> &gt;  &gt; multiple pager threads? Could the file loader have a multithreading
+</I>&gt;<i> &gt;  &gt; problem?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; It's a .ac format node; we're using a single DatabasePager thread (as
+</I>&gt;<i> &gt; there are other loading problems within FG that almost prevent it from
+</I>&gt;<i> &gt; running at all)
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; --------------------------
+</I>&gt;<i> &gt; Stack dumps are as follows:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Main thread;
+</I>&gt;<i> &gt;      fgfs.exe!NotifyLogger::notify
+</I>&gt;<i> &gt;      osg160-osg.dll!osg::NotifyStreamBuffer::sync L:92
+</I>&gt;<i> &gt;      msvcp140.dll!00007ffabb8a27f2
+</I>&gt;<i> &gt;      osg160-osg.dll!std::endl
+</I>&gt;<i> &gt;      osg160-osg.dll!osg::Referenced::~Referenced() L:205
+</I>&gt;<i> &gt;      osgdb_ac.dll!osg::Group::`scalar deleting destructor'
+</I>&gt;<i> &gt;      osg160-osg.dll!osg::Referenced::signalObserversAndDelete() L:294
+</I>&gt;<i> &gt;      osg160-osg.dll!osg::Referenced::unref() L:203
+</I>&gt;<i> &gt;      osg160-osgDB.dll!std::erase L:1431
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::ObjectCache::removeExpiredObjectsInCache
+</I>&gt;<i> L:171
+</I>&gt;<i> &gt;      osg160-osgViewer.dll!osgViewer::Viewer::updateTraversal() L:1161
+</I>&gt;<i> &gt;      osg160-osgViewer.dll!osgViewer::ViewerBase::frame L:748
+</I>&gt;<i> &gt;      fgfs.exe!fgOSMainLoop() L:339
+</I>&gt;<i> &gt;      fgfs.exe!fgMainInit(int argc, char * * argv) L:619
+</I>&gt;<i> &gt;      fgfs.exe!main(int argc, char * * argv) L:339
+</I>&gt;<i> &gt;      fgfs.exe!__scrt_common_main_seh() L:253
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; DatabasePager thread
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;      ntdll.dll!00007ffaefd51db4
+</I>&gt;<i> &gt;      KernelBase.dll!00007ffaec855834
+</I>&gt;<i> &gt;      KernelBase.dll!00007ffaec855bcc
+</I>&gt;<i> &gt;      kernel32.dll!00007ffaef606413
+</I>&gt;<i> &gt;      kernel32.dll!00007ffaef642d42
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::getRealPath
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::findFileInPath
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::findFileInPath
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::Registry::findDataFileImplementation
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::Registry::findDataFile
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::findDataFile
+</I>&gt;<i> &gt;      fgfs.exe!simgear::SGReaderWriterXML::readNode
+</I>&gt;<i> &gt; fgfs.exe!simgear::ModelRegistryCallback&lt;&gt;::loadUsingReaderWriter
+</I>&gt;<i> &gt;      fgfs.exe!simgear::ModelRegistryCallback&lt;&gt;::readNode
+</I>&gt;<i> &gt;      fgfs.exe!simgear::ModelRegistry::readNode
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::Registry::readNode
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::readRefNodeFile
+</I>&gt;<i> &gt; fgfs.exe!simgear::ReaderWriterSTG::_ModelBin::DelayLoadReadFileCallback
+</I>&gt;<i> &gt;                                      ::AddModelLOD::operator
+</I>&gt;<i> &gt;      fgfs.exe!simgear::QuadTreeBuilder&lt;&gt;::addNode
+</I>&gt;<i> &gt;      fgfs.exe!simgear::QuadTreeBuilder&lt;&gt;::buildQuadTree
+</I>&gt;<i> &gt;      fgfs.exe!simgear::ReaderWriterSTG::_ModelBin
+</I>&gt;<i> &gt; ::DelayLoadReadFileCallback::readNode
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::Registry::readNode
+</I>&gt;<i> &gt;      osg160-osgDB.dll!osgDB::DatabasePager::DatabaseThread::run
+</I>&gt;<i> &gt; ot21-OpenThreads.dll!OpenThreads::ThreadPrivateActions::StartThread
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+-- 
+Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>
+<A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+Training &#8226; Consulting &#8226; Contracting
+3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226;
+GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+Legal/IP &#8226; Forensics &#8226; Imaging &#8226; UAVs &#8226; GIS &#8226; GPS &#8226;
+osgEarth &#8226; Terrain &#8226; Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226;
+iPhone/iPad/iOS &#8226; Android
+@alphapixel &lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt; facebook.com/alphapixel (775)
+623-PIXL [7495]
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190122/b02f5ebd/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190122/b02f5ebd/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009631.html">[osg-users] Deleting still referenced object
+</A></li>
+	<LI>Next message (by thread): <A HREF="009644.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9633">[ date ]</a>
+              <a href="thread.html#9633">[ thread ]</a>
+              <a href="subject.html#9633">[ subject ]</a>
+              <a href="author.html#9633">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

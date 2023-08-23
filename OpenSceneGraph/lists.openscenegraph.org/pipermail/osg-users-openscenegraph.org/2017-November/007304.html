@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] SetAttribute / RemoveAttribute Question
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SetAttribute%20/%20RemoveAttribute%20Question&In-Reply-To=%3CCAFN7Y%2BXHrXknYHdH18rd5Rx1PpwiXirvVCQnKOZ%2Bp4DC3yMRUA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007303.html">
+   <LINK REL="Next"  HREF="007305.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] SetAttribute / RemoveAttribute Question</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SetAttribute%20/%20RemoveAttribute%20Question&In-Reply-To=%3CCAFN7Y%2BXHrXknYHdH18rd5Rx1PpwiXirvVCQnKOZ%2Bp4DC3yMRUA%40mail.gmail.com%3E"
+       TITLE="[osg-users] SetAttribute / RemoveAttribute Question">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Nov 28 08:46:17 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007303.html">[osg-users] SetAttribute / RemoveAttribute Question
+</A></li>
+        <LI>Next message (by thread): <A HREF="007305.html">[osg-users] SetAttribute / RemoveAttribute Question
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7304">[ date ]</a>
+              <a href="thread.html#7304">[ thread ]</a>
+              <a href="subject.html#7304">[ subject ]</a>
+              <a href="author.html#7304">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Paul,
+
+You haven't provided a stack trace, or how you manage your nodes and
+pointers so there isn't much we can say specifically.
+
+As a general comment, these type of crashes on what should otherwise
+be a perfect reasonable operation, is usually down to dangling
+pointers of some kind.  In your case perhaps the node has been deleted
+elsewhere so your node_unsel pointer is invalid, or the pointer to the
+material is invalid.
+
+If you are keeping pointers around to objects in the scene graph you
+shouldn't use C pointers as they can easily become dangling pointers.
+If you do need to keep a pointer around either use an osg::ref_ptr&lt;&gt;
+to make sure you keep the object alive even when all other references
+to it are removed, or use an osg::observer_ptr&lt;&gt; that automatically
+gets reset to 0 when the object it pointers is deleted.
+
+Robert.
+
+
+On 28 November 2017 at 16:35, Paul Bigeon &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osgforum at tevs.eu</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> Considering I've created an osg::Material this way, and that the nodes are shown on screen :
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> m_material_selected = new osg::Material();
+</I>&gt;<i> m_material_selected-&gt;setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4f(0.2f, 0.2f, 0.75f, 0.5f));
+</I>&gt;<i> m_material_selected-&gt;setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4f(0.2f, 0.2f, 0.75f, 0.5f));
+</I>&gt;<i> m_material_selected-&gt;setShininess(osg::Material::FRONT_AND_BACK, 75.0);
+</I>&gt;<i> m_material_selected-&gt;setColorMode(osg::Material::AMBIENT);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> And then I set it to a node like this ( this is apparently working so far ... ) :
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> // Where node_sel is a previously created osg::Node*
+</I>&gt;<i> node_sel-&gt;getOrCreateStateSet()-&gt;setAttribute(m_material_selected, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> But when I try to remove this attribute from the previously created node like this :
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> // Where node_unsel = node_sel;
+</I>&gt;<i> node_unsel-&gt;getOrCreateStateSet()-&gt;removeAttribute(m_material_selected);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> My app crashes.
+</I>&gt;<i>
+</I>&gt;<i> What did I do wrong ? Is it unsafe to removeAttribute from a node this way ?
+</I>&gt;<i> I've seen on the forum things like NodeVisitor class, should I be using this or can I change nodes manually ?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you for your interest in my question,
+</I>&gt;<i>
+</I>&gt;<i> Have a good day,
+</I>&gt;<i>
+</I>&gt;<i> Paul
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic87d3.php?p=72479#72479">http://forum.openscenegraph.org/viewtopic.php?p=72479#72479</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007303.html">[osg-users] SetAttribute / RemoveAttribute Question
+</A></li>
+	<LI>Next message (by thread): <A HREF="007305.html">[osg-users] SetAttribute / RemoveAttribute Question
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7304">[ date ]</a>
+              <a href="thread.html#7304">[ thread ]</a>
+              <a href="subject.html#7304">[ subject ]</a>
+              <a href="author.html#7304">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

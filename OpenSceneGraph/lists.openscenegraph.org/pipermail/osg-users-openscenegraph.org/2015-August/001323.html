@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Preprocessing Viewer
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Preprocessing%20Viewer&In-Reply-To=%3CCAFN7Y%2BWRC9%3DPCiei6HcDSGENgyV6dsEqYypMmwQ50EOg8vJn1A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277545.html">
+   <LINK REL="Next"  HREF="277561.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Preprocessing Viewer</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Preprocessing%20Viewer&In-Reply-To=%3CCAFN7Y%2BWRC9%3DPCiei6HcDSGENgyV6dsEqYypMmwQ50EOg8vJn1A%40mail.gmail.com%3E"
+       TITLE="[osg-users] Preprocessing Viewer">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Aug 25 07:44:29 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277545.html">[osg-users] Preprocessing Viewer
+</A></li>
+        <LI>Next message: <A HREF="277561.html">[osg-users] Animating Textures
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1323">[ date ]</a>
+              <a href="thread.html#1323">[ thread ]</a>
+              <a href="subject.html#1323">[ subject ]</a>
+              <a href="author.html#1323">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Michael,
+
+It looks like you are over complicating things - creating and destroying
+views it almost certainly not the way to do it, most likely you'll want a
+solution that uses an osg::Camera in the scene graph or attached as a slave
+Camera that has it's RenderOrder set to PRE_RENDER.  You can use a NodeMask
+or Switch to toggle on/off such Camera's so have them only rendered when
+needed.  Another approach might be to use a RealizerOperation.
+
+Could you roll back a little in your explanation of what you are trying to
+achieve so we can provide advice on how best to achieve it.  Specifically,
+what is that you need to do in your pre-processing?
+
+Robert.
+
+
+On 25 August 2015 at 11:59, Michael May &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">michael_beham at gmx.net</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I want to add a pre-processing step for rendering several environment
+</I>&gt;<i> maps. The environment maps are used for rendering the scene later.
+</I>&gt;<i> How does it work?
+</I>&gt;<i>
+</I>&gt;<i> Using multiple (composite)viewers does not work. So, I create a view for
+</I>&gt;<i> preprocessing. The view is then rendered using frame().
+</I>&gt;<i> After render the preprocess view, I remove it and create the view for
+</I>&gt;<i> rendering the scene. Note, both views has several camera slaves.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> //Scene Loading, creating cameras, and so on
+</I>&gt;<i> ...
+</I>&gt;<i> osg::ArgumentParser psr(&amp;argc, argv);
+</I>&gt;<i> osgViewer::CompositeViewer* viewer2 = new osgViewer::CompositeViewer(psr);
+</I>&gt;<i>
+</I>&gt;<i> osgViewer::View* view2 = new osgViewer::View();
+</I>&gt;<i> view2-&gt;setCamera(m_camera2);
+</I>&gt;<i> view2-&gt;setSceneData( scene_obj);
+</I>&gt;<i> scene_manager-&gt;createPreprocess(graphic_context, view2); //Creates camera
+</I>&gt;<i> slaves for pre-processing
+</I>&gt;<i> viewer2-&gt;addView(view2);
+</I>&gt;<i> viewer2-&gt;frame();
+</I>&gt;<i> viewer2-&gt;removeView(view2);
+</I>&gt;<i>
+</I>&gt;<i> osgViewer::View* view = new osgViewer::View();
+</I>&gt;<i> view-&gt;setCamera(m_camera);
+</I>&gt;<i> view-&gt;setSceneData( scene_obj);
+</I>&gt;<i>
+</I>&gt;<i> scene_manager-&gt;setSlaveCameras(view, graphic_context); //creates camera
+</I>&gt;<i> slaves for scene rendering
+</I>&gt;<i>
+</I>&gt;<i> //Add Event Handler and so on...
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> while(!viewer2-&gt;done())
+</I>&gt;<i> {
+</I>&gt;<i> if(!view-&gt;getCameraManipulator() &amp;&amp;
+</I>&gt;<i> view-&gt;getCamera()-&gt;getAllowEventFocus())
+</I>&gt;<i> view-&gt;setCameraManipulator(new osgGA::TrackballManipulator());
+</I>&gt;<i> viewer2-&gt;setReleaseContextAtEndOfFrameHint(false);
+</I>&gt;<i> if(_firstFrame)
+</I>&gt;<i> {
+</I>&gt;<i> view-&gt;init();
+</I>&gt;<i> if(!viewer2-&gt;isRealized())
+</I>&gt;<i> viewer2-&gt;realize();
+</I>&gt;<i>
+</I>&gt;<i> _firstFrame = false;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> viewer2-&gt;advance(USE_REFERENCE_TIME);
+</I>&gt;<i> viewer2-&gt;eventTraversal();
+</I>&gt;<i> viewer2-&gt;updateTraversal();
+</I>&gt;<i> viewer2-&gt;renderingTraversals();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> This technique works, but the frame-rate decreses dramatically.
+</I>&gt;<i> Does anybody have an idea?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Michael
+</I>&gt;<i>
+</I>&gt;<i> I am using Osg 3.4 rc-2 with GL3.0 profile.
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic8ad7.php?p=64889#64889">http://forum.openscenegraph.org/viewtopic.php?p=64889#64889</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150825/ba541b42/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150825/ba541b42/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277545.html">[osg-users] Preprocessing Viewer
+</A></li>
+	<LI>Next message: <A HREF="277561.html">[osg-users] Animating Textures
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1323">[ date ]</a>
+              <a href="thread.html#1323">[ thread ]</a>
+              <a href="subject.html#1323">[ subject ]</a>
+              <a href="author.html#1323">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

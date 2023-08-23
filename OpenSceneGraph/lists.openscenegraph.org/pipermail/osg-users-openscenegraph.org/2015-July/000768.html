@@ -1,0 +1,195 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Orientating model in 3D space with quaternions
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Orientating%20model%20in%203D%20space%20with%20quaternions&In-Reply-To=%3CDUB124-W35D1FB4B3665794C24012BC8960%40phx.gbl%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000766.html">
+   <LINK REL="Next"  HREF="000769.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Orientating model in 3D space with quaternions</H1>
+<!--htdig_noindex-->
+    <B>Sonya Blade</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Orientating%20model%20in%203D%20space%20with%20quaternions&In-Reply-To=%3CDUB124-W35D1FB4B3665794C24012BC8960%40phx.gbl%3E"
+       TITLE="[osg-users] Orientating model in 3D space with quaternions">sonyablade2010 at hotmail.com
+       </A><BR>
+    <I>Thu Jul  2 23:38:15 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000766.html">[osg-users] Orientating model in 3D space with quaternions
+</A></li>
+        <LI>Next message: <A HREF="000769.html">[osg-users] Orientating model in 3D space with quaternions
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#768">[ date ]</a>
+              <a href="thread.html#768">[ thread ]</a>
+              <a href="subject.html#768">[ subject ]</a>
+              <a href="author.html#768">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sebastian,
+&gt;<i> Usually you use an cosine-matrix for this. It allows to determine the quaternion which translates one coordinate frame &gt;(i.e. 3 independent vectors) into another, but I think osg doesn't have this.Does anybody can confirm also that there is not a feature like that in osg? These 3 vectors may seem that they are independent but actually they are dependant, because knowing any 2 of them you can always get the 3rd one with cross product of first two.So any modifications on one of them affects others as well.
+</I>&gt;<i>I think you can use the makeRotate by applying the resulting quaternion to the vec3(0,0,1) and (1,0,0) &gt; and using the makeRotate with the results somehow to get the inverse. I already tried that without succes, the glitch here is at the bare minimum I have to define 2 vectors (up/direction, up/right, direction/right etcc combinaton) but I don't how to combine those two into a quaternion ? 
+</I>I forgot to mention that I get plenty of following errorson console screen, when I assign direction vector, this happens when I try to pan, move, zoom of whole scene. Could that be the source of discrepancy ?   
+CullVisitor::apply(Geode&amp;) detected NaN,    depth=nan, center=(0 -2.5 0),    matrix={        nan nan nan nan        nan nan nan nan        nan nan nan nan        35 -35 0 1} 
+Date: Thu, 2 Jul 2015 19:25:34 +0200
+From: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A>
+To: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+Subject: Re: [osg-users] Orientating model in 3D space with quaternions
+
+
+  
+    
+  
+  
+    Hi Sonya, 
+
+    
+
+    Usually you use an cosine-matrix for this. It allows to determine
+    the quaternion which translates one coordinate frame (i.e. 3
+    independent vectors) into another, but I think osg doesn't have
+    this.
+
+    I think you can use the makeRotate by applying the resulting
+    quaternion to the vec3(0,0,1) and (1,0,0) and using the makeRotate
+    with the results somehow to get the inverse. 
+
+    
+
+    Cheers
+
+    Sebastian 
+
+    
+      
+      Dear All,
+        
+
+          
+        I load a model with the
+            following code in my program, p1 and p2 are osg::Vec3 type
+            variables and simply representing
+        the each ends of object in
+            spatial space ( I also use them to find the direction
+            vector). What I want to achive is: to place 
+        that model up vector always aligned  facing
+            upward ( this doesn't mean that it must coincidence/be
+            parallel with global 
+        Z axis)  to achieve that  If
+            I apply the quaternions then object is positioned with correct direction vector
+            (calulated via 
+        p1, p2)  but rolled with
+            arbitrary angle along that direction vector, which violates my
+            conditional goal.
+        
+
+          
+        It also seems that it's not
+            a supprise that it produces that result bcoz nowhere I
+            specify the crucial right or up vector with 
+        quaternion which is required
+            to position the object in 3D space. So How am I supposed to correct that
+            effect either with 
+        quaternions or matrices ?  
+        
+
+          
+        
+                              loadedModel =
+              osgDB::readNodeFile(&quot;quad.obj&quot;);
+                              osg::Vec3Array* verlist=
+              static_cast&lt;osg::Vec3Array*
+              &gt;(rubber_line-&gt;getVertexArray());
+                              osg::Vec3 p1 = (*verlist)[0];
+                              osg::Vec3 p2 = (*verlist)[1];
+            
+
+            
+                             
+              osg::ref_ptr&lt;osg::PositionAttitudeTransform&gt; Transf
+              = new osg::PositionAttitudeTransform;
+                              Transf-&gt;setPosition( p1 );
+            
+
+            
+                              osg::Quat quad;
+                              osg::Matrix matrix, mat2;
+            
+
+            
+                             
+              quad.makeRotate(osg::Vec3(0,1,0),p2-p1);
+            
+
+            
+                             
+                Transf-&gt;setAttitude(quad);
+                                Transf-&gt;addChild(loadedModel);
+                                rootnode-&gt;addChild(Transf);
+            
+
+            
+            
+
+            
+          
+      
+      
+
+      
+      
+
+      _______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+
+    
+    
+
+  
+
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A> 		 	   		  
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150703/de25d581/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150703/de25d581/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000766.html">[osg-users] Orientating model in 3D space with quaternions
+</A></li>
+	<LI>Next message: <A HREF="000769.html">[osg-users] Orientating model in 3D space with quaternions
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#768">[ date ]</a>
+              <a href="thread.html#768">[ thread ]</a>
+              <a href="subject.html#768">[ subject ]</a>
+              <a href="author.html#768">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

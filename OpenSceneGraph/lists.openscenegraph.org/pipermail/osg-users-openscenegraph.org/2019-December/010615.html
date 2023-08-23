@@ -1,0 +1,350 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Issue with setCompileOnNextDraw (Robert Osfield)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Issue%20with%20setCompileOnNextDraw%20%28Robert%20Osfield%29&In-Reply-To=%3CCAFN7Y%2BUxkpn1zQKzJaRTsO4e_na0u-5X-SUrbYY7_CfPNUutbg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010614.html">
+   <LINK REL="Next"  HREF="010616.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Issue with setCompileOnNextDraw (Robert Osfield)</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Issue%20with%20setCompileOnNextDraw%20%28Robert%20Osfield%29&In-Reply-To=%3CCAFN7Y%2BUxkpn1zQKzJaRTsO4e_na0u-5X-SUrbYY7_CfPNUutbg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Issue with setCompileOnNextDraw (Robert Osfield)">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Dec  5 07:56:09 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010614.html">[osg-users] Issue with setCompileOnNextDraw (Robert Osfield)
+</A></li>
+        <LI>Next message (by thread): <A HREF="010616.html">[osg-users] Test post of osg-users mailing list to osg-users googlegroup
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10615">[ date ]</a>
+              <a href="thread.html#10615">[ thread ]</a>
+              <a href="subject.html#10615">[ subject ]</a>
+              <a href="author.html#10615">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi David,
+
+Are you replying to a digest post from the user mailing list, or using
+googlegroups?  Each of your replies has a whole bunch of content that has
+nothing to do with your reply.  It's kinda hard to follow when  you have to
+wade through the irrelevant stuff so I'd like to get to the bottom of this
+and fix it in future.
+
+On the need for issues with setCompileOnNextDraw() and the OpenGL error
+'invalid enumerant' warnings, it all suggest to me that there is something
+amiss with your scene graph, some OpenGL state you are setting in the scene
+graph is resulting in OpenGL detecting an error and reporting it as an
+&quot;invalid enumerant'.  Unfortunately OpenGL doesn't provide great error
+report support, the errors you get don't tell you exactly what previous API
+call provoked it, the only thing you can do is increase how often you do a
+glGetError() to get the warnings.   The glGetError() call is no cheap so
+the OSG by default only checks it once per frame, so any of the OpenGL
+calls in the frame could cause the warning you get.
+
+To get the OSG to do finer grained checking you can set the
+OSG_GL_ERROR_CHECKING env to ON and it'll check after each
+State::applyAttribute(..) call.  This doesn't pinpoint precisely what the
+problem is but should help you home in a bit better.
+
+A third party GL debugger tool could also be helpful in this work.
+
+Once you have resolved the error then there is chance you'll see better
+performance from your application.
+
+--
+
+As an aside, Vulkan is far better than OpenGL for error reporting, while it
+doesn't by default do checking, you can use the debug layer and api
+reporting layer to get far richer checking and info from these layers, once
+your app is running cleanly you then can not bother adding these layers so
+you never pay the cost at runtime in a deployed application, which is best
+of both worlds :-)
+
+Robert.
+
+
+On Thu, 5 Dec 2019 at 15:27, Heitbrink, David A &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david-heitbrink at uiowa.edu</A>&gt;
+wrote:
+
+&gt;<i> I am only doing setCompileOnNextDraw, after the load of my main scene. If
+</I>&gt;<i> I do not do it, then I get a lot more severe hangs.......however after some
+</I>&gt;<i> further test I ran into some complications. I have a user set option to use
+</I>&gt;<i> this or not. I found if the scene is larger than what can fit on the GPU, I
+</I>&gt;<i> am better off not doing this.
+</I>&gt;<i>
+</I>&gt;<i> I am currently running nodes with 3-4 projectors per node, 2 video cards
+</I>&gt;<i> per node. Each projector runs has its own process. What I found from
+</I>&gt;<i> running a profiler is glGet*, caused periodic hangs, this included:
+</I>&gt;<i>
+</I>&gt;<i> glGetInteger64v(GL_TIMESTAMP, &amp;timestamp);
+</I>&gt;<i>
+</I>&gt;<i> I setup a condition around where said line is used so it is not being run
+</I>&gt;<i> unless stats are enabled. So it turns out when I run without stats enabled,
+</I>&gt;<i> I get a lot fewer hangs.......but it makes it harder to quantify without
+</I>&gt;<i> stats. I am doing ground based simulation, so I have pretty high optical
+</I>&gt;<i> flow rates so dropped frames are really noticeable. I don't really see this
+</I>&gt;<i> on my development machine, or not to the same degree. My deployment
+</I>&gt;<i> machines are older and are running multiple processes. So...problem
+</I>&gt;<i> solved.....maybe?
+</I>&gt;<i>
+</I>&gt;<i> I am still getting 100's of :
+</I>&gt;<i> Warning: detected OpenGL error 'invalid enumerant' at after
+</I>&gt;<i> stateset.compileGLObjects in GLObjectsVisitor::apply(osg::StateSet&amp;
+</I>&gt;<i> stateset)
+</I>&gt;<i>
+</I>&gt;<i> After setCompileOnNextDraw, and I am still concerned about these messages.
+</I>&gt;<i> I have not tracked down exactly what objects being compiled at the time
+</I>&gt;<i> are......or if it's every object for that matter.
+</I>&gt;<i>
+</I>&gt;<i> I was also looking at the shared state manager, I am using OSG 3.6.3. Is
+</I>&gt;<i> there anything in particular I should do to use this?
+</I>&gt;<i>
+</I>&gt;<i> -----Original Message-----
+</I>&gt;<i> From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; On Behalf Of
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-request at lists.openscenegraph.org</A>
+</I>&gt;<i> Sent: Wednesday, December 4, 2019 3:05 PM
+</I>&gt;<i> To: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> Subject: osg-users Digest, Vol 150, Issue 2
+</I>&gt;<i>
+</I>&gt;<i> Send osg-users mailing list submissions to
+</I>&gt;<i>         <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> To subscribe or unsubscribe via the World Wide Web, visit
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> or, via email, send a message with subject or body 'help' to
+</I>&gt;<i>         <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-request at lists.openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> You can reach the person managing the list at
+</I>&gt;<i>         <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-owner at lists.openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> When replying, please edit your Subject line so it is more specific than
+</I>&gt;<i> &quot;Re: Contents of osg-users digest...&quot;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Today's Topics:
+</I>&gt;<i>
+</I>&gt;<i>    1. Issue with setCompileOnNextDraw (Heitbrink, David A)
+</I>&gt;<i>    2. Re: Issue with setCompileOnNextDraw (Robert Osfield)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ----------------------------------------------------------------------
+</I>&gt;<i>
+</I>&gt;<i> Message: 1
+</I>&gt;<i> Date: Wed, 4 Dec 2019 14:49:54 +0000
+</I>&gt;<i> From: &quot;Heitbrink, David A&quot; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david-heitbrink at uiowa.edu</A>&gt;
+</I>&gt;<i> To: &quot;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&quot;
+</I>&gt;<i>         &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i> Subject: [osg-users] Issue with setCompileOnNextDraw
+</I>&gt;<i> Message-ID:
+</I>&gt;<i>         &lt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">BN7PR04MB4067C359D54EECA7C8099976FA5D0 at BN7PR04MB4067.namprd04.prod.outlook.com</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i>
+</I>&gt;<i> Content-Type: text/plain; charset=&quot;us-ascii&quot;
+</I>&gt;<i>
+</I>&gt;<i> I am doing a setCompileOnNextDraw on each render for each camera , (I
+</I>&gt;<i> typically only have 1) loading my scene.
+</I>&gt;<i>
+</I>&gt;<i> After doing thing I am getting a large number of error messages:
+</I>&gt;<i>
+</I>&gt;<i> Warning: detected OpenGL error 'invalid enumerant' at after
+</I>&gt;<i> stateset.compileGLObjects in GLObjectsVisitor::apply(osg::StateSet&amp;
+</I>&gt;<i> stateset)
+</I>&gt;<i>
+</I>&gt;<i> It also seems that I am getting a large number of hangs. It looks like I
+</I>&gt;<i> have plenty of free memory on the GPU. I am pretty sure this is from
+</I>&gt;<i> loading textures.
+</I>&gt;<i>
+</I>&gt;<i>  When should you use setCompileOnNextDraw? Has any else scene this issue
+</I>&gt;<i> before?
+</I>&gt;<i>
+</I>&gt;<i> -----Original Message-----
+</I>&gt;<i> From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; On Behalf Of
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-request at lists.openscenegraph.org</A>
+</I>&gt;<i> Sent: Tuesday, December 3, 2019 3:05 PM
+</I>&gt;<i> To: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> Subject: [External] osg-users Digest, Vol 150, Issue 1
+</I>&gt;<i>
+</I>&gt;<i> Send osg-users mailing list submissions to
+</I>&gt;<i>         <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> To subscribe or unsubscribe via the World Wide Web, visit
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> or, via email, send a message with subject or body 'help' to
+</I>&gt;<i>         <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-request at lists.openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> You can reach the person managing the list at
+</I>&gt;<i>         <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-owner at lists.openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> When replying, please edit your Subject line so it is more specific than
+</I>&gt;<i> &quot;Re: Contents of osg-users digest...&quot;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Today's Topics:
+</I>&gt;<i>
+</I>&gt;<i>    1. OpenSceneGraph Forum moved to googlegroups (Robert Osfield)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ----------------------------------------------------------------------
+</I>&gt;<i>
+</I>&gt;<i> Message: 1
+</I>&gt;<i> Date: Tue, 3 Dec 2019 10:35:27 +0000
+</I>&gt;<i> From: Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i> Subject: [osg-users] OpenSceneGraph Forum moved to googlegroups
+</I>&gt;<i> Message-ID:
+</I>&gt;<i>         &lt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">CAFN7Y+WxrAucovcgy+aiX9WHGbGN5fBkVsjiFN8YRcZOtpS4vg at mail.gmail.com</A>&gt;
+</I>&gt;<i> Content-Type: text/plain; charset=&quot;utf-8&quot;
+</I>&gt;<i>
+</I>&gt;<i> Hi All,
+</I>&gt;<i>
+</I>&gt;<i> Our old forum was generously created by a member of our community, but a
+</I>&gt;<i> number of years ago the creator/manager of the forum moved on work in an
+</I>&gt;<i> area unrelated to the OpenSceneGraph so the forum no longer had a
+</I>&gt;<i> maintainer, finally the old server that was hosting has gone too.
+</I>&gt;<i>
+</I>&gt;<i> Previous discussions in the community didn't come up with a replacement,
+</I>&gt;<i> and as I don't have any expertise in this direction myself I have adopted
+</I>&gt;<i> the osg-users mailing list mirror on googlegroups as the forum, so now when
+</I>&gt;<i> you go to forum.openscenegraph you'll be redirected to:
+</I>&gt;<i>
+</I>&gt;<i>   <A HREF="https://groups.google.com/forum/#!forum/osg-users">https://groups.google.com/forum/#!forum/osg-users</A>
+</I>&gt;<i>
+</I>&gt;<i> The googlegroup doesn't have a record of the membership to the old forum,
+</I>&gt;<i> and I don't have a record either, so to use the new googlegroup forum
+</I>&gt;<i> you'll need to register with it.
+</I>&gt;<i>
+</I>&gt;<i> Alternatively, you can use the original osg-users mailing list, and posts
+</I>&gt;<i> will be crossed posted automatically.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Robert.
+</I>&gt;<i> -------------- next part --------------
+</I>&gt;<i> An HTML attachment was scrubbed...
+</I>&gt;<i> URL: &lt;
+</I>&gt;<i> <A HREF="../attachments/20191203/dbc35821/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191203/dbc35821/attachment-0001.html</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i>
+</I>&gt;<i> ------------------------------
+</I>&gt;<i>
+</I>&gt;<i> Subject: Digest Footer
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------------------
+</I>&gt;<i>
+</I>&gt;<i> End of osg-users Digest, Vol 150, Issue 1
+</I>&gt;<i> *****************************************
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------------------
+</I>&gt;<i>
+</I>&gt;<i> Message: 2
+</I>&gt;<i> Date: Wed, 4 Dec 2019 15:16:45 +0000
+</I>&gt;<i> From: Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i> Subject: Re: [osg-users] Issue with setCompileOnNextDraw
+</I>&gt;<i> Message-ID:
+</I>&gt;<i>         &lt;CAFN7Y+UYJLZOcUBk=
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">xfgdeQfcp8SLoa3BKxK78_O4bTG0my_4g at mail.gmail.com</A>&gt;
+</I>&gt;<i> Content-Type: text/plain; charset=&quot;utf-8&quot;
+</I>&gt;<i>
+</I>&gt;<i> Hi David,
+</I>&gt;<i>
+</I>&gt;<i> On Wed, 4 Dec 2019 at 14:50, Heitbrink, David A &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david-heitbrink at uiowa.edu</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;<i> &gt; I am doing a setCompileOnNextDraw on each render for each camera , (I
+</I>&gt;<i> &gt; typically only have 1) loading my scene.
+</I>&gt;<i> &gt;
+</I>&gt;<i>
+</I>&gt;<i> CompileOnNextDraw is a feature that is meant to be used sparingly such as
+</I>&gt;<i> on start up when you are first pre compiling all new GL objects to prevent
+</I>&gt;<i> incremental compiles from breaking frame later in the app run.
+</I>&gt;<i>
+</I>&gt;<i> First thing you should do is remove that call and see what happens.
+</I>&gt;<i>
+</I>&gt;<i> Do you have an idea why this line was added?
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i> -------------- next part --------------
+</I>&gt;<i> An HTML attachment was scrubbed...
+</I>&gt;<i> URL: &lt;
+</I>&gt;<i> <A HREF="../attachments/20191204/baab7aac/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191204/baab7aac/attachment-0001.html</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i>
+</I>&gt;<i> ------------------------------
+</I>&gt;<i>
+</I>&gt;<i> Subject: Digest Footer
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------------------
+</I>&gt;<i>
+</I>&gt;<i> End of osg-users Digest, Vol 150, Issue 2
+</I>&gt;<i> *****************************************
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191205/394aa0be/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191205/394aa0be/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010614.html">[osg-users] Issue with setCompileOnNextDraw (Robert Osfield)
+</A></li>
+	<LI>Next message (by thread): <A HREF="010616.html">[osg-users] Test post of osg-users mailing list to osg-users googlegroup
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10615">[ date ]</a>
+              <a href="thread.html#10615">[ thread ]</a>
+              <a href="subject.html#10615">[ subject ]</a>
+              <a href="author.html#10615">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

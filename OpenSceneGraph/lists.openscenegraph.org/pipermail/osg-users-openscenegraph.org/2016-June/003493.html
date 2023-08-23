@@ -1,0 +1,147 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgQt Coverity Scan reported issue, Qt experts please chip in.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20Coverity%20Scan%20reported%20issue%2C%0A%20Qt%20experts%20please%20chip%20in.&In-Reply-To=%3CCAM4StfCOoHxfiuiYLzo9wVMMd9FGHEd62OYOXXiohrPfTZY33Q%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003491.html">
+   <LINK REL="Next"  HREF="003494.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgQt Coverity Scan reported issue, Qt experts please chip in.</H1>
+<!--htdig_noindex-->
+    <B>Jordi Torres</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20Coverity%20Scan%20reported%20issue%2C%0A%20Qt%20experts%20please%20chip%20in.&In-Reply-To=%3CCAM4StfCOoHxfiuiYLzo9wVMMd9FGHEd62OYOXXiohrPfTZY33Q%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgQt Coverity Scan reported issue, Qt experts please chip in.">jtorresfabra at gmail.com
+       </A><BR>
+    <I>Fri Jun 24 13:19:25 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003491.html">[osg-users] osgQt Coverity Scan reported issue, Qt experts please chip in.
+</A></li>
+        <LI>Next message: <A HREF="003494.html">[osg-users] osgQt Coverity Scan reported issue, Qt experts please chip in.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3493">[ date ]</a>
+              <a href="thread.html#3493">[ thread ]</a>
+              <a href="subject.html#3493">[ subject ]</a>
+              <a href="author.html#3493">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Jan,
+
+El 24/6/2016 21:46, &quot;Jan Ciger&quot; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">jan.ciger at gmail.com</A>&gt; escribi&#243;:
+&gt;<i>
+</I>&gt;<i> -----BEGIN PGP SIGNED MESSAGE-----
+</I>&gt;<i> Hash: SHA1
+</I>&gt;<i>
+</I>&gt;<i> Hello,
+</I>&gt;<i>
+</I>&gt;<i> On 24/06/16 20:32, Robert Osfield wrote:
+</I>&gt;<i> &gt; If you have a github account you should be able to login in with
+</I>&gt;<i> &gt; this account.  Alternatively you can create your own account for
+</I>&gt;<i> &gt; Coverity.
+</I>&gt;<i>
+</I>&gt;<i> I have logged in with my Github account, but unless someone adds me to
+</I>&gt;<i> the OpenSceneGraph project, I don't have access to the reports.
+</I>&gt;<i>
+</I>&gt;<i> &gt;
+</I>
+You can add yourself to the project as an observer/defect viewer. Otherwise
+you also can ask for permissions as a contributor. Me or Robert will add
+you as soon as you ask for it.
+
+Cheers.
+
+&gt;<i> &gt; Attach is a screen snaptshot of the source browser.  The source I
+</I>&gt;<i> &gt; also included in my previous post.
+</I>&gt;<i>
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I've looked at the relevant code, copy and pasted below for
+</I>&gt;<i> &gt; reference. The issue looks to be related to mixing an int key value
+</I>&gt;<i> &gt; with the enum's defined in osgGA::GUIEventAdapter.  I presume the
+</I>&gt;<i> &gt; key value is coming in from a Qt event, though I'm not 100% clear
+</I>&gt;<i> &gt; on this as I'm not the author of this code, no have Qt expertise.
+</I>&gt;<i>
+</I>&gt;<i> Yes, the problem is that the key is being passed into the function as
+</I>&gt;<i> an instead of enum. It is coming from QEvent (line 136 of the same
+</I>&gt;<i> file). The code is taking the Qt events and passing them to the OSG
+</I>&gt;<i> event handling system using custom Qt events (a kludge necessary to
+</I>&gt;<i> work around some Qt issues).
+</I>&gt;<i>
+</I>&gt;<i> To fix the problem the comparison should be done using the Qt key
+</I>&gt;<i> codes instead:
+</I>&gt;<i>
+</I>&gt;<i> Change:
+</I>&gt;<i> osgGA::GUIEventAdapter::KEY_Shift_L  to  Qt::Key_Shift
+</I>&gt;<i> osgGA::GUIEventAdapter::KEY_Shift_R to Qt::Key_Shift as well
+</I>&gt;<i>
+</I>&gt;<i> osgGA::GUIEventAdapter::KEY_Control_L to Qt::Key_Control
+</I>&gt;<i> osgGA::GUIEventAdapter::KEY_Control_R to Qt::Key_Control
+</I>&gt;<i>
+</I>&gt;<i> osgGA::GUIEventAdapter::KEY_Alt_L to Qt::Key_Alt
+</I>&gt;<i> osgGA::GUIEventAdapter::KEY_Alt_R to Qt::Key_AltGr
+</I>&gt;<i>
+</I>&gt;<i> osgGA::GUIEventAdapter::KEY_Meta_L to Qt::Key_Meta
+</I>&gt;<i> osgGA::GUIEventAdapter::KEY_Meta_R to Qt::Key_Meta
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I don't think Qt makes distinction between left/right shift, control
+</I>&gt;<i> and meta (windows) keys unless you use the native scan code, which is
+</I>&gt;<i> platform-specific.
+</I>&gt;<i>
+</I>&gt;<i> You can find the full list here:
+</I>&gt;<i> <A HREF="http://doc.qt.io/qt-5/qt.html#Key-enum">http://doc.qt.io/qt-5/qt.html#Key-enum</A>
+</I>&gt;<i>
+</I>&gt;<i> Best regards,
+</I>&gt;<i>
+</I>&gt;<i> Jan
+</I>&gt;<i>
+</I>&gt;<i> -----BEGIN PGP SIGNATURE-----
+</I>&gt;<i> Version: GnuPG v2
+</I>&gt;<i>
+</I>&gt;<i> iD8DBQFXbY4sn11XseNj94gRAsTqAJ9mZ7BWmhrfNKNPSbjlw97UPMVb8QCfVuzK
+</I>&gt;<i> 3exJN3eTbdmqx1pwgwPHeYw=
+</I>&gt;<i> =Hs+F
+</I>&gt;<i> -----END PGP SIGNATURE-----
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160624/292f603a/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160624/292f603a/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003491.html">[osg-users] osgQt Coverity Scan reported issue, Qt experts please chip in.
+</A></li>
+	<LI>Next message: <A HREF="003494.html">[osg-users] osgQt Coverity Scan reported issue, Qt experts please chip in.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3493">[ date ]</a>
+              <a href="thread.html#3493">[ thread ]</a>
+              <a href="subject.html#3493">[ subject ]</a>
+              <a href="author.html#3493">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

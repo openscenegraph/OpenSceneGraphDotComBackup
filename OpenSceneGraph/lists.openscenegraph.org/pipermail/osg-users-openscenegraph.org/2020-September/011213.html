@@ -1,0 +1,83 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] ParticleSystem lifetime, race conditions
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ParticleSystem%20lifetime%2C%20race%20conditions&In-Reply-To=%3Cmailman.14294.1599675043.3540.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011212.html">
+   <LINK REL="Next"  HREF="011214.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] ParticleSystem lifetime, race conditions</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ParticleSystem%20lifetime%2C%20race%20conditions&In-Reply-To=%3Cmailman.14294.1599675043.3540.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] ParticleSystem lifetime, race conditions">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Wed Sep  9 11:10:38 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011212.html">[osg-users] Updating app to latest OSG
+</A></li>
+        <LI>Next message (by thread): <A HREF="011214.html">[osg-users] ParticleSystem lifetime, race conditions
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11213">[ date ]</a>
+              <a href="thread.html#11213">[ thread ]</a>
+              <a href="subject.html#11213">[ subject ]</a>
+              <a href="author.html#11213">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello, 
+
+We&#8217;re seeing some crashes in FlightGear relating to osgParticle, which raised some questions:
+
+- what is the thread-safety / expected thread calling restrictions on ParticleSystemUpdater addPS/removePS? I&#8217;m asking because none of the method which modify the PSU&#8217;s list of particle-systems, seem to lock any kind of mutex before making changes. (there is locking internal to each PS, but that doesn&#8217;t protect the std::vector inside the PSU)
+
+In FlightGear, we create ParticleSystems in some custom osgDB loaders, and therefore our ParticleSytems are created, and added to our global ParticleSystemUpdater, in those osgDB threads. We suspect this might be a race condition given the lack of locking in ParticleSystemUpdater::addParticleSystem and others. I wondered if it was expected to only touch the PSU from the main thread, for example. Eg by deferring adding to the PSU to an UpdateCallback.
+
+- what is the expected lifetime model of ParticleSystems/Updaters?
+
+We have a single global PSU, but since the PSU takes an owning ref_ptr to each added ParticleSystem, I suspect we are in practice never freeing any particle systems, even once the node which owns them in the scene, is unloaded/removed. (By the scenery tile expiring in our cache)
+
+I would have expected the PSU to use a weak-ref / osg::Observer onto the ParticleSystem, but maybe having a single global PSU is not the intended design here, perhaps we should be having one PSU per scenery tile (covers a few square km), or something else again? Or maybe I need to add an Observer on the parent Node, to call PSU::removeParticleSystem?
+
+Any pointers on best practice for this would be welcome. Maybe this is the wrong design for managing the creation and destruction of ParticleSystems in a long-lived scene such as a flight simulator.
+
+Kind regards,
+James
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011212.html">[osg-users] Updating app to latest OSG
+</A></li>
+	<LI>Next message (by thread): <A HREF="011214.html">[osg-users] ParticleSystem lifetime, race conditions
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11213">[ date ]</a>
+              <a href="thread.html#11213">[ thread ]</a>
+              <a href="subject.html#11213">[ subject ]</a>
+              <a href="author.html#11213">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

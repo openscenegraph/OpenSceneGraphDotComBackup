@@ -1,0 +1,163 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Question about working with osgVolume
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Question%20about%20working%20with%20osgVolume&In-Reply-To=%3CCAHKmQh9WnZ4wzA9%3DN3ip%3D__2ZZANdZEnwPwMMZ5xYG3-mmO-Sw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002182.html">
+   <LINK REL="Next"  HREF="002180.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Question about working with osgVolume</H1>
+<!--htdig_noindex-->
+    <B>Alex Taylor</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Question%20about%20working%20with%20osgVolume&In-Reply-To=%3CCAHKmQh9WnZ4wzA9%3DN3ip%3D__2ZZANdZEnwPwMMZ5xYG3-mmO-Sw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Question about working with osgVolume">alextaylor at gmail.com
+       </A><BR>
+    <I>Thu Dec 17 10:10:07 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002182.html">[osg-users] Alter tree in safe mode.
+</A></li>
+        <LI>Next message: <A HREF="002180.html">[osg-users] Question about working with osgVolume
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278395">[ date ]</a>
+              <a href="thread.html#278395">[ thread ]</a>
+              <a href="subject.html#278395">[ subject ]</a>
+              <a href="author.html#278395">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I have a question about the construction of the osgImage and the
+specification of a transfer function.
+
+I have uint8_T intensity data in the range [0 255] and a 1-D transfer
+function of RGBA uint8_T values in a lookup table, also in the range [0
+255]. I can't figure out the right setup for my osgImage and the
+specification of the TransferFunction1D when working with
+RayTracedTechnique as the rendering algorithm.
+
+If I construct my image in a function createTexture3D as follows:
+
+  * osg::Image* createTexture3D(const mxArray* src, const uint8_T*
+xfer_table) {*
+
+*        if (src == NULL || mxGetNumberOfDimensions(src) != 3 ||
+mxGetClassID(src) != mxUINT8_CLASS) {*
+*            return NULL;*
+*        }*
+
+*        size_t num_s = mxGetDimensions(src)[0];*
+*        size_t num_t = mxGetDimensions(src)[1];*
+*        size_t num_r = mxGetDimensions(src)[2];*
+
+*        // now allocate the 3d texture;*
+
+*        osg::ref_ptr&lt;osg::Image&gt; image_3d = new osg::Image;*
+
+*        image_3d-&gt;setImage(num_s, num_t, num_r, *
+*                GL_LUMINANCE, GL_LUMINANCE, GL_UNSIGNED_BYTE,*
+*                static_cast&lt;uint8_T *&gt;(mxGetData(src)),*
+*                osg::Image::NO_DELETE);*
+
+*        return image_3d.release();*
+*    }*
+
+And then attempt to setup my transfer function, I can't get the
+specification of the transfer function right. I've tried:
+
+&#8230;
+*    osg::ref_ptr&lt;osg::Image&gt; image_3d = createTexture3D(data,xfer_table);*
+
+*            osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer = new
+osgVolume::ImageLayer(image_3d.get());*
+
+*            tile-&gt;setLayer(layer.get());*
+
+*            //tile-&gt;setVolumeTechnique(new
+osgVolume::FixedFunctionTechnique());*
+*            tile-&gt;setVolumeTechnique(new osgVolume::RayTracedTechnique());*
+
+*            float alphaFunc=0.0f;*
+&#8230;
+*            float sampleDensityWhenMoving = 0.02;*
+*            osgVolume::AlphaFuncProperty* ap = new
+osgVolume::AlphaFuncProperty(alphaFunc);*
+*            osgVolume::SampleDensityProperty* sd = new
+osgVolume::SampleDensityProperty(0.005);*
+*            osgVolume::SampleDensityWhenMovingProperty* sdwm =
+sampleDensityWhenMoving!=0.0 ? new
+osgVolume::SampleDensityWhenMovingProperty(sampleDensityWhenMoving) : 0;*
+*            osgVolume::TransparencyProperty* tp = new
+osgVolume::TransparencyProperty(0.6);*
+*            osgVolume::TransferFunctionProperty* tfp = new
+osgVolume::TransferFunctionProperty(transferFunction);*
+
+*            layer-&gt;addProperty(ap);*
+*            layer-&gt;addProperty(sd);*
+*            layer-&gt;addProperty(sdwm);*
+*            layer-&gt;addProperty(tp);*
+*            layer-&gt;addProperty(tfp);*
+
+If I don't specify a TransferFunctionProperty, depending on the dataset, I
+sometimes see a cube shaped brick that roughly shows the structure of my
+data, othertimes I see nothing at all. When I specify the transfer
+function, I don't see anything at all. I've tried defining my
+TransferFunction1D as a 4-vec of float values in the range [0 1] and a
+uint8_T values in the range [0 255].
+
+One question I have: what is the expected datatype and normalization of
+values in the LUT for color and alpha values?
+
+As a debugging step, I tried FixedFunctionTechnique. In that algorithm, I
+see my data as I would expect as grayscale without any color mapping
+applied. It looks like it's modulating alpha using the intensity values for
+each voxel. This at least suggests I'm roughly using the setImage method of
+osgImage properly, it seems like I&quot;m just not able to set the
+transferFunction correctly.
+
+How exactly should I specify the transferFunction in terms of datatype and
+normalization of data values within the transferFunction?
+
+Hoping someone on the list can help me, I feel like working with uint8
+intensity data and a known colormap/transfer function is a pretty common
+use case of volume rendering, but I can't seem to get this right.
+
+- Alex
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151217/910f1926/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151217/910f1926/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002182.html">[osg-users] Alter tree in safe mode.
+</A></li>
+	<LI>Next message: <A HREF="002180.html">[osg-users] Question about working with osgVolume
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278395">[ date ]</a>
+              <a href="thread.html#278395">[ thread ]</a>
+              <a href="subject.html#278395">[ subject ]</a>
+              <a href="author.html#278395">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

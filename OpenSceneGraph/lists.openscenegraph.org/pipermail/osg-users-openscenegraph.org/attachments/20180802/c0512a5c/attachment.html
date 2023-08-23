@@ -1,0 +1,93 @@
+#include <osg/Geode>
+#include <osg/Geometry>
+#include <osg/PointSprite>
+#include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
+
+static const float RADIUS = 55.f;
+static const osg::Vec4f DOT_COLORS(1.f, 0.f, 1.f, 1.f);
+
+// Creates a Geode with 120 points in a circle at a given scale (radius), rotation angle, and color
+osg::Geode* createCircle(const osg::Vec4f& color, float radius, float extraRotateDeg)
+{
+    osg::Geode* geode = new osg::Geode;
+    osg::Geometry* geom = new osg::Geometry;
+    geom->setUseVertexArrayObject(true);
+    geom->setUseVertexBufferObjects(true);
+
+    // Draw a simple circle, every 3 degrees
+    osg::Vec3Array* vertices = new osg::Vec3Array();
+    for (int k = 0; k < 120; ++k)
+    {
+        double asRadians = osg::DegreesToRadians(3.0 * k + extraRotateDeg);
+        vertices->push_back(osg::Vec3(radius * sin(asRadians), 0.0, radius * cos(asRadians)));
+    }
+
+    osg::Vec4Array* colors = new osg::Vec4Array(osg::Array::BIND_OVERALL);
+    colors->push_back(color);
+
+    geom->addPrimitiveSet(new osg::DrawArrays(GL_POINTS, 0, 120));
+    geom->setVertexArray(vertices);
+    geom->setColorArray(colors);
+    geode->addDrawable(geom);
+
+    return geode;
+}
+
+// Creates the top level group for the scene
+osg::Group* createScene()
+{
+    osg::Group* group = new osg::Group;
+    osgText::Text* text = new osgText::Text;
+    text->setText("Demo of missing glDeleteVertexArrays.");
+    text->setCharacterSize(10.f);
+    text->setFont("fonts/times.ttf");
+    text->setAxisAlignment(osgText::Text::XZ_PLANE);
+    text->setAlignment(osgText::Text::CENTER_CENTER);
+    group->addChild(text);
+
+    return group;
+}
+
+// On every frame, this handler removes the circle geode and recreates it.  I know this is not efficient,
+// but this test application is only intended to demonstrate the problem found in a real app.
+struct NewGeodeOnFrame : public osgGA::GUIEventHandler
+{
+    explicit NewGeodeOnFrame(osg::Group* group)
+        : group_(group)
+    {
+    }
+
+    virtual bool handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, osg::Object* obj, osg::NodeVisitor* nv)
+    {
+        if (ea.getEventType() == ea.FRAME)
+        {
+            group_->removeChildren(0, group_->getNumChildren());
+            group_->addChild(createCircle(DOT_COLORS, RADIUS, 3.0 * ea.getTime()));
+        }
+        return GUIEventHandler::handle(ea, aa, obj, nv);
+    }
+
+    osg::ref_ptr<osg::Group> group_;
+};
+
+int main(int argc, char** argv)
+{
+    osg::ArgumentParser arguments(&argc, argv);
+
+    // construct the viewer.
+    osgViewer::Viewer viewer(arguments);
+    osg::Group* scene = createScene();
+
+    // Add a holder for our rotating circle
+    osg::Group* geodeHolder = new osg::Group;
+    scene->addChild(geodeHolder);
+
+    viewer.setSceneData(scene);
+    viewer.setUpViewInWindow(100, 100, 800, 600);
+    viewer.addEventHandler(new osgViewer::StatsHandler());
+    // Recreate the circle on every FRAME event
+    viewer.addEventHandler(new NewGeodeOnFrame(geodeHolder));
+
+    return viewer.run();
+}

@@ -1,0 +1,130 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Hi&nbsp;Daniel,&lt;div&gt;I&nbsp;don&#39;t&nbsp;understand&nbsp;why&nbsp;your&nbsp;modification&nbsp;to&nbsp;addPrimitiveSet()&nbsp;resolves&nbsp;your&nbsp;issue&nbsp;with&nbsp;the&nbsp;openflight&nbsp;plugin,&nbsp;as&nbsp;it&#39;s&nbsp;called&nbsp;before&nbsp;the&nbsp;proper&nbsp;array&nbsp;bindings&nbsp;have&nbsp;been&nbsp;set&nbsp;(src\osgPlugins\OpenFlight\GeometryRecords.cpp&nbsp;line&nbsp;601)&lt;/div&gt;&lt;div&gt;Can&nbsp;your&nbsp;problem&nbsp;be&nbsp;avoided&nbsp;by&nbsp;changing&lt;/div&gt;&lt;div&gt;if&nbsp;(geometry-&gt;getColorArray())&nbsp;geometry-&gt;getColorArray()-&gt;setBinding(osg::Array::BIND_PER_VERTEX);&lt;/div&gt;&lt;div&gt;to&lt;/div&gt;&lt;div&gt;if&nbsp;(geometry-&gt;getColorArray())&nbsp;<br>
+<br>
+&lt;span&nbsp;style=&quot;font-size:small;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;float:none;display:inline&quot;&gt;geometry-&gt;setColorArray(&lt;span&gt; &lt;/span&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:small;text-decoration-style:initial;text-decoration-color:initial;background-color:rgb(255,255,255);float:none;display:inline&quot;&gt;geometry-&gt;getColorArray(),&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:small;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;float:none;display:inline&quot;&gt;&lt;span&gt; &lt;/span&gt;osg::Array::BIND_PER_VERTEX);&lt;/span&gt;<br>
+<br>
+&lt;br&gt;&lt;/div&gt;&lt;div&gt;and&lt;/div&gt;&lt;div&gt;if&nbsp;(geometry-&gt;getNormalArray())&nbsp;geometry-&gt;getNormalArray()-&gt;setBinding(osg::Array::BIND_PER_VERTEX);&lt;br&gt;&lt;/div&gt;&lt;div&gt;by&lt;/div&gt;&lt;div&gt;if&nbsp;(geometry-&gt;getNormalArray())&nbsp;geometry-&gt;setNormalArray(<br>
+<br>
+&lt;span&nbsp;style=&quot;font-size:small;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;float:none;display:inline&quot;&gt;geometry-&gt;getNormalArray(),&lt;/span&gt;<br>
+<br>
+osg::Array::BIND_PER_VERTEX);&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;(both&nbsp;changes&nbsp;appear&nbsp;two&nbsp;times&nbsp;in <br>
+<br>
+&lt;span&nbsp;style=&quot;font-size:small;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;float:none;display:inline&quot;&gt;src\osgPlugins\OpenFlight\GeometryRecords.cpp&lt;/span&gt;<br>
+<br>
+&nbsp;)&lt;/div&gt;&lt;div&gt;Regards,&nbsp;Laurens.&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;Mon,&nbsp;Jun&nbsp;11,&nbsp;2018&nbsp;at&nbsp;3:37&nbsp;PM,&nbsp;Daniel&nbsp;Emminizer,&nbsp;Code&nbsp;5773&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:dan.emminizer@nrl.navy.mil&quot;&nbsp;target=&quot;_blank&quot;&gt;dan.emminizer@nrl.navy.mil&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;Robert,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;am&nbsp;back&nbsp;from&nbsp;travel&nbsp;and&nbsp;looking&nbsp;at&nbsp;this&nbsp;again. &nbsp;Didn&#39;t&nbsp;get&nbsp;a&nbsp;response&nbsp;on&nbsp;last&nbsp;set&nbsp;of&nbsp;questions&nbsp;about&nbsp;this&nbsp;crash. &nbsp;Sorry&nbsp;to&nbsp;distract&nbsp;from&nbsp;the&nbsp;Vulkan&nbsp;work&nbsp;--&nbsp;it&nbsp;sounds&nbsp;interesting,&nbsp;and&nbsp;I&#39;m&nbsp;watching&nbsp;your&nbsp;progress&nbsp;there&nbsp;excitedly.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Core&nbsp;problem&nbsp;seems&nbsp;to&nbsp;be&nbsp;that&nbsp;Array::setBinding()&nbsp;can&nbsp;change&nbsp;after&nbsp;Geometry::set*Array(). &nbsp;Geometry::set*Array()&nbsp;is&nbsp;responsible&nbsp;for&nbsp;calling&nbsp;addVertexBufferObjectIfRequire&lt;wbr&gt;d(),&nbsp;and&nbsp;doesn&#39;t&nbsp;have&nbsp;enough&nbsp;information&nbsp;to&nbsp;correctly&nbsp;do&nbsp;so.&lt;br&gt;<br>
+&lt;br&gt;<br>
+During&nbsp;the&nbsp;draw&nbsp;traversal,&nbsp;as&nbsp;a&nbsp;result,&nbsp;the&nbsp;Array::getBinding()&nbsp;flag&nbsp;does&nbsp;not&nbsp;match&nbsp;the&nbsp;VBO&nbsp;state&nbsp;in&nbsp;Geometry.&lt;br&gt;<br>
+&lt;br&gt;<br>
+One&nbsp;solution&nbsp;is&nbsp;to&nbsp;create&nbsp;the&nbsp;VBO&nbsp;as&nbsp;needed&nbsp;(using&nbsp;addVertexBufferObjectIfRequire&lt;wbr&gt;d)&nbsp;sometime&nbsp;between&nbsp;the&nbsp;start&nbsp;of&nbsp;cull&nbsp;phase&nbsp;and&nbsp;before&nbsp;the&nbsp;Geometry::drawImplementation()&lt;wbr&gt;. &nbsp;But&nbsp;drawImplementation()&nbsp;is&nbsp;const,&nbsp;and&nbsp;not&nbsp;a&nbsp;place&nbsp;where&nbsp;this&nbsp;can&nbsp;happen.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Another&nbsp;possible&nbsp;solution&nbsp;that&nbsp;might&nbsp;help&nbsp;is&nbsp;to&nbsp;modify&nbsp;Geometry::setPrimitiveSet()&nbsp;and&nbsp;addPrimitiveSet()&nbsp;to&nbsp;call&nbsp;addVertexBufferObjectIfRequire&lt;wbr&gt;d()&nbsp;on&nbsp;the&nbsp;various&nbsp;arrays. &nbsp;I&nbsp;prototyped&nbsp;this&nbsp;solution&nbsp;locally&nbsp;and&nbsp;it&nbsp;resolved&nbsp;the&nbsp;issue&nbsp;in&nbsp;the&nbsp;FLT&nbsp;loader. &nbsp;I&nbsp;know&nbsp;it&#39;s&nbsp;not&nbsp;perfect,&nbsp;but&nbsp;most&nbsp;places&nbsp;I&#39;ve&nbsp;seen&nbsp;that&nbsp;would&nbsp;trigger&nbsp;this&nbsp;bug&nbsp;have&nbsp;defined&nbsp;an&nbsp;array&nbsp;binding&nbsp;by&nbsp;the&nbsp;time&nbsp;a&nbsp;primitive&nbsp;set&nbsp;is&nbsp;added.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Should&nbsp;I&nbsp;submit&nbsp;a&nbsp;PR&nbsp;for&nbsp;this&nbsp;approach? &nbsp;It&nbsp;keeps&nbsp;binary&nbsp;compatibility&nbsp;and&nbsp;is&nbsp;fairly&nbsp;straightforward,&nbsp;and&nbsp;helps&nbsp;my&nbsp;immediate&nbsp;crash&nbsp;out&nbsp;of&nbsp;FLT&nbsp;and&nbsp;most&nbsp;of&nbsp;the&nbsp;other&nbsp;use&nbsp;cases&nbsp;I&#39;ve&nbsp;encountered.&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;im&nbsp;HOEnZb&quot;&gt;&lt;br&gt;<br>
+Thanks,&lt;br&gt;<br>
+&lt;br&gt;<br>
+ -&nbsp;Dan&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&gt;&nbsp;-----Original&nbsp;Message-----&lt;br&gt;<br>
+&lt;/span&gt;&lt;span&nbsp;class=&quot;im&nbsp;HOEnZb&quot;&gt;&gt;&nbsp;From:&nbsp;Daniel&nbsp;Emminizer,&nbsp;Code&nbsp;5773&lt;br&gt;<br>
+&gt;&nbsp;Sent:&nbsp;Monday,&nbsp;June&nbsp;04,&nbsp;2018&nbsp;8:45&nbsp;AM&lt;br&gt;<br>
+&gt;&nbsp;To:&nbsp;OpenSceneGraph&nbsp;Users&lt;br&gt;<br>
+&lt;/span&gt;&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&gt;&nbsp;Subject:&nbsp;RE:&nbsp;[osg-users]&nbsp;VBO&nbsp;Bug&nbsp;with&nbsp;3.6.1&nbsp;and&nbsp;Normal&nbsp;Arrays&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;Hi&nbsp;Robert,&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;The&nbsp;file&nbsp;you&nbsp;sent&nbsp;is&nbsp;identical&nbsp;to&nbsp;the&nbsp;one&nbsp;I&nbsp;sent. &nbsp;Was&nbsp;that&nbsp;intentional? &nbsp;You&nbsp;also&lt;br&gt;<br>
+&gt;&nbsp;mention&nbsp;Cessna;&nbsp;do&nbsp;you&nbsp;have&nbsp;the&nbsp;examples&nbsp;mixed&nbsp;up&nbsp;perhaps?&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;The&nbsp;bug&nbsp;will&nbsp;manifest&nbsp;if&nbsp;the&nbsp;geometry&#39;s&nbsp;normal&nbsp;array&nbsp;(and&nbsp;presumably&nbsp;fog,&lt;br&gt;<br>
+&gt;&nbsp;colors,&nbsp;etc)&nbsp;are&nbsp;set&nbsp;before&nbsp;the&nbsp;array&nbsp;binding&nbsp;type&nbsp;is&nbsp;set. &nbsp;It&#39;s&nbsp;entirely&nbsp;possible&lt;br&gt;<br>
+&gt;&nbsp;to&nbsp;have&nbsp;correctly&nbsp;loaded&nbsp;models. &nbsp;I&nbsp;only&nbsp;ran&nbsp;across&nbsp;this&nbsp;because&nbsp;the&lt;br&gt;<br>
+&gt;&nbsp;OpenFlight&nbsp;loader&nbsp;sets&nbsp;the&nbsp;binding&nbsp;late.&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;This&nbsp;bug&nbsp;prints&nbsp;on&nbsp;console:&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;Warning:&nbsp;detected&nbsp;OpenGL&nbsp;error&nbsp;&#39;invalid&nbsp;operation&#39;&nbsp;at&nbsp;after&lt;br&gt;<br>
+&gt;&nbsp;drawable.compileGLObjects()&nbsp;call&nbsp;in&nbsp;GLObjectsVisitor::apply(osg::&lt;wbr&gt;Drawable&amp;&lt;br&gt;<br>
+&gt;&nbsp;drawable)&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;No&nbsp;change&nbsp;in&nbsp;error&nbsp;message&nbsp;with&nbsp;with&nbsp;OSG_GL_ERROR_CHECKING=on. &nbsp;No&lt;br&gt;<br>
+&gt;&nbsp;change&nbsp;in&nbsp;error&nbsp;message&nbsp;with&nbsp;--ro,&nbsp;with&nbsp;--reset,&nbsp;or&nbsp;with&nbsp;--ro&nbsp;--reset.&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;I&nbsp;am&nbsp;building&nbsp;OSG&nbsp;3.6.1&nbsp;(and&nbsp;tried&nbsp;OpenSceneGraph-3.6)&nbsp;in&nbsp;core&nbsp;profile&nbsp;on&lt;br&gt;<br>
+&gt;&nbsp;Windows&nbsp;10. &nbsp;Video&nbsp;card&nbsp;data&nbsp;is:&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;Vendor&nbsp;=&nbsp;NVIDIA&nbsp;Corporation&lt;br&gt;<br>
+&gt;&nbsp;Renderer&nbsp;=&nbsp;NVS&nbsp;510/PCIe/SSE2&lt;br&gt;<br>
+&gt;&nbsp;Version&nbsp;=&nbsp;3.3.0&nbsp;NVIDIA&nbsp;388.19&lt;br&gt;<br>
+&gt;&nbsp;GLSL&nbsp;Version&nbsp;=&nbsp;330&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;Responses&nbsp;from&nbsp;me&nbsp;will&nbsp;be&nbsp;slow&nbsp;this&nbsp;week;&nbsp;my&nbsp;email&nbsp;access&nbsp;will&nbsp;be&nbsp;spotty.&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;Hope&nbsp;this&nbsp;helps. &nbsp;Thanks,&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt; &nbsp;-&nbsp;Dan&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;-----Original&nbsp;Message-----&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;From:&nbsp;osg-users&nbsp;[mailto:&lt;a&nbsp;href=&quot;mailto:osg-users-bounces@lists.openscenegraph.org&quot;&gt;osg-users-bounces@&lt;wbr&gt;lists.openscenegraph.org&lt;/a&gt;]&nbsp;On&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Behalf&nbsp;Of&nbsp;Robert&nbsp;Osfield&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Sent:&nbsp;Sunday,&nbsp;June&nbsp;03,&nbsp;2018&nbsp;6:11&nbsp;AM&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;To:&nbsp;OpenSceneGraph&nbsp;Users&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Subject:&nbsp;Re:&nbsp;[osg-users]&nbsp;VBO&nbsp;Bug&nbsp;with&nbsp;3.6.1&nbsp;and&nbsp;Normal&nbsp;Arrays&lt;br&gt;<br>
+&gt;&nbsp;&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&gt;&nbsp;&gt;&nbsp;Hi&nbsp;Dan,&lt;br&gt;<br>
+&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;On&nbsp;1&nbsp;June&nbsp;2018&nbsp;at&nbsp;16:01,&nbsp;Daniel&nbsp;Emminizer,&nbsp;Code&nbsp;5773&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:dan.emminizer@nrl.navy.mil&quot;&gt;dan.emminizer@nrl.navy.mil&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&gt;&nbsp;Attached&nbsp;is&nbsp;a&nbsp;demo&nbsp;of&nbsp;the&nbsp;problem&nbsp;that&nbsp;generates&nbsp;a&nbsp;console&nbsp;warning.&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;More&nbsp;complex&nbsp;scenes&nbsp;can&nbsp;cause&nbsp;crashes. &nbsp;The&nbsp;red&nbsp;triangle&nbsp;has&nbsp;the&nbsp;problem,&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;but&nbsp;the&nbsp;green&nbsp;one&nbsp;does&nbsp;not.&lt;br&gt;<br>
+&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;I&nbsp;have&nbsp;built&nbsp;the&nbsp;example,&nbsp;and&nbsp;to&nbsp;help&nbsp;with&nbsp;test&nbsp;have&nbsp;changed&nbsp;the&nbsp;#ifdef&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;blocks&nbsp;to&nbsp;ones&nbsp;that&nbsp;check&nbsp;arguments.read(&quot;--ro&quot;)&nbsp;for&nbsp;the&nbsp;RealizerOperation&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;usage&nbsp;and&nbsp;&quot;--reset&quot;&nbsp;for&nbsp;the&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;resetVertexAttributeAlias. &nbsp; Attached&nbsp;is&nbsp;the&nbsp;modified&nbsp;file.&lt;br&gt;<br>
+&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;If&nbsp;you&nbsp;run&nbsp;the&nbsp;test&nbsp;with&nbsp;--ro&nbsp;and&nbsp;have&nbsp;it&nbsp;use&nbsp;the&nbsp;custom&nbsp;RealizerOperation&nbsp;I&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;see&nbsp;a&nbsp;completely&nbsp;red&nbsp;cessna. &nbsp;If&nbsp;I&nbsp;used&nbsp;--ro&nbsp;and&nbsp;--reset&nbsp;I&nbsp;see&nbsp;multi-colour&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;(blue,&nbsp;red&nbsp;etc)&nbsp;one,&nbsp;if&nbsp;I&nbsp;run&nbsp;without&nbsp;any&nbsp;options&nbsp;I&nbsp;see&nbsp;the&nbsp;multi-colour&nbsp;one.&lt;br&gt;<br>
+&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;I&nbsp;don&#39;t&nbsp;see&nbsp;any&nbsp;command&nbsp;line&nbsp;warnings&nbsp;though. &nbsp;I&#39;m&nbsp;testing&nbsp;under&nbsp;Kubuntu&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;with&nbsp;OSG-3.6&nbsp;branch,&nbsp;my&nbsp;drive&nbsp;info&nbsp;is:&lt;br&gt;<br>
+&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;OpenGL&nbsp;vendor&nbsp;string:&nbsp;NVIDIA&nbsp;Corporation&nbsp;OpenGL&nbsp;renderer&nbsp;string:&lt;br&gt;<br>
+&gt;&nbsp;GeForce&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;GTX&nbsp;760/PCIe/SSE2&nbsp;OpenGL&nbsp;core&nbsp;profile&nbsp;version&nbsp;string:&nbsp;4.5.0&nbsp;NVIDIA&lt;br&gt;<br>
+&gt;&nbsp;384.111&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;OpenGL&nbsp;core&nbsp;profile&nbsp;shading&nbsp;language&nbsp;version&nbsp;string:&nbsp;4.50&nbsp;NVIDIA&lt;br&gt;<br>
+&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;I&nbsp;don&#39;t&nbsp;yet&nbsp;have&nbsp;any&nbsp;idea&nbsp;what&nbsp;is&nbsp;going&nbsp;wrong,&nbsp;it&#39;s&nbsp;obviously&nbsp;very&nbsp;odd&nbsp;that&lt;br&gt;<br>
+&gt;&nbsp;the&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;custom&nbsp;RealizeOperation&nbsp;is&nbsp;having&nbsp;an&nbsp;effect&nbsp;when&nbsp;it&nbsp;does&nbsp;nothing&nbsp;itself.&lt;br&gt;<br>
+&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Before&nbsp;I&nbsp;start&nbsp;diving&nbsp;deeper&nbsp;I&#39;d&nbsp;like&nbsp;to&nbsp;know&nbsp;what&nbsp;others&nbsp;are&nbsp;seeing&nbsp;with&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;these&nbsp;different&nbsp;combinations&nbsp;and&nbsp;if&nbsp;any&nbsp;errors&nbsp;are&nbsp;being&nbsp;printed&nbsp;in&nbsp;the&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;console,&nbsp;if&nbsp;so&nbsp;what&nbsp;are&nbsp;they. &nbsp;Also&nbsp;let&nbsp;us&nbsp;know&nbsp;the&nbsp;OSG&nbsp;version&nbsp;and&lt;br&gt;<br>
+&gt;&nbsp;driver/OS&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;details.&lt;br&gt;<br>
+&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Robert.&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

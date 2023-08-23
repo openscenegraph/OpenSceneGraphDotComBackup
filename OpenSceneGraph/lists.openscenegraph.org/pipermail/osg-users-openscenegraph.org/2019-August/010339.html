@@ -1,0 +1,249 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Removing objects with shared GL state from scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1566778977.m2f.76611%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010338.html">
+   <LINK REL="Next"  HREF="010340.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Removing objects with shared GL state from scene graph</H1>
+<!--htdig_noindex-->
+    <B>Chris Djali</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1566778977.m2f.76611%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Removing objects with shared GL state from scene graph">krizdjali at gmail.com
+       </A><BR>
+    <I>Sun Aug 25 17:22:57 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010338.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="010340.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10339">[ date ]</a>
+              <a href="thread.html#10339">[ thread ]</a>
+              <a href="subject.html#10339">[ subject ]</a>
+              <a href="author.html#10339">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+The reason I couldn't add or remove views during the event traversal was that it was invalidating iterators that iterated over the views. Instead, I'm adding an update operation to add or remove the viewer.
+
+I now have a fairly minimal example that replicates my use case and bug:
+
+
+Code:
+
+#include &lt;osg/AutoTransform&gt;
+
+#include &lt;osgText/Text&gt;
+
+#include &lt;osgGA/TrackballManipulator&gt;
+
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+#include &lt;osgViewer/CompositeViewer&gt;
+
+class AddViewOperation : public osg::Operation
+{
+public:
+    AddViewOperation(osg::ref_ptr&lt;osgViewer::View&gt; view)
+        : osg::Operation(&quot;AddView&quot;, false)
+        , _view(view)
+    {}
+
+    void operator() (osg::Object * compositeViewer) override
+    {
+        OSG_NOTICE &lt;&lt; &quot;AddView operator()&quot; &lt;&lt; std::endl;
+        osgViewer::CompositeViewer * viewer = dynamic_cast&lt;osgViewer::CompositeViewer *&gt;(compositeViewer);
+        viewer-&gt;stopThreading();
+        viewer-&gt;addView(_view);
+        viewer-&gt;startThreading();
+    }
+
+protected:
+    osg::ref_ptr&lt;osgViewer::View&gt; _view;
+};
+
+class RemoveViewOperation : public osg::Operation
+{
+public:
+    RemoveViewOperation(osg::ref_ptr&lt;osgViewer::View&gt; view)
+        : osg::Operation(&quot;RemoveView&quot;, false)
+        , _view(view)
+    {}
+
+    void operator() (osg::Object * compositeViewer) override
+    {
+        OSG_NOTICE &lt;&lt; &quot;RemoveView operator()&quot; &lt;&lt; std::endl;
+        osgViewer::CompositeViewer * viewer = dynamic_cast&lt;osgViewer::CompositeViewer *&gt;(compositeViewer);
+        viewer-&gt;stopThreading();
+        viewer-&gt;removeView(_view);
+        viewer-&gt;startThreading();
+    }
+
+protected:
+    osg::ref_ptr&lt;osgViewer::View&gt; _view;
+};
+
+class ViewAdder : public osgGA::GUIEventHandler
+{
+public:
+    ViewAdder(osgViewer::CompositeViewer * viewer)
+        : _viewer(viewer)
+        , _view(nullptr)
+    {}
+
+    bool handle(const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; aa)
+    {
+        if (ea.getEventType() == osgGA::GUIEventAdapter::KEYUP &amp;&amp; (ea.getKey() == 'v' || ea.getKey() == 'V'))
+        {
+            if (_view)
+            {
+                OSG_NOTICE &lt;&lt; &quot;Existing view, remove it&quot; &lt;&lt; std::endl;
+                // parts of the scene get removed before the view gets destroyed.
+                // normally this is fine as things get handled by destructors.
+                // however, things that are still cached require the cache to be released
+                _view-&gt;setSceneData(nullptr);
+                // We need to remove the view after the event traversal is done to avoid invalidating iterators
+                _viewer-&gt;addUpdateOperation(new RemoveViewOperation(_view));
+                _view = nullptr;
+            }
+            else
+            {
+                OSG_NOTICE &lt;&lt; &quot;No existing view, create one&quot; &lt;&lt; std::endl;
+                _view = new osgViewer::View;
+                _view-&gt;setName(&quot;View two&quot;);
+
+                _view-&gt;setUpViewOnSingleScreen(1);
+
+
+                osg::ref_ptr&lt;osgText::Text&gt; text2 = new osgText::Text();
+                text2-&gt;setText(&quot;Here's some other text. It appears in the dynamically-added view. It ensures the default font gets used with a context that goes away, and that lives in the cache.&quot;);
+                osg::ref_ptr&lt;osg::AutoTransform&gt; autoTransform2 = new osg::AutoTransform();
+                autoTransform2-&gt;setAutoRotateMode(osg::AutoTransform::ROTATE_TO_SCREEN);
+                autoTransform2-&gt;addChild(text2);
+                osg::ref_ptr&lt;osg::Node&gt; scene2 = autoTransform2;
+
+                _view-&gt;setSceneData(scene2.get());
+                _view-&gt;setCameraManipulator(new osgGA::TrackballManipulator);
+
+                _viewer-&gt;addUpdateOperation(new AddViewOperation(_view));
+            }
+            return true;
+        }
+        return false;
+    }
+
+protected:
+    // raw pointer because it's stack-allocated
+    osgViewer::CompositeViewer * _viewer;
+    osg::ref_ptr&lt;osgViewer::View&gt; _view;
+};
+
+int main(int argc, char **argv)
+{
+
+    // use an ArgumentParser object to manage the program arguments.
+    osg::ArgumentParser arguments(&amp;argc, argv);
+
+    osg::ref_ptr&lt;osgText::Text&gt; text = new osgText::Text();
+    text-&gt;setText(&quot;Here's some text. It doesn't have to be text, and in fact we don't need anything in the main view as it just exists to keep the application alive.&quot;);
+    osg::ref_ptr&lt;osg::AutoTransform&gt; autoTransform = new osg::AutoTransform();
+    autoTransform-&gt;setAutoRotateMode(osg::AutoTransform::ROTATE_TO_SCREEN);
+    autoTransform-&gt;addChild(text);
+    osg::ref_ptr&lt;osg::Node&gt; scene = autoTransform;
+
+    if (!scene)
+    {
+        OSG_NOTICE &lt;&lt; argv[0] &lt;&lt; &quot;: requires filename argument.&quot; &lt;&lt; std::endl;
+        return 1;
+    }
+
+    // construct the viewer.
+    osgViewer::CompositeViewer viewer(arguments);
+
+    // single-threaded to prove a threading bug isn't responsible for the symptoms
+    viewer.setThreadingModel(osgViewer::CompositeViewer::SingleThreaded);
+
+    // view one
+    {
+        osg::ref_ptr&lt;osgViewer::View&gt; view = new osgViewer::View;
+        view-&gt;setName(&quot;View one&quot;);
+        viewer.addView(view);
+
+        view-&gt;setUpViewOnSingleScreen(0);
+        view-&gt;setSceneData(scene.get());
+        view-&gt;setCameraManipulator(new osgGA::TrackballManipulator);
+
+        view-&gt;addEventHandler(new ViewAdder(&amp;viewer));
+    }
+
+    // run the viewer's main frame loop
+    return viewer.run();
+}
+
+
+
+
+
+This started life as the Composite Viewer example, and I deleted chunks of it and then added the new behaviour I needed, so I don't think I've done anything invalid.
+
+Upon starting the application, you'll see a view with some text on one monitor. This isn't important, but I believe I need a living viewer to be able to have an event handler.
+
+When you press the V key, a second view with some different text will appear on the other monitor. Pressing V again will remove it, and then again will add it again, and so on and so forth.
+
+The second appearance of the second view will have a white box instead of the text, though, as the object cache doesn't have its GL objects released when the view was destroyed, so OSG tries using the same object names, which are no longer valid with the new context. This happens because the text isn't attached to the scene graph any more when the context is destroyed, so the default font is only referenced by the object cache, and the camera and its renderer never have releaseGLObjects called.
+
+The osg::GraphicsContext::removeCamera diff I posted earlier solves the issue.
+
+Cheers,
+Chris
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic3d6b.php?p=76611#76611">http://forum.openscenegraph.org/viewtopic.php?p=76611#76611</A>
+
+
+
+
+
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010338.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="010340.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10339">[ date ]</a>
+              <a href="thread.html#10339">[ thread ]</a>
+              <a href="subject.html#10339">[ subject ]</a>
+              <a href="author.html#10339">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

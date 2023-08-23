@@ -1,0 +1,160 @@
+LOCAL_PATH := $(call my-dir)
+ 
+OSG_SRC_FILES := \
+JNIosgViewer.cpp \
+JNIosg.cpp \
+JNIosgDB.cpp \
+JNIosgUtil.cpp \
+JNIosgGA.cpp \
+JNIUtils.cpp \
+MultiViewNode.cpp \
+GLES2ShaderGenVisitor.cpp
+
+OSG_LDLIBS := \
+-losgdb_osg \
+-losgdb_ive \
+-losgdb_rgb \
+-losgdb_bmp \
+-losgdb_tga \
+-losgdb_stl \
+-losgdb_obj \
+-losgdb_dxf \
+-losgdb_curl \
+-losgdb_gif \
+-losgdb_jpeg \
+-losgdb_openflight \
+-losgdb_serializers_osgvolume \
+-losgdb_serializers_osgtext \
+-losgdb_serializers_osgterrain \
+-losgdb_serializers_osgsim \
+-losgdb_serializers_osgshadow \
+-losgdb_serializers_osgparticle \
+-losgdb_serializers_osgmanipulator \
+-losgdb_serializers_osgfx \
+-losgdb_serializers_osganimation \
+-losgdb_serializers_osgui \
+-losgdb_serializers_osgviewer \
+-losgdb_serializers_osgga \
+-losgdb_serializers_osgutil \
+-losgdb_serializers_osg \
+-losgdb_deprecated_osgwidget \
+-losgdb_deprecated_osgviewer \
+-losgdb_deprecated_osgvolume \
+-losgdb_deprecated_osgtext \
+-losgdb_deprecated_osgterrain \
+-losgdb_deprecated_osgsim \
+-losgdb_deprecated_osgshadow \
+-losgdb_deprecated_osgparticle \
+-losgdb_deprecated_osgfx \
+-losgdb_deprecated_osganimation \
+-losgdb_deprecated_osg \
+-losgPresentation \
+-losgWidget \
+-losgUI \
+-losgViewer \
+-losgVolume \
+-losgTerrain \
+-losgText \
+-losgShadow \
+-losgSim \
+-losgParticle \
+-losgManipulator \
+-losgGA \
+-losgFX \
+-losgDB \
+-losgAnimation \
+-losgUtil \
+-losg \
+-lOpenThreads
+
+#-losgdb_serializers_osgpresentation \
+
+### Static preparation
+OSG_SDK:=/media/christian/DATA/android-osg-sdk/gles1/${APP_ABI}
+OSG_SDK_3RDPARTY_LIB_PATH:=${OSG_SDK}/obj/local/${APP_ABI}
+THRD_PARTY_SRC:=/media/christian/DATA/3rdparty
+
+include $(CLEAR_VARS)
+LOCAL_MODULE    := jpeg
+LOCAL_EXPORT_C_INCLUDES := $(THRD_PARTY_SRC)/libjpeg
+LOCAL_EXPORT_CPP_INCLUDES := $(THRD_PARTY_SRC)/libjpeg
+LOCAL_SRC_FILES := $(OSG_SDK_3RDPARTY_LIB_PATH)/libjpeg.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE    := gif
+LOCAL_EXPORT_C_INCLUDES := $(THRD_PARTY_SRC)/giflib
+LOCAL_EXPORT_CPP_INCLUDES := $(THRD_PARTY_SRC)/giflib
+LOCAL_SRC_FILES := $(OSG_SDK_3RDPARTY_LIB_PATH)/libgif.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE    := png
+LOCAL_EXPORT_C_INCLUDES := $(THRD_PARTY_SRC)/libpng
+LOCAL_EXPORT_CPP_INCLUDES := $(THRD_PARTY_SRC)/libpng
+LOCAL_SRC_FILES := $(OSG_SDK_3RDPARTY_LIB_PATH)/libpng.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE    := curl
+LOCAL_EXPORT_C_INCLUDES := $(THRD_PARTY_SRC)/curl/include
+LOCAL_EXPORT_CPP_INCLUDES := $(THRD_PARTY_SRC)/curl/include
+LOCAL_SRC_FILES := $(OSG_SDK_3RDPARTY_LIB_PATH)/libcurl.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE    := tiff
+LOCAL_EXPORT_C_INCLUDES := $(THRD_PARTY_SRC)/libtiff
+LOCAL_EXPORT_CPP_INCLUDES := $(THRD_PARTY_SRC)/libtiff
+LOCAL_SRC_FILES := $(OSG_SDK_3RDPARTY_LIB_PATH)/libtiff.a
+include $(PREBUILT_STATIC_LIBRARY)
+
+### GLES1 build
+include $(CLEAR_VARS)
+OSG_SDK:=/media/christian/DATA/android-osg-sdk/gles1/${APP_ABI}
+OSG_SDK_LIB_PATH:=$(OSG_SDK)/lib
+OSG_SDK_PLUGIN_PATH:=$(OSG_SDK_LIB_PATH)/osgPlugins-3.3.8
+
+ifneq (,$(wildcard $(OSG_SDK)/include/osg/Config))
+
+    APP_MODULES       := jniosg-gles1
+    LOCAL_CFLAGS      := -Werror -fno-short-enums -fPIC
+    LOCAL_CPPFLAGS    := -DOSG_LIBRARY_STATIC 
+    LOCAL_SRC_FILES   := $(OSG_SRC_FILES)
+    LOCAL_MODULE      := libjniosg-gles1
+    LOCAL_LDLIBS      := -llog -lGLESv1_CM -ldl
+    #LOCAL_SHARED_LIBRARIES := -ljpeg -lgif -lpng -lcurl -ltiff
+    LOCAL_STATIC_LIBRARIES := jpeg gif png curl tiff
+    LOCAL_C_INCLUDES  := $(OSG_SDK)/include
+    LOCAL_CPP_INCLUDES := $(OSG_SDK)/include
+    TARGET_LDLIBS     := $(OSG_LDLIBS)
+    LOCAL_LDFLAGS := -L$(OSG_SDK_LIB_PATH) -L$(OSG_SDK_PLUGIN_PATH)# -L$(OSG_SDK_3RDPARTY_LIB_PATH)
+    include $(BUILD_SHARED_LIBRARY)
+else
+    $(warning Unable to find osg/Config file in the headers, not building libjniosg-gles1 module)
+endif
+
+### GLES2 build
+include $(CLEAR_VARS)
+OSG_SDK2:=/media/christian/DATA/android-osg-sdk/gles2/${APP_ABI}
+OSG_SDK2_LIB_PATH:=$(OSG_SDK2)/lib
+OSG_SDK2_PLUGIN_PATH:=$(OSG_SDK2_LIB_PATH)/osgPlugins-3.3.8
+ifneq ( ,$(wildcard $(OSG_SDK2)/include/osg/Config))
+
+    APP_MODULES       := jniosg-gles2
+    LOCAL_CFLAGS      := -Werror -fno-short-enums -fPIC
+    LOCAL_CPPFLAGS    := -DOSG_LIBRARY_STATIC 
+    LOCAL_SRC_FILES   := $(OSG_SRC_FILES)
+    LOCAL_MODULE      := libjniosg-gles2
+    LOCAL_LDLIBS      := -llog -lGLESv2 -ldl
+    #LOCAL_SHARED_LIBRARIES := -ljpeg -lgif -lpng -lcurl -ltiff
+    LOCAL_STATIC_LIBRARIES := jpeg gif png curl tiff
+    LOCAL_C_INCLUDES  := $(OSG_SDK2)/include
+    LOCAL_CPP_INCLUDES := $(OSG_SDK2)/include
+    TARGET_LDLIBS     := $(OSG_LDLIBS)
+    LOCAL_LDFLAGS     := -L$(OSG_SDK2_LIB_PATH) -L$(OSG_SDK2_PLUGIN_PATH)# -L$(OSG_SDK_3RDPARTY_LIB_PATH)
+    include $(BUILD_SHARED_LIBRARY)
+else
+    $(warning Unable to find osg/Config file in the headers, not building libjniosg-gles2 module)
+endif
+

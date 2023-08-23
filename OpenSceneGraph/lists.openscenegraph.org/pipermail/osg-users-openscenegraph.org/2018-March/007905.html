@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20AutoTransform%2C%0A%20ROTATE_TO_SCREEN%20and%20small%20feature%20culling&In-Reply-To=%3C1522099729.m2f.73174%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007934.html">
+   <LINK REL="Next"  HREF="007907.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling</H1>
+<!--htdig_noindex-->
+    <B>Hartwig Wiesmann</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20AutoTransform%2C%0A%20ROTATE_TO_SCREEN%20and%20small%20feature%20culling&In-Reply-To=%3C1522099729.m2f.73174%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling">hartwig.wiesmann at skywind.eu
+       </A><BR>
+    <I>Mon Mar 26 14:28:49 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007934.html">[osg-users] Show part of geometry which intersects a specific area
+</A></li>
+        <LI>Next message (by thread): <A HREF="007907.html">[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7905">[ date ]</a>
+              <a href="thread.html#7905">[ thread ]</a>
+              <a href="subject.html#7905">[ subject ]</a>
+              <a href="author.html#7905">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I found a very old article covering this issue: <A HREF="https://www.mail-archive.com/osg-users@lists.openscenegraph.org/msg15948.html.">https://www.mail-archive.com/osg-users@lists.openscenegraph.org/msg15948.html.</A> In the meantime it seems to be that proposal (2) has been implemented and the AutoTransform's computeBound() method returns an invalid bounding sphere during the first cull traversal. Nevertheless, when checking in the example osgautotransform.cpp the bounding spheres (of the text messages) remain invalid. To check this I have added an update callback to the AutoTransforms that only checks the validity of the bounding sphere.
+
+Now, if the bounding sphere remains invalid culling of the AutoTransform's children will not be correctly performed because the AutoTransform's isCullingActive method will always return false (bounding sphere is invalid).
+
+To solve this issue I was thinking to add a ComputeBoundingSphere callback or an update callback to the AutoTransform. But this is not a good solution because in this case I have to calculate always a new bounding sphere as I do not have access to the node's &quot;_boundingSphereComputed&quot; flag.
+
+Another solution is to patch the node's getBound() method that will set the flag &quot;_boundingSphereComputed&quot; only to true if a valid &quot;_boundingSphere&quot; exists. This sounds reasonable in any case:
+
+Code:
+        inline const BoundingSphere&amp; getBound() const
+        {
+            if(!_boundingSphereComputed)
+            {
+                _boundingSphere = _initialBound;
+                if (_computeBoundCallback.valid())
+                    _boundingSphere.expandBy(_computeBoundCallback-&gt;computeBound(*this));
+                else
+                    _boundingSphere.expandBy(computeBound());
+
+                _boundingSphereComputed = _boundingSphere.valid();
+            }
+            return _boundingSphere;
+        }
+
+
+
+But I do not know if this breaks anything.
+
+Is there any other method to get a valid bounding sphere for the AutoTransform without sacrificing performance?
+
+Thank you!
+
+Cheers,
+Hartwig
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic8af0.php?p=73174#73174">http://forum.openscenegraph.org/viewtopic.php?p=73174#73174</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007934.html">[osg-users] Show part of geometry which intersects a specific area
+</A></li>
+	<LI>Next message (by thread): <A HREF="007907.html">[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7905">[ date ]</a>
+              <a href="thread.html#7905">[ thread ]</a>
+              <a href="subject.html#7905">[ subject ]</a>
+              <a href="author.html#7905">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

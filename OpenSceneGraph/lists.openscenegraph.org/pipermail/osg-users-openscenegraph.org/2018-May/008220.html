@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [forum] DXT texture compression
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bforum%5D%20DXT%20texture%20compression&In-Reply-To=%3CCAFN7Y%2BWENy3xuNnCe6dxzbS7BVduFep%3DYQSxP%2BDCzvvOoZrzmQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008219.html">
+   <LINK REL="Next"  HREF="008224.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [forum] DXT texture compression</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bforum%5D%20DXT%20texture%20compression&In-Reply-To=%3CCAFN7Y%2BWENy3xuNnCe6dxzbS7BVduFep%3DYQSxP%2BDCzvvOoZrzmQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] [forum] DXT texture compression">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri May 18 05:08:02 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008219.html">[osg-users] [forum] DXT texture compression
+</A></li>
+        <LI>Next message (by thread): <A HREF="008224.html">[osg-users] [forum] DXT texture compression
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8220">[ date ]</a>
+              <a href="thread.html#8220">[ thread ]</a>
+              <a href="subject.html#8220">[ subject ]</a>
+              <a href="author.html#8220">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Roby,
+
+On 18 May 2018 at 12:46, Roby Urban Chaos &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">urbanchaos at email.it</A>&gt; wrote:
+&gt;<i> Now that I've changed the name, in according to the netiquette, the human name will appear.
+</I>
+Thanks :-)
+
+&gt;<i> Thanks for the information.
+</I>
+&gt;<i> Going back to the code, below how I've realized a very small graphic context.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::GraphicContext::Traits&gt; traits = new osg::GraphicContext::Traits;
+</I>&gt;<i>
+</I>&gt;<i> traits-&gt;x = 1;
+</I>&gt;<i> traits-&gt;y = 1;
+</I>&gt;<i> traits-&gt;width = 1;
+</I>&gt;<i> traits-&gt;height = 1;
+</I>&gt;<i> traits-&gt;alpha = 8;
+</I>&gt;<i> traits-&gt;windowDecoration = false;
+</I>&gt;<i> traits-&gt;doubleBuffer = true;
+</I>&gt;<i> traits-&gt;sharedContext = 0;
+</I>&gt;<i> traits-&gt;pbuffer = 0;
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::GraphicContext&gt; gfx = new osg::GraphicContext::createGraphicsContext(traits.get());
+</I>&gt;<i> if (!gfx || !gfx-&gt;valid())
+</I>&gt;<i> {
+</I>&gt;<i> // osg::notify - Unable to create a graphic context
+</I>&gt;<i> return 1;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> gfx-&gt;realize();
+</I>&gt;<i> gfx-&gt;makeCurrent();
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The code has stopped working since OSG 3.2.1.
+</I>
+The graphics context code has stopped working?  Or the compression?
+
+
+&gt;<i>
+</I>&gt;<i> Since 3.2.1, the RGB plugin shows a warning &quot;RGB plugin does not supporting writing compressed imagery&quot; and the DDS output was not flipped.
+</I>
+FYI, I've quietened down the RGB plugin warning so it's only emitted
+when you try to write a compressed image to a .rgb file.  This change
+now checked into the 3.6 branch, so the warning won't appear once
+3.6.1 comes out.
+
+
+&gt;<i> Since 3.4.1, I got a segmentation fault.
+</I>&gt;<i>
+</I>&gt;<i> The code has been extracted from the &quot;osgconv&quot; applications (CompressTextureVisitor).
+</I>&gt;<i>
+</I>&gt;<i> Any suggestions?
+</I>
+This morning I had a bash at recreating the crash on my system so
+cobbled together a test application the uses a bit of your code
+snippet and some code for creating the graphics context.
+
+The code works fine for me using the 3.6 branch head on my Kubuntu
+system.  I have just built against 3.6.0 and it works fine as well.
+
+Could you test the test program and let me know what happens.
+
+For future reference, the best way for myself and others to be able to
+investigate issues is to have a complete compilable example like the
+attached one, otherwise it's a lot more work and far more likely to
+not recreate issues that you see, we basically have to take a best
+guess what we think you have, write it and hope for the best.  Copy
+and pasting snippets is very poor second to having a compilable
+application.
+
+Cheers,
+Robert.
+-------------- next part --------------
+cmake_minimum_required(VERSION 2.6)
+
+SET(PROJECT_NAME compressionbug)
+
+PROJECT(${PROJECT_NAME})
+
+FIND_PACKAGE(OpenThreads)
+FIND_PACKAGE(osg)
+FIND_PACKAGE(osgDB)
+FIND_PACKAGE(osgUtil)
+FIND_PACKAGE(osgGA)
+FIND_PACKAGE(osgViewer)
+FIND_PACKAGE(osgText)
+
+SET(SOURCES
+    main.cpp
+)
+
+INCLUDE_DIRECTORIES(${OPENTHREADS_INCLUDE_DIR} ${OSG_INCLUDE_DIR})
+
+LINK_DIRECTORIES(${OSG_LIB_DIR})
+
+ADD_EXECUTABLE(${PROJECT_NAME} ${SOURCES})
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${OSG_LIBRARIES} ${OSGVIEWER_LIBRARIES} ${OSGUTIL_LIBRARIES} ${OSGDB_LIBRARIES} ${OSGGA_LIBRARIES} ${OSGTEXT_LIBRARIES} ${OPENTHREADS_LIBRARIES})
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: main.cpp
+Type: text/x-c++src
+Size: 1978 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180518/054a40e5/attachment.cpp">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180518/054a40e5/attachment.cpp</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008219.html">[osg-users] [forum] DXT texture compression
+</A></li>
+	<LI>Next message (by thread): <A HREF="008224.html">[osg-users] [forum] DXT texture compression
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8220">[ date ]</a>
+              <a href="thread.html#8220">[ thread ]</a>
+              <a href="subject.html#8220">[ subject ]</a>
+              <a href="author.html#8220">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

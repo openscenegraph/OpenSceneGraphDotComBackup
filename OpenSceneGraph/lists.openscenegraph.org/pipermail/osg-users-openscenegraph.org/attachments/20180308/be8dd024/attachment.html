@@ -1,0 +1,48 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Hi&nbsp;Altin,&lt;div&gt;just&nbsp;a&nbsp;few&nbsp;remarks:&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;you&nbsp;wrote:&lt;/div&gt;&lt;div&gt;<br>
+<br>
+&lt;span&nbsp;style=&quot;color:rgb(34,34,34);font-family:arial,sans-serif;font-size:12.8px;font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;white-space:normal;word-spacing:0px;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;float:none;display:inline&quot;&gt; &gt;Steeping&nbsp;through&nbsp;the&nbsp;code,&nbsp;It&nbsp;seems&nbsp;that&nbsp;uploading&nbsp;the&nbsp;image&nbsp;is&nbsp;done&nbsp;by&nbsp;applyTexImage_subload()&nbsp;called&nbsp;from&nbsp;within&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span&nbsp;style=&quot;color:rgb(34,34,34);font-family:arial,sans-serif;font-size:12.8px;font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;white-space:normal;word-spacing:0px;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;float:none;display:inline&quot;&gt; &gt;TextureRectangle::apply(state)&nbsp;called&nbsp;from&nbsp;a&nbsp;GraphicsThread.&nbsp;And&nbsp;this&nbsp;operation&nbsp;is&nbsp;triggered&nbsp;by&nbsp;renderingTraversals().&nbsp;It&nbsp;just&nbsp;doesn&#39;t&nbsp;upload&nbsp;in&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span&nbsp;style=&quot;color:rgb(34,34,34);font-family:arial,sans-serif;font-size:12.8px;font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;white-space:normal;word-spacing:0px;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;float:none;display:inline&quot;&gt; &gt;time&nbsp;and&nbsp;the&nbsp;background&nbsp;rectangle&nbsp;drawn&nbsp;by&nbsp;this&nbsp;renderingTraversal()&nbsp;uses&nbsp;the&nbsp;previous&nbsp;image.&lt;/span&gt;&lt;br&nbsp;style=&quot;color:rgb(34,34,34);font-family:arial,sans-serif;font-size:12.8px;font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;white-space:normal;word-spacing:0px;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial&quot;&gt;<br>
+<br>
+That&#39;s&nbsp;not&nbsp;how&nbsp;it&nbsp;works,&nbsp;openGL&nbsp;will&nbsp;upload&nbsp;the&nbsp;image&nbsp;before&nbsp;using&nbsp;it&nbsp;to&nbsp;render.&nbsp;This&nbsp;might&nbsp;be&nbsp;slow&nbsp;for&nbsp;a&nbsp;big&nbsp;image,&nbsp;but&nbsp;the&nbsp;old&nbsp;image&nbsp;will&nbsp;not&nbsp;be&nbsp;used.&nbsp;You&nbsp;might&nbsp;be&nbsp;tricked&nbsp;by&nbsp;a&nbsp;tripple&nbsp;buffering&nbsp;driver,&nbsp;where&nbsp;at&nbsp;the&nbsp;next&nbsp;buffer&nbsp;swap&nbsp;you&nbsp;will&nbsp;see&nbsp;a&nbsp;render&nbsp;containing&nbsp;the&nbsp;old&nbsp;image.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;2&gt;&nbsp;test&nbsp;singlethreaded.&nbsp;I&#39;ve&nbsp;seen&nbsp;no&nbsp;hint&nbsp;that&nbsp;you&nbsp;marked&nbsp;the&nbsp;stateset&nbsp;containing&nbsp;the&nbsp;imageStream&nbsp;texture&nbsp;as&nbsp;DYNAMIC, &nbsp;so&nbsp;the&nbsp;renderingTraversal&nbsp;might&nbsp;return&nbsp;before&nbsp;the&nbsp;texture&nbsp;or&nbsp;uniform&nbsp;has&nbsp;been&nbsp;apply&#39;ed&nbsp;-&nbsp;trusting&nbsp;the&nbsp;(default)&nbsp;STATIC&nbsp;promise. &lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:left&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:left&quot;&gt;Regards,&nbsp;Laurens.&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;Thu,&nbsp;Mar&nbsp;8,&nbsp;2018&nbsp;at&nbsp;1:48&nbsp;PM,&nbsp;Robert&nbsp;Osfield&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;Altin,&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+On&nbsp;8&nbsp;March&nbsp;2018&nbsp;at&nbsp;12:18,&nbsp;Altin&nbsp;Gjata&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:altingjataj@gmail.com&quot;&gt;altingjataj@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&nbsp;I&nbsp;use&nbsp;(the&nbsp;default)&nbsp;DrawThreadPerContext&nbsp;for&nbsp;the&nbsp;moment.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt;The&nbsp;first&nbsp;thing&nbsp;you&nbsp;need&nbsp;to&nbsp;try&nbsp;is&nbsp;SingleTheaded:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;viewer.setThreadingModel(&lt;wbr&gt;osgViewer::Viewer::&lt;wbr&gt;SingleTheaded);&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;can&#39;t&nbsp;stress&nbsp;this&nbsp;enough,&nbsp;this&nbsp;is&nbsp;the&nbsp;biggest&nbsp;variable&nbsp;to&nbsp;test. &nbsp;I&lt;br&gt;<br>
+didn&#39;t&nbsp;suggest&nbsp;you&nbsp;do&nbsp;this&nbsp;in&nbsp;my&nbsp;previous&nbsp;email&nbsp;for&nbsp;no&nbsp;reason.&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+&gt;&nbsp;Steeping&nbsp;through&nbsp;the&nbsp;code,&nbsp;It&nbsp;seems&nbsp;that&nbsp;uploading&nbsp;the&nbsp;image&nbsp;is&nbsp;done&nbsp;by&nbsp;applyTexImage_subload()&nbsp;called&nbsp;from&nbsp;within&nbsp;TextureRectangle::apply(state)&nbsp;called&nbsp;from&nbsp;a&nbsp;GraphicsThread.&nbsp;And&nbsp;this&nbsp;operation&nbsp;is&nbsp;triggered&nbsp;by&nbsp;renderingTraversals().&nbsp;It&nbsp;just&nbsp;doesn&#39;t&nbsp;upload&nbsp;in&nbsp;time&nbsp;and&nbsp;the&nbsp;background&nbsp;rectangle&nbsp;drawn&nbsp;by&nbsp;this&nbsp;renderingTraversal()&nbsp;uses&nbsp;the&nbsp;previous&nbsp;image.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Is&nbsp;there&nbsp;any&nbsp;way&nbsp;I&nbsp;can&nbsp;trigger&nbsp;applyTexImage_subload()&nbsp;sooner?&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt;The&nbsp;subload&nbsp;will&nbsp;be&nbsp;happening&nbsp;as&nbsp;sooner&nbsp;as&nbsp;is&nbsp;necessary&nbsp;to&nbsp;properly&lt;br&gt;<br>
+reflect&nbsp;the&nbsp;updates&nbsp;to&nbsp;the&nbsp;osg::ImageStream,&nbsp;it&#39;s&nbsp;a&nbsp;pretty&nbsp;widely&lt;br&gt;<br>
+fleshed&nbsp;out&nbsp;part&nbsp;of&nbsp;the&nbsp;OSG,&nbsp;this&nbsp;won&#39;t&nbsp;be&nbsp;the&nbsp;problem,&nbsp;the&nbsp;problem&lt;br&gt;<br>
+will&nbsp;be&nbsp;elsewhere. &nbsp;If&nbsp;the&nbsp;subload&nbsp;is&nbsp;not&nbsp;happening&nbsp;soon&nbsp;enough&nbsp;for&lt;br&gt;<br>
+you&nbsp;then&nbsp;it&#39;s&nbsp;because&nbsp;the&nbsp;updated&nbsp;dirty&nbsp;of&nbsp;the&nbsp;image&nbsp;stream&nbsp;isn&#39;t&lt;br&gt;<br>
+happening&nbsp;soon&nbsp;enough.&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+&gt;&nbsp;Would&nbsp;it&nbsp;help&nbsp;if&nbsp;I&nbsp;used&nbsp;another&nbsp;camera&nbsp;that&nbsp;also&nbsp;uses&nbsp;the&nbsp;same&nbsp;ImageStream&nbsp;as&nbsp;texture&nbsp;and&nbsp;renders&nbsp;to&nbsp;a&nbsp;small&nbsp;texture,&nbsp;and&nbsp;set&nbsp;its&nbsp;rendering&nbsp;order&nbsp;before&nbsp;that&nbsp;of&nbsp;the&nbsp;camera&nbsp;that&nbsp;renders&nbsp;the&nbsp;background?&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt;No.&nbsp;Coming&nbsp;up&nbsp;with&nbsp;ever&nbsp;more&nbsp;complicated&nbsp;solutions&nbsp;to&nbsp;a&nbsp;problem&nbsp;you&lt;br&gt;<br>
+don&#39;t&nbsp;yet&nbsp;understand&nbsp;is&nbsp;only&nbsp;going&nbsp;to&nbsp;take&nbsp;you&nbsp;further&nbsp;away&nbsp;from&nbsp;the&lt;br&gt;<br>
+solution.&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;key&nbsp;to&nbsp;a&nbsp;solution&nbsp;is&nbsp;understanding&nbsp;the&nbsp;problem. &nbsp;Without&nbsp;actual&lt;br&gt;<br>
+code&nbsp;to&nbsp;look&nbsp;or&nbsp;even&nbsp;better&nbsp;test&nbsp;there&nbsp;really&nbsp;isn&#39;t&nbsp;too&nbsp;much&nbsp;we&nbsp;can&nbsp;do&lt;br&gt;<br>
+apart&nbsp;from&nbsp;give&nbsp;you&nbsp;general&nbsp;pointers.&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;font&nbsp;color=&quot;#888888&quot;&gt;&lt;br&gt;<br>
+Robert.&lt;br&gt;<br>
+&lt;/font&gt;&lt;/span&gt;&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

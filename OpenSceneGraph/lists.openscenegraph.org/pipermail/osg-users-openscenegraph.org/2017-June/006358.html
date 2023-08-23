@@ -1,0 +1,201 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Investigating using OSG as a graphics backend for our real-time physics simulation system
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Investigating%20using%20OSG%20as%20a%20graphics%20backend%20for%0A%20our%20real-time%20physics%20simulation%20system&In-Reply-To=%3CCAGoufma1YqJ1s22jXi_BAw8reTp2e%2BM18tgGKaqr790xXJRwhg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006356.html">
+   <LINK REL="Next"  HREF="006359.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Investigating using OSG as a graphics backend for our real-time physics simulation system</H1>
+<!--htdig_noindex-->
+    <B>Chris Hanson</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Investigating%20using%20OSG%20as%20a%20graphics%20backend%20for%0A%20our%20real-time%20physics%20simulation%20system&In-Reply-To=%3CCAGoufma1YqJ1s22jXi_BAw8reTp2e%2BM18tgGKaqr790xXJRwhg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Investigating using OSG as a graphics backend for our real-time physics simulation system">xenon at alphapixel.com
+       </A><BR>
+    <I>Thu Jun 22 23:04:42 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006356.html">[osg-users] Investigating using OSG as a graphics backend for our real-time physics simulation system
+</A></li>
+        <LI>Next message: <A HREF="006359.html">[osg-users] Investigating using OSG as a graphics backend for our real-time physics simulation system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6358">[ date ]</a>
+              <a href="thread.html#6358">[ thread ]</a>
+              <a href="subject.html#6358">[ subject ]</a>
+              <a href="author.html#6358">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>&gt;<i>
+</I>&gt;<i> We're evaluating using OSG as a possible graphics backend for our
+</I>&gt;<i> real-time physics simulation project, and I've got a few questions:
+</I>&gt;<i>
+</I>&gt;<i> * We suport Mac, Windows and Linux, how good is cross-platform support
+</I>&gt;<i> with OSG?
+</I>&gt;<i>
+</I>
+  Excellent. We just ported a client's OSG application from Windows to
+Linux in about two days. Mostly it was dealing with instances where it was
+using standard library called via their Windows-bastardized names, with a
+lot of #ifdefs to call them by their industry standard names. We noted to
+the client that we could probably port nearly effortlessly to Mac, but Mac
+is not one of their near-term requirements.
+
+
+&gt;<i> * It looks like it&#8217;s pretty easy is it to hook up Magnum to an existing
+</I>&gt;<i> native window, just would like to confirm. Say on Windows, I create a new
+</I>&gt;<i> Win32 window, or on Mac I create a Cocoa window, is it possible to hook up
+</I>&gt;<i> OSG to that window. I know that I'll have to grab the window events (mouse,
+</I>&gt;<i> resize, etc...) in my app and forward them to OSG, that's not a big deal.
+</I>&gt;<i> We'll be using the native toolkit on each platform for the gui, i.e. WPF on
+</I>&gt;<i> Windows, Cocoa on Mac and GTK on Linux, so it's important that we can hook
+</I>&gt;<i> up our rendering code to native windows.
+</I>&gt;<i>
+</I>
+
+  Yes. I'm not sure what &quot;Magnum&quot; is, but OSG can bind to existing Windows
+very well, especially using the GraphicsWindowEmbedded class. There are
+interfaces and examples for using things like Qt as well, which many of my
+clients use and love.
+
+* Much of our application will entail displaying highly dynamic deformable
+&gt;<i> elastic surfaces and particle systems with programmatically generated
+</I>&gt;<i> textures, do you thing OSG is a good fit? Does OSG have mesh node types
+</I>&gt;<i> where it&#8217;s easy from the CPU side to update vertex positions and add/remove
+</I>&gt;<i> vertices?
+</I>&gt;<i>
+</I>
+  Yes, and no. You may want to consider using buffer objects and shaders
+that bypass piping the geometry to OSG itself on each update and instead
+pass a dynamically updated buffer direct to the GOU where a tesselation
+shader constructs the desired mesh from the dynamic buffer data. This will
+be much more efficient than having OSG itself potentially restructure the
+scene graph on each update, if you kjnow the updates will be restricted and
+well defined.
+
+  Textures are easy to update on the fly in OpenGL, or if they are
+programmatically generated, you might generate them on the fly in a GLSL
+fragment shader.
+
+
+&gt;<i> * We also plan to do a bit of 2D drawing (objects in a tree structure),
+</I>&gt;<i> How easy would it be to also use OSG for 2D trees?
+</I>&gt;<i>
+</I>
+  Not too tough. There are some nodekits and libraries that may help you do
+some 2D work more easily too.
+
+
+&gt;<i> * I think a scene graph approach would be a good fit for us, as I&#8217;ve
+</I>&gt;<i> worked a lot with open inventor in the past. Part of what we'll be doing
+</I>&gt;<i> will be constructive solid geometry, similar to OpenSCAD,
+</I>&gt;<i> <A HREF="http://www.openscad.org,/">http://www.openscad.org,</A> and a scene graph we think is a good way to
+</I>&gt;<i> represent this kind of geometry. There are however some criticisms of scene
+</I>&gt;<i> graphs, namely Tom Forsythe&#8217;s blog: <A HREF="http://tomforsyth1000.github./">http://tomforsyth1000.github.</A>
+</I>&gt;<i> io/blog.wiki.html#%5B%5BScene%20Graphs%20-%20just%20say%20no%5D%5D
+</I>&gt;<i>
+</I>&gt;<i> I would tend to disagree with Jon, as I conceptualize things in space as
+</I>&gt;<i> all relative to the original, and things relative to each other (I worked
+</I>&gt;<i> with robotic arm manipulation before, so I tend to think in terms of
+</I>&gt;<i> transforms). How would you guys respond do Jon&#8217;s issues?
+</I>&gt;<i>
+</I>
+  I'd tell Tom F to go do his own thing. Yes, most of the issues he
+mentions are true. A scene graph is not a magical fairy wand that makes
+everything optimally wonderful. The OpenGL hardware and APIs we use today
+are hugely different from those of the years when OpenGL and OSG were first
+wed. But it doesn't change the fact that OSG still does some fantastic
+stuff. Structuring a graph is an important design decision that the Scene
+Graph can't decide for you. And state change minimization may or may not be
+that big of a deal (on mobile OpenGL ES devices it may be much more
+significant than desktop brutes). OSG is actually way more than a graph and
+traversal and render library. It has loaders, animators, pagers and a huge
+body of support code surrounding those core kernal components. Those
+accessories are almost more valuable than the actual graph. And OSG is so
+open, you can customize and override almost any aspoect of its operation
+that you dislike or need to change.
+
+
+
+&gt;<i>
+</I>&gt;<i> * It would appear that Apple, in their infinite wisdom (sarcasm) is slowly
+</I>&gt;<i> deprecating OpenGL in favor of metal. In the future, do you think OSG could
+</I>&gt;<i> have different backends (metal, directx)?
+</I>&gt;<i>
+</I>
+  It is unlikely that OSG will have multiple backends. Strategies for
+accomodating Metal and Vulkan have been theorized. We (AlphaPixel, led by
+Jeremy Moles) have done some work on a prototype successor design that
+implements OpenGL ES, OpenGL 3+ and Vulkan. It's not production ready, but
+it's wandering down that direction.
+
+  For now, OpenGL is not going away at all, and continues to improve, so
+OSG is a damn safe bet. OSG continues to grow and improve and is the
+absolute best at what it does today.
+
+
+  FWIW, we (AlphaPixel) and Robert Osfield have both worked on a CSG/CAD
+based application (the same one, even, though not at the same time)
+implemented using OSG and a commercial CSG CAD library. It works well, once
+you think about rendering structure as being sometimes different than
+CSG/CAD heirarchy. I don't think I'm supposed to name the app publicly, but
+you may have even seen it and be aware of it if you are skilled in the art
+of the industry.
+
+
+
+  If you want to discuss this with more bandwidth and lower latency, I'd be
+happy to call you sometime, no obligation, just to chat about what working
+with OSG is really like.
+
+
+-- 
+Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>
+<A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+Training &#8226; Consulting &#8226; Contracting
+3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226;
+GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+Legal/IP &#8226; Code Forensics &#8226; Digital Imaging &#8226; GIS &#8226; GPS &#8226;
+osgEarth &#8226; Terrain &#8226; Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226;
+iPhone/iPad/iOS &#8226; Android
+@alphapixel &lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt; facebook.com/alphapixel (775)
+623-PIXL [7495]
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170623/8dccb323/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170623/8dccb323/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006356.html">[osg-users] Investigating using OSG as a graphics backend for our real-time physics simulation system
+</A></li>
+	<LI>Next message: <A HREF="006359.html">[osg-users] Investigating using OSG as a graphics backend for our real-time physics simulation system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6358">[ date ]</a>
+              <a href="thread.html#6358">[ thread ]</a>
+              <a href="subject.html#6358">[ subject ]</a>
+              <a href="author.html#6358">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

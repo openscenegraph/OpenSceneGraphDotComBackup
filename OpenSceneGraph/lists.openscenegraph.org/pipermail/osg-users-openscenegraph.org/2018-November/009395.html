@@ -1,0 +1,202 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Change color of node read from dxf file
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Change%20color%20of%20node%20read%20from%20dxf%20file&In-Reply-To=%3C1542732439.m2f.75219%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009393.html">
+   <LINK REL="Next"  HREF="009396.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Change color of node read from dxf file</H1>
+<!--htdig_noindex-->
+    <B>Diego Mancilla</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Change%20color%20of%20node%20read%20from%20dxf%20file&In-Reply-To=%3C1542732439.m2f.75219%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Change color of node read from dxf file">dmancillac at gmail.com
+       </A><BR>
+    <I>Tue Nov 20 08:47:19 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009393.html">[osg-users] Change color of node read from dxf file
+</A></li>
+        <LI>Next message (by thread): <A HREF="009396.html">[osg-users] Change color of node read from dxf file
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9395">[ date ]</a>
+              <a href="thread.html#9395">[ thread ]</a>
+              <a href="subject.html#9395">[ subject ]</a>
+              <a href="author.html#9395">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+The suggestion of Chris solve the problem.
+
+The actual code:
+
+
+Code:
+osg::Node* lines = osgDB::readNodeFile(&quot;lines.dxf&quot;);
+osg::Geode* geode = new osg::Geode;
+
+ColorVisitor newColor;
+newColor.setColor( 1.0f, 0.0f, 0.0f );
+topography-&gt;accept(newColor);
+
+geode-&gt;addChild(lines); 
+_mViewer-&gt;setSceneData(geode);
+_mViewer-&gt;realize();
+
+
+
+
+Where ColorVisitor is a derived class from osg::NodeVistor:
+
+
+Code:
+
+
+class ColorVisitor : public osg::NodeVisitor
+{
+public:
+ColorVisitor();
+ColorVisitor(const osg::Vec4 &amp;color);
+virtual ~ColorVisitor();
+virtual void ColorVisitor::apply(osg::Node &amp;node);
+virtual void ColorVisitor::apply(osg::Geode &amp;geode);
+virtual void ColorVisitor::setColor(const float r, const float g, const float b, const float a = 1.0f);
+virtual void ColorVisitor::setColor(const osg::Vec4 &amp;color);
+
+private:
+osg::Vec4 m_color;
+osg::ref_ptr&lt; osg::Vec4Array &gt; m_colorArrays;
+
+
+
+and the implementation:
+
+
+Code:
+
+#include &quot;ColorVisitor.h&quot;
+
+ColorVisitor::ColorVisitor(): osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {
+m_color.set(1.0, 1.0, 1.0, 1.0);
+m_colorArrays = new osg::Vec4Array;
+m_colorArrays-&gt;push_back(m_color);
+};
+
+ColorVisitor::ColorVisitor(const osg::Vec4 &amp;color): osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN){
+m_color = color;
+m_colorArrays = new osg::Vec4Array;
+m_colorArrays-&gt;push_back(m_color);
+};
+
+ColorVisitor::~ColorVisitor(){};
+
+void ColorVisitor::apply(osg::Node &amp;node) {
+traverse(node);
+};
+
+void ColorVisitor::apply(osg::Geode &amp;geode) {
+osg::StateSet *state = NULL;
+unsigned int vertNum = 0;
+unsigned int numGeoms = geode.getNumDrawables();
+
+for (unsigned int geodeIdx = 0; geodeIdx &lt; numGeoms; geodeIdx++) {
+if (curGeom) {
+osg::Vec4Array *colorArrays = dynamic_cast&lt;osg::Vec4Array *&gt;(curGeom-&gt;getColorArray());
+if (colorArrays) {
+for (unsigned int i = 0; i &lt; colorArrays-&gt;size(); i++) {
+osg::Vec4 *color = &amp;colorArrays-&gt;operator [](i);
+color-&gt;set(m_color._v[0], m_color._v[1], m_color._v[2], m_color._v[3]);
+}
+}
+else {
+curGeom-&gt;setColorArray(m_colorArrays.get());
+curGeom-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+}
+}
+}
+};
+
+void ColorVisitor::setColor(const float r, const float g, const float b, const float a) {
+
+osg::Vec4 *c = &amp;m_colorArrays-&gt;operator [](0);
+m_color.set(r, g, b, a);
+*c = m_color;
+
+};
+
+void ColorVisitor::setColor(const osg::Vec4 &amp;color) {
+
+osg::Vec4 *c = &amp;m_colorArrays-&gt;operator [](0);
+m_color = color;
+*c = m_color;
+};
+
+
+
+The ColorVistor class I took it from Gordon Tomlison's OSG Samples (cant post links yet)
+
+One thing stills bother me. If I dont use the line 
+Code:
+geode-&gt;addChild(lines)
+
+ and instead I pass directly the node to the viewer
+
+Code:
+_mViewer-&gt;setSceneData(lines);
+
+ the application crashes. Can anyone tell why this is happening? 
+
+Thank you!
+PS: Sorry I coudnt get the code blocks indented... :(
+
+Cheers,
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic1a65.php?p=75219#75219">http://forum.openscenegraph.org/viewtopic.php?p=75219#75219</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009393.html">[osg-users] Change color of node read from dxf file
+</A></li>
+	<LI>Next message (by thread): <A HREF="009396.html">[osg-users] Change color of node read from dxf file
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9395">[ date ]</a>
+              <a href="thread.html#9395">[ thread ]</a>
+              <a href="subject.html#9395">[ subject ]</a>
+              <a href="author.html#9395">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

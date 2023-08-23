@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20porting%20from%20osg-3.4.0%20to%20osg-3.6.0&In-Reply-To=%3CCAFN7Y%2BXi0j6VLAEvXbJ9dTbCmmjSO%2BKAGsv16TRR3Xqm6ZgOtg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009203.html">
+   <LINK REL="Next"  HREF="009224.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20porting%20from%20osg-3.4.0%20to%20osg-3.6.0&In-Reply-To=%3CCAFN7Y%2BXi0j6VLAEvXbJ9dTbCmmjSO%2BKAGsv16TRR3Xqm6ZgOtg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Oct  2 06:42:08 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009203.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+        <LI>Next message (by thread): <A HREF="009224.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9212">[ date ]</a>
+              <a href="thread.html#9212">[ thread ]</a>
+              <a href="subject.html#9212">[ subject ]</a>
+              <a href="author.html#9212">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Herman,
+
+With the change to subclassing Drawable from Node rather than Object,
+the dirty flag is now inherited from Node, it's a bit awkward as it's
+now _boundingSphereComputed, but it's essentially the same thing.
+
+However, your own code should worry about the dirty flag, that's the
+job of the getBound()/getBoundingBox() job to worry about, and this
+has always been the case - it's an example of the Template Method
+Design Pattern.  The getBound*() method provides the high level
+managing of dirty status that always needs to be managed coherently
+and the compute*() method provides the part that differs.
+
+So in your code just delete the line:
+
+   _boundingBoxComputed=true;
+
+It will work fine for 3.4.x and 3.6.x without this line as it was
+never needed in the first place :-)
+
+Robert.
+On Tue, 2 Oct 2018 at 12:25, Herman Varma &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hermanvarma at eastlink.ca</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I have encountered another problem. what is the replacement for
+</I>&gt;<i> _boundingBoxComputed in osg-3.6.2
+</I>&gt;<i>
+</I>&gt;<i> in osg-3.4.0
+</I>&gt;<i> It was defined in osg\Drawable
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> BoundingBox                             _initialBound;
+</I>&gt;<i> ref_ptr&lt;ComputeBoundingBoxCallback&gt; _computeBoundCallback;
+</I>&gt;<i> mutable BoundingBox                 _boundingBox;
+</I>&gt;<i> mutable bool                              _boundingBoxComputed;
+</I>&gt;<i>
+</I>&gt;<i> in osg-3.6.2
+</I>&gt;<i> it  is not defined in osg\Drawable
+</I>&gt;<i>
+</I>&gt;<i> BoundingBox                              _initialBoundingBox;
+</I>&gt;<i> ref_ptr&lt;ComputeBoundingBoxCallback&gt;_computeBoundingBoxCallback;
+</I>&gt;<i> mutable BoundingBox                 _boundingBox;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The code to be ported is
+</I>&gt;<i>
+</I>&gt;<i> osg::BoundingBox OsgDynMesh::computeBoundingBox() const
+</I>&gt;<i> {
+</I>&gt;<i>         FBox3 box;
+</I>&gt;<i>         m_pDynGeom-&gt;DoCalcBoundBox(box);
+</I>&gt;<i>
+</I>&gt;<i>         // convert it to OSG bounds
+</I>&gt;<i>         v2s(box.min, _boundingBox._min);
+</I>&gt;<i>         v2s(box.max, _boundingBox._max);
+</I>&gt;<i>
+</I>&gt;<i>         _boundingBoxComputed=true;
+</I>&gt;<i>         return _boundingBox;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Herman
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopiccfaf.php?p=75006#75006">http://forum.openscenegraph.org/viewtopic.php?p=75006#75006</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009203.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+	<LI>Next message (by thread): <A HREF="009224.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9212">[ date ]</a>
+              <a href="thread.html#9212">[ thread ]</a>
+              <a href="subject.html#9212">[ subject ]</a>
+              <a href="author.html#9212">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

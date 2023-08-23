@@ -1,0 +1,107 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Android: Survive Context Loss without complete reinitialization
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%3A%20Survive%20Context%20Loss%20without%20complete%0A%20reinitialization&In-Reply-To=%3C1563927084.m2f.76475%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010224.html">
+   <LINK REL="Next"  HREF="010232.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Android: Survive Context Loss without complete reinitialization</H1>
+<!--htdig_noindex-->
+    <B>Chris Djali</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%3A%20Survive%20Context%20Loss%20without%20complete%0A%20reinitialization&In-Reply-To=%3C1563927084.m2f.76475%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Android: Survive Context Loss without complete reinitialization">krizdjali at gmail.com
+       </A><BR>
+    <I>Tue Jul 23 17:11:24 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010224.html">[osg-users] Android: Survive Context Loss without complete reinitialization
+</A></li>
+        <LI>Next message (by thread): <A HREF="010232.html">[osg-users] Android: Survive Context Loss without complete reinitialization
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10227">[ date ]</a>
+              <a href="thread.html#10227">[ thread ]</a>
+              <a href="subject.html#10227">[ subject ]</a>
+              <a href="author.html#10227">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+You can't release objects that belong to a destroyed context, so you definitely need to call all the releaseGLObjects methods before the context is destroyed. You shouldn't need to call it on the root node provided the root node is still attached to the viewer when the viewer and context are destroyed, as the normal viewer does this for you.
+
+You need to give the state associated with the context that's being destroyed if you just want to clear GL objects for that context. If you're fine deleting things from every context (e.g. because you've only got one context or destroy them all at once) you can just pass a null pointer, and it'll do it for all contexts.
+
+flushAllDeletedGLObjects gets called automatically unless you're using a weird viewer (which is possible given that you're using Android, but I'd guess it isn't happening).
+
+
+
+If I were in your situation, if you're loading fonts from files, I'd try calling releaseGLObjects on the object cache (osgDB::Registry::instance()-&gt;getObjectCache()-&gt;releaseGLObjects();) right before the context is closed, and if you're letting OSG use its default font, I'd do the default font instead (osgText::Font::getDefaultFont()-&gt;releaseGLObjects();). If either of these helps, then the problem is what I think it is. I've not looked at the Android examples, so I don't know where you'd put the call, though.
+
+
+Cheers,
+Chris
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic0a36.php?p=76475#76475">http://forum.openscenegraph.org/viewtopic.php?p=76475#76475</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010224.html">[osg-users] Android: Survive Context Loss without complete reinitialization
+</A></li>
+	<LI>Next message (by thread): <A HREF="010232.html">[osg-users] Android: Survive Context Loss without complete reinitialization
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10227">[ date ]</a>
+              <a href="thread.html#10227">[ thread ]</a>
+              <a href="subject.html#10227">[ subject ]</a>
+              <a href="author.html#10227">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

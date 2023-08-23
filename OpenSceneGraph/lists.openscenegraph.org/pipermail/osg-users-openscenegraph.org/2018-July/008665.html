@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Updating scene properties instead of recreation it each frame.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Updating%20scene%20properties%20instead%20of%20recreation%20it%0A%20each%20frame.&In-Reply-To=%3CCAFN7Y%2BX%3DbV8QnbofiYtxMoyjn6Mnx5EH8B6vapP0JD3RHf%2BZWA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008636.html">
+   <LINK REL="Next"  HREF="008627.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Updating scene properties instead of recreation it each frame.</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Updating%20scene%20properties%20instead%20of%20recreation%20it%0A%20each%20frame.&In-Reply-To=%3CCAFN7Y%2BX%3DbV8QnbofiYtxMoyjn6Mnx5EH8B6vapP0JD3RHf%2BZWA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Updating scene properties instead of recreation it each frame.">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Jul  9 01:52:24 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008636.html">[osg-users] Updating scene properties instead of recreating it each frame
+</A></li>
+        <LI>Next message (by thread): <A HREF="008627.html">[osg-users] problem with picking/intersecting in window space
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8665">[ date ]</a>
+              <a href="thread.html#8665">[ thread ]</a>
+              <a href="subject.html#8665">[ subject ]</a>
+              <a href="author.html#8665">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Igor,
+
+The OSG uses OpenGL display lists by default, or
+VertexBufferObjects/VertexArrayObjects when enabled via
+osg::Geometry::setUserVertexBufferObjects(true) +
+setUserVertexArrayObject(true).  These GL objects cache the vertex
+data within GL, so if you want to update the vertex data you need to
+call geometry-&gt;dirtyGLObjects() to force the objects to update.  You
+can also call array-&gt;dirty() if you are using VBO/VAO.
+
+If the bounding volume of the geometry changes you'll also want to
+force the bounding volume to update by calling Geometry::dirtyBound();
+
+Robert.
+
+
+On Mon, 2 Jul 2018 at 06:44, Igor Spiridonov &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">igwasm at rambler.ru</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi. I'm wandering if it's ok what i'm doing and how to do it properly.
+</I>&gt;<i>
+</I>&gt;<i> I have data of primitives which comes from source periodically. These primitives are points, lines, polygons. They have different sizes, colors, vertices, etc. My first approach was to create a new subscene each time i receive new data and replace a current node to a new one. But to create a new scene each frame is not very fast operation(a lot of allocation /deallocation). So instead of that I've decided to update existing scene by changing vertices, primitive types, etc. But I'v noticed that some data somewhat cached. For example.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::Vec3Array&amp; vertices = static_cast&lt;osg::Vec3Array&amp;&gt;(*geometry.getVertexArray());
+</I>&gt;<i>     vertices.clear();
+</I>&gt;<i>     for (int i = 0; i &lt; logPolygon.points.size(); i++)
+</I>&gt;<i>    {
+</I>&gt;<i>         auto&amp; point = logPolygon.points[i];
+</I>&gt;<i>         vertices.push_back(osg::Vec3(point.X / 100.f, point.Y / 100.f, 0.f));
+</I>&gt;<i>    }
+</I>&gt;<i>
+</I>&gt;<i>    geometry.setVertexArray(&amp;vertices); // i need to do that otherwise scene is incorrect.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> My first question is why do I need to set vertex array again? &quot;geometry.setVertexArray(&amp;vertices);&quot;
+</I>&gt;<i>
+</I>&gt;<i> The second question is it ok to do such update of all properties instead of full scene recreation? What other drawbacks can be? Is there a better approach?
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic3938.php?p=74235#74235">http://forum.openscenegraph.org/viewtopic.php?p=74235#74235</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008636.html">[osg-users] Updating scene properties instead of recreating it each frame
+</A></li>
+	<LI>Next message (by thread): <A HREF="008627.html">[osg-users] problem with picking/intersecting in window space
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8665">[ date ]</a>
+              <a href="thread.html#8665">[ thread ]</a>
+              <a href="subject.html#8665">[ subject ]</a>
+              <a href="author.html#8665">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

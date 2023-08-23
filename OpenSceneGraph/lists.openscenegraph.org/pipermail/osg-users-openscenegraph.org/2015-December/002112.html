@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Building with DCMTK that uses libiconv
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Building%20with%20DCMTK%20that%20uses%20libiconv&In-Reply-To=%3CCAFN7Y%2BUpXSYXCrsypLDPEiEciZArr2pteH9LUgT_B6dZoWsrYA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278334.html">
+   <LINK REL="Next"  HREF="278337.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Building with DCMTK that uses libiconv</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Building%20with%20DCMTK%20that%20uses%20libiconv&In-Reply-To=%3CCAFN7Y%2BUpXSYXCrsypLDPEiEciZArr2pteH9LUgT_B6dZoWsrYA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Building with DCMTK that uses libiconv">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Dec  8 00:56:09 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278334.html">[osg-users] Building with DCMTK that uses libiconv
+</A></li>
+        <LI>Next message: <A HREF="278337.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2112">[ date ]</a>
+              <a href="thread.html#2112">[ thread ]</a>
+              <a href="subject.html#2112">[ subject ]</a>
+              <a href="author.html#2112">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Andrew,
+
+This extra dependency should probably be added to the CMake FindDCMK.cmake,
+you'll find it in the Modules/FindDCMK.cmake entry.  The DCMTK_LIBRARIES
+entry would then contain this additional external dependency, which in turn
+would mean the OSG itself wouldn't need to be modified.
+It would seem to me like Homebrew is making a few decisions that aren't
+backed up with things like CMake scripts to support their particular build
+decisions.
+
+As a general note, with platform specific issues like this you want to keep
+the specifics in the Find scripts, possibly with the option of a user
+editable flag.
+
+Robert.
+
+On 7 December 2015 at 22:36, Andrew Janke &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">floss at apjanke.net</A>&gt; wrote:
+
+&gt;<i> Hi, OpenSceneGraph folks.
+</I>&gt;<i>
+</I>&gt;<i> I ran in to an issue while building OpenSceneGraph on Mac OS X the other
+</I>&gt;<i> day. DCMTK can be built with libiconv support, in which case any program
+</I>&gt;<i> linking in dcmtk will also need to link in libiconv. The OpenSceneGraph
+</I>&gt;<i> build script seems to assume that dcmtk was built without libiconv, so
+</I>&gt;<i> doesn't attempt to link it.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Originally found this through a report to Homebrew:
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="https://github.com/Homebrew/homebrew/issues/46356">https://github.com/Homebrew/homebrew/issues/46356</A>
+</I>&gt;<i> <A HREF="https://github.com/Homebrew/homebrew/pull/46388">https://github.com/Homebrew/homebrew/pull/46388</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Homebrew's dcmtk is always built with libiconv, so as a workaround we just
+</I>&gt;<i> hacked it to unconditionally link libiconv.
+</I>&gt;<i>
+</I>&gt;<i> diff --git a/src/osgPlugins/dicom/CMakeLists.txt b/src/osgPlugins/dicom/CMakeLists.txt
+</I>&gt;<i> index 55c2a57..e6e3f4a 100644
+</I>&gt;<i> --- a/src/osgPlugins/dicom/CMakeLists.txt
+</I>&gt;<i> +++ b/src/osgPlugins/dicom/CMakeLists.txt
+</I>&gt;<i> @@ -5,7 +5,7 @@ IF  (DCMTK_FOUND)
+</I>&gt;<i>
+</I>&gt;<i>      SET(TARGET_SRC ReaderWriterDICOM.cpp )
+</I>&gt;<i>
+</I>&gt;<i> -    LINK_LIBRARIES(${DCMTK_LIBRARIES} ${ZLIB_LIBRARY})
+</I>&gt;<i> +    LINK_LIBRARIES(${DCMTK_LIBRARIES} iconv ${ZLIB_LIBRARY})
+</I>&gt;<i>
+</I>&gt;<i>      ADD_DEFINITIONS(-DUSE_DCMTK)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> That won't work in general though; seems like the build script would need
+</I>&gt;<i> to query dcmtk to see if it used libiconv and detect libiconv's
+</I>&gt;<i> installation location as well. The dcmtk installation includes a lib/cmake
+</I>&gt;<i> directory with information on how dcmtk was built; that might be an easy
+</I>&gt;<i> way to get at it.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Andrew Janke
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151208/43526219/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151208/43526219/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278334.html">[osg-users] Building with DCMTK that uses libiconv
+</A></li>
+	<LI>Next message: <A HREF="278337.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2112">[ date ]</a>
+              <a href="thread.html#2112">[ thread ]</a>
+              <a href="subject.html#2112">[ subject ]</a>
+              <a href="author.html#2112">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

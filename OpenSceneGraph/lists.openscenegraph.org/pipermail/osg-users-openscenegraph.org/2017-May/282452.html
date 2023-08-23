@@ -1,0 +1,224 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Vanishing letters in osg::Text
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vanishing%20letters%20in%20osg%3A%3AText&In-Reply-To=%3CCAKM-7dFvJyjNACFOZd9HCkLrFE9Xt1eYbc8ZSp1ARC-DfNykEA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="282461.html">
+   <LINK REL="Next"  HREF="282459.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Vanishing letters in osg::Text</H1>
+<!--htdig_noindex-->
+    <B>Maxim Gammer</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vanishing%20letters%20in%20osg%3A%3AText&In-Reply-To=%3CCAKM-7dFvJyjNACFOZd9HCkLrFE9Xt1eYbc8ZSp1ARC-DfNykEA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Vanishing letters in osg::Text">maxgammer at gmail.com
+       </A><BR>
+    <I>Mon May 15 05:27:36 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="282461.html">[osg-users] Multi-pass rendering segfault issue
+</A></li>
+        <LI>Next message: <A HREF="282459.html">[osg-users] Support for Windows Universal Platform
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282452">[ date ]</a>
+              <a href="thread.html#282452">[ thread ]</a>
+              <a href="subject.html#282452">[ subject ]</a>
+              <a href="author.html#282452">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Here is the solution:
+
+text-&gt;setFontResolution(18,18);
+
+
+
+2017-04-25 17:13 GMT+05:00 Volckaert, Guy (CA - MTS) &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Guy.Volckaert at meggitt.com</A>&gt;:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I'm using OSG v3.4.0 and I resolved this issue by adding a
+</I>&gt;<i> glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,...) before calling
+</I>&gt;<i> glTexSubImage2D() in glyph.cpp. This problem was occurring if I was using
+</I>&gt;<i> an Intel video driver.
+</I>&gt;<i>
+</I>&gt;<i> void Glyph::subload() const
+</I>&gt;<i> {
+</I>&gt;<i> [...]
+</I>&gt;<i>
+</I>&gt;<i> // MTSI_BEGIN
+</I>&gt;<i>     // This line was added to resolve a problem with intel chipsets. In
+</I>&gt;<i> essence, some of the
+</I>&gt;<i>     // numeric glyphs would not display correctly. They would appear grey
+</I>&gt;<i> or transparent.
+</I>&gt;<i>     if( getTexture() )
+</I>&gt;<i>     {
+</I>&gt;<i>         glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+</I>&gt;<i> getTexture()-&gt;getFilter( osg::Texture::MIN_FILTER ) );
+</I>&gt;<i>     }
+</I>&gt;<i> // MTSI_END
+</I>&gt;<i>
+</I>&gt;<i>     glTexSubImage2D(GL_TEXTURE_2D,0,
+</I>&gt;<i>                     _texturePosX,_texturePosY,
+</I>&gt;<i>                     s(),t(),
+</I>&gt;<i>                     (GLenum)getPixelFormat(),
+</I>&gt;<i>                     (GLenum)getDataType(),
+</I>&gt;<i>                     data());
+</I>&gt;<i> [...]
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void GlyphTexture::apply(osg::State&amp; state) const
+</I>&gt;<i> {
+</I>&gt;<i> [...]
+</I>&gt;<i> // MTSI_BEGIN
+</I>&gt;<i>             // This line was added to resolve a problem with intel
+</I>&gt;<i> chipsets. In essence, some of the
+</I>&gt;<i>             // numeric glyphs would not display correctly. They would
+</I>&gt;<i> appear grey or transparent.
+</I>&gt;<i>             glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+</I>&gt;<i> _min_filter);
+</I>&gt;<i> // MTSI_END
+</I>&gt;<i>             // Subload the image once
+</I>&gt;<i>             glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0,
+</I>&gt;<i>                     getTextureWidth(),
+</I>&gt;<i>                     getTextureHeight(),
+</I>&gt;<i>                     OSGTEXT_GLYPH_FORMAT, GL_UNSIGNED_BYTE, local_data);
+</I>&gt;<i> [...]
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> Regards,
+</I>&gt;<i>
+</I>&gt;<i> -----Original Message-----
+</I>&gt;<i> From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On
+</I>&gt;<i> Behalf Of Tim Hartter
+</I>&gt;<i> Sent: April-25-17 7:29 AM
+</I>&gt;<i> To: OpenSceneGraph Users
+</I>&gt;<i> Subject: Re: [osg-users] Vanishing letters in osg::Text
+</I>&gt;<i>
+</I>&gt;<i> Setting OSG_TEXT_INCREMENTAL_SUBLOADING to off does not make a difference
+</I>&gt;<i> and YES it happens on Intel cards (not on Nvidia) (Win 7 OSG 3.4)
+</I>&gt;<i>
+</I>&gt;<i> Maybe the patched OSG text works better...
+</I>&gt;<i>
+</I>&gt;<i> Mit AquaMail Android
+</I>&gt;<i> <A HREF="http://www.aqua-mail.com/">http://www.aqua-mail.com</A> gesendet
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Am 25. April 2017 10:18:21 vorm. schrieb Robert Osfield
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;:
+</I>&gt;<i>
+</I>&gt;<i> &gt; On 25 April 2017 at 06:34, Wouter Roos &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rooswouter at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt;&gt; I've experienced a similar issue lately where we were running a
+</I>&gt;<i> &gt;&gt; project on lower spec systems with only an integrated GPU. On those
+</I>&gt;<i> &gt;&gt; systems the frame rate would not show properly, having the same issue
+</I>&gt;<i> &gt;&gt; as described here, with some numbers not showing properly.
+</I>&gt;<i> &gt;&gt; I did a test on my laptop, and when I force it to use the integrated
+</I>&gt;<i> &gt;&gt; GPU
+</I>&gt;<i> &gt;&gt; (4600) the problems shows up as well. If I switch to use the GTX970M
+</I>&gt;<i> &gt;&gt; everything is fine again. This is all on Windows 10, osg 3.4.0 I
+</I>&gt;<i> &gt;&gt; haven't done any further investigation as the project is not using
+</I>&gt;<i> &gt;&gt; any Text objects, but maybe this might help somehow.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Some hardware/drivers don't support texture sub-loading correctly so
+</I>&gt;<i> &gt; the osgText subloading of new glyphs could cause problems, perhaps
+</I>&gt;<i> &gt; this is what you are seeing.  It's problem that originally occurred on
+</I>&gt;<i> &gt; Radeon's and some SGI hardware so there is a workaround in osgText
+</I>&gt;<i> &gt; that detects these combinations in drivers, you can also enable the
+</I>&gt;<i> &gt; workaround by setting the env var OSG_TEXT_INCREMENTAL_SUBLOADING to
+</I>&gt;<i> &gt; OFF i.e. under bash you'd do:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;   export OSG_TEXT_INCREMENTAL_SUBLOADING=OFF
+</I>&gt;<i> &gt;   osgtext
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Under windows I think it's something like:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;   set OSG_TEXT_INCREMENTAL_SUBLOADING=OFF
+</I>&gt;<i> &gt;   osgtext
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The OSG master version has a had a major rewrite of osgText so it no
+</I>&gt;<i> &gt; longer uses the texture subloading as may well just work out of the
+</I>&gt;<i> &gt; box on the Intel GPU/drivers that you have.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Robert.
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph-3.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.</A>
+</I>&gt;<i> &gt; org
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> ________________________________
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> This e-mail may contain proprietary information and/or copyright material.
+</I>&gt;<i> This e-mail is intended for the use of the addressee only. Any unauthorized
+</I>&gt;<i> use may be unlawful. If you receive this e-mail by mistake, please advise
+</I>&gt;<i> the sender immediately by using the reply facility in your e-mail software.
+</I>&gt;<i>
+</I>&gt;<i> Information contained in and/or attached to this document may be subject
+</I>&gt;<i> to export control regulations of the European Community, USA, or other
+</I>&gt;<i> countries. Each recipient of this document is responsible to ensure that
+</I>&gt;<i> usage and/or transfer of any information contained in this document
+</I>&gt;<i> complies with all relevant export control regulations. If you are in any
+</I>&gt;<i> doubt about the export control restrictions that apply to this information,
+</I>&gt;<i> please contact the sender immediately.
+</I>&gt;<i>
+</I>&gt;<i> Be aware that Meggitt may monitor incoming and outgoing e-mails to ensure
+</I>&gt;<i> compliance with the Meggitt IT Use policy.
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+
+-- 
+--------------------------------
+Maxim Gammer
++79199510073
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170515/1d6554cb/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170515/1d6554cb/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="282461.html">[osg-users] Multi-pass rendering segfault issue
+</A></li>
+	<LI>Next message: <A HREF="282459.html">[osg-users] Support for Windows Universal Platform
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282452">[ date ]</a>
+              <a href="thread.html#282452">[ thread ]</a>
+              <a href="subject.html#282452">[ subject ]</a>
+              <a href="author.html#282452">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Why are my shaders not being used?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20are%20my%20shaders%20not%20being%20used%3F&In-Reply-To=%3C1516387509.m2f.72803%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007603.html">
+   <LINK REL="Next"  HREF="007595.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Why are my shaders not being used?</H1>
+<!--htdig_noindex-->
+    <B>Antoine Rennuit</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20are%20my%20shaders%20not%20being%20used%3F&In-Reply-To=%3C1516387509.m2f.72803%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Why are my shaders not being used?">antoinerennuit at hotmail.com
+       </A><BR>
+    <I>Fri Jan 19 10:45:09 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007603.html">[osg-users] [osgPlugins] Unable to load texture in the same folder as the scene file
+</A></li>
+        <LI>Next message (by thread): <A HREF="007595.html">[osg-users] Why are my shaders not being used?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7593">[ date ]</a>
+              <a href="thread.html#7593">[ thread ]</a>
+              <a href="subject.html#7593">[ subject ]</a>
+              <a href="author.html#7593">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+The following code renders the square in red (fixed pipeline) rather green (shaders), I guess the shaders are not used.
+
+
+Code:
+
+#define GLSL330(program) &quot;#version 150\n&quot; #program
+
+const char* vertSource = GLSL330
+(
+    void main(void)
+    {
+        gl_Position = ftransform();
+    }
+);
+
+const char* fragSource = GLSL330
+(
+    void main(void)
+    {
+        gl_FragColor = vec4(0,1,0,1);
+    }
+);
+
+////////////////////////////////////////////////////////////////////////////////
+osg::ref_ptr&lt;osg::Geode&gt; SetupNurbsSurface()
+{
+    osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode();
+    assert(geode);
+    osg::ref_ptr&lt;osg::Geometry&gt; geometry = new osg::Geometry();
+    assert(geometry);
+    osg::ref_ptr&lt;osg::Vec3Array&gt; vertices_osg = new osg::Vec3Array();
+    assert(vertices_osg);
+    osg::ref_ptr&lt;osg::Vec3Array&gt; normals_osg = new osg::Vec3Array();
+    assert(normals_osg);
+    osg::ref_ptr&lt;osg::DrawElementsUInt&gt; triangles_osg = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, 0);
+    assert(triangles_osg);
+    osg::ref_ptr&lt;osg::Vec4Array&gt; colors = new osg::Vec4Array();
+    assert(colors);
+
+    // Setup.
+    geode-&gt;addDrawable(geometry);
+    geometry-&gt;setVertexArray(vertices_osg);
+    geometry-&gt;setNormalArray(normals_osg);
+    geometry-&gt;addPrimitiveSet(triangles_osg);
+    geometry-&gt;setColorArray(colors);
+
+    // Vertices.
+    vertices_osg-&gt;push_back(osg::Vec3(-1.0f,  0.0f, 1.0f));
+    vertices_osg-&gt;push_back(osg::Vec3(-1.0f,  0.0f, 2.0f));
+    vertices_osg-&gt;push_back(osg::Vec3(-1.0f, -1.0f, 2.0f));
+    vertices_osg-&gt;push_back(osg::Vec3(-1.0f, -1.0f, 1.0f));
+
+    // Triangles (primitive sets).
+    triangles_osg-&gt;push_back(0);
+    triangles_osg-&gt;push_back(1);
+    triangles_osg-&gt;push_back(2);
+    triangles_osg-&gt;push_back(0);
+    triangles_osg-&gt;push_back(2);
+    triangles_osg-&gt;push_back(3);
+
+    // Colors.
+    colors-&gt;setBinding(osg::Array::BIND_OVERALL);
+    colors-&gt;push_back(osg::Vec4f(1.0f, 0.0f, 0.0f, 1.0f));
+
+    // Normals.
+    normals_osg-&gt;setBinding(osg::Array::BIND_PER_VERTEX);
+    normals_osg-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    normals_osg-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    normals_osg-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    normals_osg-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    normals_osg-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    normals_osg-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+
+    // State.
+    osg::ref_ptr&lt;osg::Shader&gt; vertShader = new osg::Shader( osg::Shader::VERTEX, vertSource );
+
+    osg::ref_ptr&lt;osg::Shader&gt; fragShader = new osg::Shader( osg::Shader::FRAGMENT, fragSource );
+
+    osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+    program-&gt;addShader( vertShader.get() );
+    program-&gt;addShader( fragShader.get() );
+
+    osg::ref_ptr&lt;osg::StateSet&gt; state = geode-&gt;getOrCreateStateSet();
+    assert(state);
+
+    state-&gt;setAttributeAndModes( program.get(), osg::StateAttribute::ON );
+//    state-&gt;addUniform(&quot;TODO&quot;);
+
+    return geode;
+}
+
+
+
+
+Any idea of what is going on?
+
+Thanks!
+
+Regards,
+
+Antoine[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopica665.php?p=72803#72803">http://forum.openscenegraph.org/viewtopic.php?p=72803#72803</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007603.html">[osg-users] [osgPlugins] Unable to load texture in the same folder as the scene file
+</A></li>
+	<LI>Next message (by thread): <A HREF="007595.html">[osg-users] Why are my shaders not being used?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7593">[ date ]</a>
+              <a href="thread.html#7593">[ thread ]</a>
+              <a href="subject.html#7593">[ subject ]</a>
+              <a href="author.html#7593">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

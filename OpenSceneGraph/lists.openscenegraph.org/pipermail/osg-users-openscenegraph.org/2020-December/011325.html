@@ -1,0 +1,166 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Why not show textures when rendering geometry with PrimitiveSet::TRIANGLES using Shader330 version?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20not%20show%20textures%20when%20rendering%20geometry%20with%0A%20PrimitiveSet%3A%3ATRIANGLES%20using%20Shader330%20version%3F&In-Reply-To=%3Cmailman.33191.1607094198.3539.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="011327.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Why not show textures when rendering geometry with PrimitiveSet::TRIANGLES using Shader330 version?</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20not%20show%20textures%20when%20rendering%20geometry%20with%0A%20PrimitiveSet%3A%3ATRIANGLES%20using%20Shader330%20version%3F&In-Reply-To=%3Cmailman.33191.1607094198.3539.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Why not show textures when rendering geometry with PrimitiveSet::TRIANGLES using Shader330 version?">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Fri Dec  4 00:42:43 PST 2020</I>
+    <P><UL>
+        
+        <LI>Next message (by thread): <A HREF="011327.html">[osg-users] Why not show textures when rendering geometry with PrimitiveSet::TRIANGLES using Shader330 version?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11325">[ date ]</a>
+              <a href="thread.html#11325">[ thread ]</a>
+              <a href="subject.html#11325">[ subject ]</a>
+              <a href="author.html#11325">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>system Win10&amp; GTX1660 ,osg 3.6.4, osgearth 2.10.0 
+
+
+[image: QQ&#22270;&#29255;20201204163639.jpg]    
+static const char* gl3_VertexShader = {
+    &quot;#version 330 core\n&quot;
+    &quot;// gl3_VertexShader\n&quot;
+    &quot;#ifdef GL_ES\n&quot;
+    &quot;    precision highp float;\n&quot;
+    &quot;#endif\n&quot;
+    &quot;in vec4 osg_Vertex;\n&quot;
+    &quot;in vec4 osg_MultiTexCoord0;\n&quot;
+    &quot;uniform mat4 osg_ModelViewProjectionMatrix;\n&quot;
+    &quot;out vec2 texCoord;\n&quot;
+    &quot;void main(void)\n&quot;
+    &quot;{\n&quot;
+    &quot;    gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;\n&quot;
+    &quot;    texCoord = osg_MultiTexCoord0.xy;\n&quot;
+    &quot;}\n&quot;
+};
+
+static const char* gl3_FragmentShader = {
+    &quot;# version 330 core &quot;\n&quot;
+    &quot;// gl3_FragmentShader\n&quot;
+    &quot;#ifdef GL_ES\n&quot;
+    &quot;    precision highp float;\n&quot;
+    &quot;#endif\n&quot;
+    &quot;uniform sampler2D baseTexture;\n&quot;
+    &quot;in vec2 texCoord;\n&quot;
+    &quot;out vec4 color;\n&quot;
+    &quot;void main(void)\n&quot;
+    &quot;{\n&quot;
+    &quot;    color = texture(baseTexture, texCoord);\n&quot;
+    &quot;}\n&quot;
+};
+
+
+    Geometry* geom = new Geometry;
+
+    Vec3Array* coords = new Vec3Array(4);
+    (*coords)[0] = corner+heightVec;
+    (*coords)[1] = corner;
+    (*coords)[2] = corner+widthVec;
+    (*coords)[3] = corner+widthVec+heightVec;
+    geom-&gt;setVertexArray(coords);
+
+    Vec2Array* tcoords = new Vec2Array(4);
+    (*tcoords)[0].set(l,t);
+    (*tcoords)[1].set(l,b);
+    (*tcoords)[2].set(r,b);
+    (*tcoords)[3].set(r,t);
+    geom-&gt;setTexCoordArray(0,tcoords);
+
+    osg::Vec4Array* colours = new osg::Vec4Array(1);
+    (*colours)[0].set(1.0f,1.0f,1.0,1.0f);
+    geom-&gt;setColorArray(colours, osg::Array::BIND_OVERALL);
+
+    osg::Vec3Array* normals = new osg::Vec3Array(1);
+    (*normals)[0] = widthVec^heightVec;
+    (*normals)[0].normalize();
+    geom-&gt;setNormalArray(normals, osg::Array::BIND_OVERALL);
+
+    DrawElementsUByte* elems = new 
+DrawElementsUByte(PrimitiveSet::TRIANGLES);
+    elems-&gt;push_back(0);
+    elems-&gt;push_back(1);
+    elems-&gt;push_back(2);
+
+    elems-&gt;push_back(2);
+    elems-&gt;push_back(3);
+    elems-&gt;push_back(0);
+    geom-&gt;addPrimitiveSet(elems);
+
+    osg::ref_ptr&lt;osg::Image&gt; image = new osg::Image;
+    image-&gt;allocateImage(1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE);
+    image-&gt;setColor(osg::Vec4(1.0,1.0,1.0,1.0), 0, 0, 0);
+
+    osg::ref_ptr&lt;osg::Texture2D&gt; texture = new osg::Texture2D(image.get());
+
+    osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+    program-&gt;addShader(new osg::Shader(osg::Shader::VERTEX, 
+gl3_VertexShader));
+    program-&gt;addShader(new osg::Shader(osg::Shader::FRAGMENT,          
+gl3_FragmentShader));
+    setAttributeAndModes(program.get());
+    setTextureAttribute(0,  texture);
+    addUniform(new osg::Uniform(&quot;baseTexture&quot;, 0));
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/79f7c364-d90f-4462-890d-e7ec3fbfc7e5n%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/79f7c364-d90f-4462-890d-e7ec3fbfc7e5n%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20201204/23f4194d/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20201204/23f4194d/attachment-0001.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: QQ??20201204163639.jpg
+Type: image/jpeg
+Size: 466768 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20201204/23f4194d/attachment-0001.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20201204/23f4194d/attachment-0001.jpg</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message (by thread): <A HREF="011327.html">[osg-users] Why not show textures when rendering geometry with PrimitiveSet::TRIANGLES using Shader330 version?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11325">[ date ]</a>
+              <a href="thread.html#11325">[ thread ]</a>
+              <a href="subject.html#11325">[ subject ]</a>
+              <a href="author.html#11325">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

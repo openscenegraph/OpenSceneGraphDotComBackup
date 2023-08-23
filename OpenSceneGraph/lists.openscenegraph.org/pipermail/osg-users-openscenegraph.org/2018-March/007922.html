@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Show part of geometry which intersects a specific area
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Show%20part%20of%20geometry%20which%20intersects%20a%20specific%0A%20area&In-Reply-To=%3CCAFN7Y%2BX6w51F57TgMZaJu5-G7O4MxNny%2B3-S9-cbxOrTUG0BTQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007919.html">
+   <LINK REL="Next"  HREF="007923.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Show part of geometry which intersects a specific area</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Show%20part%20of%20geometry%20which%20intersects%20a%20specific%0A%20area&In-Reply-To=%3CCAFN7Y%2BX6w51F57TgMZaJu5-G7O4MxNny%2B3-S9-cbxOrTUG0BTQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Show part of geometry which intersects a specific area">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Mar 28 02:17:00 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007919.html">[osg-users] Show part of geometry which intersects a specific area
+</A></li>
+        <LI>Next message (by thread): <A HREF="007923.html">[osg-users] Show part of geometry which intersects a specific area
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7922">[ date ]</a>
+              <a href="thread.html#7922">[ thread ]</a>
+              <a href="subject.html#7922">[ subject ]</a>
+              <a href="author.html#7922">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Ali,
+
+When you put nodes underneath a ClipNode those nodes should inherit
+the required GL_CLIP_PLANEi, so in theory it should work right,
+however, as I've never mixed osgText with clipping I can only say I
+don't see a reason in principle when it wouldn't work.  If you put the
+subgraphs you want to clip in a different subgraph you'll need to set
+the GL_CLIP_PLANEi.
+
+Robert.
+
+On 28 March 2018 at 08:46, Ali Ozdin &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">alinailozdin at gmail.com</A>&gt; wrote:
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> Firstly, I am using osg 3.4.1. However I dont enable any GL_CLIP_PLANEi but all geometry in geodeForgeomRight works well except osgText geometries. Sample code is below:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::ClipNode* clipped_subgraph;
+</I>&gt;<i> osg::ref_ptr&lt;osg::Geode&gt; geodeForgeomRight;
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osgText::Text&gt; bottomAltitudeText = new  osgText::Text;
+</I>&gt;<i> osg::Vec3 position( (SCREEN_WIDTH * 0.64) + bigLineLength, (i/2)*lineBreak, 0.0f);
+</I>&gt;<i> std::string timesFont(&quot;fonts/arial.ttf&quot;);
+</I>&gt;<i> bottomAltitudeText-&gt;setAlignment(osgText::TextBase::AlignmentType::LEFT_CENTER);
+</I>&gt;<i> bottomAltitudeText-&gt;setFont(timesFont);
+</I>&gt;<i> bottomAltitudeText-&gt;setColor( osg::Vec4f(0.f, 255.f,0.f,1.f) );
+</I>&gt;<i> bottomAltitudeText-&gt;setPosition(position);
+</I>&gt;<i> bottomAltitudeText-&gt;setText(&quot;hello world&quot; );
+</I>&gt;<i> bottomAltitudeText-&gt;setCharacterSize(15.0);
+</I>&gt;<i> geodeForgeomRight-&gt;addDrawable( bottomAltitudeText.get() );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::MatrixTransform&gt; mt = new osg::MatrixTransform();
+</I>&gt;<i> mt-&gt;addChild(geodeForgeomRight.get());
+</I>&gt;<i>
+</I>&gt;<i> clipped_subgraph = new osg::ClipNode;
+</I>&gt;<i> double xMin,yMin, zMin, xMax, yMax, zMax;
+</I>&gt;<i> xMin = (SCREEN_WIDTH * 0.64);
+</I>&gt;<i> yMin = SCREEN_HEIGHT*0.6 - 17*lineBreak;
+</I>&gt;<i> zMin = 0.0f;
+</I>&gt;<i> xMax = geodeForgeomRight.get()-&gt;getBoundingBox().xMax();
+</I>&gt;<i> yMax = SCREEN_HEIGHT*0.6;
+</I>&gt;<i> zMax = 0.0f;
+</I>&gt;<i> osg::BoundingBox bb(xMin,yMin, zMin, xMax, yMax, zMax);
+</I>&gt;<i> clipped_subgraph-&gt;createClipBox(bb);
+</I>&gt;<i> clipped_subgraph-&gt;addChild(mt);
+</I>&gt;<i>
+</I>&gt;<i> clipped_subgraph-&gt;setCullingActive(true);
+</I>&gt;<i> mt-&gt;setUpdateCallback(new AltitudeCallBack());
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Best regards,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> robertosfield wrote:
+</I>&gt;&gt;<i> Hi Ali,
+</I>&gt;&gt;<i> I haven't tested this specific combination of features, but in
+</I>&gt;&gt;<i> principle it should be just a case of enabling the GL_CLIP_PLANEi mode
+</I>&gt;&gt;<i> for the text subgraphs.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Which version of the OSG are you using and what GL versions?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The new osgText implementation in master/OSG-3.6 branch uses shaders
+</I>&gt;&gt;<i> so out of the box, looking at the shader I don't see any setting of
+</I>&gt;&gt;<i> the gl_ClipVertex so this could be a problem.  I will look into this.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>  ------------------
+</I>&gt;&gt;<i> Post generated by Mail2Forum
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicf1bc.php?p=73188#73188">http://forum.openscenegraph.org/viewtopic.php?p=73188#73188</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007919.html">[osg-users] Show part of geometry which intersects a specific area
+</A></li>
+	<LI>Next message (by thread): <A HREF="007923.html">[osg-users] Show part of geometry which intersects a specific area
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7922">[ date ]</a>
+              <a href="thread.html#7922">[ thread ]</a>
+              <a href="subject.html#7922">[ subject ]</a>
+              <a href="author.html#7922">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

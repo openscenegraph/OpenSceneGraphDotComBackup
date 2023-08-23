@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Slow optimization and OpenFlight
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Slow%20optimization%20and%20OpenFlight&In-Reply-To=%3C65935751-a1e5-008d-177f-07aeb1f67e53%40remograph.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007239.html">
+   <LINK REL="Next"  HREF="007277.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Slow optimization and OpenFlight</H1>
+<!--htdig_noindex-->
+    <B>Andreas Ekstrand</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Slow%20optimization%20and%20OpenFlight&In-Reply-To=%3C65935751-a1e5-008d-177f-07aeb1f67e53%40remograph.com%3E"
+       TITLE="[osg-users] Slow optimization and OpenFlight">andreas.ekstrand at remograph.com
+       </A><BR>
+    <I>Sun Nov 19 08:13:24 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007239.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+        <LI>Next message (by thread): <A HREF="007277.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7241">[ date ]</a>
+              <a href="thread.html#7241">[ thread ]</a>
+              <a href="subject.html#7241">[ subject ]</a>
+              <a href="author.html#7241">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Yes, the model is ineffective in the sense that it has 150 000 separate 
+triangles on the same level in the scene graph, that's the nature of 
+basic usage of OpenFlight and I guess that's why the plugin applies an 
+optimization of its own. But this could be optimized and merged much 
+faster before and I'm just looking for a way to get it to behave like 
+that again, to keep my software from being slower in a new version.
+
+Some results from VTune, where I have manually filtered and presented 
+the top two culprits in 3.5.1 compared to 3.5.8 (where I gave up after 2 
+minutes):
+
+3.5.8: TOTAL: 121.4s
+
+  * Registry::read -&gt; Optimizer::optimize -&gt;
+    MergeGeometryVisitor::mergeGroup -&gt; Group::removeChildren -&gt;
+    OpenThreads::Atomic::operator++ (78.5s)
+  * Registry::read -&gt; Optimizer::optimize -&gt;
+    MergeGeometryVisitor::mergeGroup -&gt; Group::removeChildren -&gt;
+    OpenThreads::Atomic::operator-- (27.4s)
+
+3.5.1: TOTAL: 12.7s
+
+  * Registry::read -&gt; Optimizer::optimize -&gt;
+    Optimizer::StateVisitor::optimize -&gt; Node::setStateSet -&gt;
+    StateSet::~StateSet -&gt; StateSet::clear -&gt;
+    StateAttribute::removeParent (2.4s)
+  * Registry::read -&gt; Optimizer::optimize -&gt;
+    Optimizer::MergeGeodesVisitor::mergeGeodes -&gt; Node::~Node -&gt;
+    Node::setStateSet -&gt; StateAttribute::removeParent (2.2s)
+
+The MergeGeometryVisitor was applied in 3.5.1 as well but didn't take 
+more than about 0.06s. I guess the 3.5.1 results are generally less 
+interesting but at least they show that MergeGeometryVisitor was not a 
+problem there.
+
+I don't know if this gives you some ideas directly or if we need to keep 
+digging. I will have another look shortly either way, but of course 
+hoping for you or someone else to come up with some bright ideas to 
+shorten the time to fixing this problem.
+
+Regards,
+Andreas
+
+
+On 2017-11-19 16:28, Robert Osfield wrote:
+&gt;<i> HI Andreas,
+</I>&gt;<i>
+</I>&gt;<i> I haven't had a chance to dig further.
+</I>&gt;<i>
+</I>&gt;<i> One curious thing I noticed is that when I enabled verbose debug
+</I>&gt;<i> output there was lots of buffer objects being created and destroyed
+</I>&gt;<i> during the optimisation step.  osg::Drawable now assigns
+</I>&gt;<i> VetextArrayState and VBO's by default for osg::Geometry - this is
+</I>&gt;<i> required to make VAO support possible.  The large number of these
+</I>&gt;<i> operations suggest lots of creation and merging of osg::Geometry for
+</I>&gt;<i> this dataset.  There is chance tthat this change alone may be causing
+</I>&gt;<i> a performance slow down.
+</I>&gt;<i>
+</I>&gt;<i> However, I don't think creation/deletion of osg::Geometry is the crux
+</I>&gt;<i> of the problem, and may not even be the optimization step - it could
+</I>&gt;<i> well be down to the nature of the scene graph being created by the
+</I>&gt;<i> OpenFlight plugin for this dataset.  I suspect the source data is
+</I>&gt;<i> stored in a way that is really inefficient to handle for real-time.
+</I>&gt;<i> It might be that the OpenFlight plugin just isn't handling the data
+</I>&gt;<i> well.
+</I>&gt;<i>
+</I>&gt;<i> As a general rule, running the Optimizer is a last resort for fixing
+</I>&gt;<i> really bad datasets, ideally datasets should be created in a form that
+</I>&gt;<i> is appropriate for decent performance right from the start.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20171119/df5a24b8/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20171119/df5a24b8/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007239.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+	<LI>Next message (by thread): <A HREF="007277.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7241">[ date ]</a>
+              <a href="thread.html#7241">[ thread ]</a>
+              <a href="subject.html#7241">[ subject ]</a>
+              <a href="author.html#7241">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Custom shader not working on Mac OS
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Custom%20shader%20not%20working%20on%20Mac%20OS&In-Reply-To=%3C56C6D8FD.4050107%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278616.html">
+   <LINK REL="Next"  HREF="002399.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Custom shader not working on Mac OS</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Custom%20shader%20not%20working%20on%20Mac%20OS&In-Reply-To=%3C56C6D8FD.4050107%40gmx.de%3E"
+       TITLE="[osg-users] Custom shader not working on Mac OS">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Fri Feb 19 00:57:33 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278616.html">[osg-users] Custom shader not working on Mac OS
+</A></li>
+        <LI>Next message: <A HREF="002399.html">[osg-users] Custom shader not working on Mac OS
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2396">[ date ]</a>
+              <a href="thread.html#2396">[ thread ]</a>
+              <a href="subject.html#2396">[ subject ]</a>
+              <a href="author.html#2396">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Pierre-Jean
+
+
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I try to port my app from Linux to Mac OS (El Capitan) using OSG 3.2.
+</I>&gt;<i> I wrote a simple system of shaders to apply a texture on a model:
+</I>&gt;<i>
+</I>&gt;<i> Vertex shader :
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> attribute vec4 osg_Vertex;
+</I>&gt;<i> uniform mat4 osg_ModelViewProjectionMatrix;
+</I>&gt;<i> varying vec4 texCoord0;
+</I>&gt;<i>
+</I>&gt;<i> void main(void)
+</I>&gt;<i> {
+</I>&gt;<i> gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;
+</I>&gt;<i> texCoord0 = gl_MultiTexCoord0;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Fragment shader :
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> uniform sampler2D tex;
+</I>&gt;<i> varying vec4 texCoord0;
+</I>&gt;<i>
+</I>&gt;<i> void main(void)
+</I>&gt;<i> {
+</I>&gt;<i> gl_FragColor = texture2D(tex, texCoord0.st);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> While it works as expected on Linux, on Mac my model is not displayed at all (I only see the default blue background). There is no error from the shader compilation.
+</I>&gt;<i> I use
+</I>&gt;<i> viewer-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true);
+</I>&gt;<i>   to get the osg_* variables, and also
+</I>&gt;<i> viewer-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseVertexAttributeAliasing(false);
+</I>&gt;<i> to keep the fixed pipeline possibilities (for other models in my scene).
+</I>
+setUseVertexAttributeAliasing should be active, when you are using osg_Vertex etc.
+It might be, that the driver on your first machine simply assigns the &quot;in-slot&quot; accidentally to the correct input.
+Are there any outputs on the console?
+
+
+If this is not working two hints:
+1. #pragma version 150 compatibility
+The version is epxected to be the first line in any shader.
+2.Use gl_ instead on osg_ attributes and uniforms for testing fixed function.
+
+
+&gt;<i>
+</I>&gt;<i> I saw a strange thing in the log : on Mac gl_MultiTexCoord0 is converted to  osg_MultiTexCoord0 even if setUseVertexAttributeAliasing is set to false. On Linux
+</I>&gt;<i> gl_MultiTexCoord0 is not converted and is keeped.
+</I>&gt;<i> By the way if I set setUseVertexAttributeAliasing to true and replace gl_MultiTexCoord0 by osg_MultiTexCoord0, my model is properly visible (but I don't want that because I lose fixed pipeline functions).
+</I>Cannot say anything on the first issue, but you are not &quot;loosing&quot; any 
+functionality by using the aliasing. OSG will simply replace gl_ names 
+with its osg_ aliases when uploading the shader to the driver. All other 
+functions will still work as expected.
+&gt;<i>
+</I>&gt;<i> Has anybody an idea of where this behavior comes from ?
+</I>As I said,  drivers will do stuff behind your back. So a shader with 
+obvious errors might run one machine while failing on another.
+
+Cheers
+Sebastian
+&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Pierre-Jean
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic881f.php?p=66344#66344">http://forum.openscenegraph.org/viewtopic.php?p=66344#66344</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278616.html">[osg-users] Custom shader not working on Mac OS
+</A></li>
+	<LI>Next message: <A HREF="002399.html">[osg-users] Custom shader not working on Mac OS
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2396">[ date ]</a>
+              <a href="thread.html#2396">[ thread ]</a>
+              <a href="subject.html#2396">[ subject ]</a>
+              <a href="author.html#2396">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

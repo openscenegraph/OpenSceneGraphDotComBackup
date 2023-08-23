@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Render to Texture without clamping values
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20to%20Texture%20without%20clamping%20values&In-Reply-To=%3C1465827355.m2f.67593%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003360.html">
+   <LINK REL="Next"  HREF="003365.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Render to Texture without clamping values</H1>
+<!--htdig_noindex-->
+    <B>Philipp Meyer</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20to%20Texture%20without%20clamping%20values&In-Reply-To=%3C1465827355.m2f.67593%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Render to Texture without clamping values">philipp.meyer at fh-bielefeld.de
+       </A><BR>
+    <I>Mon Jun 13 07:15:55 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003360.html">[osg-users] osgsimplegl3 example,	is it possible to run on some combination of OSG and OSX?
+</A></li>
+        <LI>Next message: <A HREF="003365.html">[osg-users] Render to Texture without clamping values
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279584">[ date ]</a>
+              <a href="thread.html#279584">[ thread ]</a>
+              <a href="subject.html#279584">[ subject ]</a>
+              <a href="author.html#279584">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+for my current project I need to do some computations in the fragment shader and retrieve the values within my application. For that I am using the render to texture feature together with a float texture.
+
+I'm having some trouble reading values &gt; 1.0 though. It seems like the values are getting clamped to 0..1, even though I followed the osgprerender HDR setup. Besides the code below, I have also tried GL_RGBA32F (ARB and not ARB) for the internal texture format, tried double for the image and source type and tried using osg::ClampColor to disable clamping for the RTT camera, all without success.
+
+When reading the texture, It returns (0.123,0.5,1,1) for every texel.
+
+Code for texture setup:
+
+
+Code:
+radarTexture = new osg::Texture2D;
+	radarTexture-&gt;setInternalFormat(GL_RGBA16F_ARB);
+	radarTexture-&gt;setSourceFormat(GL_RGBA);
+	radarTexture-&gt;setSourceType(GL_FLOAT);
+
+	auto textureImage = osgHelper::make_osgref&lt;osg::Image&gt;();
+	textureImage-&gt;allocateImage(16,16,1,GL_RGBA, GL_FLOAT);
+//	textureImage-&gt;setImage(128, 128, 1, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE,
+//			nullptr, osg::Image::AllocationMode::NO_DELETE);
+	radarTexture-&gt;setImage(textureImage);
+	radarTexture-&gt;setMaxAnisotropy(0);
+	radarTexture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+	radarTexture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+	radarTexture-&gt;setFilter(osg::Texture::FilterParameter::MIN_FILTER,
+			osg::Texture::FilterMode::NEAREST);
+	radarTexture-&gt;setFilter(osg::Texture::FilterParameter::MAG_FILTER,
+			osg::Texture::FilterMode::NEAREST);
+	radarTexture-&gt;setDataVariance(osg::Object::DYNAMIC);
+
+
+
+RTT Camera setup (some)
+
+Code:
+
+// set the camera to render before the main camera.
+	this-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+
+	// tell the camera to use OpenGL frame buffer object where supported.
+	this-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+
+	// attach the texture and use it as the color buffer.
+	this-&gt;attach(osg::Camera::COLOR_BUFFER0, dest-&gt;getImage());
+
+
+
+GLSL Fragment Shader Code (simplified):
+
+
+Code:
+void main()
+{
+gl_FragColor = vec4(0.123,0.5,3,4);
+}
+
+
+
+
+
+Thank you!
+
+Cheers,
+Philipp
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4a37.php?p=67593#67593">http://forum.openscenegraph.org/viewtopic.php?p=67593#67593</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003360.html">[osg-users] osgsimplegl3 example,	is it possible to run on some combination of OSG and OSX?
+</A></li>
+	<LI>Next message: <A HREF="003365.html">[osg-users] Render to Texture without clamping values
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279584">[ date ]</a>
+              <a href="thread.html#279584">[ thread ]</a>
+              <a href="subject.html#279584">[ subject ]</a>
+              <a href="author.html#279584">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

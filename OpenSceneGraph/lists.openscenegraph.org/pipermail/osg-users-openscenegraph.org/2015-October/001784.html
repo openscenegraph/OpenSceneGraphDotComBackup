@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Maximizing rendering throughput
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Maximizing%20rendering%20throughput&In-Reply-To=%3CCANfcm6a2F-kVUEZ1t7zVPt1MBE8UkF1sNd_0bV%2Bn8YsQRVg-mg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001783.html">
+   <LINK REL="Next"  HREF="001785.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Maximizing rendering throughput</H1>
+<!--htdig_noindex-->
+    <B>Glenn Waldron</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Maximizing%20rendering%20throughput&In-Reply-To=%3CCANfcm6a2F-kVUEZ1t7zVPt1MBE8UkF1sNd_0bV%2Bn8YsQRVg-mg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Maximizing rendering throughput">gwaldron at gmail.com
+       </A><BR>
+    <I>Fri Oct 23 10:15:59 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001783.html">[osg-users] Maximizing rendering throughput
+</A></li>
+        <LI>Next message: <A HREF="001785.html">[osg-users] Maximizing rendering throughput
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1784">[ date ]</a>
+              <a href="thread.html#1784">[ thread ]</a>
+              <a href="subject.html#1784">[ subject ]</a>
+              <a href="author.html#1784">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Sebastian, here is my understanding.
+
+StateSets and Drawables must be marked as DYNAMIC is you plan to change
+them. That's because they are used by the rendering stage, which can
+overlap the next frame's update.
+
+Everything else (scene graph structure, etc.) is safe to change during the
+Update traversal/callbacks.
+
+Hope this helps.
+
+Glenn Waldron
+
+On Fri, Oct 23, 2015 at 1:07 PM, Sebastian Messerschmidt &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A>&gt; wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> Thanks for the explanation. I'm still puzzled by the question which
+</I>&gt;<i> elements can be updated in the update-phase without setting them to
+</I>&gt;<i> dynamic. I always was under the impression, that the update is performed
+</I>&gt;<i> before cull/draw are actually executed.
+</I>&gt;<i> Right now I need some thread safe &quot;time slot&quot; to change the scene graph in
+</I>&gt;<i> terms of inserting nodes, updating transforms etc. I guess it is totally
+</I>&gt;<i> okay to do this in the update callback/operation.
+</I>&gt;<i> But for changes to images, text, an arrays of drawables I need to set them
+</I>&gt;<i> to DYNAMIC if I understood you correctly. So basically what I got is, that
+</I>&gt;<i> I could put the draw of those elements as far to beginning of the draw as
+</I>&gt;<i> possible.
+</I>&gt;<i>
+</I>&gt;<i> As for the double buffering: Can it be done at drawable level? Like
+</I>&gt;<i> swapping the front/back drawable back and forth, effectively doubling the
+</I>&gt;<i> geometry/image space needed?
+</I>&gt;<i>
+</I>&gt;<i> Cheers
+</I>&gt;<i> Sebastian
+</I>&gt;<i>
+</I>&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> On 23 October 2015 at 12:36, Robert Milharcic &lt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.milharcic at ib-caddy.si</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> First of all, I didn't know that cull and draw traversal can execute in
+</I>&gt;&gt;<i> parallel on a single scene. I always thought that cull and draw can only
+</I>&gt;&gt;<i> execute sequential (serial) in all available threading models. Anyway,
+</I>&gt;&gt;<i> what I know for sure is that update and draw traversal can indeed execute
+</I>&gt;&gt;<i> in parallel within some threading models, and that is the reason why we
+</I>&gt;&gt;<i> need DYNAMIC variance, to tell drawing thread it must process dynamic
+</I>&gt;&gt;<i> elements first, and then immediately allow execution of the update
+</I>&gt;&gt;<i> traversal in a main thread while STATIC elements are still being rendered
+</I>&gt;&gt;<i> in a draw thread. I also suspect that next frame cannot start before all
+</I>&gt;&gt;<i> the static+dynamic elements are rendered. If I'm correct on this one, then
+</I>&gt;&gt;<i> few DYNAMIC elements should not affect frame rate at all, because there is
+</I>&gt;&gt;<i> plenty of time to do the processing while STATIC elements are still being
+</I>&gt;&gt;<i> rendered.
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> With the DrawThreadPerContext and DrawThreadPerContextCullThreadPerCamera
+</I>&gt;<i> threading models the static part of the rendering can be done in parallel
+</I>&gt;<i> with the next frame.  You guess this correct.
+</I>&gt;<i>
+</I>&gt;<i> The one thing I'd add is that the OSG itself doesn't attempt to sort
+</I>&gt;<i> DYNAMIC objects so that are drawn first.  You can set up your
+</I>&gt;<i> StateSet::RenderBinDetails to force the dynamic objects to be drawn first,
+</I>&gt;<i> but you can only do this for objects that don't affect the rendering of
+</I>&gt;<i> other objects, or are affected by what is the fame buffer already.
+</I>&gt;<i>
+</I>&gt;<i> In the case of text it has to be placed in the depth sorted bin which is
+</I>&gt;<i> drawn after the main opaque bin, so if there are text objects set to
+</I>&gt;<i> DYNAMIC then you stop the next frame from start till the end of dispatch of
+</I>&gt;<i> the last depth sorted dynamic object.  This may well be very near the end
+</I>&gt;<i> of the draw dispatch so you come pretty close to nullifying all the
+</I>&gt;<i> capacity for running the draw thread in parallel with the next frames'
+</I>&gt;<i> update and cull traversals.  This is likely the situation for Sebastian.
+</I>&gt;<i>
+</I>&gt;<i> Using double buffering of Text object's is probably the best way to avoid
+</I>&gt;<i> updating a Text object while it's being drawn, allowing the Text
+</I>&gt;<i> DataVariance to remain STATIC.  Such double buffering could be done a
+</I>&gt;<i> custom Node that has two Text objects, one for current frame being updated,
+</I>&gt;<i> and one for the previous frame still being rendered.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">listosg-users at lists.openscenegraph.orghttp</A>://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151023/f0088755/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151023/f0088755/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001783.html">[osg-users] Maximizing rendering throughput
+</A></li>
+	<LI>Next message: <A HREF="001785.html">[osg-users] Maximizing rendering throughput
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1784">[ date ]</a>
+              <a href="thread.html#1784">[ thread ]</a>
+              <a href="subject.html#1784">[ subject ]</a>
+              <a href="author.html#1784">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

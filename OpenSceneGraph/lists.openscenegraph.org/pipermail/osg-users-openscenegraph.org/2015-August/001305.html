@@ -1,0 +1,95 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Android osgPlugins
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20osgPlugins&In-Reply-To=%3CCALFd4CeemKOsyKNXyBb8qibkO%3DdD9otAFZGfJb_OAdcamL2NaQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001303.html">
+   <LINK REL="Next"  HREF="277334.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Android osgPlugins</H1>
+<!--htdig_noindex-->
+    <B>Jan Ciger</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20osgPlugins&In-Reply-To=%3CCALFd4CeemKOsyKNXyBb8qibkO%3DdD9otAFZGfJb_OAdcamL2NaQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Android osgPlugins">jan.ciger at gmail.com
+       </A><BR>
+    <I>Mon Aug 24 01:29:38 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001303.html">[osg-users] Android osgPlugins
+</A></li>
+        <LI>Next message: <A HREF="277334.html">[osg-users] Problems with #include &lt;osgGA/MatrixManipulator&gt;
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1305">[ date ]</a>
+              <a href="thread.html#1305">[ thread ]</a>
+              <a href="subject.html#1305">[ subject ]</a>
+              <a href="author.html#1305">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>On Sun, Aug 23, 2015 at 7:22 PM, Christian Kehl &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian-kehl at web.de</A>&gt; wrote:
+&gt;<i> Thanks for the explanation - never digged so much into the linker behaviour because usually libraries generate shared or static libraries consitently. This way into the Java sandbox and how to link dependency code for it was new to me. Still, in this case it was the only way I could make it work.
+</I>
+This isn't really an Android or Java specific issue, it is an
+idiosyncracy of the GNU linker.
+
+I think the problem happens only when you are taking a static library
+(.a) and trying to convert it to a shared library (.so).
+
+This is possible in Linux (and Android), however, it involves
+relinking - and that is where things go wrong. If you don't tell the
+linker to include the whole archive (.a) file, it will optimize the
+&quot;unused&quot; code away. In extreme cases it will happily create a shared
+library that has no code inside ...
+
+Trying to link the OSG plugins (shared libraries) using static
+dependencies is similar use case - the linker included only symbols
+that were used by the rest of the plugin, but had no idea that it
+should include also symbols that are only needed by other modules
+after the shared library was loaded in memory.
+
+That is, IMO, a compilation bug - each module should be linked with
+everything it needs and not rely on the presence of a(nother) shared
+library at runtime to bring in those 3rd-party dependencies (I think
+it was zlib in your case). E.g. DLL compilation in Windows will fail
+for such unresolved symbols. In Linux it passes, because the linker
+allows late binding by default, assuming that the undefined symbols
+will be resolved at runtime by the dynamic linker.
+
+J.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001303.html">[osg-users] Android osgPlugins
+</A></li>
+	<LI>Next message: <A HREF="277334.html">[osg-users] Problems with #include &lt;osgGA/MatrixManipulator&gt;
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1305">[ date ]</a>
+              <a href="thread.html#1305">[ thread ]</a>
+              <a href="subject.html#1305">[ subject ]</a>
+              <a href="author.html#1305">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

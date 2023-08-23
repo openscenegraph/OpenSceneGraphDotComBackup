@@ -1,0 +1,228 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] CullVisitor::apply(Geode&amp;) detected NaN,
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CullVisitor%3A%3Aapply%28Geode%26%29%20detected%20NaN%2C&In-Reply-To=%3C1504278609.m2f.71593%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006714.html">
+   <LINK REL="Next"  HREF="006726.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] CullVisitor::apply(Geode&amp;) detected NaN,</H1>
+<!--htdig_noindex-->
+    <B>R&#195;&#180;mulo Cerqueira</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CullVisitor%3A%3Aapply%28Geode%26%29%20detected%20NaN%2C&In-Reply-To=%3C1504278609.m2f.71593%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] CullVisitor::apply(Geode&amp;) detected NaN,">romulogcerqueira at gmail.com
+       </A><BR>
+    <I>Fri Sep  1 08:10:09 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006714.html">[osg-users] CullVisitor::apply(Geode&amp;) detected NaN,
+</A></li>
+        <LI>Next message: <A HREF="006726.html">[osg-users] CullVisitor::apply(Geode&amp;) detected NaN,
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6725">[ date ]</a>
+              <a href="thread.html#6725">[ thread ]</a>
+              <a href="subject.html#6725">[ subject ]</a>
+              <a href="author.html#6725">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Ok Robert,
+
+this is my current code (only .cpp):
+
+
+Code:
+
+#include &quot;ImageViewerCaptureTool.hpp&quot;
+#include &lt;iostream&gt;
+#include &lt;unistd.h&gt;
+#include &lt;osgDB/WriteFile&gt;
+
+namespace normal_depth_map {
+
+ImageViewerCaptureTool::ImageViewerCaptureTool(uint width, uint height) {
+
+// initialize the hide viewer;
+initializeProperties(width, height);
+}
+
+ImageViewerCaptureTool::ImageViewerCaptureTool( double fovY, double fovX, uint value, bool isHeight) {
+uint width, height;
+
+if (isHeight) {
+height = value;
+width = height * tan(fovX * 0.5) / tan(fovY * 0.5);
+} else {
+width = value;
+height = width * tan(fovY * 0.5) / tan(fovX * 0.5);
+}
+
+double aspectRatio = width * 1.0 / height;
+
+initializeProperties(width, height);
+_viewer-&gt;getCamera()-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+
+_viewer-&gt;getCamera()-&gt;setProjectionMatrixAsPerspective(fovY * 180.0 / M_PI, aspectRatio, 0.1, 1000);
+}
+
+void ImageViewerCaptureTool::initializeProperties(uint width, uint height) {
+// initialize the hide viewer;
+_viewer = new osgViewer::Viewer;
+osg::Camera *camera = this-&gt;_viewer-&gt;getCamera();
+osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+traits-&gt;width = width;
+traits-&gt;height = height;
+traits-&gt;pbuffer = true;
+traits-&gt;readDISPLAY();
+osg::ref_ptr&lt;osg::GraphicsContext&gt; gc = osg::GraphicsContext::createGraphicsContext(traits.get());
+camera-&gt;setGraphicsContext(gc);
+camera-&gt;setDrawBuffer(GL_FRONT);
+camera-&gt;setViewport(new osg::Viewport(0, 0, width, height));
+
+// initialize the class to get the image in float data resolution
+_capture = new WindowCaptureScreen(gc);
+_viewer-&gt;getCamera()-&gt;setFinalDrawCallback(_capture);
+}
+
+osg::ref_ptr&lt;osg::Image&gt; ImageViewerCaptureTool::grabImage(osg::ref_ptr&lt;osg::Node&gt; node ) {
+
+_viewer-&gt;setSceneData(node);
+_viewer-&gt;frame();
+return _capture-&gt;captureImage();;
+}
+
+osg::ref_ptr&lt;osg::Image&gt; ImageViewerCaptureTool::getDepthBuffer() {
+return _capture-&gt;getDepthBuffer();
+}
+
+
+void ImageViewerCaptureTool::setCameraPosition( const osg::Vec3d&amp; eye, const osg::Vec3d&amp; center, const osg::Vec3d&amp; up) {
+_viewer-&gt;getCamera()-&gt;setViewMatrixAsLookAt(eye, center, up);
+}
+
+void ImageViewerCaptureTool::getCameraPosition( osg::Vec3d&amp; eye,osg::Vec3d&amp; center, osg::Vec3d&amp; up) {
+_viewer-&gt;getCamera()-&gt;getViewMatrixAsLookAt(eye, center, up);
+}
+
+void ImageViewerCaptureTool::setBackgroundColor(osg::Vec4d color) {
+_viewer-&gt;getCamera()-&gt;setClearColor(color);
+}
+
+////////////////////////////////
+////WindowCaptureScreen METHODS
+////////////////////////////////
+
+WindowCaptureScreen::WindowCaptureScreen(osg::ref_ptr&lt;osg::GraphicsContext&gt; gc) {
+_mutex = new OpenThreads::Mutex();
+_condition = new OpenThreads::Condition();
+_image = new osg::Image();
+_depth_buffer = new osg::Image();
+
+// checks the GraficContext from the camera viewer
+if (gc-&gt;getTraits()) {
+
+GLenum pixelFormat;
+if (gc-&gt;getTraits()-&gt;alpha) pixelFormat = GL_RGBA;
+else pixelFormat = GL_RGB;
+
+int width = gc-&gt;getTraits()-&gt;width;
+int height = gc-&gt;getTraits()-&gt;height;
+
+// allocates the image memory space
+_image-&gt;allocateImage(width, height, 1, pixelFormat, GL_FLOAT);
+_depth_buffer-&gt;allocateImage(width, height, 1, GL_DEPTH_COMPONENT, GL_FLOAT);
+}
+}
+
+WindowCaptureScreen::~WindowCaptureScreen() {
+delete (_condition);
+delete (_mutex);
+}
+
+osg::ref_ptr&lt;osg::Image&gt; WindowCaptureScreen::captureImage() {
+
+//wait to finish the capture image in call back
+_condition-&gt;wait(_mutex);
+return _image;
+}
+
+osg::ref_ptr&lt;osg::Image&gt; WindowCaptureScreen::getDepthBuffer() {
+return _depth_buffer;
+}
+
+
+void WindowCaptureScreen::operator ()(osg::RenderInfo&amp; renderInfo) const {
+osg::ref_ptr&lt;osg::GraphicsContext&gt; gc = renderInfo.getState()-&gt;getGraphicsContext();
+if (gc-&gt;getTraits()) {
+_mutex-&gt;lock();
+_image-&gt;readPixels( 0, 0, _image-&gt;s(), _image-&gt;t(), _image-&gt;getPixelFormat(), GL_FLOAT);
+_depth_buffer-&gt;readPixels(0, 0, _image-&gt;s(), _image-&gt;t(), _depth_buffer-&gt;getPixelFormat(), GL_FLOAT);
+
+//grants the access to image
+_condition-&gt;signal();
+_mutex-&gt;unlock();
+}
+}
+
+}
+
+
+
+
+
+... 
+
+Thank you!
+
+Cheers,
+R&#244;mulo
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic5970.php?p=71593#71593">http://forum.openscenegraph.org/viewtopic.php?p=71593#71593</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006714.html">[osg-users] CullVisitor::apply(Geode&amp;) detected NaN,
+</A></li>
+	<LI>Next message: <A HREF="006726.html">[osg-users] CullVisitor::apply(Geode&amp;) detected NaN,
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6725">[ date ]</a>
+              <a href="thread.html#6725">[ thread ]</a>
+              <a href="subject.html#6725">[ subject ]</a>
+              <a href="author.html#6725">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

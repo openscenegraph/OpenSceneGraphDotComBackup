@@ -1,0 +1,219 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OpenSceneGraph-3.6.0 release candidate 6
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenSceneGraph-3.6.0%20release%20candidate%206&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827E61490%40tewdmx.enews.nrl.navy.mil%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007979.html">
+   <LINK REL="Next"  HREF="007982.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OpenSceneGraph-3.6.0 release candidate 6</H1>
+<!--htdig_noindex-->
+    <B>Daniel Emminizer, Code 5773</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OpenSceneGraph-3.6.0%20release%20candidate%206&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827E61490%40tewdmx.enews.nrl.navy.mil%3E"
+       TITLE="[osg-users] OpenSceneGraph-3.6.0 release candidate 6">dan.emminizer at nrl.navy.mil
+       </A><BR>
+    <I>Fri Apr  6 12:51:41 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007979.html">[osg-users] OpenSceneGraph-3.6.0 release candidate 6
+</A></li>
+        <LI>Next message (by thread): <A HREF="007982.html">[osg-users] OpenSceneGraph-3.6.0 release candidate 6
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7980">[ date ]</a>
+              <a href="thread.html#7980">[ thread ]</a>
+              <a href="subject.html#7980">[ subject ]</a>
+              <a href="author.html#7980">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Thanks again for the support.  I pulled your latest with this fix and it fixes my small demo app and the bigger application I'm building too!  I'm sorry to drop bugs on you last minute, I only was able to verify it was an OSG issue finally this morning.
+
+I do not think I have any other bugs on the horizon!  Looks good from here.  Have a good weekend,
+
+ - Dan
+
+
+
+-----Original Message-----
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Robert Osfield
+Sent: Friday, April 06, 2018 3:15 PM
+To: OpenSceneGraph Users
+Subject: Re: [osg-users] OpenSceneGraph-3.6.0 release candidate 6
+
+Hi Dan,
+
+I was soooo hoping that all would be OK and I could take the whole evening off...  However, It's far better to catch stuff before a release than after though, so I appreciate your efforts on testing.
+
+I have reproduce the ever expanding bounding box thanks to the you test program, and a bit of debugging revealed that it's the increase in _textBB size due to apply margin and the shadow offsets on each
+setPosition() call.  The only proper fix I could come up with was to introduce a _textBBWithMargin so that the margin+shadows don't affect the main _textBB.  This change required far more lines of code to be changed than I'd like to do this close to a release, but I feel it's worth the risk to solve the problem.  Fingers crossed I don't introduce any regressions with this change.
+
+I have checked in the changes to OSG master the and the
+OpenSceneGraph-3.6 branch.
+
+   <A HREF="https://github.com/openscenegraph/OpenSceneGraph/commit/6bfca1582efae9606e18883971c95eb734d70058">https://github.com/openscenegraph/OpenSceneGraph/commit/6bfca1582efae9606e18883971c95eb734d70058</A>
+
+If this works OK then I'll tag a rc7.
+
+Cheers,
+Robert.
+
+
+
+On 6 April 2018 at 17:08, Daniel Emminizer, Code 5773 &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dan.emminizer at nrl.navy.mil</A>&gt; wrote:
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> I've been testing the RC5 and I have a problem with text.  I saw PR # 523 and thought it might be the same problem.  It looks quite similar to the issue I'm seeing.  I updated to RC6 (includes PR 523) and things look a lot better, but not completely fixed.
+</I>&gt;<i>
+</I>&gt;<i> I have finally been able to reproduce this in native OSG without any extra libraries.  Attached is a .cpp modification of the osgtext example that demonstrates the problem.  This is tested on RC6.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The text &quot;Left&quot; is on the left side, and (correctly) shifts position each frame (up and down).  This is important, because the position changes every frame.  But the bounding box on the Left text (incorrectly) keeps getting bigger and bigger.
+</I>&gt;<i>
+</I>&gt;<i> The text &quot;Right&quot; is on the right side, and its position is set to the right side of &quot;Left&quot; text, based on Left's bounding box.  You'll see it float to the right as the frames redraw.  I would expect &quot;Right&quot; to stay in the same place horizontally, but it does not.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The problem seems to be related to:
+</I>&gt;<i> 1) Changing the position of the text to a new position
+</I>&gt;<i> 2) Having a drop shadow
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Unfortunately I do not know how to fix this.  I can work on it if you want/need, but perhaps you see the problem right away?  Please let me know if the attachment osgtext.cpp doesn't come through for some reason.
+</I>&gt;<i>
+</I>&gt;<i>  - Dan
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> -----Original Message-----
+</I>&gt;<i> From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On 
+</I>&gt;<i> Behalf Of Robert Osfield
+</I>&gt;<i> Sent: Friday, April 06, 2018 10:02 AM
+</I>&gt;<i> To: OpenSceneGraph Users
+</I>&gt;<i> Subject: [osg-users] OpenSceneGraph-3.6.0 release candidate 6
+</I>&gt;<i>
+</I>&gt;<i> Hi All,
+</I>&gt;<i>
+</I>&gt;<i> I have just tagged release candidate 6:
+</I>&gt;<i>
+</I>&gt;<i>     
+</I>&gt;<i> <A HREF="https://github.com/openscenegraph/OpenSceneGraph/tree/OpenSceneGraph-3">https://github.com/openscenegraph/OpenSceneGraph/tree/OpenSceneGraph-3</A>
+</I>&gt;<i> .6.0-rc6
+</I>&gt;<i>
+</I>&gt;<i> I'm really hoping this is now and we are good to go.  If things are
+</I>&gt;<i> building and running OK I'll tag 3.6.0 tomorrow.   So yet another big
+</I>&gt;<i> PLEASE test :-)
+</I>&gt;<i>
+</I>&gt;<i> Let us know about success or failures so we know where we are at for the release.
+</I>&gt;<i>
+</I>&gt;<i> Thankyou!
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> --Changes since rc5
+</I>&gt;<i>
+</I>&gt;<i> Fri, 6 Apr 2018 14:47:54 +0100
+</I>&gt;<i> Author : Robert Osfield
+</I>&gt;<i> Updated for rc6
+</I>&gt;<i>
+</I>&gt;<i> Fri, 6 Apr 2018 14:17:35 +0100
+</I>&gt;<i> Author : Robert Osfield
+</I>&gt;<i> Fixed warning
+</I>&gt;<i>
+</I>&gt;<i> Fri, 6 Apr 2018 14:07:58 +0100
+</I>&gt;<i> Author : Robert Osfield
+</I>&gt;<i> Changed TextBase::setAlignment() to use computeGlyphRepresentation(); 
+</I>&gt;<i> rather than computePositions(); to address issues seen with calling
+</I>&gt;<i> Text::setAlignment() after calls to Text::setText()
+</I>&gt;<i>
+</I>&gt;<i> Fri, 6 Apr 2018 14:06:50 +0100
+</I>&gt;<i> Author : Robert Osfield
+</I>&gt;<i> Added osgtext --alignment test to look the effect of calling
+</I>&gt;<i> Text::setAlignent() before and after the Text::setText().
+</I>&gt;<i>
+</I>&gt;<i> Thu, 5 Apr 2018 18:00:30 +0100
+</I>&gt;<i> Author : OpenSceneGraph git repository Merge pull request #525 from 
+</I>&gt;<i> emminizer/fix-windows-exportosgDB: Added missing extern OSGDB_EXPORT.
+</I>&gt;<i>
+</I>&gt;<i> Thu, 5 Apr 2018 10:51:24 -0400
+</I>&gt;<i> Author : Daniel Emminizer
+</I>&gt;<i> osgDB: Added missing extern OSGDB_EXPORT.
+</I>&gt;<i>
+</I>&gt;<i> Thu, 5 Apr 2018 14:14:49 +0100
+</I>&gt;<i> Author : Robert Osfield
+</I>&gt;<i> Quietened down debug message output for osgText shader setup and 
+</I>&gt;<i> Drawable::createVertexArrayStateImplementation
+</I>&gt;<i>
+</I>&gt;<i> Thu, 5 Apr 2018 12:35:36 +0100
+</I>&gt;<i> Author : Robert Osfield
+</I>&gt;<i> Changed DisplaySettings::setShaderHint(..) messages to INFO
+</I>&gt;<i>
+</I>&gt;<i> Thu, 5 Apr 2018 12:19:56 +0100
+</I>&gt;<i> Author : Robert Osfield
+</I>&gt;<i> Updated ChangeLOG and news
+</I>&gt;<i>
+</I>&gt;<i> Thu, 5 Apr 2018 11:21:55 +0200
+</I>&gt;<i> Author : Philippe Renon
+</I>&gt;<i> mingw: fix compile error in GraphicsWindowWin32.cppcompilation error 
+</I>&gt;<i> was introduced by msvc specific change see 
+</I>&gt;<i> <A HREF="https://github.com/openscenegraph/OpenSceneGraph/commit/bb169979a1054e">https://github.com/openscenegraph/OpenSceneGraph/commit/bb169979a1054e</A>
+</I>&gt;<i> 2fa63a7ea82c9c8bec87e90494 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph-3.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.</A>
+</I>&gt;<i> org
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph-3.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.</A>
+</I>&gt;<i> org
+</I>&gt;<i>
+</I>_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</PRE>
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007979.html">[osg-users] OpenSceneGraph-3.6.0 release candidate 6
+</A></li>
+	<LI>Next message (by thread): <A HREF="007982.html">[osg-users] OpenSceneGraph-3.6.0 release candidate 6
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7980">[ date ]</a>
+              <a href="thread.html#7980">[ thread ]</a>
+              <a href="subject.html#7980">[ subject ]</a>
+              <a href="author.html#7980">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

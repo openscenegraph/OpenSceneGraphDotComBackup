@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] GUIEventHandler called twice - possible bug(s)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GUIEventHandler%20called%20twice%20-%20possible%20bug%28s%29&In-Reply-To=%3CCAFN7Y%2BV7%3DeHvMqBS8eYZRvpZbYTgGEFbe-yOMP4J%2B8mKpfDFCA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003994.html">
+   <LINK REL="Next"  HREF="280220.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] GUIEventHandler called twice - possible bug(s)</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GUIEventHandler%20called%20twice%20-%20possible%20bug%28s%29&In-Reply-To=%3CCAFN7Y%2BV7%3DeHvMqBS8eYZRvpZbYTgGEFbe-yOMP4J%2B8mKpfDFCA%40mail.gmail.com%3E"
+       TITLE="[osg-users] GUIEventHandler called twice - possible bug(s)">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Aug 29 09:45:08 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003994.html">[osg-users] GUIEventHandler called twice - possible bug(s)
+</A></li>
+        <LI>Next message: <A HREF="280220.html">[osg-users] [3rdparty] The link to download Android pre packaged	dependencies is broken
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3995">[ date ]</a>
+              <a href="thread.html#3995">[ thread ]</a>
+              <a href="subject.html#3995">[ subject ]</a>
+              <a href="author.html#3995">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks Riccardo.  I'm currently submerged in refactoring osgParticle,
+once this is completed I'll have a look at the modified
+osgcallback.cpp.
+
+On 29 August 2016 at 16:20, Riccardo Corsi &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">riccardo.corsi at kairos3d.it</A>&gt; wrote:
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> please find attached a simple example that shows the issues I was trying to
+</I>&gt;<i> explain:
+</I>&gt;<i> - launch with no args to see the initial issue
+</I>&gt;<i> - launch with &quot;--crash&quot; to get the crash i ran into when implementing the
+</I>&gt;<i> callback deriving from osg::Callback
+</I>&gt;<i> - launch with &quot;--fix&quot; to see the way I fixed it with the NodeCallback:
+</I>&gt;<i> comments on the run() and operator() methods explain some concerns for this
+</I>&gt;<i> solution
+</I>&gt;<i>
+</I>&gt;<i> Hope this clarifies things :)
+</I>&gt;<i> Ricky
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Mon, Aug 29, 2016 at 4:29 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi Ricky,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The changes to Drawable and the knock on effect to the callbacks is an
+</I>&gt;&gt;<i> awkward one - it would be easy if it we could just discard backwards
+</I>&gt;&gt;<i> compatibility, so it's a far from ideal code, but alas you can't
+</I>&gt;&gt;<i> rewrite history once it's happened.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> From your description I don't have a clear idea of what is being
+</I>&gt;&gt;<i> called twice and whether this is a problem.  Could you create a small
+</I>&gt;&gt;<i> example that illustrates the problem, once I can see first hand I can
+</I>&gt;&gt;<i> review the behaviour and decide whether this is acceptable or is an
+</I>&gt;&gt;<i> bug.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks,
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 29 August 2016 at 15:00, Riccardo Corsi &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">riccardo.corsi at kairos3d.it</A>&gt;
+</I>&gt;&gt;<i> wrote:
+</I>&gt;&gt;<i> &gt; Hi all,
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; I report what I believe could be considered a bug, probably introduced
+</I>&gt;&gt;<i> &gt; after
+</I>&gt;&gt;<i> &gt; the promotion of the Drawable class to a node, together with the new
+</I>&gt;&gt;<i> &gt; callback system.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; I have a GUIEventHandler derived class installed on a Drawable.
+</I>&gt;&gt;<i> &gt; After some digging I've realized that it's called twice for every event
+</I>&gt;&gt;<i> &gt; due
+</I>&gt;&gt;<i> &gt; to the EventVisitor code here:
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; <A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/master/include/osgGA/EventVisitor#L86">https://github.com/openscenegraph/OpenSceneGraph/blob/master/include/osgGA/EventVisitor#L86</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; GUIEventHandler happens to derive both from NodeCallback and
+</I>&gt;&gt;<i> &gt; DrawableEventCallback, resulting in it being called twice. I think this
+</I>&gt;&gt;<i> &gt; might be considered as a bug if the intended behavior was to keep using
+</I>&gt;&gt;<i> &gt; the
+</I>&gt;&gt;<i> &gt; old GUIEventHandler interface the way it was (when attached to the
+</I>&gt;&gt;<i> &gt; viewer
+</I>&gt;&gt;<i> &gt; for instance, it is called only once as expected).
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Relate issue:
+</I>&gt;&gt;<i> &gt; I've re-implemented my callback deriving from osg::Callback, but this
+</I>&gt;&gt;<i> &gt; results in a crash as the osg::CallbackObject interface is used even if
+</I>&gt;&gt;<i> &gt; the
+</I>&gt;&gt;<i> &gt; cast does not succeed (first if condition)
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; <A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/master/include/osgGA/EventVisitor#L93">https://github.com/openscenegraph/OpenSceneGraph/blob/master/include/osgGA/EventVisitor#L93</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; I fixed that by deriving from osg::NodeCallback, but I had to
+</I>&gt;&gt;<i> &gt; reimplement
+</I>&gt;&gt;<i> &gt; the operator() method instead of run(), as the second is not called by
+</I>&gt;&gt;<i> &gt; the
+</I>&gt;&gt;<i> &gt; visitor - that also it's a bit counter-intuitive with respect to the
+</I>&gt;&gt;<i> &gt; osg::Callback class interface.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Ricky
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; _______________________________________________
+</I>&gt;&gt;<i> &gt; osg-users mailing list
+</I>&gt;&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003994.html">[osg-users] GUIEventHandler called twice - possible bug(s)
+</A></li>
+	<LI>Next message: <A HREF="280220.html">[osg-users] [3rdparty] The link to download Android pre packaged	dependencies is broken
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3995">[ date ]</a>
+              <a href="thread.html#3995">[ thread ]</a>
+              <a href="subject.html#3995">[ subject ]</a>
+              <a href="author.html#3995">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

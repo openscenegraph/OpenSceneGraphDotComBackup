@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problem blending multiple render passes
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20blending%20multiple%20render%20passes&In-Reply-To=%3C6cbf5681-dfc0-8b57-abdb-5f0497f23d3d%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006809.html">
+   <LINK REL="Next"  HREF="006811.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problem blending multiple render passes</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20blending%20multiple%20render%20passes&In-Reply-To=%3C6cbf5681-dfc0-8b57-abdb-5f0497f23d3d%40gmx.de%3E"
+       TITLE="[osg-users] Problem blending multiple render passes">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Sat Sep  9 05:09:19 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="006809.html">[osg-users] Problem blending multiple render passes
+</A></li>
+        <LI>Next message (by thread): <A HREF="006811.html">[osg-users] Problem blending multiple render passes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6810">[ date ]</a>
+              <a href="thread.html#6810">[ thread ]</a>
+              <a href="subject.html#6810">[ subject ]</a>
+              <a href="author.html#6810">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Antiro,&gt; Hi Sebastian,
+&gt;<i> 
+</I>&gt;<i> So I screwed up on both the color clearing and the depth writing, I tried to disable both is follows.
+</I>&gt;<i> On the cameras:
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> 
+</I>&gt;<i> //Disable depth buffer writing
+</I>&gt;<i> osg::ref_ptr&lt;osg::Depth&gt; depth = new osg::Depth(osg::Depth::LESS,0,1,false);
+</I>&gt;<i> camera-&gt;getOrCreateStateSet()-&gt;setAttribute(depth);
+</I>&gt;<i> 
+</I>&gt;<i> //Disable writing to color buffer
+</I>&gt;<i> GLbitfield mask = 0;
+</I>&gt;<i> camera-&gt;setClearMask(mask);
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> The result was that (as expected) the geometry became extremely bright within a few frames (as I had forgotten to clear the output texture in between frames), but unexpectedly still from only a single light source. After I had fixed the texture clearing in between frames the result was the same as before: Only the result of a single lighting pass is visible.
+</I>&gt;<i> I verified that this is the LAST pass, so it seems like the results of previous passes are overwritten instead of blended?
+</I>
+If you're using multiple passes the first pass needs to clear the buffer 
+and all consecutive passes need to simply blend into it. Did you enable 
+blending in the camera state set?
+
+&gt;<i> 
+</I>&gt;<i> The reason I am using multiple passes is because I want to support an arbitrary (run time determined) number of light sources. Hence I can not just load a bunch of light sources into the uniforms of a single shader
+</I>So you're not doing deferred lighting? Usually one does blend all the 
+lighting contributions to one texture by rendering all lights as boxes, 
+spheres etc to limit the area in the lighting texture the light can 
+contribute to using viewspace-calculations. There are tons of papers and 
+blogs on how to do this.
+
+Each light therefore is rendered in the same camera adding its 
+contribution by simply rendering its hull-volume and carrying the light 
+information in a bunch of uniforms per light. Since you have the 
+depth-buffer (and therefore the viewspace/worldspace geometry 
+coordiantes per fragment) you can calculate the light-geometry distance 
+per fragment and therefore the light contribution.
+
+&gt;<i> 
+</I>&gt;<i> If you have any other ideas of why my problems persist (or if I messed up with disabling color clearing/depth writing) please let me know!
+</I>
+Again: Try to create a minimal example! It's rather tedious to pull 
+information out of someone's head in order to get the possible problems.
+
+Cheers
+Sebastian
+&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Thank you!
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> antiro[/code]
+</I>&gt;<i> 
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic08ef.php?p=71681#71681">http://forum.openscenegraph.org/viewtopic.php?p=71681#71681</A>
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="006809.html">[osg-users] Problem blending multiple render passes
+</A></li>
+	<LI>Next message (by thread): <A HREF="006811.html">[osg-users] Problem blending multiple render passes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6810">[ date ]</a>
+              <a href="thread.html#6810">[ thread ]</a>
+              <a href="subject.html#6810">[ subject ]</a>
+              <a href="author.html#6810">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

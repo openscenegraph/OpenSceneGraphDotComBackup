@@ -1,0 +1,288 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Rendering kinda attached to the camera moving
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Rendering%20kinda%20attached%20to%20the%20camera%20moving&In-Reply-To=%3C1430825618.m2f.63635%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000311.html">
+   <LINK REL="Next"  HREF="276537.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Rendering kinda attached to the camera moving</H1>
+<!--htdig_noindex-->
+    <B>Andreas Schreiber</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Rendering%20kinda%20attached%20to%20the%20camera%20moving&In-Reply-To=%3C1430825618.m2f.63635%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Rendering kinda attached to the camera moving">ayss at online.de
+       </A><BR>
+    <I>Tue May  5 04:33:38 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000311.html">[osg-users] [build] OSG 3.3.7 cmake_policy CMP0020
+</A></li>
+        <LI>Next message: <A HREF="276537.html">[osg-users] [vpb] Unusual Error while running vpbmaster
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276533">[ date ]</a>
+              <a href="thread.html#276533">[ thread ]</a>
+              <a href="subject.html#276533">[ subject ]</a>
+              <a href="author.html#276533">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+hope someone can help me. If you got any problems with my explanation, please just ask me! I will try to explain it better. I added two image, in the second image I moved the camera a bit to the left.
+
+
+
+I've got the following problem:
+I want to render a glitter path of car headlights.
+
+For that purpose I rendered a texture of the headlights. With this texture I want to check if the viewer will see a light on the given vertex or not.
+
+The main idea is: Reflect the vector, which goes from viewer to the current vertex in the vertex shader.
+Then check where this reflected vector hits the plane, which is in front of the car right now.
+Furthermore check if the point where the reflected vector hits the plane is in the area of the plane on which the texture is on.
+
+If yes get the uv coord and get the color from the texture and render this as the vertex color.
+
+I get the two lanes of the headlight, but they are kinda moving with the camera. They are not beginning from the car and don't go to the viewer like it should be.
+
+Now i don't know if it's a problem with the spaces I use or my calculation in general. Right now i think its the spaces, because I am getting two lanes.
+Please don't think I want you to debug my shader, that's not the case!
+I don't see what my mistake in the space conversion is, if it is really there.
+
+The position of the plane on which the texture is rendered on I pass as an uniform vec4. In the osg code I use this 
+
+Code:
+getOrCreateStateSet()-&gt;addUniform(new osg::Uniform(&quot;rttPlane_Position&quot;, osg::Vec4(1, -0.25, 1, 1)));
+
+
+
+
+&gt;<i>From what I know this is the world coordinate.
+</I>This is transform in tangent space in the vertex shader.
+
+The vector from eye to vertex is transform in eye coordinate then in tangent space.
+
+Here is my vertex shader
+
+Code:
+
+
+uniform vec4 rttPlane_Position;
+
+varying vec4 projCoords;
+varying vec3 viewDirToVertex;						// Blickrichtung im Tangentenraum
+varying vec3 rttPlane_PositionInTS;
+
+varying vec2 texCoords;
+
+in vec3 Tangent;
+in vec3 Binormal; 
+
+void main()
+{
+	// Tanget Space Matrix Generierung, ausgehen von der Normalen (0, 0, 1)
+	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+
+	vec3 n = normalize(gl_NormalMatrix * gl_Normal);
+	vec3 t = normalize(gl_NormalMatrix * Tangent);
+	vec3 b = normalize(gl_NormalMatrix * Binormal);
+	
+	// Erhalte Streifen der an Kamera h&#228;ngt
+	rttPlane_PositionInTS.x = dot(rttPlane_Position.xyz, t);
+	rttPlane_PositionInTS.y = dot(rttPlane_Position.xyz, b);
+	rttPlane_PositionInTS.z = dot(rttPlane_Position.xyz, n);
+	
+	//// Erhalte Tangens wenn ich dies mache
+	//rttPlane_PositionInTS.x = dot((gl_ModelViewMatrix * rttPlane_Position).xyz, t);
+	//rttPlane_PositionInTS.y = dot((gl_ModelViewMatrix * rttPlane_Position).xyz, b);
+	//rttPlane_PositionInTS.z = dot((gl_ModelViewMatrix * rttPlane_Position).xyz, n);
+
+	vec3 viewDirToVertex0 = (gl_ModelViewMatrix * gl_Vertex).xyz;			// View to Vertex In EyeCoordinates
+	
+	viewDirToVertex.x = dot(viewDirToVertex0, t);
+	viewDirToVertex.y = dot(viewDirToVertex0, b);
+	viewDirToVertex.z = dot(viewDirToVertex0, n);
+
+	texCoords = gl_MultiTexCoord0.xy;
+
+	gl_TexCoord[0] = gl_MultiTexCoord0;
+	gl_Position = ftransform();
+	projCoords = gl_Position;
+}
+
+
+
+
+Here is the Fragment Shader
+
+Code:
+
+uniform sampler2D defaultTex; 
+uniform sampler2D reflection;  
+uniform sampler2D refraction;   
+uniform sampler2D normalTex; // normalmap
+uniform sampler2D rttTexture; // Texture with headlights 
+
+varying vec3 rttPlane_PositionInTS;
+
+varying vec4 projCoords;
+varying vec2 texCoords;
+
+varying vec3 viewDirToVertex;									// Blickrichtung im Tangentenraum
+
+void main()
+{
+
+	vec2 rippleEffect = 0.02 * texture2D(refraction, texCoords).xy;
+	// Hole die Normale
+	vec4 normalFromTexture = texture2D(normalTex, texCoords).xyzw;
+	normalFromTexture = normalFromTexture * 2.0 - vec3(1.0);
+	normalFromTexture.a = 1.0;
+	normalFromTexture = normalize(normalFromTexture);
+
+	// Berechne den reflektierten Vektor
+	vec3 viewDirToVertexNormalized = normalize(viewDirToVertex);
+	vec3 reflectedEyeDirection = normalize(reflect(-viewDirToVertexNormalized, normalFromTexture.xyz));
+	
+	//////////////////////////////////////////
+	// Berechnung Schnittpunkt von Ebenen und Vektor 
+	float gamma;
+	if( reflectedEyeDirection.x != 0){
+		gamma = (rttPlane_PositionInTS.x - viewDirToVertex.x) / reflectedEyeDirection.x;
+	}
+	else
+	{
+		gamma = 1;
+	}
+
+	float alpha = (rttPlane_PositionInTS.y + gamma * reflectedEyeDirection.y) - viewDirToVertex.y;  
+	float beta = (rttPlane_PositionInTS.z + gamma * reflectedEyeDirection.z) - viewDirToVertex.z;
+
+	// Schnittpunkt von relfektiertem Vektor und Ebene
+	vec3 schnittpunkt;
+	schnittpunkt.x = rttPlane_PositionInTS.x;
+	schnittpunkt.y = rttPlane_PositionInTS.y + alpha;
+	schnittpunkt.z = rttPlane_PositionInTS.z + beta;
+
+	// Ebene in Ursprung verschieben
+	vec3 A = vec3(1, -0.25, -1);
+	vec3 B = vec3(1, 1, -1);
+	vec3 C = vec3(1, 1, 1);
+	vec3 D = vec3(1, -0.25, 1);
+
+	float rttPlaneHoehe_Half = (D.z - A.z)/2;
+	float rttPlaneBreite_Half = (C.y - D.y)/2;
+	float rttPlaneDiagonale = sqrt((rttPlaneHoehe_Half * rttPlaneHoehe_Half) + (rttPlaneBreite_Half * rttPlaneBreite_Half));
+	
+
+	vec3 schnittpunkt_a = schnittpunkt - A;
+	vec3 c_a = C - A;
+	vec3 a_a = A - A;
+
+	schnittpunkt_a.x /= c_a.x;
+	schnittpunkt_a.y /= c_a.y;
+	schnittpunkt_a.z /= c_a.z;
+
+
+	// Berechne Winkel zwischen viewDirToVertex-Vektor und refEyeDirection-Vektor
+	float refAngle = clamp(dot(reflectedEyeDirection, viewDirToVertex), 0.0, 1.0);
+	vec4 specular = vec4(pow(refAngle, 40.0));
+	// Berechne die Distortion
+	vec2 dist = texture2D(refraction, texCoords).xy;
+	dist = (dist * 2.0 - vec2(1.0)) * 0.1;
+
+	vec2 uv = projCoords.xy / projCoords.w;
+	uv = clamp((uv + 1.0) * 0.5 + dist, 0.0, 1.0);
+	vec4 base = texture2D(defaultTex, uv);
+	vec4 refl = texture2D(reflection, uv); 
+
+	if((schnittpunkt.y &gt; A.y &amp;&amp; schnittpunkt.y &lt; C.y) &amp;&amp; (schnittpunkt.z &gt; A.z &amp;&amp; schnittpunkt.z &lt; C.z))
+	{
+		vec4 lightSpot = texture2D(rttTexture, schnittpunkt.yz).xyzw;
+		if (lightSpot.w == 1.0)
+		{	
+			gl_FragColor = lightSpot;
+		}
+		else
+		{
+			vec4 color = mix(base, refl + specular, 0.4);
+			color.w = 1;
+			gl_FragColor = color;
+		}
+		//gl_FragColor = vec4(1,1,0,1);
+	}
+	else
+	{
+		vec4 color = mix(base, refl + specular, 0.4);
+		color.w = 1;
+		gl_FragColor = color;
+	}
+}
+
+
+
+
+
+... 
+
+Thank you!
+
+Cheers,
+Andreas[/img]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc72b.php?p=63635#63635">http://forum.openscenegraph.org/viewtopic.php?p=63635#63635</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: 2.JPG
+Type: image/jpeg
+Size: 48256 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20150505/8008f426/attachment-0004.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150505/8008f426/attachment-0004.jpeg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: 1.JPG
+Type: image/jpeg
+Size: 47278 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20150505/8008f426/attachment-0005.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150505/8008f426/attachment-0005.jpeg</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000311.html">[osg-users] [build] OSG 3.3.7 cmake_policy CMP0020
+</A></li>
+	<LI>Next message: <A HREF="276537.html">[osg-users] [vpb] Unusual Error while running vpbmaster
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276533">[ date ]</a>
+              <a href="thread.html#276533">[ thread ]</a>
+              <a href="subject.html#276533">[ subject ]</a>
+              <a href="author.html#276533">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

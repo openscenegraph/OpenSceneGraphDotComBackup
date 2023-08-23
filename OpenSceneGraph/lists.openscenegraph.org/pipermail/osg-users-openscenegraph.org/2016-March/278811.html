@@ -1,0 +1,163 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Tesselation on Model
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Tesselation%20on%20Model&In-Reply-To=%3C1458739925.m2f.66608%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002578.html">
+   <LINK REL="Next"  HREF="002589.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Tesselation on Model</H1>
+<!--htdig_noindex-->
+    <B>David Knipp</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Tesselation%20on%20Model&In-Reply-To=%3C1458739925.m2f.66608%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Tesselation on Model">David.Knipp at gmx.net
+       </A><BR>
+    <I>Wed Mar 23 06:32:05 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002578.html">[osg-users] Replies with &quot;Incident ID&quot;'s returned for every	post I sent to this list... Is that normal?
+</A></li>
+        <LI>Next message: <A HREF="002589.html">[osg-users] Tesselation on Model
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278811">[ date ]</a>
+              <a href="thread.html#278811">[ thread ]</a>
+              <a href="subject.html#278811">[ subject ]</a>
+              <a href="author.html#278811">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi osg-Forum,
+
+I'm kind of stuck with a problem in how to combine a tesslation shader in osg with a normal model right now. I really searched over google a couple of times and over the osg forum. I can't find an answer to my problem. Normally i prefer to not ask and just resolve it myself because thats my problem and not yours. As you can see this is my first post and i just registered here to ask that. I'm really sry for that.
+
+The thing is that I'm currently working on is an application that will just display a model. The model i'm working on is a huge bunch of GroupNodes that resolve down in the tree to geode-group-nodes and then geometrynodes. I guess thats pretty normal. With default osg shaders everty thing works nice and smooth.
+
+Now comes the problem. I have to tesselate the Model. 
+I admit that im not used to programm shaders and only did it with DirectX 11. But the easy things worked back then. 
+For this project i used the &quot;osgtesselateshaders&quot; example of yours and did just copy the shaders there. I know that now all the texture, material and own lightning won't work with this shaders. I just want to see if the wireframe will get tesselated. For that i create the osg::Program variable in a ref_ptr and then set the pointer of it to all geometrynodes of the model. Every Geometrynode will get his own uniform with &quot;innerTesselation&quot;, &quot;outerTesselation&quot; variables and so own. I also created hotkeys for &quot;+&quot; and &quot;-&quot; that will change the values of all Geoemtrynode as pleased. 
+
+The default shader of osg works perfectly fine with my programm but of course no tesselation will hapen. Now if i start the programm with the osg tesselateion shaders of &quot;osgtesselateshaders&quot; it will just print this in Visual Studio:
+
+&quot;Warning: detected OpenGL error 'invalid operation' at after RenderBin::draw(..)&quot;
+
+This warning pretty much says nothing as far as i have googeld it. Just says &quot;some Problem ist here&quot;. Of course the viewer will show nothing of my model.
+
+So now my question what do i have to change to make the shaders of the example work with a loaded model? Is it even possible to make this example work with a model? Isn't a model just a bunch of triangles (+ texture and materials) as the Icosahedron in the example? Whats the difference here?
+
+It would be cool if somebody allready has an example on how to use an tesselation shader with a simpel model that he can (is allowed) to post here. 
+
+I'm sry for the post if the problem is just a simple coding error.
+
+
+Code:
+
+// init of the programm
+this-&gt;mShader = new osg::Program();
+this-&gt;mShader-&gt;addShader(new osg::Shader(osg::Shader::VERTEX,			shader::Shader::vertSource));
+this-&gt;mShader-&gt;addShader(new osg::Shader(osg::Shader::TESSCONTROL,		shader::Shader::tessControlSource));
+this-&gt;mShader-&gt;addShader(new osg::Shader(osg::Shader::TESSEVALUATION,	shader::Shader::tessEvalSource));
+this-&gt;mShader-&gt;addShader(new osg::Shader(osg::Shader::GEOMETRY,			shader::Shader::geomSource));
+this-&gt;mShader-&gt;addShader(new osg::Shader(osg::Shader::FRAGMENT,			shader::Shader::fragSource));
+this-&gt;mShader-&gt;setParameter(GL_GEOMETRY_VERTICES_OUT_EXT, 3);
+this-&gt;mShader-&gt;setParameter(GL_GEOMETRY_INPUT_TYPE_EXT, GL_TRIANGLES);
+this-&gt;mShader-&gt;setParameter(GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
+
+n-&gt;setShader(this-&gt;mShader.get());
+
+
+
+
+
+Code:
+
+void scene::GroupNode::setShader(osg::Program * p) {
+	NodeIDMap::iterator itr;
+	for (itr = this-&gt;mChildren.begin(); itr != this-&gt;mChildren.end(); ++itr)
+		itr-&gt;second-&gt;setShader(p);
+}
+
+
+
+
+
+Code:
+
+void scene::GeometryNode::setShader(osg::Program * p) {
+	auto *ss = this-&gt;mOSGNode-&gt;getOrCreateStateSet();
+	ss-&gt;setAttribute(p);
+}
+
+
+
+
+
+Code:
+
+scene::GeometryNode::GeometryNode(osg::Geometry * ptrOSGNode) {
+  ....
+        this-&gt;mTessInnerU = new osg::Uniform(&quot;TessLevelInner&quot;, 1.0f);
+	this-&gt;mTessOuterU = new osg::Uniform(&quot;TessLevelOuter&quot;, 1.0f);
+
+	osg::StateSet * state;
+	state = ptrOSGNode-&gt;getOrCreateStateSet();
+	state-&gt;addUniform(new osg::Uniform(&quot;AmbientMaterial&quot;, osg::Vec3(0.04f, 0.04f, 0.04f)));
+	state-&gt;addUniform(new osg::Uniform(&quot;DiffuseMaterial&quot;, osg::Vec3(0.0f, 0.75f, 0.75f)));
+	state-&gt;addUniform(new osg::Uniform(&quot;LightPosition&quot;, osg::Vec3(0.25f, 0.25f, 1.0f)));
+	state-&gt;addUniform(this-&gt;mTessInnerU.get());
+	state-&gt;addUniform(this-&gt;mTessOuterU.get());
+	state-&gt;setAttribute(new osg::PatchParameter(3));
+}
+
+
+
+
+Thank you!
+
+Cheers,
+NoxxKn[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic978a.php?p=66608#66608">http://forum.openscenegraph.org/viewtopic.php?p=66608#66608</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002578.html">[osg-users] Replies with &quot;Incident ID&quot;'s returned for every	post I sent to this list... Is that normal?
+</A></li>
+	<LI>Next message: <A HREF="002589.html">[osg-users] Tesselation on Model
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278811">[ date ]</a>
+              <a href="thread.html#278811">[ thread ]</a>
+              <a href="subject.html#278811">[ subject ]</a>
+              <a href="author.html#278811">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

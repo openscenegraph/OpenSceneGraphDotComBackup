@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] A problem with regard to std:istream on Android
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20A%20problem%20with%20regard%20to%20std%3Aistream%20on%20Android&In-Reply-To=%3Ctencent_7DFEE98A3E8F437E0515FACB%40qq.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006282.html">
+   <LINK REL="Next"  HREF="006277.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] A problem with regard to std:istream on Android</H1>
+<!--htdig_noindex-->
+    <B>&#40858;&#26469;&#24681;</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20A%20problem%20with%20regard%20to%20std%3Aistream%20on%20Android&In-Reply-To=%3Ctencent_7DFEE98A3E8F437E0515FACB%40qq.com%3E"
+       TITLE="[osg-users] A problem with regard to std:istream on Android">8802661 at qq.com
+       </A><BR>
+    <I>Sat May 27 16:19:06 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006282.html">[osg-users] A problem with regard to std:istream on Android
+</A></li>
+        <LI>Next message: <A HREF="006277.html">[osg-users] Dimension Mask in PolytopeIntersector still working?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6284">[ date ]</a>
+              <a href="thread.html#6284">[ thread ]</a>
+              <a href="subject.html#6284">[ subject ]</a>
+              <a href="author.html#6284">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi michael,
+  The osg format file can be loaded. The problem has to do with std::istream &gt;&gt; operator reading binary stream.
+
+------------------ &#21407;&#22987;&#37038;&#20214; ------------------
+&#21457;&#20214;&#20154;: &quot;michael kapelko&quot; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">kornerr at gmail.com</A>&gt;;
+&#21457;&#36865;&#26102;&#38388;: 2017&#24180;5&#26376;27&#26085;(&#26143;&#26399;&#20845;) 17:13
+&#25910;&#20214;&#20154;: &quot;OpenSceneGraph Users&quot; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;;
+&#20027;&#39064;: Re: [osg-users] A problem with regard to std:istream on Android
+
+
+
+Hi.
+
+Are you sure /sdcard path is valid at all? Different Android versions
+use different sdcard paths. Use getExternalStorageDirectory():
+<A HREF="https://stackoverflow.com/a/21230946/3404710">https://stackoverflow.com/a/21230946/3404710</A>
+Note that you need a special permission to read from external storage, too.
+
+
+2017-05-26 13:06 GMT+07:00 &#40858;&#26469;&#24681; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">8802661 at qq.com</A>&gt;:
+&gt;<i> Hi All,
+</I>&gt;<i>     I'm trying to make osgEarth run on Android (OSG 3.2 &amp; osgEarth 2.3). Now
+</I>&gt;<i> the earth can display on Android system. But I run into a problem with
+</I>&gt;<i> regard to std:istream. I tried to load an osgb file by the following code
+</I>&gt;<i> osg::ref_ptr&lt;osg::Node&gt; node =
+</I>&gt;<i> osgDB::readNodeFile(&quot;/sdcard/WV/Models/tk.osgb&quot;);
+</I>&gt;<i> the variable node's value is always be NULL.  I step into this line and
+</I>&gt;<i> traced down to file ReaderWriterOSG2.cpp
+</I>&gt;<i> virtual ReadResult readNode( const std::string&amp; file, const Options* options
+</I>&gt;<i> ) const
+</I>&gt;<i>     {
+</I>&gt;<i>         ReadResult result = ReadResult::FILE_LOADED;
+</I>&gt;<i>         std::string fileName = file;
+</I>&gt;<i>         std::ios::openmode mode = std::ios::in;
+</I>&gt;<i>         Options* local_opt = prepareReading( result, fileName, mode, options
+</I>&gt;<i> );
+</I>&gt;<i>         if ( !result.success() ) return result;
+</I>&gt;<i>
+</I>&gt;<i>         osgDB::ifstream istream( fileName.c_str(), mode );
+</I>&gt;<i>         return readNode( istream, local_opt );
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i> virtual ReadResult readNode( std::istream&amp; fin, const Options* options )
+</I>&gt;<i> const
+</I>&gt;<i>     {
+</I>&gt;<i>         osg::ref_ptr&lt;InputIterator&gt; ii = readInputIterator(fin, options);
+</I>&gt;<i>         if ( !ii ) return ReadResult::FILE_NOT_HANDLED;
+</I>&gt;<i>
+</I>&gt;<i>         InputStream is( options );
+</I>&gt;<i>         if ( is.start(ii.get())!=InputStream::READ_SCENE )
+</I>&gt;<i>         {
+</I>&gt;<i>             CATCH_EXCEPTION(is);
+</I>&gt;<i>             return ReadResult::FILE_NOT_HANDLED;
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         is.decompress(); CATCH_EXCEPTION(is);
+</I>&gt;<i>         osg::Node* node = dynamic_cast&lt;osg::Node*&gt;(is.readObject());
+</I>&gt;<i> CATCH_EXCEPTION(is);
+</I>&gt;<i>         return node;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i> the debugger couldn't step into the function readNode( std::istream&amp; fin,
+</I>&gt;<i> const Options* options ). But on windows it works.
+</I>&gt;<i>
+</I>&gt;<i> Can anybody tell me how to solve this problem?
+</I>&gt;<i>
+</I>&gt;<i> Dev Environment:
+</I>&gt;<i>     Visual Studio 2017
+</I>&gt;<i>     Android 7.0
+</I>&gt;<i>     Android NDK64 r13b
+</I>&gt;<i>     Arch arm64-v8a
+</I>&gt;<i>
+</I>&gt;<i> Best regards.
+</I>&gt;<i>
+</I>&gt;<i> Glen
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170528/28fbef48/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170528/28fbef48/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006282.html">[osg-users] A problem with regard to std:istream on Android
+</A></li>
+	<LI>Next message: <A HREF="006277.html">[osg-users] Dimension Mask in PolytopeIntersector still working?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6284">[ date ]</a>
+              <a href="thread.html#6284">[ thread ]</a>
+              <a href="subject.html#6284">[ subject ]</a>
+              <a href="author.html#6284">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

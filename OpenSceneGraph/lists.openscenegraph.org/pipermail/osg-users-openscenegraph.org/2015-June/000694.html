@@ -1,0 +1,146 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to rotate node's local coordinate system?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20rotate%20node%27s%20local%20coordinate%20system%3F&In-Reply-To=%3C55892E65.6080605%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000693.html">
+   <LINK REL="Next"  HREF="000711.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to rotate node's local coordinate system?</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20rotate%20node%27s%20local%20coordinate%20system%3F&In-Reply-To=%3C55892E65.6080605%40gmx.de%3E"
+       TITLE="[osg-users] How to rotate node's local coordinate system?">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Tue Jun 23 03:01:09 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000693.html">[osg-users] How to rotate node's local coordinate system?
+</A></li>
+        <LI>Next message: <A HREF="000711.html">[osg-users] How to rotate node's local coordinate system?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#694">[ date ]</a>
+              <a href="thread.html#694">[ thread ]</a>
+              <a href="subject.html#694">[ subject ]</a>
+              <a href="author.html#694">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Elias,
+
+
+Seems like you are after a change of coordinate frame (e.g. which axis 
+is front/up etc.)
+ From my experience: don't ...
+What I usually do ist to transform at the interface by using a 
+permutation matrix.
+So for instance if you want
+x = x&#180;
+y = -z
+z = y
+
+then multiply your incoming positions/orientation with the matrix
+1  0  0  0
+0  0 -1  0
+0  1  0  0
+0  0  0  1
+
+and your outgoing with the inverse (or transpose in this case).
+
+This saves you the trouble of fiddeling with the coordinates inside osg.
+
+Cheers
+Sebastian
+&gt;<i> Hello, Robert!
+</I>&gt;<i> Thanks for the quick reply.
+</I>&gt;<i> It seems i wasn't able to clarify my question. I dont use MatrixTransform or PositionAttitudeTransform here because i don't want to transform my target node relate to others. I want to change local XYZ in that node itself, not the position of my node relate to other nodes or world XYZ.
+</I>&gt;<i>
+</I>&gt;<i> Let me describe more specifically.
+</I>&gt;<i> Standart aerodynamic convention (and it also looks reasonable in most practical situations) defines local(body) coordinate system as:
+</I>&gt;<i> O - center of mass (here just center of a node), X - from center up to nose, Y - from center up to right wing, Z - down. That leads to Roll, Pitch, Yaw rotations around X,Y,Z respectively.
+</I>&gt;<i>
+</I>&gt;<i> Let say i want to place camera right behind cessna's tail. Then, AFAIK that code can help me
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> nodeTracker = new osgGA::NodeTrackerManipulator;
+</I>&gt;<i> nodeTracker-&gt;setHomePosition( Vec3(-90,0,0), Vec3(), Z_AXIS );
+</I>&gt;<i> nodeTracker-&gt;setTrackerMode(osgGA::NodeTrackerManipulator::NODE_CENTER_AND_ROTATION );
+</I>&gt;<i> nodeTracker-&gt;setTrackNode( cessna.get() );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> So: eye Vec3(-90,0,0) means 90 behind center on X. //Local coords, right?
+</I>&gt;<i> And of course what we can see now is depended on how X is oriented with respect to model body.
+</I>&gt;<i>
+</I>&gt;<i> If, for instance, X has center at model's center and go straight up to nose,
+</I>&gt;<i> then -90 means right behind tail (this is what i want to achieve)
+</I>&gt;<i>
+</I>&gt;<i> But if X has center at model's center and go from right wing, then -90 means we see left side of an aeroplane, not the tail.
+</I>&gt;<i>
+</I>&gt;<i> Then, even when cessna moves correctly (for instance, straight to the north), i see at as moving with right wing forward and nose to the west.
+</I>&gt;<i>
+</I>&gt;<i> Also, Roll (rotation about X axis) will be looking like pitch (rotation about Y axis according to aerodynamic standart)
+</I>&gt;<i> So to avoid confusion and necessity to remeber how that particular node (cessna) is oriented with respect to its own local coords, maybe the better
+</I>&gt;<i> way is to rotate local coords somehow?
+</I>&gt;<i>
+</I>&gt;<i> I might be wrong, just to explain why i cannot use Tranform classes according to you advice.
+</I>&gt;<i>
+</I>&gt;<i> Could you explain how that problem might be solved?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Elias
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicec60.php?p=64161#64161">http://forum.openscenegraph.org/viewtopic.php?p=64161#64161</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000693.html">[osg-users] How to rotate node's local coordinate system?
+</A></li>
+	<LI>Next message: <A HREF="000711.html">[osg-users] How to rotate node's local coordinate system?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#694">[ date ]</a>
+              <a href="thread.html#694">[ thread ]</a>
+              <a href="subject.html#694">[ subject ]</a>
+              <a href="author.html#694">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

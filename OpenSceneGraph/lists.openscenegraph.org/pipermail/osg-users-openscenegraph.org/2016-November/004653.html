@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Polytope from view frustum
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Polytope%20from%20view%20frustum&In-Reply-To=%3C5e6b8565-b0fd-03c6-27ea-b8c1fd000b4b%40simperative.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004652.html">
+   <LINK REL="Next"  HREF="004654.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Polytope from view frustum</H1>
+<!--htdig_noindex-->
+    <B>Jeff Biggs</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Polytope%20from%20view%20frustum&In-Reply-To=%3C5e6b8565-b0fd-03c6-27ea-b8c1fd000b4b%40simperative.com%3E"
+       TITLE="[osg-users] Polytope from view frustum">osg at simperative.com
+       </A><BR>
+    <I>Wed Nov  2 06:47:58 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004652.html">[osg-users] Polytope from view frustum
+</A></li>
+        <LI>Next message: <A HREF="004654.html">[osg-users] Polytope from view frustum
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4653">[ date ]</a>
+              <a href="thread.html#4653">[ thread ]</a>
+              <a href="subject.html#4653">[ subject ]</a>
+              <a href="author.html#4653">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+try this...
+
+osg::Polytope GetViewPolytope(
+     const osg::Matrix &amp;p,
+     const osg::Matrix &amp;v,
+     const osg::Matrix &amp;m)
+{
+     osg::Polytope clipspace;
+     clipspace.setToUnitFrustum(true, true);
+
+     // composite matrix
+     osg::Matrixd mvp = m * v * p;
+
+     // transform from clip space to local coords
+     osg::Polytope local;
+     local.setAndTransformProvidingInverse(clipspace, mvp);
+
+     return local;
+}
+
+// --- Sample use case ---
+
+osg::Camera *cam;
+osg::Matrixd entityBodyMatrix;
+
+osg::Polytope viewPolytope = GetViewPolytope(
+     cam-&gt;getProjectionMatrix(), cam-&gt;getViewMatrix(), entityBodyMatrix);
+
+const osg::BoundingSphere boundSphere;
+
+if (viewPolytope.contains(boundSphere) {
+     // sphere is inside of view
+}
+
+jeff
+
+
+
+On 11/2/16 3:43 AM, Robert Osfield wrote:
+&gt;<i> On 1 November 2016 at 21:45, Trajce Nikolov NICK
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;&gt;<i> Hi Community,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> anyone knowing how to achieve this and with will to share?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks a bunch as always !!
+</I>&gt;<i> Have a look at the API's...
+</I>&gt;<i>
+</I>&gt;<i> First one to look at is osg::Polytope, create one of these with a unit
+</I>&gt;<i> frustum.  This will be in clip space.
+</I>&gt;<i>
+</I>&gt;<i> Next step transform this Polytope by the projection matrix using the
+</I>&gt;<i> transformProvidingInverse() method (to transform a plane you multiple
+</I>&gt;<i> it by the inverse of that matrix), so in our case the projection
+</I>&gt;<i> matrix transform from eye space into clip space which is the inverse
+</I>&gt;<i> of the transform we intend, but thanks to the way that planes are
+</I>&gt;<i> transformed we can just use the projection matrix directly as long as
+</I>&gt;<i> we use the transformProvidingInverse().  See the src/osg/CullStack.cpp
+</I>&gt;<i> to see this in action.
+</I>&gt;<i>
+</I>&gt;<i> Then transform into object coordinates using the same method by
+</I>&gt;<i> providing the view and model matrices.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>
+
+-- 
+Jeff Biggs
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004652.html">[osg-users] Polytope from view frustum
+</A></li>
+	<LI>Next message: <A HREF="004654.html">[osg-users] Polytope from view frustum
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4653">[ date ]</a>
+              <a href="thread.html#4653">[ thread ]</a>
+              <a href="subject.html#4653">[ subject ]</a>
+              <a href="author.html#4653">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

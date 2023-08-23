@@ -1,0 +1,155 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Support for Windows Universal Platform
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Support%20for%20Windows%20Universal%20Platform&In-Reply-To=%3CCAEt8o9jNDVCC44eetVN-EYNEs4VvHs7A%2BN%3Dy2ErD7EQY5d-q5A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="282339.html">
+   <LINK REL="Next"  HREF="006118.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Support for Windows Universal Platform</H1>
+<!--htdig_noindex-->
+    <B>michael kapelko</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Support%20for%20Windows%20Universal%20Platform&In-Reply-To=%3CCAEt8o9jNDVCC44eetVN-EYNEs4VvHs7A%2BN%3Dy2ErD7EQY5d-q5A%40mail.gmail.com%3E"
+       TITLE="[osg-users] Support for Windows Universal Platform">kornerr at gmail.com
+       </A><BR>
+    <I>Fri Apr 21 18:54:59 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="282339.html">[osg-users] Support for Windows Universal Platform
+</A></li>
+        <LI>Next message: <A HREF="006118.html">[osg-users] Support for Windows Universal Platform
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6117">[ date ]</a>
+              <a href="thread.html#6117">[ thread ]</a>
+              <a href="subject.html#6117">[ subject ]</a>
+              <a href="author.html#6117">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi.
+Will this pull request include an example? Does it work on Windows Phone?
+
+2017-04-22 6:08 GMT+07:00 Thomas Hogarth &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">thomas.hogarth at gmail.com</A>&gt;:
+
+&gt;<i> Hi
+</I>&gt;<i>
+</I>&gt;<i> So I've been tasked to add UWP/Angle support to OSG working with Chris
+</I>&gt;<i> Hanson. I have it pretty much working, it's rendering a cube, and just
+</I>&gt;<i> wanted a little guidance on a few issues before I submit any changes.
+</I>&gt;<i>
+</I>&gt;<i> So firstly to the main CMakeLists.txt file I've added a
+</I>&gt;<i> OSG_BUILD_PLATFORM_UWP flag, this only does one thing on the CMake side. It
+</I>&gt;<i> adds a preprocessor define to all targets 'OSG_UWP' this is used in the
+</I>&gt;<i> code to hash def out a few unsupported features.
+</I>&gt;<i>
+</I>&gt;<i> Also in the osgViewer CMake I have added support to Win32 path to set the
+</I>&gt;<i> Window System type, it defaults to Win32 which will behave as usual and any
+</I>&gt;<i> other value just doesn't add the Win32 graphics window implementation
+</I>&gt;<i> files. Maybe later we could add an EGL implementation but for now we just
+</I>&gt;<i> don't want the Win32 version and then we use setupViewerAsEmbedded.
+</I>&gt;<i>
+</I>&gt;<i> I've hash defed out the plugin loading code on Win32 for now and have
+</I>&gt;<i> built osg as static as it uses a few functions not available on UWP,
+</I>&gt;<i> however later we could get that working I think as I've got GLExtensions
+</I>&gt;<i> code to work with a different function for loading the dll module.
+</I>&gt;<i>
+</I>&gt;<i> OpenThreads had a few functions not available but none of them are show
+</I>&gt;<i> stoppers. The micoSleep function used some stuff not available so I made it
+</I>&gt;<i> fall back on standard sleep just as older windows versions do. You can't
+</I>&gt;<i> set process affinity on UWP so that function call does nothing, and you
+</I>&gt;<i> can't force terminate a thread, but you can cancel them so the fail safe
+</I>&gt;<i> terminate is just excluded.
+</I>&gt;<i>
+</I>&gt;<i> The real issue at the moment is the use of getenv. That's used in a lot of
+</I>&gt;<i> places and is a handy bit of code for config type stuff so I didn't really
+</I>&gt;<i> want to add hash defs all over the place where ever it's used. So for now I
+</I>&gt;<i> made a dummy implementation that just returns 0, but the only place I could
+</I>&gt;<i> find to put it that is included globally was in the Notify header which is
+</I>&gt;<i> far from ideal. Does anyone have any thoughts or feedback on where I could
+</I>&gt;<i> place a dummy function like that that kind of needs to be used anywhere
+</I>&gt;<i> without people having to add a new include?
+</I>&gt;<i>
+</I>&gt;<i> Here's an example CMake command that will generate a UWP visual studio
+</I>&gt;<i> project
+</I>&gt;<i>
+</I>&gt;<i> &quot;C:/Program Files/CMake/bin/cmake.exe&quot; ./ -G &quot;Visual Studio 14 2015 Win64&quot;
+</I>&gt;<i> -DCMAKE_SYSTEM_NAME:STRING=&quot;WindowsStore&quot; -DCMAKE_SYSTEM_VERSION:STRING=&quot;10.0&quot;
+</I>&gt;<i> ^
+</I>&gt;<i> -DOSG_BUILD_PLATFORM_UWP:BOOL=ON ^
+</I>&gt;<i> -DOPENGL_PROFILE:STRING=GLES2 ^
+</I>&gt;<i> -DOSG_WINDOWING_SYSTEM:STRING=NONE ^
+</I>&gt;<i> -DOSG_USE_UTF8_FILENAME:BOOL=ON ^
+</I>&gt;<i> -DDYNAMIC_OPENSCENEGRAPH:BOOL=OFF ^
+</I>&gt;<i> -DDYNAMIC_OPENTHREADS:BOOL=OFF ^
+</I>&gt;<i> -DBUILD_OSG_APPLICATIONS:BOOL=OFF ^
+</I>&gt;<i> -DBUILD_OSG_EXAMPLES:BOOL=OFF ^
+</I>&gt;<i> -DOPENGL_INCLUDE_DIR:PATH=&quot;C:/Work/AlphaPixel/osgUWP-Port/angle/include&quot; ^
+</I>&gt;<i> -DOPENGL_HEADER1:STRING=&quot;#include &lt;GLES2/gl2.h&gt;&quot; ^
+</I>&gt;<i> -DOPENGL_gl_LIBRARY:STRING=&quot;C:/Work/AlphaPixel/osgUWP-Port/
+</I>&gt;<i> angle/winrt/10/src/Release_x64/lib/libGLESv2.lib&quot; ^
+</I>&gt;<i> -DEGL_INCLUDE_DIR:PATH=&quot;C:/Work/AlphaPixel/osgUWP-Port/angle/include&quot; ^
+</I>&gt;<i> -DEGL_LIBRARY:STRING=&quot;C:/Work/AlphaPixel/osgUWP-Port/angle/
+</I>&gt;<i> winrt/10/src/Release_x64/lib/libEGL.lib&quot;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Once I have a solution to this getenv thing and done some more testing
+</I>&gt;<i> I'll look at doing a pull request.
+</I>&gt;<i>
+</I>&gt;<i> Thanks
+</I>&gt;<i> Tom
+</I>&gt;<i>
+</I>&gt;<i> PS
+</I>&gt;<i> It's currently in a private repo
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic3d84.php?p=70800#70800">http://forum.openscenegraph.org/viewtopic.php?p=70800#70800</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170422/92776a4c/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170422/92776a4c/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="282339.html">[osg-users] Support for Windows Universal Platform
+</A></li>
+	<LI>Next message: <A HREF="006118.html">[osg-users] Support for Windows Universal Platform
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6117">[ date ]</a>
+              <a href="thread.html#6117">[ thread ]</a>
+              <a href="subject.html#6117">[ subject ]</a>
+              <a href="author.html#6117">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

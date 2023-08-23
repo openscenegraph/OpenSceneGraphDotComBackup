@@ -1,0 +1,265 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Texturing with GLBeginEndAdapter
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texturing%20with%20GLBeginEndAdapter&In-Reply-To=%3C1c820af.2eab.1594da365e6.Coremail.tianzjyh%40126.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005193.html">
+   <LINK REL="Next"  HREF="281420.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Texturing with GLBeginEndAdapter</H1>
+<!--htdig_noindex-->
+    <B>tianzjyh</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texturing%20with%20GLBeginEndAdapter&In-Reply-To=%3C1c820af.2eab.1594da365e6.Coremail.tianzjyh%40126.com%3E"
+       TITLE="[osg-users] Texturing with GLBeginEndAdapter">tianzjyh at 126.com
+       </A><BR>
+    <I>Thu Dec 29 18:51:11 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005193.html">[osg-users] Texturing with GLBeginEndAdapter
+</A></li>
+        <LI>Next message: <A HREF="281420.html">[osg-users] [build] x86_64, cmd line,	built OK - but warning in Xcode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5198">[ date ]</a>
+              <a href="thread.html#5198">[ thread ]</a>
+              <a href="subject.html#5198">[ subject ]</a>
+              <a href="author.html#5198">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, 
+    I checked again about the function &quot;State::setActiveTextureUnit()&quot;, and it seems like it's designed to be called inside the class &quot;State&quot; but not for users's calling. 
+   So to enable the GL_TEXTURE_2D mode, and to make a specified unit to be the current, you can use
+    &gt;state-&gt;applyTextureMode(0, GL_TEXTURE_2D, true);     //this will call State::setActiveTextureUnit(0) internally.
+
+
+   and to bind a texture object to target GL_TEXTURE_2D, call
+    &gt;state-&gt;applyTextureAttribute(0, texture[0]);                       //texture[0]-&gt;apply(*state) should work too
+
+
+    Sorry for misleading you. 
+    Function &quot;State::setActiveTextureUnit()&quot; only makes a specified unit to be the current, without enabling GL_TEXTURE_2D mode.
+
+
+    As I understand, in the function drawImplementation(), you can even call native gl*() funtions(like glEnable(GL_TEXTURE_2D), glBindTexture(...)). Just remember to restore the gl state you have changed when leaving the funtion. But do not worry about this too much, as OSG's state manager will minimize the affect&#8212;&#8212;when rendering other drawables, OSG will make states to be as you have pre-settled on them, while those you have not settled somehow will be unsure since you are not using OSG's state system.
+
+
+--
+
+
+
+
+
+Cheers, 
+---
+TianZJ
+
+
+
+At 2016-12-29 21:34:40, &quot;Aaron Andersen&quot; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">aaron at fosslib.net</A>&gt; wrote:
+&gt;<i>Hello TanZJ,
+</I>&gt;<i>
+</I>&gt;<i>Thank you for the information. I don't think I quite understood your  
+</I>&gt;<i>intention though. I apologize if this is obvious but as I said my  
+</I>&gt;<i>OpenGL skills are lacking... Here is my code after applying your  
+</I>&gt;<i>suggestion about applying the texture to the state:
+</I>&gt;<i>
+</I>&gt;<i>class MyDrawable {
+</I>&gt;<i>osg::ref_ptr&lt;osg::Texture2D&gt; texture[3];
+</I>&gt;<i>public:
+</I>&gt;<i>     MyDrawable()
+</I>&gt;<i>     {
+</I>&gt;<i>         for (int i : {0, 1, 2})
+</I>&gt;<i>         {
+</I>&gt;<i>             const std::string filename = std::to_string(i + 1) + &quot;.png&quot;;
+</I>&gt;<i>
+</I>&gt;<i>             if (osg::Image * image = osgDB::readImageFile(filename))
+</I>&gt;<i>             {
+</I>&gt;<i>                 texture[i] = new osg::Texture2D;
+</I>&gt;<i>                 texture[i]-&gt;setImage(image);
+</I>&gt;<i>             }
+</I>&gt;<i>             else
+</I>&gt;<i>             {
+</I>&gt;<i>                 std::cerr &lt;&lt; &quot;ERROR LOADING IMAGE &quot; &lt;&lt; filename &lt;&lt; std::endl;
+</I>&gt;<i>             }
+</I>&gt;<i>         }
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     virtual void drawImplementation(osg::RenderInfo &amp; renderInfo)  
+</I>&gt;<i>const override
+</I>&gt;<i>     {
+</I>&gt;<i>         const float Z = 0.f;
+</I>&gt;<i>
+</I>&gt;<i>         osg::State * state = renderInfo.getState();
+</I>&gt;<i>         osg::GLBeginEndAdapter &amp; gl = state-&gt;getGLBeginEndAdapter();
+</I>&gt;<i>
+</I>&gt;<i>         state-&gt;setActiveTextureUnit(0);
+</I>&gt;<i>
+</I>&gt;<i>         gl.Color4f(1.f, 1.f, 1.f, 1.f);
+</I>&gt;<i>
+</I>&gt;<i>         float x = 50.f, y = 50.f, w = 64.f, h = 64.f, offset;
+</I>&gt;<i>
+</I>&gt;<i>         offset = 0.f;
+</I>&gt;<i>
+</I>&gt;<i>         // apply the first texture so it will draw on the first rect
+</I>&gt;<i>         texture[0]-&gt;apply(*state);
+</I>&gt;<i>         gl.Begin(GL_QUADS);
+</I>&gt;<i>         gl.TexCoord2f(0.f, 0.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x, y, Z);
+</I>&gt;<i>         gl.TexCoord2f(0.f, 1.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x + w, y, Z);
+</I>&gt;<i>         gl.TexCoord2f(1.f, 1.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x + w, y + h, Z);
+</I>&gt;<i>         gl.TexCoord2f(1.f, 0.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x, y + h, Z);
+</I>&gt;<i>         gl.End();
+</I>&gt;<i>
+</I>&gt;<i>         offset = 256.f;
+</I>&gt;<i>
+</I>&gt;<i>         // apply the second texture so it will draw on the second rect
+</I>&gt;<i>         texture[1]-&gt;apply(*state);
+</I>&gt;<i>         gl.Begin(GL_QUADS);
+</I>&gt;<i>         gl.TexCoord2f(0.f, 0.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x, y, Z);
+</I>&gt;<i>         gl.TexCoord2f(0.f, 1.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x + w, y, Z);
+</I>&gt;<i>         gl.TexCoord2f(1.f, 1.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x + w, y + h, Z);
+</I>&gt;<i>         gl.TexCoord2f(1.f, 0.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x, y + h, Z);
+</I>&gt;<i>         gl.End();
+</I>&gt;<i>
+</I>&gt;<i>         offset = 512.f;
+</I>&gt;<i>
+</I>&gt;<i>         // apply the third texture so it will draw on the third rect
+</I>&gt;<i>         texture[2]-&gt;apply(*state);
+</I>&gt;<i>         gl.Begin(GL_QUADS);
+</I>&gt;<i>         gl.TexCoord2f(0.f, 0.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x, y, Z);
+</I>&gt;<i>         gl.TexCoord2f(0.f, 1.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x + w, y, Z);
+</I>&gt;<i>         gl.TexCoord2f(1.f, 1.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x + w, y + h, Z);
+</I>&gt;<i>         gl.TexCoord2f(1.f, 0.f);
+</I>&gt;<i>         gl.Vertex3f(offset + x, y + h, Z);
+</I>&gt;<i>         gl.End();
+</I>&gt;<i>     }
+</I>&gt;<i>};
+</I>&gt;<i>
+</I>&gt;<i>Can you see what I'm doing wrong? No textures show up at all when I  
+</I>&gt;<i>try this code.
+</I>&gt;<i>
+</I>&gt;<i>Thank you,
+</I>&gt;<i>Aaron
+</I>&gt;<i>
+</I>&gt;<i>Quoting tianzjyh &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">tianzjyh at 126.com</A>&gt;:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi, Andersen,
+</I>&gt;&gt;<i> Let's say you have three images, then you can wrap them using  
+</I>&gt;&gt;<i> osg::Texture2D, something like this:
+</I>&gt;&gt;<i>     &gt;
+</I>&gt;&gt;&gt;<i> osg::Image* image0 = osgDB::readImageFile(&quot;filename0.xxx&quot;);
+</I>&gt;&gt;&gt;<i> osg::Texture2D* tex0 = new osg::Texture2D(image0);
+</I>&gt;&gt;&gt;<i> tex1-&gt;setWrap(..., ...);
+</I>&gt;&gt;&gt;<i> tex1-&gt;setFilter(..., ...);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> And then you can apply them in the drawImplementation() of your  
+</I>&gt;&gt;<i> drawable like this :
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> osg::State&amp; state = *renderInfo.getState();
+</I>&gt;&gt;&gt;<i> state.setActiveTextureUnit(0);        //set texture unit 0 as  
+</I>&gt;&gt;&gt;<i> current texture
+</I>&gt;&gt;&gt;<i> tex0-&gt;apply(state);                        //apply texture paras to  
+</I>&gt;&gt;&gt;<i> current texture
+</I>&gt;&gt;&gt;<i> ...drawQuad0...
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> ...deal with other two quads...
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> --
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Cheers,
+</I>&gt;&gt;<i> ---
+</I>&gt;&gt;<i> TianZJ
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> At 2016-12-29 07:32:01, &quot;Aaron Andersen&quot; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">aaron at fosslib.net</A>&gt; wrote:
+</I>&gt;&gt;&gt;<i> Hello,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> There is some code in a library which I want to adapt for OSG. The
+</I>&gt;&gt;&gt;<i> code is pretty old and uses the old style OpenGL. I don't have the
+</I>&gt;&gt;&gt;<i> time it would take to rewrite this code so I would like to use the
+</I>&gt;&gt;&gt;<i> GLBeginEndAdapter to make this code work with OSG.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Looking at the GLBeginEndAdapter there isn't much documentation so I
+</I>&gt;&gt;&gt;<i> was hoping someone could help me out. Please keep in mind my OpenGL
+</I>&gt;&gt;&gt;<i> skills are lacking (which I why enjoy using a rendering engine like
+</I>&gt;&gt;&gt;<i> OSG :-).
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I've created a subclass to the Drawable class called &quot;MyDrawable&quot;. In
+</I>&gt;&gt;&gt;<i> the drawImplementation function I'm have a couple
+</I>&gt;&gt;&gt;<i> gl.Begin(GL_QUADS)/gl.End() calls to draw 3 simple rectangles. I'm
+</I>&gt;&gt;&gt;<i> unsure of how to apply 3 separate textures to these 3 rectangles. From
+</I>&gt;&gt;&gt;<i> reading the ShapeDrawable class it looks like the state of the
+</I>&gt;&gt;&gt;<i> Drawable applies the texture to everything you draw.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> So how can I apply many different textures to my drawing, with 1
+</I>&gt;&gt;&gt;<i> texture per shape I draw with GL_QUADS?
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Thank you for any insight you can provide.
+</I>&gt;&gt;&gt;<i> Aaron
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>_______________________________________________
+</I>&gt;<i>osg-users mailing list
+</I>&gt;<i><A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i><A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161230/a151a9e8/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161230/a151a9e8/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005193.html">[osg-users] Texturing with GLBeginEndAdapter
+</A></li>
+	<LI>Next message: <A HREF="281420.html">[osg-users] [build] x86_64, cmd line,	built OK - but warning in Xcode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5198">[ date ]</a>
+              <a href="thread.html#5198">[ thread ]</a>
+              <a href="subject.html#5198">[ subject ]</a>
+              <a href="author.html#5198">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

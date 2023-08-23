@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to read FBO attachment back to the CPU?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20read%20FBO%20attachment%20back%20to%20the%20CPU%3F&In-Reply-To=%3C1483704333.m2f.69901%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005334.html">
+   <LINK REL="Next"  HREF="005291.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to read FBO attachment back to the CPU?</H1>
+<!--htdig_noindex-->
+    <B>Marius Dransfeld</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20read%20FBO%20attachment%20back%20to%20the%20CPU%3F&In-Reply-To=%3C1483704333.m2f.69901%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] How to read FBO attachment back to the CPU?">marius.dransfeld at gmail.com
+       </A><BR>
+    <I>Fri Jan  6 04:05:33 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005334.html">[osg-users] [vpb] Buildings
+</A></li>
+        <LI>Next message: <A HREF="005291.html">[osg-users] How to read FBO attachment back to the CPU?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281513">[ date ]</a>
+              <a href="thread.html#281513">[ thread ]</a>
+              <a href="subject.html#281513">[ subject ]</a>
+              <a href="author.html#281513">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I have a scene graph that contains a (pre-render) camera that renders to an FBO with an attached image. Similar to this:
+
+Code:
+
+cam = new osg::Camera;
+cam-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+cam-&gt;setRenderTargetImplementation(DsTOsgCamera::FRAME_BUFFER_OBJECT);
+cam-&gt;attach(osg::Camera::COLOR_BUFFER, m_RenderTarget, 0, 0, false, 1, 0);
+
+
+
+
+Now I want to read the pixel data of that image back to the CPU each frame.
+I tried using a DrawCall back:
+
+Code:
+
+class ImageReader : public osg::Camera::DrawCallback
+{
+public:
+virtual void operator() (osg::RenderInfo&amp; renderInfo) const
+{
+osg::ref_ptr&lt;osg::Camera&gt; camera = renderInfo.getCurrentCamera();
+int x, y, width, height;
+x = camera-&gt;getViewport()-&gt;x();
+y = camera-&gt;getViewport()-&gt;y();
+width = camera-&gt;getViewport()-&gt;width();
+height = camera-&gt;getViewport()-&gt;height();
+
+osg::ref_ptr&lt;osg::Image&gt; image = new osg::Image;
+image-&gt;readPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE);
+
+osgDB::writeImageFile(*image,&quot;image.png&quot;);
+}
+}
+
+
+
+and adding it to the camera:
+
+Code:
+
+cam-&gt;setFinalDrawCallback(new ImageReader());
+
+
+
+
+What happens is that not the rendered image of that camera is captured, but instead the output of the whole scene graph.
+How can I correctly access the rendering result of an FBO camera?
+
+Thank you!
+
+Cheers,
+Marius
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic97ff.php?p=69901#69901">http://forum.openscenegraph.org/viewtopic.php?p=69901#69901</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005334.html">[osg-users] [vpb] Buildings
+</A></li>
+	<LI>Next message: <A HREF="005291.html">[osg-users] How to read FBO attachment back to the CPU?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281513">[ date ]</a>
+              <a href="thread.html#281513">[ thread ]</a>
+              <a href="subject.html#281513">[ subject ]</a>
+              <a href="author.html#281513">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

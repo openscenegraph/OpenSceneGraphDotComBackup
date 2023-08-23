@@ -1,0 +1,65 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Could&nbsp;this&nbsp;be&nbsp;why&nbsp;I&#39;m&nbsp;not&nbsp;getting&nbsp;my&nbsp;colors?&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Cheers,&lt;/div&gt;&lt;div&gt;Brad&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;Fri,&nbsp;Jun&nbsp;1,&nbsp;2018&nbsp;at&nbsp;8:51&nbsp;AM,&nbsp;Robert&nbsp;Osfield&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;Dan,&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thanks&nbsp;for&nbsp;the&nbsp;explanation&nbsp;and&nbsp;example&nbsp;to&nbsp;reproduce&nbsp;the&nbsp;bug...&nbsp;Guess&lt;br&gt;<br>
+it&nbsp;looks&nbsp;like&nbsp;we&#39;ll&nbsp;need&nbsp;to&nbsp;make&nbsp;3.6.2&nbsp;rather&nbsp;sooner&nbsp;than&nbsp;I&nbsp;was&lt;br&gt;<br>
+hoping,&nbsp;it&#39;ll&nbsp;be&nbsp;one&nbsp;a&nbsp;month&nbsp;at&nbsp;this&nbsp;rate...&lt;br&gt;<br>
+&lt;br&gt;<br>
+Robert.&lt;br&gt;<br>
+&lt;br&gt;<br>
+On&nbsp;1&nbsp;June&nbsp;2018&nbsp;at&nbsp;16:01,&nbsp;Daniel&nbsp;Emminizer,&nbsp;Code&nbsp;5773&lt;br&gt;<br>
+&lt;div&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:dan.emminizer@nrl.navy.mil&quot;&gt;dan.emminizer@nrl.navy.mil&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&nbsp;Hi&nbsp;Robert,&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Oops&nbsp;--&nbsp;I&nbsp;sent&nbsp;this&nbsp;earlier&nbsp;today&nbsp;but&nbsp;apparently&nbsp;to&nbsp;the&nbsp;bounces&nbsp;list;&nbsp;that&nbsp;explains&nbsp;the&nbsp;confusion&nbsp;on&nbsp;GitHub&nbsp;--&nbsp;my&nbsp;mistake. &nbsp;This&nbsp;was&nbsp;supposedly&nbsp;sent&nbsp;right&nbsp;before&nbsp;I&nbsp;posted&nbsp;the&nbsp;PR. &nbsp;Here&#39;s&nbsp;the&nbsp;original&nbsp;text:&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;I&nbsp;think&nbsp;I&nbsp;found&nbsp;a&nbsp;bug&nbsp;in&nbsp;3.6.1. &nbsp;I&nbsp;am&nbsp;loading&nbsp;a&nbsp;FLT&nbsp;model&nbsp;and&nbsp;it&#39;s&nbsp;causing&nbsp;a&nbsp;crash&nbsp;in&nbsp;my&nbsp;application&nbsp;to&nbsp;draw&nbsp;it. &nbsp;The&nbsp;same&nbsp;model&nbsp;does&nbsp;not&nbsp;crash&nbsp;in&nbsp;OSG&nbsp;3.4. &nbsp;I&nbsp;think&nbsp;I&#39;ve&nbsp;finally&nbsp;tracked&nbsp;down&nbsp;the&nbsp;cause&nbsp;and&nbsp;have&nbsp;a&nbsp;candidate&nbsp;solution&nbsp;too.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;A&nbsp;few&nbsp;weeks&nbsp;back&nbsp;I&nbsp;saw&nbsp;a&nbsp;similar&nbsp;crash&nbsp;in&nbsp;my&nbsp;own&nbsp;code,&nbsp;and&nbsp;figured&nbsp;it&nbsp;was&nbsp;due&nbsp;to&nbsp;incorrect&nbsp;usage&nbsp;of&nbsp;the&nbsp;binding&nbsp;flags&nbsp;on&nbsp;osg::Array. &nbsp;Much&nbsp;of&nbsp;our&nbsp;code&nbsp;was&nbsp;using&nbsp;osg::Geometry::&lt;wbr&gt;setNormalBinding()&nbsp;(and&nbsp;related&nbsp;methods). &nbsp;During&nbsp;debugging,&nbsp;I&nbsp;was&nbsp;able&nbsp;to&nbsp;determine&nbsp;my&nbsp;normals&nbsp;were&nbsp;crashing&nbsp;in&nbsp;3.6,&nbsp;and&nbsp;the&nbsp;problem&nbsp;went&nbsp;away&nbsp;when&nbsp;I&nbsp;used&nbsp;the&nbsp;osg::Array(osg::Array::&lt;wbr&gt;Binding)&nbsp;signature&nbsp;--&nbsp;i.e.&nbsp;assigning&nbsp;a&nbsp;binding&nbsp;on&nbsp;construction. &nbsp;At&nbsp;the&nbsp;time&nbsp;I&nbsp;thought&nbsp;it&nbsp;was&nbsp;something&nbsp;I&nbsp;was&nbsp;doing&nbsp;wrong&nbsp;and&nbsp;moved&nbsp;on.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;The&nbsp;problem&nbsp;showed&nbsp;up&nbsp;again&nbsp;earlier&nbsp;this&nbsp;week&nbsp;but&nbsp;not&nbsp;in&nbsp;my&nbsp;code,&nbsp;and&nbsp;not&nbsp;manifesting&nbsp;in&nbsp;exactly&nbsp;the&nbsp;same&nbsp;way. &nbsp;Here&#39;s&nbsp;the&nbsp;run-down&nbsp;of&nbsp;what&#39;s&nbsp;going&nbsp;on:&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;Loading&nbsp;FLT&nbsp;model&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;FLT&nbsp;model&nbsp;loads&nbsp;a&nbsp;face,&nbsp;which&nbsp;has&nbsp;vertices,&nbsp;textures,&nbsp;and&nbsp;normals&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;FLT&nbsp;uses&nbsp;getOrCreateNormalArray(),&nbsp;which&nbsp;allocates&nbsp;an&nbsp;array&nbsp;(BIND_UNDEFINED)&nbsp;and&nbsp;sets&nbsp;it&nbsp;on&nbsp;the&nbsp;geometry&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;Geometry::&lt;wbr&gt;addVertexBufferObjectIfRequire&lt;wbr&gt;d()&nbsp;is&nbsp;called&nbsp;on&nbsp;the&nbsp;normals,&nbsp;but&nbsp;nothing&nbsp;done&nbsp;due&nbsp;to&nbsp;BIND_UNDEFINED&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;FLT&nbsp;later&nbsp;sets&nbsp;normals&nbsp;to&nbsp;BIND_PER_VERTEX&nbsp;appropriately,&nbsp;which&nbsp;is&nbsp;a&nbsp;direct&nbsp;set&nbsp;and&nbsp;does&nbsp;not&nbsp;do&nbsp;anything&nbsp;to&nbsp;the&nbsp;Geometry&#39;s&nbsp;VBOs&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;First&nbsp;frame&nbsp;starts&nbsp;to&nbsp;render&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;Geometry::drawVAImpl&nbsp;calls&nbsp;vas-&gt;setNormalArray()&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;VertexArrayState::setArray()&nbsp;calls&nbsp;new_array-&gt;&lt;wbr&gt;getOrCreateGLBufferObject(),&nbsp;which&nbsp;returns&nbsp;0. &nbsp;This&nbsp;is&nbsp;the&nbsp;first&nbsp;major&nbsp;problem.&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;Because&nbsp;vbo&nbsp;is&nbsp;NULL,&nbsp;unbindindVertexBufferObject()&nbsp;is&nbsp;called,&nbsp;leading&nbsp;to&nbsp;GL_ARRAY_BUFFER&nbsp;to&nbsp;go&nbsp;to&nbsp;0&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;vad-&gt;enable_and_dispatch()&nbsp;gets&nbsp;called&nbsp;and&nbsp;does&nbsp;glVertexAttribPointer()&nbsp;with&nbsp;a&nbsp;non-NULL&nbsp;data&nbsp;ptr,&nbsp;which&nbsp;is&nbsp;a&nbsp;GL&nbsp;error&nbsp;because&nbsp;array&nbsp;buffer&nbsp;is&nbsp;0&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Unwinding&nbsp;the&nbsp;error:&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;enable_and_dispatch()&nbsp;shouldn&#39;t&nbsp;be&nbsp;called&nbsp;if&nbsp;ptr&nbsp;is&nbsp;non-NULL&nbsp;and&nbsp;no&nbsp;GL_ARRAY_BUFFER&nbsp;is&nbsp;0&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;GL_ARRAY_BUFFER&nbsp;is&nbsp;set&nbsp;to&nbsp;0&nbsp;because&nbsp;there&nbsp;is&nbsp;no&nbsp;VBO&nbsp;set&nbsp;up&nbsp;for&nbsp;the&nbsp;normal&nbsp;array&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;There&nbsp;is&nbsp;no&nbsp;normal&nbsp;array&nbsp;because&nbsp;the&nbsp;only&nbsp;place&nbsp;it&nbsp;seems&nbsp;to&nbsp;be&nbsp;created&nbsp;is&nbsp;in&nbsp;setNormalArray(),&nbsp;which&nbsp;fails&nbsp;because&nbsp;at&nbsp;that&nbsp;time,&nbsp;it&nbsp;is&nbsp;BIND_UNDEFINED&lt;br&gt;<br>
+&gt;&nbsp;-&nbsp;Binding&nbsp;gets&nbsp;swapped&nbsp;from&nbsp;BIND_UNDEFINED&nbsp;to&nbsp;BIND_PER_VERTEX&nbsp;after&nbsp;setNormalArray(),&nbsp;leading&nbsp;to&nbsp;the&nbsp;error&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;There&nbsp;are&nbsp;several&nbsp;possible&nbsp;solutions&nbsp;I&nbsp;can&nbsp;see. &nbsp;You&nbsp;can&nbsp;probably&nbsp;see&nbsp;more:&lt;br&gt;<br>
+&gt;&nbsp;1)&nbsp;Change&nbsp;FLT&nbsp;plugin&nbsp;to&nbsp;assign&nbsp;array&nbsp;binding&nbsp;per&nbsp;vertex&nbsp;on&nbsp;construction&nbsp;of&nbsp;array. &nbsp;Seems&nbsp;poor&nbsp;because&nbsp;invariably&nbsp;this&nbsp;bug&nbsp;is&nbsp;crashing&nbsp;other&nbsp;code&nbsp;--&nbsp;maybe&nbsp;it&#39;s&nbsp;the&nbsp;cause&nbsp;of&nbsp;the&nbsp;DXF&nbsp;that&nbsp;Brian&nbsp;Hutchison&nbsp;reported&nbsp;earlier&nbsp;this&nbsp;week?&lt;br&gt;<br>
+&gt;&nbsp;2)&nbsp;Update&nbsp;Array::setBinding()&nbsp;to&nbsp;create&nbsp;the&nbsp;VBO&nbsp;if&nbsp;needed. &nbsp;I&nbsp;do&nbsp;not&nbsp;know&nbsp;if&nbsp;this&nbsp;is&nbsp;possible&nbsp;nor&nbsp;how&nbsp;to&nbsp;do&nbsp;it.&lt;br&gt;<br>
+&gt;&nbsp;3)&nbsp;&quot;Lazily&quot;&nbsp;detect&nbsp;this&nbsp;issue&nbsp;somewhere&nbsp;in&nbsp;the&nbsp;rendering&nbsp;calls&nbsp;and&nbsp;create&nbsp;VBO&nbsp;there&nbsp;if&nbsp;necessary&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;PR&nbsp;554&nbsp;was&nbsp;an&nbsp;attempt&nbsp;at&nbsp;approach&nbsp;#3&nbsp;but&nbsp;I&nbsp;agree&nbsp;with&nbsp;your&nbsp;assessment&nbsp;on&nbsp;GitHub. &nbsp;It&nbsp;does&nbsp;not&nbsp;solve&nbsp;the&nbsp;problem&nbsp;in&nbsp;all&nbsp;cases.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Attached&nbsp;is&nbsp;a&nbsp;demo&nbsp;of&nbsp;the&nbsp;problem&nbsp;that&nbsp;generates&nbsp;a&nbsp;console&nbsp;warning. &nbsp;More&nbsp;complex&nbsp;scenes&nbsp;can&nbsp;cause&nbsp;crashes. &nbsp;The&nbsp;red&nbsp;triangle&nbsp;has&nbsp;the&nbsp;problem,&nbsp;but&nbsp;the&nbsp;green&nbsp;one&nbsp;does&nbsp;not.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp;-&nbsp;Dan&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&gt;&nbsp;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+&gt;&nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

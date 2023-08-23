@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] delay-loading OSG DLLs?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20delay-loading%20OSG%20DLLs%3F&In-Reply-To=%3CCALm6U%2Bq_NXwWOO8FdbtNGe-Ez%3Dkju1%3Du56ApDeEJDJ6D_7gPGg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280835.html">
+   <LINK REL="Next"  HREF="280837.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] delay-loading OSG DLLs?</H1>
+<!--htdig_noindex-->
+    <B>Christian Buchner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20delay-loading%20OSG%20DLLs%3F&In-Reply-To=%3CCALm6U%2Bq_NXwWOO8FdbtNGe-Ez%3Dkju1%3Du56ApDeEJDJ6D_7gPGg%40mail.gmail.com%3E"
+       TITLE="[osg-users] delay-loading OSG DLLs?">christian.buchner at gmail.com
+       </A><BR>
+    <I>Wed Oct 26 03:49:57 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280835.html">[osg-users] delay-loading OSG DLLs?
+</A></li>
+        <LI>Next message: <A HREF="280837.html">[osg-users] Qt3D 2.0 vs OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4618">[ date ]</a>
+              <a href="thread.html#4618">[ thread ]</a>
+              <a href="subject.html#4618">[ subject ]</a>
+              <a href="author.html#4618">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, here is my code that actually enables the delay loading to function.
+First I modify the PATH environment variable to actually contain the
+folders where the DLLs are expected to be found.
+
+Then using __HrLoadAllImportsForDll() I get all the import symbols from the
+delay loaded DLLS (which have to be given explicitly, file by file) which
+allows OSG to run successfully.
+
+Without that second step, no graphics context could be initialized.
+
+The only remaining issue is that in case a delay-loaded DLL isn't found at
+runtime, the function __HrLoadAllImportsForDll() crashes internally
+somewhere, and not even the try{} catch {} block can prevent this. I wish I
+could somehow catch this.
+
+#include &lt;regex&gt;
+#include &lt;string&gt;
+
+#include &lt;Windows.h&gt;
+#include &lt;LibLoaderAPI.h&gt;
+#include &lt;DelayImp.h&gt;
+
+
+        // the DLL search paths to prepend to PATH
+        std::vector&lt;std::wstring&gt; path_list = {
+L&quot;%CD%\\..\\deps_v2\\OSG-3.4\\bin&quot;,
+L&quot;%CD%\\..\\deps_v2\\OSG-3.4\\3rdParty\\bin&quot; };
+
+        // prepend the PATH environment variable with the folders specified
+above
+        wchar_t pwd[512];
+        _wgetcwd(pwd, sizeof(pwd) / sizeof(wchar_t));
+        std::wstringstream ss;
+        for (auto path : path_list)
+        {
+            // replace %CD% with the actual current working directory
+            path = std::regex_replace(path,
+std::basic_regex&lt;wchar_t&gt;(L&quot;\\%CD\\%&quot;), pwd);
+            ss &lt;&lt; path &lt;&lt; &quot;;&quot;;
+        }
+        ss &lt;&lt; _wgetenv(L&quot;PATH&quot;);
+        ss &lt;&lt; '\0';
+        const std::wstring env = ss.str();
+        SetEnvironmentVariable(L&quot;PATH&quot;, env.c_str());
+
+        //
+        // Delay-load all import symbols from the OSG DLLs now.
+        //
+
+#if _DEBUG
+        std::vector&lt;std::string&gt; dll_list =
+        { &quot;osg130-osgd.dll&quot;, &quot;osg130-osgDBd.dll&quot;, &quot;osg130-osgViewerd.dll&quot;,
+&quot;ot20-OpenThreadsd.dll&quot; };
+#else
+        std::vector&lt;std::string&gt; dll_list =
+        { &quot;osg130-osg.dll&quot;, &quot;osg130-osgDB.dll&quot;, &quot;osg130-osgViewer.dll&quot;,
+&quot;ot20-OpenThreads.dll&quot; };
+#endif
+
+        for (auto dllname : dll_list)
+        {
+            fprintf(stderr, &quot;Delay-loading imports from %s\n&quot;,
+dllname.c_str());
+            bool failed = true;
+            try {
+                failed = FAILED(__HrLoadAllImportsForDll(dllname.c_str()));
+            }
+            catch (...)
+            {
+            }
+            if (failed) {
+               fprintf(stderr, &quot;Delay-loading imports from %s failed!\n&quot;,
+dllname.c_str());
+                exit(1);
+            }
+        }
+
+        init = true;
+    }
+
+
+
+
+2016-10-25 19:24 GMT+02:00 Christian Buchner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian.buchner at gmail.com</A>&gt;:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I was wondering if anyone of you has successfully used the /DELAYLOAD
+</I>&gt;<i> linker option with the OSG DLLs on Windows.
+</I>&gt;<i>
+</I>&gt;<i> For me, attempting this causes the creation of the graphics context to
+</I>&gt;<i> fail, because
+</I>&gt;<i> windowingSystemInterfaceRef() called by createGraphicsContext() returns an
+</I>&gt;<i> invalid reference.
+</I>&gt;<i>
+</I>&gt;<i> Any clues about how to fix this possibly? It seems that maybe constructors
+</I>&gt;<i> for static objects inside the OSG DLLs aren't getting called as required.
+</I>&gt;<i>
+</I>&gt;<i> Christian
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161026/c056a548/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161026/c056a548/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280835.html">[osg-users] delay-loading OSG DLLs?
+</A></li>
+	<LI>Next message: <A HREF="280837.html">[osg-users] Qt3D 2.0 vs OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4618">[ date ]</a>
+              <a href="thread.html#4618">[ thread ]</a>
+              <a href="subject.html#4618">[ subject ]</a>
+              <a href="author.html#4618">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

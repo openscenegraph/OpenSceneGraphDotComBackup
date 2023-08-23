@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Setting the transform matrices
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Setting%20the%20transform%20matrices&In-Reply-To=%3C1509023053.m2f.72246%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006996.html">
+   <LINK REL="Next"  HREF="006998.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Setting the transform matrices</H1>
+<!--htdig_noindex-->
+    <B>Chris Kuliukas</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Setting%20the%20transform%20matrices&In-Reply-To=%3C1509023053.m2f.72246%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Setting the transform matrices">chris at kuliukas.com
+       </A><BR>
+    <I>Thu Oct 26 06:04:13 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="006996.html">[osg-users] Setting the transform matrices
+</A></li>
+        <LI>Next message (by thread): <A HREF="006998.html">[osg-users] OpenSceneGaph-3.5.7 developer release tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7092">[ date ]</a>
+              <a href="thread.html#7092">[ thread ]</a>
+              <a href="subject.html#7092">[ subject ]</a>
+              <a href="author.html#7092">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks for the informative reply, much appreciated.
+
+
+robertosfield wrote:
+&gt;<i> I have run with the various command 1-8 options and get different behaviour but looking at the code I really don't know what is expected. The black cow is likely occurring because no shader is being provided that handles texgen that the cow.osg uses from the fixed function pipeline.&#160; 
+</I>
+Based on your earlier response here ..
+
+robertosfield wrote:
+&gt;<i> you don't need to add ANY more complexity than just replacing gl_ModelView* with osg_ModelView*, the OSG will even automatically remap for you. 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> The OSG automatically accumulates all view and projection matrices for you, sets the when required, it does a shed load of work for you to make you life easy.  All the osg::Camera and osg::Transform subclasses all work in coherent and robust fashion, whether you are using fixed function pipeline of shaders and they function in the same way in both. 
+</I>
+.. I would have thought the expected behavior is that using vertex attrib aliasing and use model/view/projection uniforms would work because osg remaps etc and replaces fixed transforms and deprecated gl_ uniforms with osg_ uniforms.
+
+I realize the difficulty / impossibility of automatically taking people from fixed function / legacy shaders to modern GL. But that's what prompted this thread; that it seems difficult to hook into the power of OSG in a modern GL context.
+
+
+
+robertosfield wrote:
+&gt;<i> In OSG-3.4.x there isn't good automatic way to mix and match fixed function and shader, the use of the vertex aliasing etc. also doesn't help matters.&#160; It's an area where OpenGL drops us in it, it's either shaders or fixed function, OpenGL provides no mapping for us to leverage, particularly when building GL3/core profile or GLES2 where built ins't like glLight etc. have no gl_Light uniforms associated with them like there is in GL2.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> The OSG tries to walk between there two worlds - fixed function and shader based, you can mix and match a bit but it's not seamless, and once you start talking about GL3/core profule and GLES2 there's a whole heap more things to deal with and you essentially have to build everything with your own shaders. 
+</I>
+Agreed 100%; my problem is that building your own shaders within OSG currently has a couple of seemingly minor, but quite frustrating, stumbling blocks. 
+
+For me the main one is that if you're using your own shaders you need to be able to access the model/view/projection matrices and set them within your own shaders. Right now I need to write my shader with osg_ModelView* as a uniform, which means you need to set setUseModelViewAndProjectionUniforms. This then breaks other legacy shaders since it's a global flag for the state.
+
+It seems like if there was a way to set the matrices as uniforms like any other, by giving a hook so that you can define your own behavior when OSG wants to change the matrices during drawing, then I could selectively choose where and when to use fixed and modern.
+
+
+The value of OSG for us is in scene organization, memory management, wrapping around C-oriented OpenGL calls, multiple data format handling, culling, all the libraries built around it, sensible and flexible design, etc. The value of modern shader pipelines is being able to take a set of input uniforms, vertex attributes and texture maps, and have lots of rendering flexibility from that.
+
+i.e. I don't need OSG to be able to take a legacy / modern project mixed up and be able to sort it all out. osg::Fog and Light and Particles and Shadows I am happy to leave to legacy because in a modern pipeline world you want to do that yourself. I would like OSG to offer something where it says: &quot;I have figured out the render order, transformation matrices, loaded up the textures, set the vertex attribs, applied your shader programs and applied the global uniforms, done all that magic: Now for this sub-tree as requested you can set the bindings, and I won't try and look inside your shader program and modify it.&quot;
+
+
+
+robertosfield wrote:
+&gt;<i> So for your example, well you've written an test case that tries to walk the line between fixed function and shader worlds and area that doesn't isn't properly supported by OSG-3.4.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> In the shader_pipeline branch of the OSG master there is some work that attempts to bridge the gap between fixed function and shaders by providing a solution for mapping fixed function state attributes to uniforms and providing shader composition but it's a bleeding edge work in progress.&#160; Getting a seamless mashup isn't a really tough nut to crack, but shader_pipeline is our current best attempt at this.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> For your own application you'll need to decide what your goals and constraints are - if you have to support GL3/core profile and/or GLES2+ then you'll need to think about how you provide your own shaders and how you remap fixed function models into your shader approach.&#160; Trying to maship fixed function with shaders will likely cause problems though as your test example shows, it's not a &quot;bug&quot; in the OSG that we can fix though, rather you've stepped no-mans land which can't be properly supported which different back-end completely i.e. shader_pipeline.
+</I>
+Encouraging that there's a branch for this, if for nothing else then because it's an acknowledgement that OSG shader support isn't ideal. I wasn't aware of that and I'll take a look at it and see if I can learn from your approach.
+
+
+Bear in mind we both agree OSG is of huge value, that I'm no expert, and we both want what's best for your system and both share frustrations with the OpenGL transition. These are just my thoughts and experiences so don't take them as an attack on your work.
+
+All the best,
+Chris
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4f8c.php?p=72246#72246">http://forum.openscenegraph.org/viewtopic.php?p=72246#72246</A>
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="006996.html">[osg-users] Setting the transform matrices
+</A></li>
+	<LI>Next message (by thread): <A HREF="006998.html">[osg-users] OpenSceneGaph-3.5.7 developer release tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7092">[ date ]</a>
+              <a href="thread.html#7092">[ thread ]</a>
+              <a href="subject.html#7092">[ subject ]</a>
+              <a href="author.html#7092">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

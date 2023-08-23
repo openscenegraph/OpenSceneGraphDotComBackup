@@ -1,0 +1,300 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] RTT + shaders example
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RTT%20%2B%20shaders%20example&In-Reply-To=%3C51308536-9f6d-6df9-e955-712c1b175c5d%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006431.html">
+   <LINK REL="Next"  HREF="006440.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] RTT + shaders example</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RTT%20%2B%20shaders%20example&In-Reply-To=%3C51308536-9f6d-6df9-e955-712c1b175c5d%40gmx.de%3E"
+       TITLE="[osg-users] RTT + shaders example">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Wed Jul 12 05:30:40 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006431.html">[osg-users] RTT + shaders example
+</A></li>
+        <LI>Next message: <A HREF="006440.html">[osg-users] Convert from screen space to world space and back	to screen space.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6434">[ date ]</a>
+              <a href="thread.html#6434">[ thread ]</a>
+              <a href="subject.html#6434">[ subject ]</a>
+              <a href="author.html#6434">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+Hi Michael,
+
+
+As a side note:
+In order to get your matrices to your shaders simply use the osg_ 
+equivalents to the gl_-Matrices and setup aliasing:
+	Viewer-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true);
+Viewer-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getState()-&gt;setUseVertexAttributeAliasing(true);
+
+
+In general you need to create the render-target textures and bind them 
+to the FBO of your RTT-Camera. Basically there is the 
+osgmultiplerendertargets example which shows you how to achieve this.
+
+Once you have a working example rendering the gbuffer, you can simply 
+add more absolute cameras to the graph to do the screenspace calculations.
+
+Also take a look at osgPPU, which might offer some insight.
+
+Cheers
+Sebastian
+
+
+
+&gt;<i> Hi all,
+</I>&gt;<i> 
+</I>&gt;<i> I am trying to figure out RTT in combination with shaders for 
+</I>&gt;<i> implementing a gbuffer but I can't get the different examples to work 
+</I>&gt;<i> together.
+</I>&gt;<i> This is a working example for using my shaders, but without RTT and also 
+</I>&gt;<i> for setting the StateSet for the model and not the camera.
+</I>&gt;<i> 
+</I>&gt;<i> const char* vertSource =
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;#version 400\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;uniform mat4 MV;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;uniform mat4 N;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;uniform mat4 P;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;layout(location = 0) in vec4 Vertex;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;layout(location = 1) in vec3 Normal;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;smooth out vec3 p;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;smooth out vec3 n;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;void main(void) {\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>          &quot;p = (MV * Vertex).xyz;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>          &quot;n = normalize(N * vec4(Normal, 0)).xyz;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>          &quot;gl_Position = P * vec4(p, 1);\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;}\n&quot;;
+</I>&gt;<i> 
+</I>&gt;<i> const char* fragSource =
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;#version 400\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;in vec3 p;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;in vec3 n;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;layout(location = 0) out vec4 position;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;layout(location = 1) out vec4 normal;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;layout(location = 2) out float depth;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;void main(void) {\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>          &quot;position = vec4(p,1);\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>          &quot;normal = vec4(n,0);\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>          &quot;depth = gl_FragCoord.z;\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>          //&quot;gl_FragColor = vec4(n,1);\n&quot;
+</I>&gt;<i> 
+</I>&gt;<i>      &quot;}\n&quot;;
+</I>&gt;<i> 
+</I>&gt;<i> #define Test1
+</I>&gt;<i> 
+</I>&gt;<i> struct ProjectionMatrixCallback: public osg::Uniform::Callback {
+</I>&gt;<i> 
+</I>&gt;<i> 	ProjectionMatrixCallback(osg::Camera* camera) :
+</I>&gt;<i> 
+</I>&gt;<i> 			_camera(camera) {
+</I>&gt;<i> 
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> 	virtual void operator()(osg::Uniform* uniform, osg::NodeVisitor* nv) {
+</I>&gt;<i> 
+</I>&gt;<i> 		uniform-&gt;set(_camera-&gt;getProjectionMatrix());
+</I>&gt;<i> 
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> 	osg::Camera* _camera;
+</I>&gt;<i> 
+</I>&gt;<i> };
+</I>&gt;<i> 
+</I>&gt;<i> struct NormalMatrixCallback: public osg::Uniform::Callback {
+</I>&gt;<i> 
+</I>&gt;<i> 	NormalMatrixCallback(osg::Camera* camera) :
+</I>&gt;<i> 
+</I>&gt;<i> 			_camera(camera) {
+</I>&gt;<i> 
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> 	virtual void operator()(osg::Uniform* uniform, osg::NodeVisitor* nv) {
+</I>&gt;<i> 
+</I>&gt;<i> 		osg::Matrixd viewMatrix = _camera-&gt;getViewMatrix();
+</I>&gt;<i> 
+</I>&gt;<i> 		osg::Matrixd normalMatrix = osg::Matrix::inverse(viewMatrix);
+</I>&gt;<i> 
+</I>&gt;<i> 		uniform-&gt;set(normalMatrix);
+</I>&gt;<i> 
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> 	osg::Camera* _camera;
+</I>&gt;<i> 
+</I>&gt;<i> };
+</I>&gt;<i> 
+</I>&gt;<i> struct ModelViewMatrixCallback: public osg::Uniform::Callback {
+</I>&gt;<i> 
+</I>&gt;<i> 	ModelViewMatrixCallback(osg::Camera* camera) :
+</I>&gt;<i> 
+</I>&gt;<i> 			_camera(camera) {
+</I>&gt;<i> 
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> 	virtual void operator()(osg::Uniform* uniform, osg::NodeVisitor* nv) {
+</I>&gt;<i> 
+</I>&gt;<i> 		osg::Matrixd viewMatrix = _camera-&gt;getViewMatrix();
+</I>&gt;<i> 
+</I>&gt;<i> 		osg::Matrixd modelMatrix = osg::computeLocalToWorld(nv-&gt;getNodePath());
+</I>&gt;<i> 
+</I>&gt;<i> 		osg::Matrixd modelViewMatrix = modelMatrix * viewMatrix;
+</I>&gt;<i> 
+</I>&gt;<i> 		uniform-&gt;set(modelViewMatrix);
+</I>&gt;<i> 
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> 	osg::Camera* _camera;
+</I>&gt;<i> 
+</I>&gt;<i> };
+</I>&gt;<i> 
+</I>&gt;<i> int main(int, char**) {
+</I>&gt;<i> 
+</I>&gt;<i>      osgViewer::Viewer viewer;
+</I>&gt;<i> 
+</I>&gt;<i>      osg::Node* model = osgDB::readNodeFile(&quot;cow.osgt&quot;);
+</I>&gt;<i> 
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group();
+</I>&gt;<i> 
+</I>&gt;<i>      //create camera
+</I>&gt;<i> 
+</I>&gt;<i>      osg::Camera* camera = viewer.getCamera();
+</I>&gt;<i> 
+</I>&gt;<i>      // create shader
+</I>&gt;<i> 
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+</I>&gt;<i> 
+</I>&gt;<i>      program-&gt;setName(&quot;shader&quot;);
+</I>&gt;<i> 
+</I>&gt;<i>      program-&gt;addShader(new osg::Shader(osg::Shader::VERTEX, vertSource));
+</I>&gt;<i> 
+</I>&gt;<i>      program-&gt;addShader(new osg::Shader(osg::Shader::FRAGMENT, fragSource));
+</I>&gt;<i> 
+</I>&gt;<i>      osg::StateSet* state = model-&gt;getOrCreateStateSet();
+</I>&gt;<i> 
+</I>&gt;<i>      state-&gt;setAttributeAndModes(program.get(), osg::StateAttribute::ON);
+</I>&gt;<i> 
+</I>&gt;<i>      // add uniforms
+</I>&gt;<i> 
+</I>&gt;<i>      osg::Uniform* modelViewMatrix = new osg::Uniform(osg::Uniform::FLOAT_MAT4, &quot;MV&quot;);
+</I>&gt;<i> 
+</I>&gt;<i>      modelViewMatrix-&gt;setUpdateCallback(new ModelViewMatrixCallback(camera));
+</I>&gt;<i> 
+</I>&gt;<i>      state-&gt;addUniform(modelViewMatrix);
+</I>&gt;<i> 
+</I>&gt;<i>      osg::Uniform* normalMatrix = new osg::Uniform(osg::Uniform::FLOAT_MAT4, &quot;N&quot;);
+</I>&gt;<i> 
+</I>&gt;<i>      normalMatrix-&gt;setUpdateCallback(new NormalMatrixCallback(camera));
+</I>&gt;<i> 
+</I>&gt;<i>      state-&gt;addUniform(normalMatrix);
+</I>&gt;<i> 
+</I>&gt;<i>      osg::Uniform* projectionMatrix = new osg::Uniform(osg::Uniform::FLOAT_MAT4, &quot;P&quot;);
+</I>&gt;<i> 
+</I>&gt;<i>      projectionMatrix-&gt;setUpdateCallback(new ProjectionMatrixCallback(camera));
+</I>&gt;<i> 
+</I>&gt;<i>      state-&gt;addUniform(projectionMatrix);
+</I>&gt;<i> 
+</I>&gt;<i>      // turn lights off
+</I>&gt;<i> 
+</I>&gt;<i>      state-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+</I>&gt;<i> 
+</I>&gt;<i>      // scene state run
+</I>&gt;<i> 
+</I>&gt;<i>      root-&gt;addChild(model);
+</I>&gt;<i> 
+</I>&gt;<i>      viewer.setSceneData(root.get());
+</I>&gt;<i> 
+</I>&gt;<i>      viewer.setUpViewOnSingleScreen(0);
+</I>&gt;<i> 
+</I>&gt;<i>      return viewer.run();
+</I>&gt;<i> 
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> Another working example with RTT camera but without shaders can be found here:<A HREF="https://github.com/xarray/osgRecipes/blob/master/cookbook/chapter6/ch06_04/read_depth.cpp">https://github.com/xarray/osgRecipes/blob/master/cookbook/chapter6/ch06_04/read_depth.cpp</A>
+</I>&gt;<i> Can somebody help me combine these two or give me a minimal working example (which is documented :) ).
+</I>&gt;<i> 
+</I>&gt;<i> Thanks,
+</I>&gt;<i> Michael
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I></PRE>
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006431.html">[osg-users] RTT + shaders example
+</A></li>
+	<LI>Next message: <A HREF="006440.html">[osg-users] Convert from screen space to world space and back	to screen space.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6434">[ date ]</a>
+              <a href="thread.html#6434">[ thread ]</a>
+              <a href="subject.html#6434">[ subject ]</a>
+              <a href="author.html#6434">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

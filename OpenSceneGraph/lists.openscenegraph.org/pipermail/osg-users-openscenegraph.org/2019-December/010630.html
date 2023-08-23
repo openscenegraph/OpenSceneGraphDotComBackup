@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users]  Offscreen rendering of large scenes
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20Offscreen%20rendering%20of%20large%20scenes&In-Reply-To=%3Cc6f7907d-6c89-4c00-973c-f9dc0585ae32%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010653.html">
+   <LINK REL="Next"  HREF="010631.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users]  Offscreen rendering of large scenes</H1>
+<!--htdig_noindex-->
+    <B>Philipp Wagner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20Offscreen%20rendering%20of%20large%20scenes&In-Reply-To=%3Cc6f7907d-6c89-4c00-973c-f9dc0585ae32%40googlegroups.com%3E"
+       TITLE="[osg-users]  Offscreen rendering of large scenes">macphatty at gmail.com
+       </A><BR>
+    <I>Tue Dec 10 07:42:23 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010653.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+        <LI>Next message (by thread): <A HREF="010631.html">[osg-users] Offscreen rendering of large scenes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10630">[ date ]</a>
+              <a href="thread.html#10630">[ thread ]</a>
+              <a href="subject.html#10630">[ subject ]</a>
+              <a href="author.html#10630">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I want to perform an offscreen rendering of a scene that is too large to 
+fit into the GPU memory at once (lots of big textures).
+My idea was to render parts of the scene each in its own frame, and disable 
+the clearing of the depth and color buffer.
+This does work for the color buffer, but the depth buffer seems to be 
+cleared after each frame, which leads to incorrect results (The later parts 
+are drawn over the previous ones, even though they are behind the other 
+parts).
+
+The algorithm:
+1. Create camera/context/...
+2. Clear the buffers (i.e. Render an empty scene with a clear mask of 
+(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT)
+3. Disable buffer clearing
+4. Render each part in its own frame
+ a. Add part to the scene
+ b. Render
+ c. Remove part from the scene
+5. Read back color buffer
+
+
+osg::ref_ptr&lt;::osg::Camera&gt; camera = new osg::Camera();
+
+//Here we set the camera orientation/projection matrix
+
+camera-&gt;setClearColor(...);
+camera-&gt;setGraphicsContext(context);
+
+osg::ref_ptr&lt;osg::Image&gt; img = new osg::Image;
+img-&gt;allocateImage(textureWidth, textureHeight, 1, GL_RGBA, 
+GL_UNSIGNED_BYTE);
+camera-&gt;attach(osg::Camera::COLOR_BUFFER0, img, numSamples);
+camera-&gt;attach(osg::Camera::DEPTH_BUFFER, GL_DEPTH_COMPONENT32);
+camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+camera-&gt;setRenderTargetImplementation(osg::Camera::RenderTargetImplementation::FRAME_BUFFER_OBJECT);
+camera-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+camera-&gt;setProjectionResizePolicy(osg::Camera::FIXED);
+camera-&gt;setViewport(0, 0, img-&gt;s(), img-&gt;t());
+viewer-&gt;addSlave(camera);
+
+camera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+viewer-&gt;frame();
+camera-&gt;setClearMask(0);
+for (auto&amp; item : parts)
+{
+   //Here we create and add the item to the scene...
+       viewer-&gt;frame();
+   //Here we remove item from the scene and delete it
+}
+
+Thanks in advance
+Phil
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/c6f7907d-6c89-4c00-973c-f9dc0585ae32%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/c6f7907d-6c89-4c00-973c-f9dc0585ae32%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191210/04daed88/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191210/04daed88/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010653.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+	<LI>Next message (by thread): <A HREF="010631.html">[osg-users] Offscreen rendering of large scenes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10630">[ date ]</a>
+              <a href="thread.html#10630">[ thread ]</a>
+              <a href="subject.html#10630">[ subject ]</a>
+              <a href="author.html#10630">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

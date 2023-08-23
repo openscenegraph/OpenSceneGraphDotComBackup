@@ -1,0 +1,203 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to debug this SIGSEGV
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20debug%20this%20SIGSEGV&In-Reply-To=%3Cmailman.6118.1590513595.4146.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011101.html">
+   <LINK REL="Next"  HREF="011120.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to debug this SIGSEGV</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20debug%20this%20SIGSEGV&In-Reply-To=%3Cmailman.6118.1590513595.4146.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] How to debug this SIGSEGV">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Tue May 26 10:19:42 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011101.html">[osg-users] How to debug this SIGSEGV
+</A></li>
+        <LI>Next message (by thread): <A HREF="011120.html">[osg-users] How to debug this SIGSEGV
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11104">[ date ]</a>
+              <a href="thread.html#11104">[ thread ]</a>
+              <a href="subject.html#11104">[ subject ]</a>
+              <a href="author.html#11104">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Erik,
+
+I have seen the exact crash when I provide non-valid data for primitive
+sets in geometry. Something like drawarray with 0 size. OSG is not checking
+the validity of all the data (I believe the reason is performance). So
+maybe you put validation of your data before letting osg render it
+
+And I just read you are updating the scenegraph in realtime. Make sure this
+is done in the update traversal (you can do this in Node UpdateCallbacks)
+or decompose the viewer.frame() and add your update code at the beginning
+of the decomposed frame()
+
+Hope this helps
+
+On Tue, May 26, 2020 at 7:11 PM OpenSceneGraph Users &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt; wrote:
+
+&gt;<i> Also, when I do *not* get the crash, I do get the following warning:
+</I>&gt;<i>
+</I>&gt;<i> Warning: detected OpenGL error 'invalid value' at after RenderBin::draw
+</I>&gt;<i> (..)
+</I>&gt;<i>
+</I>&gt;<i> Maybe there's some connection? How do I go about finding the invalid value
+</I>&gt;<i> that is mentioned here?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> On Friday, May 22, 2020 at 4:53:26 PM UTC-5, Erik Hensens wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hello! I am totally at a loss and I hope someone can help me. I've got a
+</I>&gt;&gt;<i> Gtk application running on Ubuntu that uses osgGtk to display the scene.
+</I>&gt;&gt;<i> The crash does not happen every time I do the same operation, only
+</I>&gt;&gt;<i> sometimes. As you can see, the crash is in libosg. I guess that I'm doing
+</I>&gt;&gt;<i> something wrong in an Osg call somewhere and the crash is just happening
+</I>&gt;&gt;<i> asynchronously? Either way I have absolutely no idea how to approach fixing
+</I>&gt;&gt;<i> this crash. Please help me! Here's a typical backtrace. Does anyone have
+</I>&gt;&gt;<i> any ideas? Thank you all so much in advance!
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> - Erik
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> #0  0x00007fffd2e90eea in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/dri/i965_dri.so
+</I>&gt;&gt;<i> #1  0x00007fffd2d2f5e0 in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/dri/i965_dri.so
+</I>&gt;&gt;<i> #2  0x00007fffd2e9ddb0 in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/dri/i965_dri.so
+</I>&gt;&gt;<i> #3  0x00007ffff55af488 in
+</I>&gt;&gt;<i> osg::Geometry::drawImplementation(osg::RenderInfo&amp;) const () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libosg.so.100
+</I>&gt;&gt;<i> #4  0x00007ffff47d1380 in osgUtil::RenderLeaf::render(osg::RenderInfo&amp;,
+</I>&gt;&gt;<i> osgUtil::RenderLeaf*) () from /usr/lib/x86_64-linux-gnu/libosgUtil.so.100
+</I>&gt;&gt;<i> #5  0x00007ffff47cb695 in
+</I>&gt;&gt;<i> osgUtil::RenderBin::drawImplementation(osg::RenderInfo&amp;,
+</I>&gt;&gt;<i> osgUtil::RenderLeaf*&amp;) () from /usr/lib/x86_64-linux-gnu/libosgUtil.so.100
+</I>&gt;&gt;<i> #6  0x00007ffff47cb6d4 in
+</I>&gt;&gt;<i> osgUtil::RenderBin::drawImplementation(osg::RenderInfo&amp;,
+</I>&gt;&gt;<i> osgUtil::RenderLeaf*&amp;) () from /usr/lib/x86_64-linux-gnu/libosgUtil.so.100
+</I>&gt;&gt;<i> #7  0x00007ffff47d6ed7 in
+</I>&gt;&gt;<i> osgUtil::RenderStage::drawImplementation(osg::RenderInfo&amp;,
+</I>&gt;&gt;<i> osgUtil::RenderLeaf*&amp;) () from /usr/lib/x86_64-linux-gnu/libosgUtil.so.100
+</I>&gt;&gt;<i> #8  0x00007ffff47d5cd2 in
+</I>&gt;&gt;<i> osgUtil::RenderStage::drawInner(osg::RenderInfo&amp;, osgUtil::RenderLeaf*&amp;,
+</I>&gt;&gt;<i> bool&amp;) () from /usr/lib/x86_64-linux-gnu/libosgUtil.so.100
+</I>&gt;&gt;<i> #9  0x00007ffff47d7c7f in osgUtil::RenderStage::draw(osg::RenderInfo&amp;,
+</I>&gt;&gt;<i> osgUtil::RenderLeaf*&amp;) () from /usr/lib/x86_64-linux-gnu/libosgUtil.so.100
+</I>&gt;&gt;<i> #10 0x00007ffff47dfdb7 in osgUtil::SceneView::draw() () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libosgUtil.so.100
+</I>&gt;&gt;<i> #11 0x00007ffff443545f in osgViewer::Renderer::cull_draw() () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libosgViewer.so.100
+</I>&gt;&gt;<i> #12 0x00007ffff55cfd49 in osg::GraphicsContext::runOperations() () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libosg.so.100
+</I>&gt;&gt;<i> #13 0x00007ffff446c6c4 in osgViewer::ViewerBase::renderingTraversals() ()
+</I>&gt;&gt;<i> from /usr/lib/x86_64-linux-gnu/libosgViewer.so.100
+</I>&gt;&gt;<i> #14 0x0000000000a7c73e in
+</I>&gt;&gt;<i> osgViewer::ViewerGtk::on_graphics_window_expose_event (widget=0x31134b0,
+</I>&gt;&gt;<i> event=0x7fffffffdf10, data=0x456ba50) at Main3D/osgGtk/ViewerGtk.cpp:220
+</I>&gt;&gt;<i> #15 0x00007ffff78beaec in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgtk-x11-2.0.so.0
+</I>&gt;&gt;<i> #16 0x00007ffff6904fa5 in g_closure_invoke () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0
+</I>&gt;&gt;<i> #17 0x00007ffff6916fc1 in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0
+</I>&gt;&gt;<i> #18 0x00007ffff691f7f9 in g_signal_emit_valist () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0
+</I>&gt;&gt;<i> #19 0x00007ffff692008f in g_signal_emit () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgobject-2.0.so.0
+</I>&gt;&gt;<i> #20 0x00007ffff79d693c in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgtk-x11-2.0.so.0
+</I>&gt;&gt;<i> #21 0x00007ffff78bd7dd in gtk_main_do_event () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgtk-x11-2.0.so.0
+</I>&gt;&gt;<i> #22 0x00007ffff7518b9f in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgdk-x11-2.0.so.0
+</I>&gt;&gt;<i> #23 0x00007ffff7515671 in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgdk-x11-2.0.so.0
+</I>&gt;&gt;<i> #24 0x00007ffff7515fa8 in gdk_window_process_all_updates () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgdk-x11-2.0.so.0
+</I>&gt;&gt;<i> #25 0x00007ffff7842971 in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgtk-x11-2.0.so.0
+</I>&gt;&gt;<i> #26 0x00007ffff74f4d57 in ?? () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgdk-x11-2.0.so.0
+</I>&gt;&gt;<i> #27 0x00007ffff662e04a in g_main_context_dispatch () from
+</I>&gt;&gt;<i> /lib/x86_64-linux-gnu/libglib-2.0.so.0
+</I>&gt;&gt;<i> #28 0x00007ffff662e3f0 in ?? () from
+</I>&gt;&gt;<i> /lib/x86_64-linux-gnu/libglib-2.0.so.0
+</I>&gt;&gt;<i> #29 0x00007ffff662e712 in g_main_loop_run () from
+</I>&gt;&gt;<i> /lib/x86_64-linux-gnu/libglib-2.0.so.0
+</I>&gt;&gt;<i> #30 0x00007ffff78bc697 in gtk_main () from
+</I>&gt;&gt;<i> /usr/lib/x86_64-linux-gnu/libgtk-x11-2.0.so.0
+</I>&gt;&gt;<i> #31 0x000000000130f9a6 in main (argc=1, argv=0x7fffffffe398) at
+</I>&gt;&gt;<i> Main/main.cpp:3889
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> --
+</I>&gt;<i> You received this message because you are subscribed to the Google Groups
+</I>&gt;<i> &quot;OpenSceneGraph Users&quot; group.
+</I>&gt;<i> To unsubscribe from this group and stop receiving emails from it, send an
+</I>&gt;<i> email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+</I>&gt;<i> To view this discussion on the web visit
+</I>&gt;<i> <A HREF="https://groups.google.com/d/msgid/osg-users/c845db03-c6e4-4142-b681-66aeff9988fd%40googlegroups.com">https://groups.google.com/d/msgid/osg-users/c845db03-c6e4-4142-b681-66aeff9988fd%40googlegroups.com</A>
+</I>&gt;<i> &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/c845db03-c6e4-4142-b681-66aeff9988fd%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/c845db03-c6e4-4142-b681-66aeff9988fd%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt;
+</I>&gt;<i> .
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200526/7606f7e1/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200526/7606f7e1/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011101.html">[osg-users] How to debug this SIGSEGV
+</A></li>
+	<LI>Next message (by thread): <A HREF="011120.html">[osg-users] How to debug this SIGSEGV
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11104">[ date ]</a>
+              <a href="thread.html#11104">[ thread ]</a>
+              <a href="subject.html#11104">[ subject ]</a>
+              <a href="author.html#11104">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] &#22238;&#22797;:Re:  remove updatecallback stably and reliably
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%3D%3Fgbk%3Fb%3Fu9i4tDpSZTogIHJlbW92ZSB1cGRhdGVjYWxsYmFjayBz%3F%3D%0A%20%3D%3Fgbk%3Fq%3Ftably_and_reliably%3F%3D&In-Reply-To=%3C66846e8b.1629.176a48a246d.Coremail.beijihuohu%40126.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011354.html">
+   <LINK REL="Next"  HREF="011356.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] &#22238;&#22797;:Re:  remove updatecallback stably and reliably</H1>
+<!--htdig_noindex-->
+    <B>&#34081;&#23569;&#27874;</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%3D%3Fgbk%3Fb%3Fu9i4tDpSZTogIHJlbW92ZSB1cGRhdGVjYWxsYmFjayBz%3F%3D%0A%20%3D%3Fgbk%3Fq%3Ftably_and_reliably%3F%3D&In-Reply-To=%3C66846e8b.1629.176a48a246d.Coremail.beijihuohu%40126.com%3E"
+       TITLE="[osg-users] &#22238;&#22797;:Re:  remove updatecallback stably and reliably">beijihuohu at 126.com
+       </A><BR>
+    <I>Sun Dec 27 06:11:25 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011354.html">[osg-users] remove updatecallback stably and reliably
+</A></li>
+        <LI>Next message (by thread): <A HREF="011356.html">[osg-users]  &#22238;&#22797;:Re: remove updatecallback stably and reliably
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11355">[ date ]</a>
+              <a href="thread.html#11355">[ thread ]</a>
+              <a href="subject.html#11355">[ subject ]</a>
+              <a href="author.html#11355">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+The last few questions were too fragmented. I will introduce the needs of our project. We need to read symbol information from the database and generate symbols based on their coordinates, including text and geometry. The number of these symbols is about several thousand to several.Between 10,000, users are unwilling to use the display and hide switch to gradually generate symbols. In addition to these symbols, the project requires a dynamic simulation function. This simulation process is a dynamic simulation of several different objects. The simulation action uses time as theMarked, so we use AnimationPathCallback, but this faces a time benchmark problem. Although the method of pre-calculating relative time can be used to circumvent this problem, it is not a good way to solve the problem mechanically. The last problem is toTo meet the needs of users to start and stop the simulation process at any time, this requires a safe and secure RemoveUpdateCallBack and delete nodes generated during the simulation process.
+
+
+&#22312; 2020-12-27 20:42:05&#65292;&quot;Robert Osfield&quot; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt; &#20889;&#36947;&#65306;
+
+On Sun, 27 Dec 2020 at 01:01, &#34081;&#23569;&#27874; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">beijihuohu at 126.com</A>&gt; wrote:
+
+
+   I have some problems encountered in the project to ask everyone.
+
+
+
+As a general tip, it's best to post a single question per post so that the threads that follow can remain focused on one topic rather than have several topics all interleaved together making it harder to follow and harder for others later who are searching for answers.
+
+
+ 
+Question 1: The following function parameter t does not seem to be set to the specified value. It is found in the callback function of osg::Node that even if t is set to the specified value, the ReferenceTime in the callback function still starts from 0. Is there any way to make ReferenceTime from the specified value?
+viewer-&gt;getFrameStamp()-&gt;setReferenceTime(double t)
+
+
+The FrameStamp has a ReferenceTime and SimulationTime, for animations it's recommended you use the SimulationTIme.
+
+
+The FrameStamp is set on each new frame in the Viewer::advance(double simulationTime) method, so if you are writing your own frame loop you'll call this with the parameter you want.
+
+
+If you are calling the higher level Viewer::frame() method then it also takes the optional simulationTime, or the higher still Viewer::run() that also takes an optional double parameter for setting the simulationTime.
+
+
+ 
+Question 2: osg:Group cannot generate and add a large number of nodes at one time, nor can it repeatedly add and delete all child nodes, otherwise it will crash. Is there any way to add a large number of nodes at once?  Can repeatedly add and delete a large number of child nodes?
+
+
+
+You can add and removing large number of children but how to do it safely will depend upon the threading model your applcation you are using and how you got about adding/removing the nodes.
+
+
+As a general note, it's likely very inefficient to create and delete objects, especially ones that OpenGL objects associated with them.  If you can reuse data or change how you do things to avoid creating and deleting entirely then this will be the most efficient way to do things.  For instance it may be possible to move work entirely to the GPU so the scene graph itself is almost entirely static and only uniforms or small packets of data need updating each frame.
+
+
+You don't provide any information about how you are doing things or for what reason so we can't provide any specific recommendations.  The best thing to do would be to take a big step back and describe what you are trying to achieve in your application from a really high level rather diving into low level details about how you've decided to implement something.
+ 
+Question 3: How to remove the updatecallback of a node stably and reliably? How to remove a node that is being updated stably and reliably?
+       My rendering is done in a separate thread,
+    while(!viewer-&gt;done())
+    {
+        osg-&gt;PreFrameUpdate();
+        viewer-&gt;frame();
+        osg-&gt;PostFrameUpdate();
+    }
+I call node-&gt;removeUpdateCallback(callback) in the preFrameOpration-&gt;Operation()  function  will cause a crash.
+  I call node-&gt;setUpdateCallback(callback) again for a node that has already called node-&gt;setUpdateCallback(callback) will cause a crash.
+Do you have a stable and reliable way to achieve this goal?
+void PreFrameUpdate()
+{
+   if (preFrameOpration != nullptr)
+   {
+      preFrameOpration-&gt;Operation();
+      delete preFrameOpration;
+     preFrameOpration = nullptr;
+ }
+}
+
+
+Again you don't really provide enough information for us to be able to guide you in a specific direction.
+
+
+Best I can say is that the osgViewer by default will run the Viewer::frame() operations multi-threaded.  Running the frame loop itself in it's own thread could also introduce problems if you are updating the scene graph at the same time as another thread is reading it.
+
+
+You could set the Viewer threading model to SingleThreaded via viewer.setThreadingModel(osgViewer::Viewer::SingleThraeded) and see what happens.  It might provide some insight.
+
+
+But again best I can do is arm wave at this point as you've provided small bits of you what you are doing. so much is left to our imaginations.  You haven't provided any information about the nature of the crash/stack trace.
+
+
+Rather than attempt to provide lots more low level chunks of information the single best thing you can do it to describe what you are trying to achieve with your application, then describe what approach you've decided to implement and why, then go into the nature of the crash, information about your OSG version, platform etc.
+
+
+I say this as there could well be a very different approach you should be taking that will avoid such much complexity and inefficiency.
+ 
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20201227/3bfd65aa/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20201227/3bfd65aa/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011354.html">[osg-users] remove updatecallback stably and reliably
+</A></li>
+	<LI>Next message (by thread): <A HREF="011356.html">[osg-users]  &#22238;&#22797;:Re: remove updatecallback stably and reliably
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11355">[ date ]</a>
+              <a href="thread.html#11355">[ thread ]</a>
+              <a href="subject.html#11355">[ subject ]</a>
+              <a href="author.html#11355">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

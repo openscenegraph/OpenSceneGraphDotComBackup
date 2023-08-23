@@ -1,0 +1,236 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Deleting still referenced object
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3CCAG7xrZeNQpDircpbN%3DPJzmzZrXE2m1BROkd0PuKKF2YKgcWY7w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009606.html">
+   <LINK REL="Next"  HREF="009608.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Deleting still referenced object</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deleting%20still%20referenced%20object&In-Reply-To=%3CCAG7xrZeNQpDircpbN%3DPJzmzZrXE2m1BROkd0PuKKF2YKgcWY7w%40mail.gmail.com%3E"
+       TITLE="[osg-users] Deleting still referenced object">l.voerman at rug.nl
+       </A><BR>
+    <I>Thu Jan 17 05:39:19 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009606.html">[osg-users] Deleting still referenced object
+</A></li>
+        <LI>Next message (by thread): <A HREF="009608.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9607">[ date ]</a>
+              <a href="thread.html#9607">[ thread ]</a>
+              <a href="subject.html#9607">[ subject ]</a>
+              <a href="author.html#9607">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I am out of suggestions, but here are a few questions that I can come up
+with:
+- did the problematic node come out of the cache, or did it come fresh from
+disk?
+  (modelResult._status has this info)
+- Is the parent group (and it's _children vector) still sane?
+- If the parent node is still sane, can you match it to the file on disk
+and possibly tell what sort of node the problem appears in?
+- What is the file format of the file on disk? Do you have (use) multiple
+pager threads? Could the file loader have a multithreading problem?
+
+Unless the node is a proxy or pagedlod this appears to be a different
+problem than the cache release problem. You say the node looks like
+deleted,  all I can conclude is that the Node* doesn't point to a valid
+node.
+
+Other annoying questions:
+Are you sure your build is clean? You say you build osg master, but from
+your stack trace
+osg130-osg.dll!osg::clone
+osg130-osg.dll  hints at osg 3.4.0 or 3.4.1 Release candidate 2
+
+
+Regards, Laurens.
+
+
+On Thu, Jan 17, 2019 at 11:25 AM Richard Harrison &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rjh at zaretto.com</A>&gt; wrote:
+
+&gt;<i> Hi Lawrence;
+</I>&gt;<i>
+</I>&gt;<i> Thanks for the help.
+</I>&gt;<i>
+</I>&gt;<i> Sorry for the confusion; it doesn't actually fail on that line; it fails
+</I>&gt;<i> deep inside CopyOp; this is the stack trace from the previous code;
+</I>&gt;<i>
+</I>&gt;<i> osg130-osg.dll!osg::CopyOp::operator()(const osg::Node * node) Line
+</I>&gt;<i> 56    C++
+</I>&gt;<i>       osg130-osg.dll!osg::Group::Group(const osg::Group &amp; group, const
+</I>&gt;<i> osg::CopyOp &amp; copyop) Line 40    C++
+</I>&gt;<i>       osg130-osg.dll!osg::Group::clone(const osg::CopyOp &amp; copyop) Line
+</I>&gt;<i> 38    C++
+</I>&gt;<i>       osg130-osg.dll!osg::clone&lt;osg::Node&gt;(const osg::Node * t, const
+</I>&gt;<i> osg::CopyOp &amp; copyop) Line 250    C++
+</I>&gt;<i>       osg130-osg.dll!osg::Group::Group(const osg::Group &amp; group, const
+</I>&gt;<i> osg::CopyOp &amp; copyop) Line 40    C++
+</I>&gt;<i>       osg130-osg.dll!osg::Group::clone(const osg::CopyOp &amp; copyop) Line
+</I>&gt;<i> 38    C++
+</I>&gt;<i>       osg130-osg.dll!osg::clone&lt;osg::Node&gt;(const osg::Node * t, const
+</I>&gt;<i> osg::CopyOp &amp; copyop) Line 250    C++
+</I>&gt;<i>       fgfs.exe!simgear::copyModel(osg::Node * model) Line 94    C++
+</I>&gt;<i>       fgfs.exe!sgLoad3DModel_internal(const SGPath &amp; path, const
+</I>&gt;<i> osgDB::Options * dbOptions, SGPropertyNode * overlay) Line 342    C++
+</I>&gt;<i>
+</I>&gt;<i> copy model (simgear model.cxx:84) uses the following flags.
+</I>&gt;<i>
+</I>&gt;<i> Node* copyModel(Node* model)
+</I>&gt;<i> {
+</I>&gt;<i>      const CopyOp::CopyFlags flags = (CopyOp::DEEP_COPY_ALL
+</I>&gt;<i>                                       &amp; ~CopyOp::DEEP_COPY_TEXTURES
+</I>&gt;<i>                                       &amp; ~CopyOp::DEEP_COPY_IMAGES
+</I>&gt;<i>                                       &amp; ~CopyOp::DEEP_COPY_STATESETS
+</I>&gt;<i>                                       &amp; ~CopyOp::DEEP_COPY_STATEATTRIBUTES
+</I>&gt;<i>                                       &amp; ~CopyOp::DEEP_COPY_ARRAYS
+</I>&gt;<i>                                       &amp; ~CopyOp::DEEP_COPY_PRIMITIVES
+</I>&gt;<i>                                       // This will preserve display
+</I>&gt;<i> lists ...
+</I>&gt;<i>                                       &amp; ~CopyOp::DEEP_COPY_DRAWABLES
+</I>&gt;<i>                                       &amp; ~CopyOp::DEEP_COPY_SHAPES);
+</I>&gt;<i>      return (CopyOp(flags))(model);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> At the top of the stack inside operator() the node in question is all
+</I>&gt;<i> garbage - which looks like something that has been deleted.
+</I>&gt;<i>
+</I>&gt;<i>          osg::Object    {_name={...} _dataVariance=???
+</I>&gt;<i> _userDataContainer=??? }    osg::Object
+</I>&gt;<i>          _initialBound    {_center={_v=0x8003d900ed55904f {???, ???,
+</I>&gt;<i> ???} } _radius=??? } osg::BoundingSphereImpl&lt;osg::Vec3f&gt;
+</I>&gt;<i>          _computeBoundCallback    {_ptr=??? }
+</I>&gt;<i> osg::ref_ptr&lt;osg::Node::ComputeBoundingSphereCallback&gt;
+</I>&gt;<i>          _boundingSphere    {_center={_v=0x8003d900ed559067 {???, ???,
+</I>&gt;<i> ???} } _radius=??? } osg::BoundingSphereImpl&lt;osg::Vec3f&gt;
+</I>&gt;<i>          _boundingSphereComputed    &lt;Unable to read memory&gt;
+</I>&gt;<i>          _parents    { size=??? }    std::vector&lt;osg::Group
+</I>&gt;<i> *,std::allocator&lt;osg::Group *&gt; &gt;
+</I>&gt;<i>          _updateCallback    {_ptr=??? } osg::ref_ptr&lt;osg::Callback&gt;
+</I>&gt;<i>          _numChildrenRequiringUpdateTraversal    &lt;Unable to read memory&gt;
+</I>&gt;<i>          _eventCallback    {_ptr=??? } osg::ref_ptr&lt;osg::Callback&gt;
+</I>&gt;<i>          _numChildrenRequiringEventTraversal    &lt;Unable to read memory&gt;
+</I>&gt;<i>          _cullCallback    {_ptr=??? } osg::ref_ptr&lt;osg::Callback&gt;
+</I>&gt;<i>          _cullingActive    &lt;Unable to read memory&gt;
+</I>&gt;<i>          _numChildrenWithCullingDisabled    &lt;Unable to read memory&gt;
+</I>&gt;<i>          _numChildrenWithOccluderNodes    &lt;Unable to read memory&gt;
+</I>&gt;<i>          _nodeMask    &lt;Unable to read memory&gt;
+</I>&gt;<i>          _stateset    {_ptr=??? } osg::ref_ptr&lt;osg::StateSet&gt;
+</I>&gt;<i>
+</I>&gt;<i> On 17/01/2019 10:56, Voerman, L. wrote:
+</I>&gt;<i>
+</I>&gt;<i> &gt; Hi Richard,
+</I>&gt;<i> &gt; I can't see how you can get a segfault on the line you indicate, so I
+</I>&gt;<i> &gt; guess the node is somehow corrupted and the segfault is somewhere in
+</I>&gt;<i> &gt; the copyOp.
+</I>&gt;<i> &gt; I can only guess at what might be going wrong there, but my first
+</I>&gt;<i> &gt; guess would be the DEEP_COPY_USERDATA.
+</I>&gt;<i> &gt; Laurens.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; On Thu, Jan 17, 2019 at 8:13 AM Richard Harrison &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rjh at zaretto.com</A>
+</I>&gt;<i> &gt; &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">rjh at zaretto.com</A>&gt;&gt; wrote:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     On 15/01/2019 09:03, Robert Osfield wrote:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     &gt;&gt; illustrated it well) and I'm currently flying one of my long
+</I>&gt;<i> &gt;     test routes.
+</I>&gt;<i> &gt;     &gt; Fingers and toes crossed.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     ..and alas after 30h I've got a similar looking problem; the
+</I>&gt;<i> &gt;     pattern is
+</I>&gt;<i> &gt;     the same i.e. DatabasePager loading something whilst ObjectCache is
+</I>&gt;<i> &gt;     expiring.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     This time it's a segfault in the DatabasePager during a copy of a
+</I>&gt;<i> &gt;     model
+</I>&gt;<i> &gt;     that has just been loaded (simgear, SGReaderWriterXML.cxx:342)
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     options-&gt;setDatabasePath(texturepath.local8BitStr());
+</I>&gt;<i> &gt;              osgDB::ReaderWriter::ReadResult modelResult;
+</I>&gt;<i> &gt;              modelResult =
+</I>&gt;<i> &gt;     osgDB::readRefNodeFile(modelpath.local8BitStr(),
+</I>&gt;<i> &gt;     options.get());
+</I>&gt;<i> &gt;              if (!modelResult.validNode())
+</I>&gt;<i> &gt;                  throw sg_io_exception(&quot;Failed to load 3D model:&quot; +
+</I>&gt;<i> &gt;     modelResult.message(),
+</I>&gt;<i> &gt;                                        modelpath);
+</I>&gt;<i> &gt;      &gt;       model = copyModel(modelResult.getNode());
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     The object currently being expired in the ObjectCache doesn't seem to
+</I>&gt;<i> &gt;     bear any relation to the model being loaded; one is a windsock and
+</I>&gt;<i> &gt;     the
+</I>&gt;<i> &gt;     other a radio tower.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     This is after I changed all of the osg::getSomething into
+</I>&gt;<i> &gt;     osg::getRefSomething.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     I'm now a little confused as I was sure that the fix would work; I've
+</I>&gt;<i> &gt;     kept the debug session open in case there is anything that I need to
+</I>&gt;<i> &gt;     inspect.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     _______________________________________________
+</I>&gt;<i> &gt;     osg-users mailing list
+</I>&gt;<i> &gt;     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190117/4aedde35/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190117/4aedde35/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009606.html">[osg-users] Deleting still referenced object
+</A></li>
+	<LI>Next message (by thread): <A HREF="009608.html">[osg-users] Deleting still referenced object
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9607">[ date ]</a>
+              <a href="thread.html#9607">[ thread ]</a>
+              <a href="subject.html#9607">[ subject ]</a>
+              <a href="author.html#9607">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

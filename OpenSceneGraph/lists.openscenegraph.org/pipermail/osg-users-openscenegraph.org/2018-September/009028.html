@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] getWindowingSystemInterface() fails on Ubuntu 18.04
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20getWindowingSystemInterface%28%29%20fails%20on%20Ubuntu%2018.04&In-Reply-To=%3CCAFN7Y%2BUVGW2CDHBVHvhMx9G2v6fJ0DGjK4GF8CSWk%3DSk_Fwb1w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009027.html">
+   <LINK REL="Next"  HREF="009029.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] getWindowingSystemInterface() fails on Ubuntu 18.04</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20getWindowingSystemInterface%28%29%20fails%20on%20Ubuntu%2018.04&In-Reply-To=%3CCAFN7Y%2BUVGW2CDHBVHvhMx9G2v6fJ0DGjK4GF8CSWk%3DSk_Fwb1w%40mail.gmail.com%3E"
+       TITLE="[osg-users] getWindowingSystemInterface() fails on Ubuntu 18.04">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Sep  5 07:50:42 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009027.html">[osg-users] getWindowingSystemInterface() fails on Ubuntu 18.04
+</A></li>
+        <LI>Next message (by thread): <A HREF="009029.html">[osg-users] getWindowingSystemInterface() fails on Ubuntu 18.04
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9028">[ date ]</a>
+              <a href="thread.html#9028">[ thread ]</a>
+              <a href="subject.html#9028">[ subject ]</a>
+              <a href="author.html#9028">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>On Wed, 5 Sep 2018 at 15:22, Julien Valentin &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">julienvalentin51 at gmail.com</A>&gt; wrote:
+&gt;<i> for your code you should replace
+</I>&gt;<i> wsi-&gt;getNumScreens()
+</I>&gt;<i> with
+</I>&gt;<i> wsi-&gt;getNumScreens(osg::GraphicsContext::ScreenIdentifier(1))
+</I>&gt;<i> to work on DISPLAY=:1.0
+</I>
+Sounds like we are getting to the bottom of things now :-)
+
+FYI, WindowingSystemInterface::getNumScreens() is implemented in
+include/osg/GraphicsContext as:
+
+            virtual unsigned int getNumScreens(const ScreenIdentifier&amp;
+screenIdentifier = ScreenIdentifier()) = 0;
+
+The default constructed ScreenIdentifier is:
+
+GraphicsContext::ScreenIdentifier::ScreenIdentifier():
+    displayNum(0),
+    screenNum(0) {}
+
+Which is fine if the system doesn't change the default DISPLAY from 0.0.
+
+Support for DISPLAY is actually built into ScreenIdentifier via the
+readDISPLAY() method:
+
+            /** Read the DISPLAY environmental variable, and set the
+ScreenIdentifier accordingly.
+              * Note, if either of displayNum or screenNum are not
+defined then -1 is set respectively to
+              * signify that this parameter has not been set. When
+parameters are undefined one can call
+              * call setUndefinedScreenDetailsToDefaultScreen() after
+readDISPLAY() to ensure valid values. */
+            void readDISPLAY();
+
+To is not called by the constructor though, so you need to call it
+explicitly.  The various Viewer config implementations do actually
+call readDISPLAY:
+
+~/OpenSceneGraph/src/osgViewer$ grep readDISPLAY */*.cpp
+config/AcrossAllScreens.cpp:    si.readDISPLAY();
+config/PanoramicSphericalDisplay.cpp:    si.readDISPLAY();
+config/SingleWindow.cpp:    traits-&gt;readDISPLAY();
+config/SingleWindow.cpp:        si.readDISPLAY();
+config/SphericalDisplay.cpp:    si.readDISPLAY();
+config/WoWVxDisplay.cpp:    si.readDISPLAY();
+
+So I'd suggest using this, such as (modified main.cpp for osgtest:
+
+    std::cout &lt;&lt; wsi-&gt;getNumScreens() &lt;&lt; &quot; screen(s) detected&quot; &lt;&lt; std::endl;
+    for ( unsigned int screen=0 ; screen &lt;
+wsi-&gt;getNumScreens(main_screen_id); screen++ )
+    {
+        osg::GraphicsContext::ScreenIdentifier screen_id(screen);
+        osg::GraphicsContext::ScreenSettings screen_settings;
+        wsi-&gt;getScreenSettings( screen_id, screen_settings );
+        std::cout &lt;&lt; &quot;  Screen #&quot; &lt;&lt; screen &lt;&lt; &quot; : &quot;
+                  &lt;&lt; screen_settings.width &lt;&lt; &quot;x&quot; &lt;&lt;
+screen_settings.height &lt;&lt; &quot; &quot;
+                  &lt;&lt; screen_settings.refreshRate &lt;&lt; &quot;Hz &quot;
+                  &lt;&lt; screen_settings.colorDepth &lt;&lt; &quot; bit&quot; &lt;&lt; std::endl;
+    }
+
+I have also attached the full modified file.
+
+Robert.
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: main.cpp
+Type: text/x-c++src
+Size: 1191 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180905/fdc50bcf/attachment.cpp">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180905/fdc50bcf/attachment.cpp</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009027.html">[osg-users] getWindowingSystemInterface() fails on Ubuntu 18.04
+</A></li>
+	<LI>Next message (by thread): <A HREF="009029.html">[osg-users] getWindowingSystemInterface() fails on Ubuntu 18.04
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9028">[ date ]</a>
+              <a href="thread.html#9028">[ thread ]</a>
+              <a href="subject.html#9028">[ subject ]</a>
+              <a href="author.html#9028">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,336 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;HI&nbsp;Florian,&lt;br&gt;&lt;br&gt;&lt;/div&gt;I&nbsp;can&#39;t&nbsp;any&nbsp;obvious&nbsp;mistakes,&nbsp;but&nbsp;the&nbsp;use&nbsp;of&nbsp;the&nbsp;SmoothingVisitor&nbsp;looks&nbsp;redudent&nbsp;to&nbsp;me&nbsp;as&nbsp;you&nbsp;are&nbsp;providing&nbsp;your&nbsp;own&nbsp;normals. &nbsp;Try&nbsp;comment&nbsp;it&nbsp;out.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Robert.&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;3&nbsp;May&nbsp;2016&nbsp;at&nbsp;21:13,&nbsp;Florian&nbsp;GOLESTIN&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:florian.golestin@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;florian.golestin@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;Robert,&lt;br&gt;<br>
+&lt;br&gt;<br>
+Sorry&nbsp;my&nbsp;mistake,&nbsp;I&nbsp;wanted&nbsp;to&nbsp;put&nbsp;only&nbsp;the&nbsp;interesting&nbsp;part&nbsp;but&nbsp;this&nbsp;is&nbsp;not&nbsp;efficient.&lt;br&gt;<br>
+No&nbsp;more&nbsp;censure!&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+namespace&nbsp;Soleil&lt;br&gt;<br>
+{&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;LevelReader::LevelReader()&lt;br&gt;<br>
+ &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp;//supportsExtension(&quot;level&quot;,&nbsp;&quot;Text&nbsp;map&nbsp;format&nbsp;for&nbsp;Donjon&quot;);&lt;br&gt;<br>
+ &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;LevelReader::~LevelReader()&lt;br&gt;<br>
+ &nbsp;{&lt;br&gt;<br>
+ &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;osg::ref_ptr&lt;Level&gt; &nbsp;LevelReader::readFile(const&nbsp;std::string&nbsp;&amp;file)&nbsp;const&lt;br&gt;<br>
+ &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp;std::string&nbsp;fileName&nbsp;=&nbsp;osgDB::findDataFile(file);&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(fileName.empty())&nbsp;return&nbsp;nullptr;&nbsp;//&nbsp;TODO&nbsp;throw&nbsp;e?&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;errno&nbsp;=&nbsp;0;&lt;br&gt;<br>
+ &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;Stream:&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;fileName.c_str()&nbsp;&lt;&lt;&nbsp;&quot;\n&quot;;&lt;br&gt;<br>
+ &nbsp; &nbsp;std::ifstream&nbsp;stream;&lt;br&gt;<br>
+ &nbsp; &nbsp;stream.exceptions(std::ifstream::failbit);&nbsp;// &nbsp;|&nbsp;std::ifstream::badbit&lt;br&gt;<br>
+ &nbsp; &nbsp;stream.open(fileName.c_str(),&nbsp;std::ios::in);&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(!stream)&nbsp;return&nbsp;nullptr;&nbsp;//&nbsp;TODO&nbsp;throw&nbsp;e&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;return&nbsp;readStream(stream);&lt;br&gt;<br>
+ &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;osg::ref_ptr&lt;Level&gt;&nbsp;LevelReader::readStream(std::istream&nbsp;&amp;stream)&nbsp;const&lt;br&gt;<br>
+ &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp;char &nbsp; &nbsp; &nbsp; &nbsp;block; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;current&nbsp;reading&nbsp;block&lt;br&gt;<br>
+ &nbsp; &nbsp;float &nbsp; &nbsp; &nbsp; x&nbsp;=&nbsp;0; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;Current&nbsp;position&nbsp;on&nbsp;x&lt;br&gt;<br>
+ &nbsp; &nbsp;float &nbsp; &nbsp; &nbsp; y&nbsp;=&nbsp;0; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;Current&nbsp;position&nbsp;on&nbsp;y&lt;br&gt;<br>
+ &nbsp; &nbsp;int &nbsp; &nbsp; &nbsp; &nbsp; wallCount&nbsp;=&nbsp;0; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;Number&nbsp;of&nbsp;cubes&lt;br&gt;<br>
+ &nbsp; &nbsp;float &nbsp; &nbsp; &nbsp; maxX&nbsp;=&nbsp;0; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; //&nbsp;Max&nbsp;size&nbsp;of&nbsp;the&nbsp;map&nbsp;in&nbsp;X&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;Soleil::Level&gt;&nbsp;level&nbsp;=&nbsp;new&nbsp;Soleil::Level();&lt;br&gt;<br>
+ &nbsp; &nbsp;std::string&nbsp;line;&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt; &nbsp; &nbsp;while(std::getline(stream,&nbsp;line))&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;std::stringstream&nbsp;linestream(line);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;while&nbsp;(linestream&nbsp;&gt;&gt;&nbsp;block)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;/*&nbsp;TODO&nbsp;Configurable&nbsp;size&nbsp;for&nbsp;the&nbsp;blocks&nbsp;*/&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;posx&nbsp;=&nbsp;1.0&nbsp;*&nbsp;x;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;posy&nbsp;=&nbsp;1.0&nbsp;*&nbsp;y;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;endx&nbsp;=&nbsp;posx&nbsp;+&nbsp;1.0;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;endy&nbsp;=&nbsp;posy&nbsp;+&nbsp;1.0;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;bool&nbsp;blockFound&nbsp;=&nbsp;false;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;switch&nbsp;(block)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;case&nbsp;&#39;.&#39;:&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;break;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;case&nbsp;&#39;D&#39;:&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;level-&gt;_startingPosition&nbsp;=&nbsp;osg::Vec3(posx&nbsp;+&nbsp;.5,&nbsp;posy&nbsp;+&nbsp;.5,&nbsp;.3);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;blockFound&nbsp;=&nbsp;true;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;break;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;case&nbsp;&#39;d&#39;:&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;level-&gt;_startingOrientation&nbsp;=&nbsp;osg::Vec3(posx&nbsp;+&nbsp;.5,&nbsp;posy&nbsp;+&nbsp;.5,&nbsp;.3);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;blockFound&nbsp;=&nbsp;true;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;break;&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;case&nbsp;&#39;x&#39;:&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(wallCount&nbsp;%&nbsp;2)&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;1&quot;&nbsp;&lt;&lt;&nbsp;&quot;\n&quot;;&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;createCube(level.get(),&nbsp;*level-&gt;texcoords,&nbsp;*level-&gt;texcoords2,&nbsp;posx,&nbsp;posy,&nbsp;endx,&nbsp;endy);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;else&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;2&quot;&nbsp;&lt;&lt;&nbsp;&quot;\n&quot;;&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;createCube(level.get(),&nbsp;*level-&gt;texcoords2,&nbsp;*level-&gt;texcoords,&nbsp;posx,&nbsp;posy,&nbsp;endx,&nbsp;endy);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;blockFound&nbsp;=&nbsp;true;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;wallCount++;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;break;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;default:&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;// &nbsp; &nbsp; &nbsp;blockFound&nbsp;=&nbsp;levelConfiguration(block);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;// &nbsp; &nbsp; &nbsp;break;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(blockFound&nbsp;==&nbsp;false)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;Unexpected&nbsp;character:&nbsp;&quot;&nbsp;&lt;&lt; &nbsp;block&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;x&nbsp;+=&nbsp;1.0;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;maxX&nbsp;=&nbsp;std::max(x,&nbsp;maxX);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;x &nbsp;=&nbsp;0;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;y&nbsp;-=&nbsp;1.0;&nbsp;//&nbsp;TODO&nbsp;Cube&nbsp;size&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;TODO&nbsp;read&nbsp;failed?&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Floor&nbsp;-------------&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(maxX,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(maxX,&nbsp;y,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(0,&nbsp;y,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;-1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;-1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;-1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;-1.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp;level-&gt;texcoords-&gt;push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f)&nbsp;);&nbsp;//&nbsp;0&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;texcoords-&gt;push_back(&nbsp;osg::Vec2(0.0f,&nbsp;1.0f)&nbsp;);&nbsp;//&nbsp;1&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;texcoords-&gt;push_back(&nbsp;osg::Vec2(1.0f,&nbsp;1.0f)&nbsp;);&nbsp;//&nbsp;2&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;texcoords-&gt;push_back(&nbsp;osg::Vec2(1.0f,&nbsp;0.0f)&nbsp;);&nbsp;//&nbsp;3&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osg::Geometry&gt;&nbsp;geom&nbsp;=&nbsp;new&nbsp;osg::Geometry;&lt;br&gt;<br>
+ &nbsp; &nbsp;geom-&gt;setVertexArray(level-&gt;vertices);&lt;br&gt;<br>
+ &nbsp; &nbsp;geom-&gt;setNormalArray(level-&gt;normals,&nbsp;osg::Array::Binding::BIND_PER_VERTEX);&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp;geom-&gt;addPrimitiveSet(new&nbsp;osg::DrawArrays(GL_QUADS,&nbsp;0,&nbsp;24*wallCount+4));&nbsp;//&nbsp;+4&nbsp;for&nbsp;the&nbsp;floor&nbsp;texture&nbsp;coordinates&lt;br&gt;<br>
+ &nbsp; &nbsp;osgUtil::SmoothingVisitor::smooth(*geom);&lt;br&gt;<br>
+ &nbsp; &nbsp;//&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osg::Geode&gt;&nbsp;geode&nbsp;=&nbsp;new&nbsp;osg::Geode;&lt;br&gt;<br>
+ &nbsp; &nbsp;geode-&gt;addDrawable(geom);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;/*&nbsp;I&nbsp;added&nbsp;this&nbsp;in&nbsp;the&nbsp;hope&nbsp;to&nbsp;have&nbsp;the&nbsp;second&nbsp;texture&nbsp;appearing&nbsp;*/&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;osg::Material*&nbsp;material&nbsp;=&nbsp;new&nbsp;osg::Material;&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;material-&gt;setColorMode(osg::Material::AMBIENT_AND_DIFFUSE);&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;material-&gt;setAmbient(osg::Material::FRONT_AND_BACK,&nbsp;osg::Vec4(1,&nbsp;1,&nbsp;1,&nbsp;1));&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;material-&gt;setDiffuse(osg::Material::FRONT_AND_BACK,&nbsp;osg::Vec4(1,&nbsp;1,&nbsp;1,&nbsp;1));&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;material-&gt;setSpecular(osg::Material::FRONT_AND_BACK,&nbsp;osg::Vec4(1,&nbsp;1,&nbsp;1,&nbsp;1));&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;material-&gt;setShininess(osg::Material::FRONT_AND_BACK,&nbsp;64.0f);&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;level-&gt;getOrCreateStateSet()-&gt;setAttribute(material,osg::StateAttribute::ON&nbsp;|&nbsp;osg::StateAttribute::OVERRIDE);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;addChild(geode);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Texture&nbsp;1&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt; &nbsp; &nbsp;geom-&gt;setTexCoordArray(0,&nbsp;level-&gt;texcoords.get());&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Texture2D&gt;&nbsp;texture&nbsp;=&nbsp;new&nbsp;osg::Texture2D;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Image&gt;&nbsp;image&nbsp;=&nbsp;osgDB::readImageFile(&quot;media/textures/stone_3_2048x2048.jpg&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;texture-&gt;setImage(image);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;texture-&gt;setUnRefImageDataAfterApply(true);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;level-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,&nbsp;texture);&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;//Texture&nbsp;2&lt;br&gt;<br>
+ &nbsp; &nbsp;geom-&gt;setTexCoordArray(1,&nbsp;level-&gt;texcoords2.get());&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Texture2D&gt;&nbsp;texture&nbsp;=&nbsp;new&nbsp;osg::Texture2D;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Image&gt;&nbsp;image&nbsp;=&nbsp;osgDB::readImageFile(&quot;media/textures/Metal_seamless2_ch16.jpg&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;texture-&gt;setImage(image);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;texture-&gt;setUnRefImageDataAfterApply(true);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;level-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(1,&nbsp;texture);&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;done.\n&quot;;&lt;br&gt;<br>
+ &nbsp; &nbsp;return&nbsp;level;&lt;br&gt;<br>
+ &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;/*&lt;br&gt;<br>
+ &nbsp; *&nbsp;@param&nbsp;Level &nbsp; &nbsp; &nbsp; Is&nbsp;the&nbsp;container&nbsp;of&nbsp;the&nbsp;vertices,&nbsp;normals&nbsp;and&nbsp;textures&nbsp;for&nbsp;the&nbsp;walls&nbsp;of&nbsp;our&nbsp;labyrinth&lt;br&gt;<br>
+ &nbsp; *&nbsp;@param&nbsp;tex &nbsp; &nbsp; &nbsp; &nbsp; Is&nbsp;the&nbsp;Vector&nbsp;that&nbsp;should&nbsp;receive&nbsp;the&nbsp;coordinate&nbsp;for&nbsp;the&nbsp;textures&lt;br&gt;<br>
+ &nbsp; *&nbsp;@param&nbsp;skip &nbsp; &nbsp; &nbsp; &nbsp;Is&nbsp;the&nbsp;second&nbsp;vector&nbsp;for&nbsp;texture&nbsp;filled&nbsp;with&nbsp;&#39;0&#39;&nbsp;to&nbsp;&#39;skip&#39;&nbsp;this&nbsp;wall&lt;br&gt;<br>
+&lt;div&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt; &nbsp; */&lt;br&gt;<br>
+ &nbsp;void&nbsp;LevelReader::createCube(Soleil::Level&nbsp;*level,&nbsp;osg::Vec2Array&nbsp;&amp;tex,&nbsp;osg::Vec2Array&nbsp;&amp;skip,&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;float&nbsp;posx,&nbsp;float&nbsp;posy,&nbsp;float&nbsp;endx,&nbsp;float&nbsp;endy)&nbsp;const&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;------&nbsp;Front&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;posy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;posy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;posy,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;posy,&nbsp;1.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;//&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;------&nbsp;top&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;posy,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;posy,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;endy,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;endy,&nbsp;1.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;//&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;------&nbsp;back&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;endy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;endy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;endy,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;endy,&nbsp;1.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;//&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;------&nbsp;Bottom&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;posy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;posy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;endy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;endy,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;-1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;-1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;-1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,&nbsp;0.0f,&nbsp;-1.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;//&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;------&nbsp;Left&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;posy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;endy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;endy,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(posx,&nbsp;posy,&nbsp;1.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;//&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;------&nbsp;Right&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;posy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;endy,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;endy,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;vertices-&gt;push_back(osg::Vec3(endx,&nbsp;posy,&nbsp;1.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(1.0f,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(1.0f,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(1.0f,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;level-&gt;normals-&gt;push_back(osg::Vec3(1.0f,&nbsp;0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;tex.push_back(&nbsp;osg::Vec2(1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;//&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp;skip.push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;}&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;Here&nbsp;is&nbsp;the&nbsp;original&nbsp;file:&nbsp;&lt;a&nbsp;href=&quot;https://github.com/fulezi/soleil/blob/master/LevelReader.cpp&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;https://github.com/fulezi/soleil/blob/master/LevelReader.cpp&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+An&nbsp;idea?&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+Florian&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;/span&gt;&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=67046#67046&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=67046#67046&lt;/a&gt;&lt;br&gt;<br>
+&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

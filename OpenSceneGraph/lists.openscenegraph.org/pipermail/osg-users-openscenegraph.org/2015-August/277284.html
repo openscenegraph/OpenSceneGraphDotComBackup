@@ -1,0 +1,147 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] update slave camera with frame scheme ON_DEMAND
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20update%20slave%20camera%20with%20frame%20scheme%20ON_DEMAND&In-Reply-To=%3C1438699756.m2f.64613%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001098.html">
+   <LINK REL="Next"  HREF="001071.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] update slave camera with frame scheme ON_DEMAND</H1>
+<!--htdig_noindex-->
+    <B>Gianni Ambrosio</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20update%20slave%20camera%20with%20frame%20scheme%20ON_DEMAND&In-Reply-To=%3C1438699756.m2f.64613%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] update slave camera with frame scheme ON_DEMAND">g.ambrosio+osg at gmail.com
+       </A><BR>
+    <I>Tue Aug  4 07:49:16 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001098.html">[osg-users] Donations
+</A></li>
+        <LI>Next message: <A HREF="001071.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277284">[ date ]</a>
+              <a href="thread.html#277284">[ thread ]</a>
+              <a href="subject.html#277284">[ subject ]</a>
+              <a href="author.html#277284">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi All,
+I have a global cross axes object that is not correctly updated calling frame() when frame scheme is set to ON_DEMAND.
+
+Here some code.
+
+I have a ViewerWidget that is a CompositeViewer:
+
+class ViewerWidget : public osgQt::GLWidget, public osgViewer::CompositeViewer
+
+In the constructor I create an osgViewer::View that is the main view. I create a CrossAxes object and set it as slave camera. I create a timer to call the update() method of GLWidget which internally calls paintEvent method. I enable the ON_DEMAND flag and set a NodeTrackerManipulator (here is a subclass, but I don't think the manipulator makes any difference)
+
+ViewerWidget::ViewerWidget(...) {
+   osgViewer::View* view = new osgViewer::View;
+   addView(view);
+
+   crosscamera = new CrossAxes(70.0);
+   view-&gt;addSlave(crosscamera, false);
+   view-&gt;setSceneData(root);
+      
+   connect(&amp;timer, SIGNAL(timeout()), this, SLOT(update()));
+
+   setRunFrameScheme(ON_DEMAND);
+   
+   getView(0)-&gt;setCameraManipulator(new viframework::viosg::NodeTrackerManipulator(getView(0)));
+}
+
+On paintEvent I check the frame scheme mode and checkNeedToDoFrame() before calling frame().
+
+void ViewerWidget::paintEvent(QPaintEvent* iEvent)
+{
+   if (osgViewer::ViewerBase::CONTINUOUS == getRunFrameScheme() || true == checkNeedToDoFrame()) {
+      frame();
+   }
+}
+
+CrossAxes is an osg::Camera. Here is the constructor.
+
+CrossAxes::CrossAxes(double iLength)
+:<i>  length(iLength)
+</I>{
+   setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+   // only clear the depth buffer
+   setClearMask(GL_DEPTH_BUFFER_BIT);
+   // draw subgraph after main camera view.
+   setRenderOrder(osg::Camera::POST_RENDER);
+   // we don't want the camera to grab event focus from the viewers main camera(s).
+   setAllowEventFocus(false); 
+   // setup update callback, so we can update it's view matrix
+   setUpdateCallback(new AxesCameraUpdateCallback);
+
+   // put the axes under the hud transformation node
+   osg::PositionAttitudeTransform* transform = new osg::PositionAttitudeTransform;
+   transform-&gt;setPosition(osg::Vec3(0, 0, -(iLength*1.4))); // put &quot;inside&quot; the screen (z=-100) to avoid clipping
+   transform-&gt;addChild(createAxesGeometry(length));
+   transform-&gt;addChild(createAxesLabels(length));
+   addChild(transform);
+}
+
+Now the problem. I implemented some defaults views to set point of view of 3D scene towards X+, X-, Y+, Y-, Z+, Z-. To do that I use for example:
+
+void ViewerWidget::setViewTowardsXPlus()
+{
+   nodeTrackerManipulator-&gt;setTransformation(osg::Vec3d(-nodeTrackerManipulator-&gt;getDistance(), 0.0, 0.0), osg::Vec3d(0.0, 0.0, 0.0), nodeTrackerManipulator-&gt;getHomeUpPosition());
+}
+
+At the end of setTransformation there is a &quot;view-&gt;requestRedraw()&quot; call. 
+
+The problem I see is that calling setViewTowardsXPlus() the 3D scene is updated correctly by the frame() call (I verified it is called indeed!) but the CrossAxes object is not updated. Unexpectedly, if I call frame() a second time also the CrossAxes is correctly updated.
+
+Is there an obvious reason for that?
+
+Regards,
+Gianni
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic811c.php?p=64613#64613">http://forum.openscenegraph.org/viewtopic.php?p=64613#64613</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001098.html">[osg-users] Donations
+</A></li>
+	<LI>Next message: <A HREF="001071.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277284">[ date ]</a>
+              <a href="thread.html#277284">[ thread ]</a>
+              <a href="subject.html#277284">[ subject ]</a>
+              <a href="author.html#277284">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

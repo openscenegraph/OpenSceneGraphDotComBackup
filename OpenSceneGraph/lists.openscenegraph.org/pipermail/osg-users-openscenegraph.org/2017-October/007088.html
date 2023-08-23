@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Potential bug in ref_ptr::assign
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Potential%20bug%20in%20ref_ptr%3A%3Aassign&In-Reply-To=%3C1508884454.m2f.72242%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007086.html">
+   <LINK REL="Next"  HREF="007089.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Potential bug in ref_ptr::assign</H1>
+<!--htdig_noindex-->
+    <B>Hartwig Wiesmann</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Potential%20bug%20in%20ref_ptr%3A%3Aassign&In-Reply-To=%3C1508884454.m2f.72242%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Potential bug in ref_ptr::assign">hartwig.wiesmann at skywind.eu
+       </A><BR>
+    <I>Tue Oct 24 15:34:14 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007086.html">[osg-users] model matrix
+</A></li>
+        <LI>Next message (by thread): <A HREF="007089.html">[osg-users] Potential bug in ref_ptr::assign
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7088">[ date ]</a>
+              <a href="thread.html#7088">[ thread ]</a>
+              <a href="subject.html#7088">[ subject ]</a>
+              <a href="author.html#7088">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+in ref_ptr you find the following code:
+
+
+Code:
+
+        template&lt;class Other&gt; void assign(const ref_ptr&lt;Other&gt;&amp; rp)
+        {
+            if (_ptr==rp._ptr) return;
+            T* tmp_ptr = _ptr;
+            _ptr = rp._ptr;
+            if (_ptr) _ptr-&gt;ref();
+            // unref second to prevent any deletion of any object which might
+            // be referenced by the other object. i.e rp is child of the
+            // original _ptr.
+            if (tmp_ptr) tmp_ptr-&gt;unref();
+        }
+
+
+
+
+I was puzzled by the comment: actually, there is nothing that prevents an optimiser to re-write the code to
+
+Code:
+
+            if (tmp_ptr) tmp_ptr-&gt;unref();
+            if (_ptr) _ptr-&gt;ref();
+
+
+
+
+or
+
+
+Code:
+
+           _ptr-&gt;unref();
+            _ptr = rp._ptr;
+            if (_ptr) _ptr-&gt;ref();
+
+
+
+
+It seems to be that it has not happened, yet, respectively the scenario described in the comment did not occur, but this does not mean that it cannot happen, or?
+Actually, I do not see a solution for the described scenario, so probably the comment should be removed or changed? But in this case the code can be simplified, too.
+
+Cheers,
+Hartwig[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic36ee.php?p=72242#72242">http://forum.openscenegraph.org/viewtopic.php?p=72242#72242</A>
+
+
+
+
+
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007086.html">[osg-users] model matrix
+</A></li>
+	<LI>Next message (by thread): <A HREF="007089.html">[osg-users] Potential bug in ref_ptr::assign
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7088">[ date ]</a>
+              <a href="thread.html#7088">[ thread ]</a>
+              <a href="subject.html#7088">[ subject ]</a>
+              <a href="author.html#7088">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

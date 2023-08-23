@@ -1,0 +1,177 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to create a background image?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20create%20a%20background%20image%3F&In-Reply-To=%3C1447693158.m2f.65658%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278213.html">
+   <LINK REL="Next"  HREF="278202.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to create a background image?</H1>
+<!--htdig_noindex-->
+    <B>Vite Falcon</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20create%20a%20background%20image%3F&In-Reply-To=%3C1447693158.m2f.65658%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] How to create a background image?">osgforum at tevs.eu
+       </A><BR>
+    <I>Mon Nov 16 08:59:18 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278213.html">[osg-users] How to create a background image?
+</A></li>
+        <LI>Next message: <A HREF="278202.html">[osg-users] MSVS2015 3rdparty build
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1995">[ date ]</a>
+              <a href="thread.html#1995">[ thread ]</a>
+              <a href="subject.html#1995">[ subject ]</a>
+              <a href="author.html#1995">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I managed to solve this issue using the following code:
+
+
+Code:
+
+// create a camera to set up the projection and model view matrices, and the subgraph to draw in the HUD
+osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera();
+
+// set the view matrix
+camera-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+// use identity view matrix so that children do not get (view) transformed
+camera-&gt;setViewMatrix(osg::Matrix::identity());
+// set the projection matrix to be of width and height of 1
+camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0, 1.0f, 0, 1.0f));
+// set resize policy to fixed
+camera-&gt;setProjectionResizePolicy(osg::Camera::ProjectionResizePolicy::FIXED);
+
+// only clear the depth buffer
+camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+// draw subgraph before main camera view.
+camera-&gt;setRenderOrder(osg::Camera::NESTED_RENDER);
+
+// we don't want the camera to grab event focus from the viewers main camera(s).
+camera-&gt;setAllowEventFocus(false);
+
+osg::StateSet* cameraStateSet = camera-&gt;getOrCreateStateSet();
+cameraStateSet-&gt;setRenderBinDetails(1, &quot;RenderBin&quot;);
+cameraStateSet-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+
+// add to this camera a subgraph to render
+{
+
+    osg::ref_ptr&lt;osg::Geode&gt; geode{ new osg::Geode() };
+
+    auto stateset = geode-&gt;getOrCreateStateSet();
+    stateset-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    {
+        auto backgroundImage = osgDB::readImageFile(&quot;data/images/bg_ragnarok_01.bmp&quot;);
+        auto texturedQuad = osg::createTexturedQuadGeometry(
+            osg::Vec3(0.f, 0.f, 0.f),
+            osg::Vec3(1.0f, 0.f, 0.f),
+            osg::Vec3(0.f, 1.0f, 0.f),
+            0.f,
+            0.f,
+            backgroundImage-&gt;s(),
+            backgroundImage-&gt;t());
+        auto textureRect = new osg::TextureRectangle(backgroundImage); textureRect-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+        textureRect-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+        textureRect-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+        textureRect-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+        texturedQuad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, textureRect, osg::StateAttribute::ON);
+        texturedQuad-&gt;getOrCreateStateSet()-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+        geode-&gt;addDrawable(texturedQuad);
+    }
+
+    if (!camera-&gt;addChild(geode))
+    {
+        osg::notify(osg::NotifySeverity::WARN) &lt;&lt; &quot;Failed to add geode&quot; &lt;&lt; std::endl;
+    }
+}
+osgViewer::Viewer::Windows windows;
+viewer.getWindows(windows);
+
+if (windows.empty())
+{
+    return;
+}
+
+// set up cameras to render on the first window available.
+auto window = windows[0];
+camera-&gt;setGraphicsContext(window);
+auto windowTraits = window-&gt;getTraits();
+camera-&gt;setViewport(0, 0, windowTraits-&gt;width, windowTraits-&gt;height);
+
+auto group = dynamic_cast&lt;osg::Group*&gt;(viewer.getSceneData());
+if (nullptr == group)
+{
+    osg::notify(osg::NotifySeverity::WARN) &lt;&lt; &quot;Failed to add camera&quot; &lt;&lt; std::endl;
+    return;
+}
+group-&gt;addChild(camera.get());
+
+
+
+
+The gist of the code is:
+
+1. Create a camera
+2. Set the view matrix of the camera to identity so that there are no view transforms made to the children
+3. Set the projection matrix of the camera to be of an orthogonal matrix with width and height equal to 1
+4. Set resize policy on projection matrix to be fixed
+5. Set render order to be NESTED_RENDER (I previously had this as PRE_RENDER and that didn't work. I still have to dig into why).
+6. Create a textured quad with width and height of 1 unit
+7. Add the textured quad to an instance of osg::Geode and add that geode to the camera
+8. Extract the first window from the camera. Set the graphics-context and viewport of the camera
+9. Add the camera to the scene and you have a background image
+
+
+This answer can also be found in gamedev section of stackexchange. Since I cannot add links to my posts yet, I'm skipping that. But it should be easy to find if you search my username.
+
+Thanks to everyone who took a look at this question.
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic1613.php?p=65658#65658">http://forum.openscenegraph.org/viewtopic.php?p=65658#65658</A>
+
+
+
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151116/273117fc/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151116/273117fc/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278213.html">[osg-users] How to create a background image?
+</A></li>
+	<LI>Next message: <A HREF="278202.html">[osg-users] MSVS2015 3rdparty build
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1995">[ date ]</a>
+              <a href="thread.html#1995">[ thread ]</a>
+              <a href="subject.html#1995">[ subject ]</a>
+              <a href="author.html#1995">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,183 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Disappearing text
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Disappearing%20text&In-Reply-To=%3CCAFN7Y%2BX7jeU%3D5Hjx1SW7WP40Hqq0rS5NtS7OpeGn%2BObFgT9NUw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279026.html">
+   <LINK REL="Next"  HREF="002814.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Disappearing text</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Disappearing%20text&In-Reply-To=%3CCAFN7Y%2BX7jeU%3D5Hjx1SW7WP40Hqq0rS5NtS7OpeGn%2BObFgT9NUw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Disappearing text">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Apr 18 00:27:40 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279026.html">[osg-users] Disappearing text
+</A></li>
+        <LI>Next message: <A HREF="002814.html">[osg-users] Disappearing text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2807">[ date ]</a>
+              <a href="thread.html#2807">[ thread ]</a>
+              <a href="subject.html#2807">[ subject ]</a>
+              <a href="author.html#2807">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Ronny,
+
+Without seeing the artificats first hand is not possible to know what is
+going on.  The best I can suggest is that you look at the near/far planes
+of the scene, could it be that the near/far planes are clipping the text?
+
+Also look at the possibility of state leaking into the text for some
+reason. Do you have custom OpenGL code?
+
+Finally, which OSG version are you using?  The latest OSG version will
+likely have the most bug fixes so there is small chance that this might
+address issues.
+
+Robert.
+
+On 17 April 2016 at 17:58, Ronny Hatteland &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ronnyhatteland at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> By coincidence I made some progress to an issue that has been bugging me
+</I>&gt;<i> for two years, where the osgText disappears in a certain case. I am using
+</I>&gt;<i> VBO hardware instancing for another object, and when only the text and the
+</I>&gt;<i> VBO hardware instanced objects are visible (using a Switch node), the text
+</I>&gt;<i> disappears.
+</I>&gt;<i>
+</I>&gt;<i> Previously, I though it was related to the bounding box of the VBO
+</I>&gt;<i> instances, as the text would appear again if other objects were shown at
+</I>&gt;<i> the same time. However, today I noticed that when the text was not updated
+</I>&gt;<i> on cursor move, the original text that was set on the creation of the
+</I>&gt;<i> osgText::Text object would be visible as expected.
+</I>&gt;<i>
+</I>&gt;<i> The text is updated using txtObject-&gt;SetText(text) with the cursor
+</I>&gt;<i> position on a grid on the xz plane, with a text looking like this &quot;(%d,
+</I>&gt;<i> %d)&quot;. Below is the code for the initialization of the text objects:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> txtSelectedCell = new osgText::Text;
+</I>&gt;<i> txtSelectedCell-&gt;setDataVariance(Object::DYNAMIC);
+</I>&gt;<i> txtSelectedCell-&gt;setFont(consolasBold);
+</I>&gt;<i> txtSelectedCell-&gt;setFontResolution(128, 128);
+</I>&gt;<i> txtSelectedCell-&gt;setCharacterSizeMode(osgText::TextBase::OBJECT_COORDS);
+</I>&gt;<i> txtSelectedCell-&gt;setLineSpacing(0.10f);
+</I>&gt;<i> txtSelectedCell-&gt;setPosition(osg::Vec3(0.0, /*-0.001*/0.0, 0.0));
+</I>&gt;<i> txtSelectedCell-&gt;setCharacterSize(0.0015f);
+</I>&gt;<i> txtSelectedCell-&gt;setColor(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+</I>&gt;<i> txtSelectedCell-&gt;setBackdropType(osgText::Text::OUTLINE);
+</I>&gt;<i> txtSelectedCell-&gt;setBackdropColor(osg::Vec4(0.0f, 0.0f, 0.0f, 1.0f));
+</I>&gt;<i> txtSelectedCell-&gt;setBackdropOffset(0.10f, 0.10f);
+</I>&gt;<i> txtSelectedCell-&gt;setAxisAlignment(osgText::Text::XZ_PLANE);
+</I>&gt;<i> txtSelectedCell-&gt;setAlignment(osgText::Text::CENTER_CENTER);
+</I>&gt;<i> txtSelectedCell-&gt;setText(&quot;(X,Y)&quot;);
+</I>&gt;<i>
+</I>&gt;<i> ref_ptr&lt;Geode&gt; infoCellText = new osg::Geode;
+</I>&gt;<i> infoCellText-&gt;setDataVariance(Object::DYNAMIC);
+</I>&gt;<i> infoCellText-&gt;getOrCreateStateSet()-&gt;setMode(GL_DEPTH_TEST,
+</I>&gt;<i> osg::StateAttribute::OFF);
+</I>&gt;<i> infoCellText-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING,
+</I>&gt;<i> osg::StateAttribute::OFF | osg::StateAttribute::PROTECTED);
+</I>&gt;<i> infoCellText-&gt;getOrCreateStateSet()-&gt;setMode(GL_BLEND,
+</I>&gt;<i> osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
+</I>&gt;<i> infoCellText-&gt;getOrCreateStateSet()-&gt;setMode(GL_DEPTH_TEST,
+</I>&gt;<i> osg::StateAttribute::OFF);
+</I>&gt;<i> text_program = LoadShaderProgram(&quot;textMaterial.vert&quot;,
+</I>&gt;<i> &quot;textMaterial.frag&quot;);;
+</I>&gt;<i> infoCellText-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(text_program.get(),
+</I>&gt;<i> osg::StateAttribute::ON);
+</I>&gt;<i> osgUtil::GLObjectsVisitor
+</I>&gt;<i> glov(osgUtil::GLObjectsVisitor::TRAVERSE_ALL_CHILDREN |
+</I>&gt;<i> osgUtil::GLObjectsVisitor::SWITCH_OFF_DISPLAY_LISTS |
+</I>&gt;<i> osgUtil::GLObjectsVisitor::SWITCH_ON_VERTEX_BUFFER_OBJECTS);
+</I>&gt;<i> ref_ptr&lt;osg::State&gt; state = new osg::State(); glov.setState(state);
+</I>&gt;<i> infoCellText.get()-&gt;accept(glov);
+</I>&gt;<i> infoCellText-&gt;setCullingActive(false);
+</I>&gt;<i> infoCellText-&gt;addDrawable(txtSelectedCell.get());
+</I>&gt;<i> ref_ptr&lt;MatrixTransform&gt; mtSelectedCell-&gt;addChild(infoCellText); //
+</I>&gt;<i> Updated on mouse move
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Exploring this further, I created a new text object each time position on
+</I>&gt;<i> the grid was updated, that I added to the infoCellText geode. This would
+</I>&gt;<i> work only if I did not remove the original txtSelectedCell child. However,
+</I>&gt;<i> it would not work if txtSelectedCell-&gt;SetText was initialized to &quot;&quot; instead
+</I>&gt;<i> of &quot;(X,Y)&quot;. If the txtSelectedCell text was changed with setText at the
+</I>&gt;<i> same time as a new osgText was added to the infoCellText geode, the text
+</I>&gt;<i> would not show.
+</I>&gt;<i>
+</I>&gt;<i> I suspect this has something to do with the bounding box of the text,
+</I>&gt;<i> however, I am not entirely sure if it is related to the osgText::Text
+</I>&gt;<i> object or the Geode with the text as a child. I tried to call
+</I>&gt;<i> computeBound() on txtSelectedCell as well as infoCellText after updating
+</I>&gt;<i> the text with setText(), but without any luck. In many cases when the text
+</I>&gt;<i> is not displayed I get weird artifacts with planes cutting through the
+</I>&gt;<i> view. Any suggestions would be extremely appreciated.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Ronny
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic513d.php?p=66845#66845">http://forum.openscenegraph.org/viewtopic.php?p=66845#66845</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160418/bc07a179/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160418/bc07a179/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279026.html">[osg-users] Disappearing text
+</A></li>
+	<LI>Next message: <A HREF="002814.html">[osg-users] Disappearing text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2807">[ date ]</a>
+              <a href="thread.html#2807">[ thread ]</a>
+              <a href="subject.html#2807">[ subject ]</a>
+              <a href="author.html#2807">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,178 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] EXTERNAL: Re: LookAt() function parameter meanings..
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20EXTERNAL%3A%20Re%3A%20LookAt%28%29%20function%20parameter%20meanings..&In-Reply-To=%3Cc062e8af1f2549eb96118c9f7a9ddbde%40lmco.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008886.html">
+   <LINK REL="Next"  HREF="008889.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] EXTERNAL: Re: LookAt() function parameter meanings..</H1>
+<!--htdig_noindex-->
+    <B>Rowley, Marlin R</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20EXTERNAL%3A%20Re%3A%20LookAt%28%29%20function%20parameter%20meanings..&In-Reply-To=%3Cc062e8af1f2549eb96118c9f7a9ddbde%40lmco.com%3E"
+       TITLE="[osg-users] EXTERNAL: Re: LookAt() function parameter meanings..">marlin.r.rowley at lmco.com
+       </A><BR>
+    <I>Mon Aug 13 07:58:25 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008886.html">[osg-users] LookAt() function parameter meanings..
+</A></li>
+        <LI>Next message (by thread): <A HREF="008889.html">[osg-users] LookAt() function parameter meanings..
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8888">[ date ]</a>
+              <a href="thread.html#8888">[ thread ]</a>
+              <a href="subject.html#8888">[ subject ]</a>
+              <a href="author.html#8888">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Ravi,
+
+During the projection matrix phase, OpenGL switches to left-handed system (i.e. Z-axis points positive going into the screen).  But I missed the rotation, so it stays left-handed with +x (right), -y (look), and +z(up).
+
+Thanks for the interpretation of the parameter names.  I interpreted &#8220;center&#8221; to mean a position point &#8211; not a vector.  And &#8220;eye&#8221; to mean the direction the eye is pointed to.
+
+----------------------------------------
+Marlin Rowley
+Software Engineer, Staff
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>]
+Missiles and Fire Control
+972-603-1931 (office)
+214-926-0622 (mobile)
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+
+From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; On Behalf Of Ravi Mathur
+Sent: Monday, August 13, 2018 9:32 AM
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+Subject: EXTERNAL: Re: [osg-users] LookAt() function parameter meanings..
+
+Hey Martin,
+
+You are not interpreting the parameters properly. Look at the header for Matrixd.cpp:
+
+  /** Set the position and orientation to be a view matrix,
+    * using the same convention as gluLookAt.
+  */
+  void makeLookAt(const Vec3d&amp; eye,const Vec3d&amp; center,const Vec3d&amp; up    );
+
+It follows the same convention and algorithm as gluLookAt(), so you can look at the many online reference pages for that (microsoft&lt;<A HREF="https://docs.microsoft.com/en-us/windows/desktop/opengl/glulookat">https://docs.microsoft.com/en-us/windows/desktop/opengl/glulookat</A>&gt;, khronos&lt;<A HREF="https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml">https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml</A>&gt;). There is no question about its correctness or compatibility with OpenGL, since OSG has been used with OpenGL in hundreds of projects for like 20 years. :D
+
+To very directly answer your question, &quot;eye&quot; is the eye position (or camera if you prefer), &quot;center&quot; is a point towards which the eye is looking, and therefore the look vector points from eye towards center. This look vector is the negative z-axis of OpenGL. The &quot;up&quot; vector specifies the direction of the positive y-axis. The x-axis is then defined as y-cross-z, which is the default OpenGL right-handed system. HOWEVER, OSG takes it a step further and maps the y-axis to the look vector (into the screen). With this simple rotation, x points right and z points up, which remains right-handed. I'm guessing this is done because many OSG applications represent physical (real-world) systems, in which the z-axis often does point up. (Robert or someone else can correct me if that's not the reason)
+
+Ravi
+
+On Mon, Aug 13, 2018 at 10:07 AM Rowley, Marlin R &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;&gt; wrote:
+All,
+
+I&#8217;m very confused by the parameters passed into this function.  I am going over some of the legacy code and saw this line of code:
+
+osg::Matrixd frustumView;
+frustumView.makeLookAt(VIEW_POS, mDirection, mUp);
+
+saw the docs, it&#8217;s described like this:
+
+void makeLookAt(const Vec3d&amp; eye,const Vec3d&amp; center,const Vec3d&amp; up);
+
+So in this context, I would think that &#8220;eye&#8221; represents the look vector.  However, it seems to work like a position vector.  The &#8220;center&#8221; parameter expects a direction vector (0, -1, 0) where the look vector is along the -yaxis.
+
+This matrix will not translate to OpenGL properly since it&#8217;s coordinate system is based off of a right handed coordinate frame.
+
+Questions:
+
+
+  1.  Am I interpreting these parameters properly?
+  2.  How would I convert this system to the OpenGL right-handed system?
+
+----------------------------------------
+Marlin Rowley
+Software Engineer, Staff
+Missiles and Fire Control
+972-603-1931 (office)
+214-926-0622 (mobile)
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180813/faddc41d/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180813/faddc41d/attachment.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: image001.jpg
+Type: image/jpeg
+Size: 3114 bytes
+Desc: image001.jpg
+URL: &lt;<A HREF="../attachments/20180813/faddc41d/attachment.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180813/faddc41d/attachment.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008886.html">[osg-users] LookAt() function parameter meanings..
+</A></li>
+	<LI>Next message (by thread): <A HREF="008889.html">[osg-users] LookAt() function parameter meanings..
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8888">[ date ]</a>
+              <a href="thread.html#8888">[ thread ]</a>
+              <a href="subject.html#8888">[ subject ]</a>
+              <a href="author.html#8888">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

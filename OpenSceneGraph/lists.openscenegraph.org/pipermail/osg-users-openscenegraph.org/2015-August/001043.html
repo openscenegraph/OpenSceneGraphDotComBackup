@@ -1,0 +1,228 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG 3.2.1 and Qt5 Widget integration
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%203.2.1%20and%20Qt5%20Widget%20integration&In-Reply-To=%3C55BF87D6.30705%40inria.fr%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001041.html">
+   <LINK REL="Next"  HREF="001044.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG 3.2.1 and Qt5 Widget integration</H1>
+<!--htdig_noindex-->
+    <B>Pierre-Jean Petitprez</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%203.2.1%20and%20Qt5%20Widget%20integration&In-Reply-To=%3C55BF87D6.30705%40inria.fr%3E"
+       TITLE="[osg-users] OSG 3.2.1 and Qt5 Widget integration">pierre-jean.petitprez at inria.fr
+       </A><BR>
+    <I>Mon Aug  3 08:25:10 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001041.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+        <LI>Next message: <A HREF="001044.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1043">[ date ]</a>
+              <a href="thread.html#1043">[ thread ]</a>
+              <a href="subject.html#1043">[ subject ]</a>
+              <a href="author.html#1043">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sebastian,
+
+I use Qt 5 and OSG 3.2.1 with no problem passing the key events from Qt 
+to OSG.
+
+In your Qt widget subclass you'll have a method which gets the key events:
+void keyPressEvent(QKeyEvent* e)
+{
+         const char *keyData = e-&gt;text().toLatin1().data();
+gw-&gt;getEventQueue()-&gt;keyPress(osgGA::GUIEventAdapter::KeySymbol(*keyData));
+}
+provided that gw is your osgViewer::GraphicsWindow.
+
+Note that for the meta keys (like ALT, CTRL, SHIFT), you'll have to 
+check something like:
+  switch(e-&gt;key())
+     {
+     case Qt::Key_Shift:
+         key = osgGA::GUIEventAdapter::KEY_Shift_L; //left key is chosen 
+in an arbitrary way since Qt doesn't differ left or right
+         break;
+     case Qt::Key_Control :
+         key = osgGA::GUIEventAdapter::KEY_Control_L;
+         break;
+     case Qt::Key_Alt :
+         key = osgGA::GUIEventAdapter::KEY_Alt_L;
+         break;
+     }
+since there is no &quot;value&quot; in e-&gt;text().
+
+And the same can be achieved for the keyReleaseEvent, 
+mousePress/ReleaseEvent, etc. by creating a new GUIEventAdapter from the 
+Qt event and then send it to the event queue.
+
+Hope that helps.
+
+Cheers
+Pierre-Jean
+
+
+Le 03/08/2015 17:01, Sebastian Messerschmidt a &#233;crit :
+&gt;<i> Am 03.08.2015 um 16:57 schrieb Can Olcek:
+</I>&gt;&gt;<i> Hi Sebastian,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I have almost completed the example. My original implementation is a 
+</I>&gt;&gt;<i> little bit complex than this. Thanks to the couple of private replies 
+</I>&gt;&gt;<i> and discussion, I will post it tomorrow.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> But for keyboard inputs, I'm using an event filter.
+</I>&gt;<i>
+</I>&gt;<i> Okay, I know how to use EventFilters etc.
+</I>&gt;<i> The point is, that the qt4 implementation somehow passed the events to 
+</I>&gt;<i> OSG, while the qt5 seems to fail to pass any keys.
+</I>&gt;<i>
+</I>&gt;<i> Cheers
+</I>&gt;<i> Sebastian
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Something like this:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Code:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> class QInputFilter : public QObject
+</I>&gt;&gt;<i> {
+</I>&gt;&gt;<i>    Q_OBJECT
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> protected:
+</I>&gt;&gt;<i>    bool eventFilter(QObject *obj, QEvent *event);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>    void onKeyPress(QKeyEvent *e);
+</I>&gt;&gt;<i>    void onKeyRelease(QKeyEvent *e);
+</I>&gt;&gt;<i> };
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> bool QInputFilter::eventFilter(QObject *obj, QEvent *event)
+</I>&gt;&gt;<i> {
+</I>&gt;&gt;<i>    switch(event-&gt;type())
+</I>&gt;&gt;<i>    {
+</I>&gt;&gt;<i>      case QEvent::KeyPress:
+</I>&gt;&gt;<i>        onKeyPress(static_cast&lt;QKeyEvent *&gt;(event));
+</I>&gt;&gt;<i>        break;
+</I>&gt;&gt;<i>      case QEvent::KeyRelease:
+</I>&gt;&gt;<i>        onKeyRelease(static_cast&lt;QKeyEvent *&gt;(event));
+</I>&gt;&gt;<i>        break;
+</I>&gt;&gt;<i>    }
+</I>&gt;&gt;<i>      return QObject::eventFilter(obj, event);
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>   void QInputFilter::onKeyPress(QKeyEvent *e)
+</I>&gt;&gt;<i> {
+</I>&gt;&gt;<i>    if(e-&gt;isAutoRepeat())
+</I>&gt;&gt;<i>    {
+</I>&gt;&gt;<i>      e-&gt;ignore();
+</I>&gt;&gt;<i>      return;
+</I>&gt;&gt;<i>    }
+</I>&gt;&gt;<i>      unsigned int key = e-&gt;key();
+</I>&gt;&gt;<i>    // add pressed keys and add changed keys for current frame
+</I>&gt;&gt;<i>    // renderwidget will clear changed keys at the end of frame
+</I>&gt;&gt;<i>    Input::PrivateAccess::pressedKeys().insert(key);
+</I>&gt;&gt;<i>    Input::PrivateAccess::changedKeys().insert(key);
+</I>&gt;&gt;<i>          e-&gt;accept();
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>   void QInputFilter::onKeyPress(QKeyEvent *e)
+</I>&gt;&gt;<i> {
+</I>&gt;&gt;<i>    if(e-&gt;isAutoRepeat())
+</I>&gt;&gt;<i>    {
+</I>&gt;&gt;<i>      e-&gt;ignore();
+</I>&gt;&gt;<i>      return;
+</I>&gt;&gt;<i>    }
+</I>&gt;&gt;<i>      unsigned int key = e-&gt;key();
+</I>&gt;&gt;<i>    // remove released keys and add changed keys for current frame
+</I>&gt;&gt;<i>    // renderwidget will clear changed keys at the end of frame
+</I>&gt;&gt;<i>    Input::PrivateAccess::pressedKeys().erase(e-&gt;key());
+</I>&gt;&gt;<i>    Input::PrivateAccess::changedKeys().insert(e-&gt;key());
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>    e-&gt;accept();
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Add input listener to your Qt app:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Code:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> sdt::Author::QInputFilter inputFilter;
+</I>&gt;&gt;<i> app.installEventFilter(&amp;inputFilter);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I have almost fully static Input class to access keys and mouse 
+</I>&gt;&gt;<i> states during each frame (paintGL()) I've actually tried to implement 
+</I>&gt;&gt;<i> Unity3D like approach so inside cull or update traversal I can use 
+</I>&gt;&gt;<i> Input::getButton(), Input::getKey(), Input::isKeyUp(), etc. methods.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I can add full implemention of this to my full example.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Cheers,
+</I>&gt;&gt;<i> Can
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> ------------------
+</I>&gt;&gt;<i> Read this topic online here:
+</I>&gt;&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic6c6d.php?p=64591#64591">http://forum.openscenegraph.org/viewtopic.php?p=64591#64591</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A> 
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001041.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+	<LI>Next message: <A HREF="001044.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1043">[ date ]</a>
+              <a href="thread.html#1043">[ thread ]</a>
+              <a href="subject.html#1043">[ subject ]</a>
+              <a href="author.html#1043">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

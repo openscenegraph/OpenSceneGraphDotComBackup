@@ -1,0 +1,342 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] problem setting texture min/mag filter
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20problem%20setting%20texture%20min/mag%20filter&In-Reply-To=%3C1519146618.m2f.72972%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007727.html">
+   <LINK REL="Next"  HREF="007733.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] problem setting texture min/mag filter</H1>
+<!--htdig_noindex-->
+    <B>antiro black</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20problem%20setting%20texture%20min/mag%20filter&In-Reply-To=%3C1519146618.m2f.72972%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] problem setting texture min/mag filter">antiro42 at gmail.com
+       </A><BR>
+    <I>Tue Feb 20 09:10:18 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007727.html">[osg-users] problem setting texture min/mag filter
+</A></li>
+        <LI>Next message (by thread): <A HREF="007733.html">[osg-users] problem setting texture min/mag filter
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7732">[ date ]</a>
+              <a href="thread.html#7732">[ thread ]</a>
+              <a href="subject.html#7732">[ subject ]</a>
+              <a href="author.html#7732">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I made an executable example based on the osgtexture2D example. I removed the code to render the different walls of the cube with the exception of the filter wall. I kept the rest as close to the original as possible. changes to the code have been marked using comments.
+
+Essentially all I'm doing is generating an input image instead of loading one.
+
+
+Code:
+
+#include &lt;osg/Node&gt;
+#include &lt;osg/Geometry&gt;
+#include &lt;osg/Notify&gt;
+#include &lt;osg/MatrixTransform&gt;
+#include &lt;osg/Texture2D&gt;
+#include &lt;osg/DrawPixels&gt;
+#include &lt;osg/PolygonOffset&gt;
+#include &lt;osg/Geode&gt;
+
+#include &lt;osgDB/Registry&gt;
+#include &lt;osgDB/ReadFile&gt;
+
+#include &lt;osgText/Text&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// filter wall and animation callback.
+//
+
+class FilterCallback : public osg::NodeCallback
+{
+public:
+
+    FilterCallback(osg::Texture2D* texture,osgText::Text* text,double delay=1.0):
+        _texture(texture),
+        _text(text),
+        _delay(delay),
+        _currPos(0),
+        _prevTime(0.0)
+    {
+        // start with a mip mapped mode to ensure that
+        _minFilterList.push_back(osg::Texture2D::LINEAR_MIPMAP_LINEAR);
+        _magFilterList.push_back(osg::Texture2D::LINEAR);
+        _textList.push_back(&quot;Tri-linear mip mapping (default filtering)\nsetFilter(MIN_FILTER,LINEAR_MIP_LINEAR)\nsetFilter(MAG_FILTER,LINEAR)&quot;);
+
+        _minFilterList.push_back(osg::Texture2D::NEAREST);
+        _magFilterList.push_back(osg::Texture2D::NEAREST);
+        _textList.push_back(&quot;Nearest filtering\nsetFilter(MIN_FILTER,NEAREST)\nsetFilter(MAG_FILTER,NEAREST)&quot;);
+
+        _minFilterList.push_back(osg::Texture2D::LINEAR);
+        _magFilterList.push_back(osg::Texture2D::LINEAR);
+        _textList.push_back(&quot;Linear filtering\nsetFilter(MIN_FILTER,LINEAR)\nsetFilter(MAG_FILTER,LINEAR)&quot;);
+
+        _minFilterList.push_back(osg::Texture2D::NEAREST_MIPMAP_NEAREST);
+        _magFilterList.push_back(osg::Texture2D::LINEAR);
+        _textList.push_back(&quot;nearest mip mapping (default filtering)\nsetFilter(MIN_FILTER,)\nsetFilter(MAG_FILTER,LINEAR)&quot;);
+
+        _minFilterList.push_back(osg::Texture2D::LINEAR_MIPMAP_NEAREST);
+        _magFilterList.push_back(osg::Texture2D::LINEAR);
+        _textList.push_back(&quot;bi-linear mip mapping\nsetFilter(MIN_FILTER,LINEAR_MIPMAP_NEAREST)\nsetFilter(MAG_FILTER,LINEAR)&quot;);
+
+        _minFilterList.push_back(osg::Texture2D::NEAREST_MIPMAP_LINEAR);
+        _magFilterList.push_back(osg::Texture2D::LINEAR);
+        _textList.push_back(&quot;bi-linear mip mapping\nsetFilter(MIN_FILTER,NEAREST_MIPMAP_LINEAR)\nsetFilter(MAG_FILTER,LINEAR)&quot;);
+
+
+        setValues();
+    }
+
+    virtual void operator()(osg::Node*, osg::NodeVisitor* nv)
+    {
+        if (nv-&gt;getFrameStamp())
+        {
+            double currTime = nv-&gt;getFrameStamp()-&gt;getSimulationTime();
+            if (currTime-_prevTime&gt;_delay)
+            {
+                // update filter modes and text.
+                setValues();
+
+                // advance the current position, wrap round if required.
+                _currPos++;
+                if (_currPos&gt;=_minFilterList.size()) _currPos=0;
+
+                // record time
+                _prevTime = currTime;
+            }
+        }
+    }
+
+    void setValues()
+    {
+        _texture-&gt;setFilter(osg::Texture2D::MIN_FILTER,_minFilterList[_currPos]);
+        _texture-&gt;setFilter(osg::Texture2D::MAG_FILTER,_magFilterList[_currPos]);
+
+        _text-&gt;setText(_textList[_currPos]);
+    }
+
+protected:
+
+    typedef std::vector&lt;osg::Texture2D::FilterMode&gt; FilterList;
+    typedef std::vector&lt;std::string&gt;                TextList;
+
+    osg::ref_ptr&lt;osg::Texture2D&gt;    _texture;
+    osg::ref_ptr&lt;osgText::Text&gt;     _text;
+    double                          _delay;
+
+    FilterList                      _minFilterList;
+    FilterList                      _magFilterList;
+    TextList                        _textList;
+
+    unsigned int                    _currPos;
+    double                          _prevTime;
+
+};
+
+osg::Node* createFilterWall(osg::BoundingBox&amp; bb,osg::Image *img)
+{
+    osg::Group* group = new osg::Group;
+
+    // left hand side of bounding box.
+    osg::Vec3 top_left(bb.xMin(),bb.yMin(),bb.zMax());
+    osg::Vec3 bottom_left(bb.xMin(),bb.yMin(),bb.zMin());
+    osg::Vec3 bottom_right(bb.xMin(),bb.yMax(),bb.zMin());
+    osg::Vec3 top_right(bb.xMin(),bb.yMax(),bb.zMax());
+    osg::Vec3 center(bb.xMin(),(bb.yMin()+bb.yMax())*0.5f,(bb.zMin()+bb.zMax())*0.5f);
+    float height = bb.zMax()-bb.zMin();
+
+    // create the geometry for the wall.
+    osg::Geometry* geom = new osg::Geometry;
+
+    osg::Vec3Array* vertices = new osg::Vec3Array(4);
+    (*vertices)[0] = top_left;
+    (*vertices)[1] = bottom_left;
+    (*vertices)[2] = bottom_right;
+    (*vertices)[3] = top_right;
+    geom-&gt;setVertexArray(vertices);
+
+    osg::Vec2Array* texcoords = new osg::Vec2Array(4);
+    (*texcoords)[0].set(0.0f,1.0f);
+    (*texcoords)[1].set(0.0f,0.0f);
+    (*texcoords)[2].set(1.0f,0.0f);
+    (*texcoords)[3].set(1.0f,1.0f);
+    geom-&gt;setTexCoordArray(0,texcoords);
+
+    osg::Vec3Array* normals = new osg::Vec3Array(1);
+    (*normals)[0].set(1.0f,0.0f,0.0f);
+    geom-&gt;setNormalArray(normals, osg::Array::BIND_OVERALL);
+
+    osg::Vec4Array* colors = new osg::Vec4Array(1);
+    (*colors)[0].set(1.0f,1.0f,1.0f,1.0f);
+    geom-&gt;setColorArray(colors, osg::Array::BIND_OVERALL);
+
+    geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS,0,4));
+
+    osg::Geode* geom_geode = new osg::Geode;
+    geom_geode-&gt;addDrawable(geom);
+    group-&gt;addChild(geom_geode);
+
+
+    // set up the texture state.
+    osg::Texture2D* texture = new osg::Texture2D;
+    texture-&gt;setDataVariance(osg::Object::DYNAMIC); // protect from being optimized away as static state.
+    texture-&gt;setImage(img); //////&lt;-- setting image directly from ptr (original used osgDB::readImageFile() )
+
+    osg::StateSet* stateset = geom-&gt;getOrCreateStateSet();
+    stateset-&gt;setTextureAttributeAndModes(0,texture,osg::StateAttribute::ON);
+
+    // create the text label.
+
+    osgText::Text* text = new osgText::Text;
+    text-&gt;setDataVariance(osg::Object::DYNAMIC);
+
+    text-&gt;setFont(&quot;fonts/arial.ttf&quot;);
+    text-&gt;setPosition(center);
+    text-&gt;setCharacterSize(height*0.03f);
+    text-&gt;setAlignment(osgText::Text::CENTER_CENTER);
+    text-&gt;setAxisAlignment(osgText::Text::YZ_PLANE);
+
+    osg::Geode* text_geode = new osg::Geode;
+    text_geode-&gt;addDrawable(text);
+
+    osg::StateSet* text_stateset = text_geode-&gt;getOrCreateStateSet();
+    text_stateset-&gt;setAttributeAndModes(new osg::PolygonOffset(-1.0f,-1.0f),osg::StateAttribute::ON);
+
+    group-&gt;addChild(text_geode);
+
+    // set the update callback to cycle through the various min and mag filter modes.
+    group-&gt;setUpdateCallback(new FilterCallback(texture,text));
+
+    return group;
+
+}
+
+
+osg::Node* createModel()
+{
+
+    // create the root node which will hold the model.
+    osg::Group* root = new osg::Group();
+
+    // turn off lighting
+    root-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+
+    osg::BoundingBox bb(0.0f,0.0f,0.0f,1.0f,1.0f,1.0f);
+
+/////////// NEW CODE: ///////////////
+		int w=10,h=10;
+		GLubyte * pixels=(GLubyte*)calloc(w*h*3,sizeof(GLubyte));
+	int pixelCount=0;
+
+	for(int i=0;i&lt;100;i++){
+		int x=pixelCount%w;
+		int y=int(pixelCount/w);
+
+		int xy = y*w + x;
+		//pixels[xy*3]=GLubyte(stoi(tile-&gt;ToConstScalarToken()-&gt;GetRawData()));
+		pixels[xy*3]=GLubyte(unsigned(x&lt;6?180:10));
+		pixels[xy*3+1]=0;
+		pixels[xy*3+2]=0;
+
+		pixelCount++;
+	}
+	osg::Image* m_tileDataImg = new osg::Image;
+	m_tileDataImg-&gt;setImage(w,h,1,GL_RGB,GL_RGB,GL_UNSIGNED_BYTE,pixels,osg::Image::NO_DELETE); 
+/////////// END NEW CODE: ///////////////
+
+    root-&gt;addChild(createFilterWall(bb,m_tileDataImg)); ///// &lt;-- passing image ptr (original code used image filename)
+
+    return root;
+}
+
+int main(int , char **)
+{
+    // construct the viewer.
+    osgViewer::Viewer viewer;
+
+    // add model to viewer.
+    viewer.setSceneData( createModel() );
+
+    return viewer.run();
+}
+
+
+
+
+Note that the filter wall is on the side of the cube, so you have to rotate it before you see anything.
+
+The input image which I am generating is the following (verified by using osgDB::writeImageFile() to output it):
+
+[Image: <A HREF="../../../../i.imgur.com/8YUX0UD.png">https://i.imgur.com/8YUX0UD.png</A> ]
+It might be too small to see, but the important part is that it contains only two colors.
+
+
+The result I get with nearest filtering:
+[Image: <A HREF="../../../../i.imgur.com/h6MIpI9.png">https://i.imgur.com/h6MIpI9.png</A> ]
+Suddenly there is a band with an intermediate color which is not present in the input.
+
+
+The expected result (created by editing the screenshot):
+[Image: <A HREF="../../../../i.imgur.com/Plew0gD.png">https://i.imgur.com/Plew0gD.png</A> ]
+
+I'm not sure how the images translate to the mailing list, so just in case: this is the imgur album containing the three images: <A HREF="https://imgur.com/a/rNFu0">https://imgur.com/a/rNFu0</A>
+
+Thank you!
+
+Cheers,
+antiro[img][/img]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc93d.php?p=72972#72972">http://forum.openscenegraph.org/viewtopic.php?p=72972#72972</A>
+
+
+
+
+
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007727.html">[osg-users] problem setting texture min/mag filter
+</A></li>
+	<LI>Next message (by thread): <A HREF="007733.html">[osg-users] problem setting texture min/mag filter
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7732">[ date ]</a>
+              <a href="thread.html#7732">[ thread ]</a>
+              <a href="subject.html#7732">[ subject ]</a>
+              <a href="author.html#7732">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

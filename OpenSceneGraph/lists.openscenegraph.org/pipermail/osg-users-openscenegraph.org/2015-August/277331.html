@@ -1,0 +1,180 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Android osgPlugins
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20osgPlugins&In-Reply-To=%3C1438984241.m2f.64664%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001107.html">
+   <LINK REL="Next"  HREF="001109.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Android osgPlugins</H1>
+<!--htdig_noindex-->
+    <B>Christian Kehl</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20osgPlugins&In-Reply-To=%3C1438984241.m2f.64664%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Android osgPlugins">christian-kehl at web.de
+       </A><BR>
+    <I>Fri Aug  7 14:50:41 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001107.html">[osg-users] Problems loading OSGB files created with old	version of OSG.
+</A></li>
+        <LI>Next message: <A HREF="001109.html">[osg-users] Android osgPlugins
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277331">[ date ]</a>
+              <a href="thread.html#277331">[ thread ]</a>
+              <a href="subject.html#277331">[ subject ]</a>
+              <a href="author.html#277331">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I re-open the earlier question because the momentary questions fits into it: as Rafa already mentions, until now the osgPlugins for jpeg, png, tiff, curl etc. are not included in the package. For just rendering a .osg file that includes such texture references, it is sufficient to put the 3rdparty .a-files in the lib folder of the osgandroid project.
+
+ON THE OTHER HAND, if we want to actually access the stored image file as osg.Image within the source code, we need to include osgdb_jpeg as a plugin in the wrapper - which means generating osgdb_jpeg - which means including the 3rdparty libraries.
+
+I already started to commit myself to try exactly that, but I hit a wall: I put the 3rdparty android package folder in the 3.3.8 source folder osg OpenSceneGraph and run the cmake compilation with the following command:
+
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../PlatformSpecifics/Android/android.toolchain.cmake  \
+         -DOPENGL_PROFILE=&quot;GLES1&quot; -DDYNAMIC_OPENTHREADS=OFF -DDYNAMIC_OPENSCENEGRAPH=OFF \
+         -DANDROID_NATIVE_API_LEVEL=15 \
+         -DANDROID_ABI=armeabi \
+         -DCMAKE_INSTALL_PREFIX=/media/christian/DATA/android-osg-sdk/gles1/armeabi \
+         -DOSG_GL1_AVAILABLE=OFF \
+         -DOSG_GL2_AVAILABLE=OFF \
+         -DOSG_GL3_AVAILABLE=OFF \
+         -DOSG_GLES1_AVAILABLE=ON \
+         -DOSG_GLES2_AVAILABLE=OFF \
+         -DOSG_GL_LIBRARY_STATIC=OFF \
+         -DOSG_GL_DISPLAYLISTS_AVAILABLE=OFF \
+         -DOSG_GL_MATRICES_AVAILABLE=ON \
+         -DOSG_GL_VERTEX_FUNCS_AVAILABLE=ON \
+         -DOSG_GL_VERTEX_ARRAY_FUNCS_AVAILABLE=ON \
+         -DOSG_GL_FIXED_FUNCTION_AVAILABLE=ON \
+         -DCURL_DIR=../3rdparty/curl \
+         -DCURL_IS_STATIC=ON \
+         -DGDAL_DIR=../3rdparty/gdal/include \
+         -DGIFLIB_INCLUDE_DIR=../3rdparty/giflib \
+         -DJPEG_INCLUDE_DIR=../3rdparty/libjpeg \
+         -DPNG_INCLUDE_DIR=../3rdparty/libpng \
+         -DTIFF_INCLUDE_DIR=../3rdparty/libtiff
+
+[this is just the GLES1 profile example]
+
+The cmake procedure find the folders and file, compiles all well, I get an osgdb_jpeg and osgdb_gif etc.
+
+Now, the tricky bit: I include this in the Android.mk file osg osgAndroid
+
+OSG_LDLIBS := \
+-losgdb_osg \
+-losgdb_ive \
+-losgdb_rgb \
+-losgdb_bmp \
+-losgdb_tga \
+-losgdb_stl \
+-losgdb_obj \
+-losgdb_dxf \
+-losgdb_curl \
+-losgdb_gif \
+-losgdb_jpeg \
+-losgdb_openflight \
+-losgdb_serializers_osgvolume \
+[...]
+
+and set the LOCAL_STATIC_LIBRARIES
+
+LOCAL_STATIC_LIBRARIES := -ljpeg -lgif -lpng -lcurl -ltiff
+
+when I run ndk-build now, it does compile, but crashes at the following point:
+
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosgViewer.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosg.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosgDB.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosgUtil.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosgGA.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIUtils.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= MultiViewNode.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= GLES2ShaderGenVisitor.cpp
+[armeabi] Prebuilt       : libgnustl_shared.so &lt;= &lt;NDK&gt;/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi/thumb/
+[armeabi] SharedLibrary  : libjniosg-gles1.so
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_gif.a(ReaderWriterGIF.cpp.o):ReaderWriterGIF.cpp:function simage_gif_load(std::istream&amp;, int*, int*, int*, GifImageStream**): error: undefined reference to 'DGifOpen'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_gif.a(ReaderWriterGIF.cpp.o):ReaderWriterGIF.cpp:function simage_gif_load(std::istream&amp;, int*, int*, int*, GifImageStream**): error: undefined reference to 'DGifGetRecordType'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_gif.a(ReaderWriterGIF.cpp.o):ReaderWriterGIF.cpp:function simage_gif_load(std::istream&amp;, int*, int*, int*, GifImageStream**): error: undefined reference to 'DGifGetImageDesc'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_gif.a(ReaderWriterGIF.cpp.o):ReaderWriterGIF.cpp:function simage_gif_load(std::istream&amp;, int*, int*, int*, GifImageStream**): error: undefined reference to 'DGifGetLine'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_gif.a(ReaderWriterGIF.cpp.o):ReaderWriterGIF.cpp:function simage_gif_load(std::istream&amp;, int*, int*, int*, GifImageStream**): error: undefined reference to 'DGifGetLine'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_gif.a(ReaderWriterGIF.cpp.o):ReaderWriterGIF.cpp:function simage_gif_load(std::istream&amp;, int*, int*, int*, GifImageStream**): error: undefined reference to 'DGifGetExtension'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_gif.a(ReaderWriterGIF.cpp.o):ReaderWriterGIF.cpp:function simage_gif_load(std::istream&amp;, int*, int*, int*, GifImageStream**): error: undefined reference to 'DGifGetExtensionNext'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_gif.a(ReaderWriterGIF.cpp.o):ReaderWriterGIF.cpp:function simage_gif_load(std::istream&amp;, int*, int*, int*, GifImageStream**): error: undefined reference to 'DGifCloseFile'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::jpeg_istream_src(jpeg_decompress_struct*, std::istream*): error: undefined reference to 'jpeg_resync_to_restart'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::simage_jpeg_load(std::istream&amp;, int*, int*, int*, unsigned int*): error: undefined reference to 'jpeg_std_error'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::simage_jpeg_load(std::istream&amp;, int*, int*, int*, unsigned int*): error: undefined reference to 'jpeg_destroy_decompress'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::simage_jpeg_load(std::istream&amp;, int*, int*, int*, unsigned int*): error: undefined reference to 'jpeg_CreateDecompress'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::simage_jpeg_load(std::istream&amp;, int*, int*, int*, unsigned int*): error: undefined reference to 'jpeg_save_markers'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::simage_jpeg_load(std::istream&amp;, int*, int*, int*, unsigned int*): error: undefined reference to 'jpeg_read_header'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::simage_jpeg_load(std::istream&amp;, int*, int*, int*, unsigned int*): error: undefined reference to 'jpeg_start_decompress'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::simage_jpeg_load(std::istream&amp;, int*, int*, int*, unsigned int*): error: undefined reference to 'jpeg_read_scanlines'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::simage_jpeg_load(std::istream&amp;, int*, int*, int*, unsigned int*): error: undefined reference to 'jpeg_finish_decompress'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function osgDBJPEG::simage_jpeg_load(std::istream&amp;, int*, int*, int*, unsigned int*): error: undefined reference to 'jpeg_destroy_decompress'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function ReaderWriterJPEG::write_JPEG_file(std::ostream&amp;, osg::Image const&amp;, int) const: error: undefined reference to 'jpeg_std_error'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function ReaderWriterJPEG::write_JPEG_file(std::ostream&amp;, osg::Image const&amp;, int) const: error: undefined reference to 'jpeg_CreateCompress'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function ReaderWriterJPEG::write_JPEG_file(std::ostream&amp;, osg::Image const&amp;, int) const: error: undefined reference to 'jpeg_set_defaults'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function ReaderWriterJPEG::write_JPEG_file(std::ostream&amp;, osg::Image const&amp;, int) const: error: undefined reference to 'jpeg_set_quality'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function ReaderWriterJPEG::write_JPEG_file(std::ostream&amp;, osg::Image const&amp;, int) const: error: undefined reference to 'jpeg_start_compress'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function ReaderWriterJPEG::write_JPEG_file(std::ostream&amp;, osg::Image const&amp;, int) const: error: undefined reference to 'jpeg_write_scanlines'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function ReaderWriterJPEG::write_JPEG_file(std::ostream&amp;, osg::Image const&amp;, int) const: error: undefined reference to 'jpeg_finish_compress'
+/media/christian/DATA/android-osg-sdk/gles1/armeabi/lib/osgPlugins-3.3.8/libosgdb_jpeg.a(ReaderWriterJPEG.cpp.o):ReaderWriterJPEG.cpp:function ReaderWriterJPEG::write_JPEG_file(std::ostream&amp;, osg::Image const&amp;, int) const: error: undefined reference to 'jpeg_destroy_compress'
+collect2: error: ld returned 1 exit status
+
+What I deduct from that: something went wrong when compiling OSG 3.3.8 for Android with the plugins, as the static libraries (osgdb_jpeg, osgdb_gif, osgdb_curl) do not properly link to their pre-compiled library counterparts (libjpeg, libgif, libcurl, etc.)
+
+Jan, Rafa - the community:
+a) Did you try out to build osgAndroid with plugins ? Did you get the same problems ?
+b) Any idea how to circumvent the problem ?
+
+Cheers,
+Christian
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic29fb.php?p=64664#64664">http://forum.openscenegraph.org/viewtopic.php?p=64664#64664</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001107.html">[osg-users] Problems loading OSGB files created with old	version of OSG.
+</A></li>
+	<LI>Next message: <A HREF="001109.html">[osg-users] Android osgPlugins
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277331">[ date ]</a>
+              <a href="thread.html#277331">[ thread ]</a>
+              <a href="subject.html#277331">[ subject ]</a>
+              <a href="author.html#277331">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

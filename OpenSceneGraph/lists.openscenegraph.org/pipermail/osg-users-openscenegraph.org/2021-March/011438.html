@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How do you create the osg::Planeof PolytopeIntersector that will give you the right intersection?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20do%20you%20create%20the%20osg%3A%3APlaneof%20PolytopeIntersector%0A%20that%20will%20give%20you%20the%20right%20intersection%3F&In-Reply-To=%3C32729314-2d08-46c7-973c-812c6d8a2bb0n%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011439.html">
+   <LINK REL="Next"  HREF="011441.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How do you create the osg::Planeof PolytopeIntersector that will give you the right intersection?</H1>
+<!--htdig_noindex-->
+    <B>mirr...@gmail.com</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20do%20you%20create%20the%20osg%3A%3APlaneof%20PolytopeIntersector%0A%20that%20will%20give%20you%20the%20right%20intersection%3F&In-Reply-To=%3C32729314-2d08-46c7-973c-812c6d8a2bb0n%40googlegroups.com%3E"
+       TITLE="[osg-users] How do you create the osg::Planeof PolytopeIntersector that will give you the right intersection?">mirro187 at gmail.com
+       </A><BR>
+    <I>Tue Mar 16 05:25:15 PDT 2021</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011439.html">[osg-users] Please mirro187, work on your communication
+</A></li>
+        <LI>Next message (by thread): <A HREF="011441.html">[osg-users] OpenSceneGraph/osgEarth vs VulkanSceneGraph/vsgpagedlod
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11438">[ date ]</a>
+              <a href="thread.html#11438">[ thread ]</a>
+              <a href="subject.html#11438">[ subject ]</a>
+              <a href="author.html#11438">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>        win10&amp;osg3.6.4
+        // 
+        osg::Matrixd proj  = osg::Matrixd::identity();
+proj.makePerspective(60, frustumAspectWidth/frustumAspectHeight, 
+frustumNear, frustumFar);
+//
+const double mynear = proj(3, 2) / (proj(2, 2) - 1.0);
+const double myfar = proj(3, 2) / (1.0 + proj(2, 2));
+//
+const double nLeft = mynear * (proj(2, 0) - 1.0) / proj(0, 0);
+const double nRight = mynear * (1.0 + proj(2, 0)) / proj(0, 0);
+const double nTop = mynear * (1.0 + proj(2, 1)) / proj(1, 1);
+const double nBottom = mynear * (proj(2, 1) - 1.0) / proj(1, 1);
+const double fLeft = myfar * (proj(2, 0) - 1.0) / proj(0, 0);
+const double fRight = myfar * (1.0 + proj(2, 0)) / proj(0, 0);
+const double fTop = myfar * (1.0 + proj(2, 1)) / proj(1, 1);
+const double fBottom = myfar * (proj(2, 1) - 1.0) / proj(1, 1);
+//
+_projectPt[0] = osg::Vec3d(0.0, 0.0, 0.0);
+_projectPt[1] = osg::Vec3d(nLeft, nBottom,  -mynear);
+_projectPt[2] = osg::Vec3d(nRight, nBottom, -mynear);
+_projectPt[3] = osg::Vec3d(nRight, nTop, -mynear);
+_projectPt[4] = osg::Vec3d(nLeft, nTop,  -mynear);
+_projectPt[5] = osg::Vec3d(fLeft, fBottom,  - myfar);
+_projectPt[6] = osg::Vec3d(fRight, fBottom, - myfar);
+_projectPt[7] = osg::Vec3d(fRight, fTop,  -myfar);
+_projectPt[8] = osg::Vec3d(fLeft, fTop,  - myfar);
+osg::Polytope viewFrstumPoly;
+//
+osg::Matrixd ViewM = _view-&gt;getCamera()-&gt;getInverseViewMatrix();
+//
+osg::Vec3d tempProjectPt[9];
+//tempProjectPt[0] = _projectPt[0] * ViewM;
+tempProjectPt[1] = _projectPt[1] * ViewM;
+tempProjectPt[2] = _projectPt[2] * ViewM;
+tempProjectPt[3] = _projectPt[3] * ViewM;
+tempProjectPt[4] = _projectPt[4] * ViewM;
+tempProjectPt[5] = _projectPt[5] * ViewM;
+tempProjectPt[6] = _projectPt[6] * ViewM;
+tempProjectPt[7] = _projectPt[7] * ViewM;
+tempProjectPt[8] = _projectPt[8] * ViewM;
+{
+viewFrstumPoly.add(osg::Plane(tempProjectPt[1],tempProjectPt[5],tempProjectPt[8]));
+}
+{
+viewFrstumPoly.add(osg::Plane(tempProjectPt[2],tempProjectPt[7],tempProjectPt[6]));
+}
+
+{
+viewFrstumPoly.add(osg::Plane(tempProjectPt[3], 
+tempProjectPt[4],tempProjectPt[8]));
+}
+
+{
+viewFrstumPoly.add(osg::Plane(tempProjectPt[1],tempProjectPt[2],tempProjectPt[6]));
+}
+{
+viewFrstumPoly.add(osg::Plane(tempProjectPt[5],tempProjectPt[6],tempProjectPt[7]));
+}
+{
+viewFrstumPoly.add(osg::Plane(tempProjectPt[3],tempProjectPt[4],tempProjectPt[1]));
+}
+osg::ref_ptr&lt;osgUtil::PolytopeIntersector&gt; picker = new 
+osgUtil::PolytopeIntersector(osgUtil::Intersector::MODEL, poly);
+picker-&gt;setPrecisionHint(osgUtil::Intersector::USE_DOUBLE_CALCULATIONS);
+picker-&gt;setPrimitiveMask(osgUtil::PolytopeIntersector::POINT_PRIMITIVES);
+picker-&gt;setIntersectionLimit(osgUtil::Intersector::NO_LIMIT);
+//
+osgUtil::IntersectionVisitor iv(picker);
+_videoFusionNode-&gt;accept(iv);//group of scene 
+if (picker-&gt;containsIntersections())
+{
+//
+}
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/32729314-2d08-46c7-973c-812c6d8a2bb0n%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/32729314-2d08-46c7-973c-812c6d8a2bb0n%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20210316/d6151740/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20210316/d6151740/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011439.html">[osg-users] Please mirro187, work on your communication
+</A></li>
+	<LI>Next message (by thread): <A HREF="011441.html">[osg-users] OpenSceneGraph/osgEarth vs VulkanSceneGraph/vsgpagedlod
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11438">[ date ]</a>
+              <a href="thread.html#11438">[ thread ]</a>
+              <a href="subject.html#11438">[ subject ]</a>
+              <a href="author.html#11438">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

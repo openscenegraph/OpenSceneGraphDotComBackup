@@ -1,0 +1,104 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] What's the difference between put rttcamera under	root node and viewer?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20What%27s%20the%20difference%20between%20put%20rttcamera%20under%0A%09root%20node%20and%20viewer%3F&In-Reply-To=%3C1448956360.m2f.65803%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002070.html">
+   <LINK REL="Next"  HREF="278260.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] What's the difference between put rttcamera under	root node and viewer?</H1>
+<!--htdig_noindex-->
+    <B>Daniel Schmid</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20What%27s%20the%20difference%20between%20put%20rttcamera%20under%0A%09root%20node%20and%20viewer%3F&In-Reply-To=%3C1448956360.m2f.65803%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] What's the difference between put rttcamera under	root node and viewer?">daniel.schmid at swiss-simtec.ch
+       </A><BR>
+    <I>Mon Nov 30 23:52:40 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002070.html">[osg-users] What's the difference between put rttcamera under root node and viewer?
+</A></li>
+        <LI>Next message: <A HREF="278260.html">[osg-users] How to use OSG with Xcode?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2102">[ date ]</a>
+              <a href="thread.html#2102">[ thread ]</a>
+              <a href="subject.html#2102">[ subject ]</a>
+              <a href="author.html#2102">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi silver
+
+In our project we have a driving simulator using rear view mirrors. And we had the same issues about what should be seen in the mirror and what in the main view. First we had no shadows and light effects in the mirrors, but after some time, we figured that light effects are essential in the mirrors to, but shadows are to expensive...
+
+So we ended up having the following scene graph:
+
+RootNode
+- PostProcessingNode
+- MainView PreRenderer
+- VisualRootNode
+  - ShadowedScene
+    - Terrain
+    - Models
+  - Particles
+  - Environment (Sky, Clouds)
+  - Common PreRenderers (LightMap, Tracks, etc)
+
+So in other words we defined an VisualRootNode that holds all the Content that is common for every viewer (main or mirror). The upper most RootNode contains all the Postpro stuff and Prerenderers that are only for the main view.
+
+Then to render the Mirrors we created PreRender Cameras that are not owned by the scenegraph but share the same GraphicsContext. This is an important Point. They work like the StatsHandler or HelpHandler with their apropriate PostRender Cameras, which never appear in a scene graph but still the use the main GraphicsContext...
+These cameras render the VisualRootNode Content to a texture, and this texture can then be applied to a mirror geometry somewhere in our car model.
+
+So there is a decision you have to take what you want to display in the main view and what in the mirrors. 
+
+I hope this gave you some ideas.
+
+Now I have a question for you: How did you integrate SpeedTree? Can you provide your implementation? I am working on it, but stuck somehow.You can also write to me personnaly...
+
+Cheers,
+Daniel
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic6eff.php?p=65803#65803">http://forum.openscenegraph.org/viewtopic.php?p=65803#65803</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002070.html">[osg-users] What's the difference between put rttcamera under root node and viewer?
+</A></li>
+	<LI>Next message: <A HREF="278260.html">[osg-users] How to use OSG with Xcode?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2102">[ date ]</a>
+              <a href="thread.html#2102">[ thread ]</a>
+              <a href="subject.html#2102">[ subject ]</a>
+              <a href="author.html#2102">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

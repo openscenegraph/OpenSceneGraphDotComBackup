@@ -1,0 +1,203 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] combining Quats
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20combining%20Quats&In-Reply-To=%3C3731378b-4803-d071-70d9-83576c5582e4%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005463.html">
+   <LINK REL="Next"  HREF="005465.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] combining Quats</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20combining%20Quats&In-Reply-To=%3C3731378b-4803-d071-70d9-83576c5582e4%40gmx.de%3E"
+       TITLE="[osg-users] combining Quats">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Wed Feb  1 03:36:55 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005463.html">[osg-users] combining Quats
+</A></li>
+        <LI>Next message: <A HREF="005465.html">[osg-users] combining Quats
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5464">[ date ]</a>
+              <a href="thread.html#5464">[ thread ]</a>
+              <a href="subject.html#5464">[ subject ]</a>
+              <a href="author.html#5464">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Trajce,
+
+based on Euler with optional smoothing (to avoid jaggy movement), this 
+algorithm will adapt a local pose conserving heading. The smoothing part 
+is mainly to get a smooth transition between adjacend terrain normals. 
+Sorry for the cluttered code.
+
+&lt;code&gt;
+	IN: 	gmtl::Vec3d local_normal; gmtl::EulerAngleXZYd  orientation;
+			
+
+	//extract heading
+  	const gmtl::Quatd quat	= gmtl::make&lt;gmtl::Quatd&gt;(orientation);
+		
+  	gmtl::Vec3d heading = gmtl::xform(heading, quat, 
+gmtl::Vec3d(0.0,1.0,0.0));
+  	//project heading to plane and normalize
+	heading = gmtl::makeNormal(gmtl::Vec3d(heading[0], heading[1], 0.0));
+	// get a vector perpendicular to projected heading and the normal
+	const gmtl::Vec3d perpendicular = gmtl::makeCross(local_normal, heading);
+	const gmtl::Vec3d perpendicular_2 = gmtl::makeCross(perpendicular, 
+local_normal);
+	// construct a new orientation leaving the heading untouched
+	orientation = gmtl::EulerAngleZXYd	(
+										orientation[0]
+										,gmtl::Math::aSin(perpendicular_2[2])
+										,gmtl::Math::aTan2(perpendicular[2], local_normal[2])
+										);
+	if (smooth_factor &lt; 1.0)
+	{
+		gmtl::Quatd target_quat = gmtl::makeRot&lt;gmtl::Quatd&gt;(orientation);
+		target_quat = gmtl::slerp(target_quat, smooth_factor, quat, target_quat);
+		orientation = 
+gmtl::makeRot&lt;gmtl::EulerAngleZXYd&gt;(gmtl::makeRot&lt;gmtl::Matrix44d&gt;(target_quat));
+	}
+&lt;/code&gt;
+
+Cheers
+Sebastian
+
+P.S. If you got further questions, simply drop me a private message/email.
+
+
+
+
+Am 2/1/2017 um 11:27 AM schrieb Trajce Nikolov NICK:
+&gt;<i> Hi Sebastian,
+</I>&gt;<i>
+</I>&gt;<i> the code will be welcome. I was expecting that the proper way is to go
+</I>&gt;<i> through Eulers
+</I>&gt;<i>
+</I>&gt;<i> Thanks a lot!
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Wed, Feb 1, 2017 at 9:48 AM, Sebastian Messerschmidt
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A>&gt;&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;<i>     Hi Trajce,
+</I>&gt;<i>
+</I>&gt;<i>     Did I miss the question :-) If it is working: fine. :-)
+</I>&gt;<i>
+</I>&gt;<i>     In general you are extracting the heading I guess (with the
+</I>&gt;<i>     modelOrientation) and put it on top the tilted normal, which will
+</I>&gt;<i>     put you on in this pose. The problem might be, that you introduce
+</I>&gt;<i>     unwanted roll with this. I can give you some code (not based on OSG,
+</I>&gt;<i>     but you'll get the idea) adapting a EulerAngle pose to a terrain
+</I>&gt;<i>     normal using a local tangent plane.
+</I>&gt;<i>
+</I>&gt;<i>     Cheers
+</I>&gt;<i>     Sebastian
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>         Hi community,
+</I>&gt;<i>
+</I>&gt;<i>         this is sort of easy math question (btw, I missed that part in my
+</I>&gt;<i>         classes ;-) ) I want to check it with you.
+</I>&gt;<i>
+</I>&gt;<i>         It is about node following terrain. my node is MatrixTransform and I
+</I>&gt;<i>         have to set it in world coordinates. The node has it's own
+</I>&gt;<i>         rotation and
+</I>&gt;<i>         I just need to take the terrain normal into account. Here is the
+</I>&gt;<i>         pseudocode that produces some acceptable results (not sure if
+</I>&gt;<i>         they are
+</I>&gt;<i>         correct though, thus asking you for hints)
+</I>&gt;<i>
+</I>&gt;<i>         Vec3 terrainNormal;
+</I>&gt;<i>
+</I>&gt;<i>         Quat terrainOrientation;
+</I>&gt;<i>         terrainOrientation.makeRotate(Vec3(0,0,1), terrainNormal);
+</I>&gt;<i>
+</I>&gt;<i>         Quat modelOrientation;
+</I>&gt;<i>         modelOrientation.makeRotate(Vec3(0,1,0), whatever);
+</I>&gt;<i>
+</I>&gt;<i>         Quat q;
+</I>&gt;<i>         q = terrainOrientation * modelOrientation; // not sure about this
+</I>&gt;<i>
+</I>&gt;<i>         MatrixTransform mxt = ...
+</I>&gt;<i>         mxt-&gt;setMatrix(Matrixd:;rotate(q) * ...);
+</I>&gt;<i>
+</I>&gt;<i>         Any hints?
+</I>&gt;<i>
+</I>&gt;<i>         Thanks a bunch as always!
+</I>&gt;<i>         Nick
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>         --
+</I>&gt;<i>         trajce nikolov nick
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>         _______________________________________________
+</I>&gt;<i>         osg-users mailing list
+</I>&gt;<i>         <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>         &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i>         <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>         &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>&gt;
+</I>&gt;<i>
+</I>&gt;<i>     _______________________________________________
+</I>&gt;<i>     osg-users mailing list
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>&gt;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> trajce nikolov nick
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005463.html">[osg-users] combining Quats
+</A></li>
+	<LI>Next message: <A HREF="005465.html">[osg-users] combining Quats
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5464">[ date ]</a>
+              <a href="thread.html#5464">[ thread ]</a>
+              <a href="subject.html#5464">[ subject ]</a>
+              <a href="author.html#5464">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,220 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Render multiple PRE_RENDER cameras to FBO
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20multiple%20PRE_RENDER%20cameras%20to%20FBO&In-Reply-To=%3CCAG7xrZdMeNTziH4WtnLBJ1RkSJeX4Ad7rEDg_6N9AF9N1D2XMA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009374.html">
+   <LINK REL="Next"  HREF="009376.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Render multiple PRE_RENDER cameras to FBO</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Render%20multiple%20PRE_RENDER%20cameras%20to%20FBO&In-Reply-To=%3CCAG7xrZdMeNTziH4WtnLBJ1RkSJeX4Ad7rEDg_6N9AF9N1D2XMA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Render multiple PRE_RENDER cameras to FBO">l.voerman at rug.nl
+       </A><BR>
+    <I>Wed Nov 14 01:36:16 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009374.html">[osg-users] Render multiple PRE_RENDER cameras to FBO
+</A></li>
+        <LI>Next message (by thread): <A HREF="009376.html">[osg-users] Render multiple PRE_RENDER cameras to FBO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9375">[ date ]</a>
+              <a href="thread.html#9375">[ thread ]</a>
+              <a href="subject.html#9375">[ subject ]</a>
+              <a href="author.html#9375">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Ivar,
+Your call to Camera::attach is wrong, requesting anything other than 0 for
+multisampleSamples will cause the setup to fail.
+
+backgroundCamera-&gt;attach(osg::Camera::COLOR_BUFFER, tex.get(), 0, 0, false,
+0, 0);
+sceneCamera-&gt;attach(osg::Camera::COLOR_BUFFER, tex.get(), 0, 0, false, 0,
+0);
+
+Laurens.
+
+
+On Tue, Nov 13, 2018 at 4:41 PM ivar out &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ivarout at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I'm having trouble properly rendering a couple of cameras to an FBO. I
+</I>&gt;<i> have two PRE_RENDER cameras that use a FBO and render to a texture. The
+</I>&gt;<i> color buffer seems to be reset before rendering the second camera though.
+</I>&gt;<i> This is my code:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::Group* root = new osg::Group;
+</I>&gt;<i>
+</I>&gt;<i> osg::Camera* backgroundCamera = new osg::Camera;
+</I>&gt;<i> osg::Camera* sceneCamera = new osg::Camera;
+</I>&gt;<i> osg::Camera* finalCamera = new osg::Camera;
+</I>&gt;<i>
+</I>&gt;<i> root-&gt;addChild(backgroundCamera);
+</I>&gt;<i> root-&gt;addChild(sceneCamera);
+</I>&gt;<i> root-&gt;addChild(finalCamera);
+</I>&gt;<i>
+</I>&gt;<i> //-----------------------------------------
+</I>&gt;<i> // create texture to render to
+</I>&gt;<i> //-----------------------------------------
+</I>&gt;<i> osg::ref_ptr&lt;osg::Texture2D&gt; tex = new osg:
+</I>&gt;<i> tex-&gt;setSourceType(GL_FLOAT);
+</I>&gt;<i> tex-&gt;setSourceFormat(GL_RGBA);
+</I>&gt;<i> tex-&gt;setInternalFormat(GL_RGBA);
+</I>&gt;<i> tex-&gt;setTextureSize(512, 512);
+</I>&gt;<i>
+</I>&gt;<i> //-------------------------------------------------------------------
+</I>&gt;<i> // add geometry to background camera
+</I>&gt;<i> //-------------------------------------------------------------------
+</I>&gt;<i> osg::Geometry* background = osg::createTexturedQuadGeometry(osg::Vec3(),
+</I>&gt;<i> osg::Vec3(0, 1.0f, 0), osg::Vec3(1.0f, 0, 0));
+</I>&gt;<i> osg::ref_ptr&lt;osg::Vec4Array&gt; colors = new osg::Vec4Array;
+</I>&gt;<i> colors-&gt;push_back(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+</I>&gt;<i> colors-&gt;push_back(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+</I>&gt;<i> colors-&gt;push_back(osg::Vec4(0, 0, 0, 1.0f));
+</I>&gt;<i> colors-&gt;push_back(osg::Vec4(0, 0, 0, 1.0));
+</I>&gt;<i> background-&gt;setColorArray(colors.get());
+</I>&gt;<i> background-&gt;setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+</I>&gt;<i> osg::Geode* geode = new osg::Geode;
+</I>&gt;<i> geode-&gt;addChild(background);
+</I>&gt;<i> backgroundCamera-&gt;addChild(geode);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> backgroundCamera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+</I>&gt;<i> backgroundCamera-&gt;setViewport(0, 0, tex-&gt;getTextureWidth(),
+</I>&gt;<i> tex-&gt;getTextureHeight());
+</I>&gt;<i> backgroundCamera-&gt;attach(osg::Camera::COLOR_BUFFER, tex.get(), 0, 0, true,
+</I>&gt;<i> 512, 512);
+</I>&gt;<i> backgroundCamera-&gt;setRenderOrder(osg::Camera::PRE_RENDER, 0);
+</I>&gt;<i> backgroundCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+</I>&gt;<i> backgroundCamera-&gt;setProjectionMatrixAsOrtho2D(0.0f, 1.0f, 0.0f, 1.0f);
+</I>&gt;<i> backgroundCamera-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, FALSE);
+</I>&gt;<i> backgroundCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+</I>&gt;<i> backgroundCamera-&gt;setClearColor(osg::Vec4(0, 0, 0, 1));
+</I>&gt;<i>
+</I>&gt;<i> //-------------------------------------------------------------------
+</I>&gt;<i> // CREATE Camera to display scene
+</I>&gt;<i> //-------------------------------------------------------------------
+</I>&gt;<i> sceneCamera-&gt;setRenderOrder(osg::Camera::PRE_RENDER, 1);
+</I>&gt;<i> osg::Node* node =
+</I>&gt;<i> osgDB::readNodeFile(&quot;C:\\Software\\OpenSceneGraph-3.6.0\\Models\\cessna.osg&quot;);
+</I>&gt;<i> sceneCamera-&gt;addChild(node);
+</I>&gt;<i> sceneCamera-&gt;setViewMatrixAsLookAt(osg::Vec3(100, 0, 0), osg::Vec3(),
+</I>&gt;<i> osg::Vec3(0, 0, 1));
+</I>&gt;<i> sceneCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT); //don't clear color buffer
+</I>&gt;<i> please
+</I>&gt;<i>
+</I>&gt;<i> sceneCamera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+</I>&gt;<i> sceneCamera-&gt;attach(osg::Camera::COLOR_BUFFER, tex.get(), 0, 0, true, 512,
+</I>&gt;<i> 512);
+</I>&gt;<i> sceneCamera-&gt;setViewport(0, 0, tex-&gt;getTextureWidth(),
+</I>&gt;<i> tex-&gt;getTextureHeight());
+</I>&gt;<i>
+</I>&gt;<i> //-------------------------------------------------------------------
+</I>&gt;<i> // CREATE Camera to display texture
+</I>&gt;<i> //-------------------------------------------------------------------
+</I>&gt;<i> finalCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+</I>&gt;<i> finalCamera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0, 1.0f, 0, 1.0f));
+</I>&gt;<i> osg::Geometry* geom = osg::createTexturedQuadGeometry(osg::Vec3(),
+</I>&gt;<i> osg::Vec3(1.0f, 0.0f, 0.0f), osg::Vec3(0.0f, 1.0f, 0.0f));
+</I>&gt;<i> osg::ref_ptr&lt;osg::Geode&gt; quad = new osg::Geode;
+</I>&gt;<i> quad-&gt;addDrawable(geom);
+</I>&gt;<i> finalCamera-&gt;addChild(quad.get());
+</I>&gt;<i>
+</I>&gt;<i> // add shaders that draw the texture on the quad
+</I>&gt;<i> osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+</I>&gt;<i> program-&gt;addShader(osgDB::readShaderFile(&quot;shader.frag&quot;));
+</I>&gt;<i> program-&gt;addShader(osgDB::readShaderFile(&quot;shader.vert&quot;));
+</I>&gt;<i> osg::StateSet* stateset = finalCamera-&gt;getOrCreateStateSet();
+</I>&gt;<i> stateset-&gt;setTextureAttributeAndModes(0, tex.get());
+</I>&gt;<i> stateset-&gt;setAttributeAndModes(program.get());
+</I>&gt;<i> stateset-&gt;addUniform(new osg::Uniform(&quot;myTexture&quot;, 0));
+</I>&gt;<i>
+</I>&gt;<i> osgViewer::Viewer viewer;
+</I>&gt;<i> viewer.setSceneData(root);
+</I>&gt;<i> return viewer.run();
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Either the background or scene camera can correctly be rendered to the FBO
+</I>&gt;<i> (by commenting the other out) but not both at the same time. Does anyone
+</I>&gt;<i> understand why this doesn't work? When I render to FRAME_BUFFER it works
+</I>&gt;<i> perfectly fine, but I figured since I don't want the texture rendered on
+</I>&gt;<i> screen an FBO would be a more efficient option perhaps?
+</I>&gt;<i>
+</I>&gt;<i> Thanks!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> ivar
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicfec2.php?p=75191#75191">http://forum.openscenegraph.org/viewtopic.php?p=75191#75191</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20181114/2dabd81a/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20181114/2dabd81a/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009374.html">[osg-users] Render multiple PRE_RENDER cameras to FBO
+</A></li>
+	<LI>Next message (by thread): <A HREF="009376.html">[osg-users] Render multiple PRE_RENDER cameras to FBO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9375">[ date ]</a>
+              <a href="thread.html#9375">[ thread ]</a>
+              <a href="subject.html#9375">[ subject ]</a>
+              <a href="author.html#9375">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

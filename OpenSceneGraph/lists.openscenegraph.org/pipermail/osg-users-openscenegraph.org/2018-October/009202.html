@@ -1,0 +1,231 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Resizing FBO camera while rendering
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Resizing%20FBO%20camera%20while%20rendering&In-Reply-To=%3C1538451298.m2f.75005%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009227.html">
+   <LINK REL="Next"  HREF="009209.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Resizing FBO camera while rendering</H1>
+<!--htdig_noindex-->
+    <B>R&#195;&#180;mulo Cerqueira</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Resizing%20FBO%20camera%20while%20rendering&In-Reply-To=%3C1538451298.m2f.75005%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Resizing FBO camera while rendering">romulogcerqueira at gmail.com
+       </A><BR>
+    <I>Mon Oct  1 20:34:58 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009227.html">[osg-users] osg apps on gpu cluster
+</A></li>
+        <LI>Next message (by thread): <A HREF="009209.html">[osg-users] Resizing FBO camera while rendering
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9202">[ date ]</a>
+              <a href="thread.html#9202">[ thread ]</a>
+              <a href="subject.html#9202">[ subject ]</a>
+              <a href="author.html#9202">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I have rendered a FBO camera to image by using a callback (as seen in the code below), however some OpenGL warnings/erros are raised when I resize at runtime by setupViewer() method. I debugged the code by using 
+
+
+Code:
+export OSG_GL_ERROR_CHECKING=ON 
+
+
+
+and got the following error:
+
+
+Code:
+Warning: detected OpenGL error 'invalid operation' after applying attribute Viewport 0x7fb35406e500
+
+
+
+How can I properly do the resizing of my FBO camera?
+
+
+
+Code:
+// create a RTT (render to texture) camera
+osg::Camera *ImageViewerCaptureTool::createRTTCamera(osg::Camera* cam, osg::Camera::BufferComponent buffer, osg::Texture2D *tex, osg::GraphicsContext *gfxc)
+{
+    osg::ref_ptr&lt;osg::Camera&gt; camera = cam;
+    camera-&gt;setClearColor(osg::Vec4(0, 0, 0, 1));
+    camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+    camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER, 0);
+    camera-&gt;setViewport(0, 0, tex-&gt;getTextureWidth(), tex-&gt;getTextureHeight());
+    camera-&gt;setGraphicsContext(gfxc);
+    camera-&gt;setDrawBuffer(GL_FRONT);
+    camera-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+    camera-&gt;attach(buffer, tex);
+    return camera.release();
+}
+
+// create float textures to be rendered in FBO
+osg::Texture2D* ImageViewerCaptureTool::createFloatTexture(uint width, uint height)
+{
+    osg::ref_ptr&lt;osg::Texture2D&gt; tex2D = new osg::Texture2D;
+    tex2D-&gt;setTextureSize( width, height );
+    tex2D-&gt;setInternalFormat( GL_RGB32F_ARB );
+    tex2D-&gt;setSourceFormat( GL_RGBA );
+    tex2D-&gt;setSourceType( GL_FLOAT );
+    tex2D-&gt;setResizeNonPowerOfTwoHint( false );
+    tex2D-&gt;setFilter( osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR );
+    tex2D-&gt;setFilter( osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR );
+    return tex2D.release();
+}
+
+void ImageViewerCaptureTool::setupViewer(uint width, uint height, double fovY)
+{
+    // set graphics contexts
+    osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+    traits-&gt;x = 0;
+    traits-&gt;y = 0;
+    traits-&gt;width = width;
+    traits-&gt;height = height;
+    traits-&gt;pbuffer = true;
+    traits-&gt;readDISPLAY();
+    osg::ref_ptr&lt;osg::GraphicsContext&gt; gfxc = osg::GraphicsContext::createGraphicsContext(traits.get());
+
+    // set the main camera
+    _viewer = new osgViewer::Viewer;
+    osg::ref_ptr&lt;osg::Texture2D&gt; tex = createFloatTexture(width, height);
+    osg::ref_ptr&lt;osg::Camera&gt; cam = createRTTCamera(_viewer-&gt;getCamera(), osg::Camera::COLOR_BUFFER0, tex, gfxc);
+    cam-&gt;setProjectionMatrixAsPerspective(osg::RadiansToDegrees(fovY), (width * 1.0 / height), 0.1, 1000);
+
+    // render texture to image
+    _capture = new WindowCaptureScreen(gfxc, tex);
+    cam-&gt;setFinalDrawCallback(_capture);
+}
+
+osg::ref_ptr&lt;osg::Image&gt; ImageViewerCaptureTool::grabImage(osg::ref_ptr&lt;osg::Node&gt; node)
+{
+    // set the current node
+    _viewer-&gt;setSceneData(node);
+
+    // if the view matrix is invalid (NaN), use the identity
+    if (_viewer-&gt;getCamera()-&gt;getViewMatrix().isNaN())
+        _viewer-&gt;getCamera()-&gt;setViewMatrix(osg::Matrixd::identity());
+
+    // grab the current frame
+    _viewer-&gt;frame();
+    return _capture-&gt;captureImage();
+}
+
+////////////////////////////////
+////WindowCaptureScreen METHODS
+////////////////////////////////
+
+WindowCaptureScreen::WindowCaptureScreen(osg::ref_ptr&lt;osg::GraphicsContext&gt; gfxc, osg::Texture2D* tex) {
+    _mutex = new OpenThreads::Mutex();
+    _condition = new OpenThreads::Condition();
+    _image = new osg::Image();
+
+    // checks the GraficContext from the camera viewer
+    if (gfxc-&gt;getTraits()) {
+        _tex = tex;
+        int width = gfxc-&gt;getTraits()-&gt;width;
+        int height = gfxc-&gt;getTraits()-&gt;height;
+        _image-&gt;allocateImage(width, height, 1, GL_RGBA, GL_FLOAT);
+    }
+}
+
+WindowCaptureScreen::~WindowCaptureScreen() {
+    delete (_condition);
+    delete (_mutex);
+}
+
+osg::ref_ptr&lt;osg::Image&gt; WindowCaptureScreen::captureImage() {
+    //wait to finish the capture image in call back
+    _condition-&gt;wait(_mutex);
+    return _image;
+}
+
+void WindowCaptureScreen::operator ()(osg::RenderInfo&amp; renderInfo) const {
+    osg::ref_ptr&lt;osg::GraphicsContext&gt; gfxc = renderInfo.getState()-&gt;getGraphicsContext();
+
+    if (gfxc-&gt;getTraits()) {
+        _mutex-&gt;lock();
+
+        // read the color buffer as 32-bit floating point
+        renderInfo.getState()-&gt;applyTextureAttribute(0, _tex);
+        _image-&gt;readImageFromCurrentTexture(renderInfo.getContextID(), true, GL_FLOAT);
+
+        // grants the access to image
+        _condition-&gt;signal();
+        _mutex-&gt;unlock();
+    }
+}
+
+
+
+... 
+
+Thanks in advance,
+
+Cheers,
+R&#244;mulo
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic46cb.php?p=75005#75005">http://forum.openscenegraph.org/viewtopic.php?p=75005#75005</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009227.html">[osg-users] osg apps on gpu cluster
+</A></li>
+	<LI>Next message (by thread): <A HREF="009209.html">[osg-users] Resizing FBO camera while rendering
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9202">[ date ]</a>
+              <a href="thread.html#9202">[ thread ]</a>
+              <a href="subject.html#9202">[ subject ]</a>
+              <a href="author.html#9202">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

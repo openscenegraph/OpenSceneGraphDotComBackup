@@ -1,0 +1,201 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] passing uniforms to compute shader
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20passing%20uniforms%20to%20compute%20shader&In-Reply-To=%3C1477910614.m2f.69184%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004636.html">
+   <LINK REL="Next"  HREF="280830.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] passing uniforms to compute shader</H1>
+<!--htdig_noindex-->
+    <B>Mary-Ann Zorra</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20passing%20uniforms%20to%20compute%20shader&In-Reply-To=%3C1477910614.m2f.69184%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] passing uniforms to compute shader">rebebaba2 at gmail.com
+       </A><BR>
+    <I>Mon Oct 31 03:43:34 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004636.html">[osg-users] passing uniforms to compute shader
+</A></li>
+        <LI>Next message: <A HREF="280830.html">[osg-users] osg stops rendering after deleting the final	View/MultiView, even if I create a new one to replace it
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4638">[ date ]</a>
+              <a href="thread.html#4638">[ thread ]</a>
+              <a href="subject.html#4638">[ subject ]</a>
+              <a href="author.html#4638">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+ok, maybe it is easier in that way.
+
+Here are the uniforms of the compute shader:
+
+Code:
+
+struct PointLight {
+        vec4 position;
+        vec4 color;
+        vec4 paddingAndRadius;
+};
+
+// Shader storage buffer objects
+layout(std140) uniform LightBuffer {
+        PointLight data[1024];
+} ;
+layout (binding = 0, r32f) writeonly uniform  image2D targetTex;
+
+// Uniforms
+uniform sampler2D depthMap;
+uniform vec2 screenSize;
+uniform int lightCount;
+uniform mat4 projectionMatrix;
+uniform mat4 viewMatrix;
+
+// Shared values between all the threads in the group
+shared uint minDepthInt;
+shared uint maxDepthInt;
+shared uint visibleLightCount;
+shared vec4 frustumPlanes[6];
+shared mat4 viewProjection;
+
+#define TILE_SIZE 1
+layout(local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in;
+
+
+
+And the uniforms of the fragment shader:
+
+Code:
+
+
+struct PointLight {
+        vec4 position;
+        vec4 color;
+        vec4 paddingAndRadius;
+};
+
+// Shader storage buffer objects
+layout(std140) uniform LightBuffer{
+        PointLight data[1024];
+} ;
+
+uniform sampler2D VisibleLightIndicesBuffer;
+uniform int numberOfTilesX;
+uniform int totalLightCount;
+
+
+
+And how I bind them to the compute shader: 
+
+Code:
+
+computeShaderStateset-&gt;addUniform(new osg::Uniform(&quot;depthMap&quot;,2));
+    computeShaderStateset-&gt;setTextureAttributeAndModes(2,depthTexture, osg::StateAttribute::ON);
+    computeShaderStateset-&gt;addUniform(new osg::Uniform(&quot;screenSize&quot;, osg::Vec2(windowWidth, windowHeight)));
+    computeShaderStateset-&gt;addUniform(new osg::Uniform(&quot;lightCount&quot;, (int) lights-&gt;size()));
+    computeShaderStateset-&gt;getOrCreateUniform(&quot;projectionMatrix&quot;, osg::Uniform::FLOAT_MAT4)-&gt;set(projectionMatrix);
+    computeShaderStateset-&gt;getOrCreateUniform(&quot;viewMatrix&quot;, osg::Uniform::FLOAT_MAT4)-&gt;set(viewMatrix);
+
+    //indices
+    osg::ref_ptr&lt;osg::Texture2D&gt; indexTexture = new osg::Texture2D;
+    indexTexture-&gt;setTextureSize(1024, 1024);
+    indexTexture-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture2D::LINEAR);
+    indexTexture-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture2D::LINEAR);
+    indexTexture-&gt;setInternalFormat(GL_R32F);
+    indexTexture-&gt;setSourceFormat(GL_RED);
+    indexTexture-&gt;setSourceType(GL_FLOAT);
+    indexTexture-&gt;bindToImageUnit(0, osg::Texture::WRITE_ONLY);
+    computeShaderStateset-&gt;addUniform(new osg::Uniform(&quot;targetTex&quot;, (int)0));
+    computeShaderStateset-&gt;setTextureAttributeAndModes(0, indexTexture.get());
+
+//lights
+    std::vector&lt;char&gt; byteLights = convertLightVector(lights);
+    osg::ByteArray* bytes = new osg::ByteArray(&amp;byteLights[0], &amp;byteLights[sizeof(byteLights) * sizeof(char) * byteLights.size()]);
+    osg::UniformBufferObject* uboLights = new osg::UniformBufferObject;
+    uboLights-&gt;setUsage(GL_STATIC_DRAW);
+    uboLights-&gt;setDataVariance(osg::Object::STATIC);
+    bytes-&gt;setBufferObject(uboLights);
+    osg::UniformBufferBinding* ubbLights = new osg::UniformBufferBinding(10, uboLights, 0, bytes-&gt;size());
+    computeShaderStateset-&gt;setAttributeAndModes(ubbLights, osg::StateAttribute::ON);
+    computeShaderProgram-&gt;addBindUniformBlock(&quot;LightBuffer&quot;, 10);
+
+
+
+And to the fragment shader:
+
+
+Code:
+ //Uniforms
+    mStateset-&gt;addUniform(new osg::Uniform(&quot;numberOfTilesX&quot;, (int) ((windowWidth + (windowWidth % 16)) / 16) ));
+    mStateset-&gt;addUniform(new osg::Uniform(&quot;totalLightCount&quot;, (int) lights-&gt;size()));
+    //indices
+    mStateset-&gt;addUniform(new osg::Uniform(&quot;VisibleLightIndicesBuffer&quot;,1));
+    mStateset-&gt;setTextureAttributeAndModes(1,indices, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+
+ //lights
+    std::vector&lt;char&gt; byteLights = convertLightVector(lights);
+    osg::ByteArray* bytes = new osg::ByteArray(&amp;byteLights[0], &amp;byteLights[sizeof(byteLights) * sizeof(char) * byteLights.size()]);
+    osg::UniformBufferObject* uboLights = new osg::UniformBufferObject;
+    uboLights-&gt;setUsage(GL_STATIC_DRAW);
+    uboLights-&gt;setDataVariance(osg::Object::STATIC);
+    bytes-&gt;setBufferObject(uboLights);
+    osg::UniformBufferBinding* ubbLights = new osg::UniformBufferBinding(0, uboLights, 0, bytes-&gt;size());
+    mStateset-&gt;setAttributeAndModes(ubbLights, osg::StateAttribute::ON);
+    lightShader-&gt;addBindUniformBlock(&quot;LightBuffer&quot;, 0);
+
+
+
+The part how I pass the lights is the same, but in the case of compute shader nothing happens, no light arrives. All uniforms have a reasonable value in the fragment shader, but they are always 0 (or empty), except the image2D targetTex object,  in the compute shader. I checked all variables in the code, and I know, that their value is ok, so the mistake is surely in binding, but I don't know where.
+
+Thank you for any help!
+
+Cheers,
+Mary-Ann
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic292b.php?p=69184#69184">http://forum.openscenegraph.org/viewtopic.php?p=69184#69184</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004636.html">[osg-users] passing uniforms to compute shader
+</A></li>
+	<LI>Next message: <A HREF="280830.html">[osg-users] osg stops rendering after deleting the final	View/MultiView, even if I create a new one to replace it
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4638">[ date ]</a>
+              <a href="thread.html#4638">[ thread ]</a>
+              <a href="subject.html#4638">[ subject ]</a>
+              <a href="author.html#4638">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Oculus+OSG
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Oculus%2BOSG&In-Reply-To=%3CCALFd4CfeL24ZA6mxO1QUL%3DG%2BJKwD3eari8uhb7i8K2sbOTb4yw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001461.html">
+   <LINK REL="Next"  HREF="001466.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Oculus+OSG</H1>
+<!--htdig_noindex-->
+    <B>Jan Ciger</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Oculus%2BOSG&In-Reply-To=%3CCALFd4CfeL24ZA6mxO1QUL%3DG%2BJKwD3eari8uhb7i8K2sbOTb4yw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Oculus+OSG">jan.ciger at gmail.com
+       </A><BR>
+    <I>Tue Sep  8 05:48:47 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001461.html">[osg-users] Oculus+OSG
+</A></li>
+        <LI>Next message: <A HREF="001466.html">[osg-users] Oculus+OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1464">[ date ]</a>
+              <a href="thread.html#1464">[ thread ]</a>
+              <a href="subject.html#1464">[ subject ]</a>
+              <a href="author.html#1464">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>On Mon, Sep 7, 2015 at 9:37 PM, Bj&#246;rn Blissing &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">bjorn.blissing at vti.se</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Jan Ciger wrote:
+</I>&gt;&gt;<i> That blog post I remember, but the conclusion there seems to be that positional timewarp introduces occlusion artifacts and a lot of extra complexity. I didn't sound like something they are intending to implement at the time.
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Hi Jan,
+</I>&gt;<i>
+</I>&gt;<i> One reddit user made two short videos to display the effect of positional timewarp. Both a normal case and one extreme case (pushed to fail).
+</I>&gt;<i>
+</I>&gt;<i> In the first video the frame rate is artificially dropped. Then he toggles between positional timewarp on/off, to show how this trick can alleviate a frame rate drop and still do some minor movement without stutter:
+</I>&gt;<i> <A HREF="http://zippy.gfycat.com/JealousMeagerKestrel.webm">http://zippy.gfycat.com/JealousMeagerKestrel.webm</A>
+</I>&gt;<i>
+</I>&gt;<i> The second video shows what happens if you move to much. Here rendering is frozen and the HMD user continues to move until the effect fails miserably:
+</I>&gt;<i> <A HREF="http://giant.gfycat.com/AgileThatGraysquirrel.webm">http://giant.gfycat.com/AgileThatGraysquirrel.webm</A>
+</I>&gt;<i>
+</I>&gt;<i> The author wrote the following description:
+</I>&gt;<i> &quot;Timewarp is a way of distorting the image the HMD receives in the event that the simulation can't keep up with the target frame rate or refresh rate of the device in order to compensate. So, motion-to-photon latency and headtracking will appear to remain consistent, even if your framerate is fluctuating. This helps to alleviate jitter. This, however, was only previously possible for rotational tracking in a prior Oculus SDK. Now the distortion is possible for positional tracking as well. Both have their limits of course -- you can only move so much before the scene becomes terribly warped. It's meant to cover for momentary or tiny dips in frame rate -- not for massive ones that last a while. &quot;
+</I>
+Oh careful there.
+
+What he is actually showing is the effect of the asynchronous timewarp
+- if you can't hit the framerate, you reproject/warp the previous
+frame. That's a fairly new thing which required the driver support -
+you need to preempt the current rendering command stream if you aren't
+going to hit the target and re-project the old frame.
+
+The original idea of timewarping was to reduce the apparent tracking
+latency by warping the rendered image to match the tracking data late
+in the frame. That is what I was referring to - I doubt the latency
+reduction in the case of positional tracking is worth the effort,
+because the tracker is running at a comparable/same speed as your
+application.
+
+ I have recently spent some crazy amount of time debugging framerate
+problems when the application (both OSG/OpenGL &amp; Unity/D3D) are locked
+to VSYNC but you get horrible framerate jitter every once in a while
+for no apparent reason. This produces horrid artifacts when doing
+frame-sequential stereo, because suddenly the stereo flips (I am
+trying to do stereo on a GeForce with my own synchronisation hw). My
+hypothesis is that the Nvidia's driver is silently dropping frames
+from the pre-rendered frame queue if you are rendering too quickly
+(the scene was really simple, rendering in thousands of fps without
+vsync) instead of blocking or something. And it happens only on
+GeForce hardware, not on our old Quadro, so it seems to be driver
+&quot;optimization&quot;. If the same thing happens with the Rift connected too,
+then these timewarping kludges are going to have a hard time keeping
+up. Or maybe they switch to a different code path in the driver when
+the Rift is detected ...
+
+I can't say I am a big fan of this - it is a kludge depending on the
+GPU vendor's good will and your good relationship with them (the SDK
+is NDA-ed, for ex.). Basically we are getting to the point where it is
+going to be impossible to deliver a properly working 3D application
+without working with the GPU vendor (good luck if you are a small
+indie guy).
+
+J.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001461.html">[osg-users] Oculus+OSG
+</A></li>
+	<LI>Next message: <A HREF="001466.html">[osg-users] Oculus+OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1464">[ date ]</a>
+              <a href="thread.html#1464">[ thread ]</a>
+              <a href="subject.html#1464">[ subject ]</a>
+              <a href="author.html#1464">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

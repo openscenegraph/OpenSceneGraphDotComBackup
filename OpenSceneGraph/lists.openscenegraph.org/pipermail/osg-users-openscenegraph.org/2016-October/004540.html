@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] 32bit DEPTH for RTT
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%2032bit%20DEPTH%20for%20RTT&In-Reply-To=%3CCAG7xrZeqnq%3DWdM_dr_iPV9ABg866ZqAHvwtgWEiYLtHtC9X_gw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280761.html">
+   <LINK REL="Next"  HREF="004542.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] 32bit DEPTH for RTT</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%2032bit%20DEPTH%20for%20RTT&In-Reply-To=%3CCAG7xrZeqnq%3DWdM_dr_iPV9ABg866ZqAHvwtgWEiYLtHtC9X_gw%40mail.gmail.com%3E"
+       TITLE="[osg-users] 32bit DEPTH for RTT">l.voerman at rug.nl
+       </A><BR>
+    <I>Thu Oct 20 00:25:08 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280761.html">[osg-users] 32bit DEPTH for RTT
+</A></li>
+        <LI>Next message: <A HREF="004542.html">[osg-users] 32bit DEPTH for RTT
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4540">[ date ]</a>
+              <a href="thread.html#4540">[ thread ]</a>
+              <a href="subject.html#4540">[ subject ]</a>
+              <a href="author.html#4540">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Trajce,
+maybe this sniplet helps?
+_textureDepthBuffer = new osg::Texture2D;
+_textureDepthBuffer-&gt;setTextureSize(_width+2.0f*_width*_guardBandPercentage,
+_height+2.0f*_height*_guardBandPercentage);
+_textureDepthBuffer-&gt;setSourceFormat(GL_DEPTH_COMPONENT);
+_textureDepthBuffer-&gt;setInternalFormat(GL_DEPTH_COMPONENT32);
+_textureDepthBuffer-&gt;setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::NEAREST);
+_textureDepthBuffer-&gt;setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::NEAREST);
+_textureDepthBuffer-&gt;setShadowComparison(false);
+_textureDepthBuffer-&gt;setWrap(osg::Texture::WRAP_R,osg::Texture::CLAMP_TO_EDGE);
+_textureDepthBuffer-&gt;setWrap(osg::Texture::WRAP_S,osg::Texture::CLAMP_TO_EDGE);
+
+// camera
+_colorDepthCamera = new osg::Camera;
+_colorDepthCamera-&gt;setStats(new osg::Stats(&quot;Camera&quot;));
+_colorDepthCamera-&gt;setName(&quot;colorDepth&quot;);
+_colorDepthCamera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+_colorDepthCamera-&gt;setReferenceFrame(osg::Transform::RELATIVE_RF);
+// set viewport
+_colorDepthCamera-&gt;setViewport(0,0,_width+2.0f*_width*_guardBandPercentage,_height+2.0f*_height*_guardBandPercentage);
+_colorDepthCamera-&gt;setRenderOrder(osg::Camera::PRE_RENDER,0);
+_colorDepthCamera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+_colorDepthCamera-&gt;attach(osg::Camera::DEPTH_BUFFER,
+_textureDepthBuffer.get(),0,0,false,0,0); // depth
+_colorDepthCamera-&gt;attach(osg::Camera::COLOR_BUFFER,
+_textureColorBuffer.get(),0,0,false,_msaa,_msaa); // color
+regards, Laurens.
+
+On Wed, Oct 19, 2016 at 11:15 PM, Trajce Nikolov NICK &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi Community,
+</I>&gt;<i>
+</I>&gt;<i> anyone with clue how to set RTT osg::Texture with 32bit DEPTH?
+</I>&gt;<i>
+</I>&gt;<i> Thanks a bunch as always!
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Nick
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> trajce nikolov nick
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161020/aab2c1ca/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161020/aab2c1ca/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280761.html">[osg-users] 32bit DEPTH for RTT
+</A></li>
+	<LI>Next message: <A HREF="004542.html">[osg-users] 32bit DEPTH for RTT
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4540">[ date ]</a>
+              <a href="thread.html#4540">[ thread ]</a>
+              <a href="subject.html#4540">[ subject ]</a>
+              <a href="author.html#4540">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Pragmatic shader - a new #pragma directive proposition
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20-%20a%20new%20%23pragma%20directive%0A%20proposition&In-Reply-To=%3C5698A4FF.2000305%40ib-caddy.si%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271980.html">
+   <LINK REL="Next"  HREF="271986.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Pragmatic shader - a new #pragma directive proposition</H1>
+<!--htdig_noindex-->
+    <B>Robert Milharcic</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20-%20a%20new%20%23pragma%20directive%0A%20proposition&In-Reply-To=%3C5698A4FF.2000305%40ib-caddy.si%3E"
+       TITLE="[osg-users] Pragmatic shader - a new #pragma directive proposition">robert.milharcic at ib-caddy.si
+       </A><BR>
+    <I>Thu Jan 14 23:51:27 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271980.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+        <LI>Next message: <A HREF="271986.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271985">[ date ]</a>
+              <a href="thread.html#271985">[ thread ]</a>
+              <a href="subject.html#271985">[ subject ]</a>
+              <a href="author.html#271985">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sebastian ,
+
+On 14.1.2016 15:47, Sebastian Messerschmidt wrote:
+&gt;<i> Am 14.01.2016 um 15:01 schrieb Robert Milharcic:
+</I>&gt;&gt;<i> Hi Sebastian,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> First of all, the lightning shader only illustrates one of the cases where (optionally) repeating a code block containing substitution parameter can be useful. I used the multi-light lightning as an illustration only.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> First, thank you for your input. Yes, that is more or less the same approach I'm currently using. The downside of this approach is that it requires additional nontrivial code logic for the uniform array management (u_LightColor) and that is why I started to look at the alternatives.
+</I>&gt;&gt;&gt;<i> What could be more complicated there than to setup individual uniforms? Sorry this doesn't pass as a valid argument. If you have to hold the number of used lights somewhere you can hold a reference to the uniform as well.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Sorry, but that is not what I had in mind.  The problem here is the management of the array uniform's content and not the reference to it or the light count etc. Let say I only want to disable one of the lights, say LIGHT0 eg. stateset-&gt;setDefines(&quot;LIGHT0&quot;, osg::StateAttribute::OFF). What will you do?
+</I>&gt;<i> Let's say you have a fixed maximum on N, than you create a UBO/Array of this size and provide a count-uniform for the maximum valid entries.
+</I>&gt;<i> If a light gets disabled, you simply remove it, copy it to the back and set your count to N-1.
+</I>&gt;<i> In the shader you simply loop from 0 to count instead of N. That might break compiler optimization, but it won't hurt too much I guess.
+</I>&gt;<i> When using the setDefine, OSG will have to issue a recompile of this new variant, which will degrade performance if all combinations are needed.
+</I>&gt;<i>
+</I>&gt;<i> Assume 16 Lightsource, that will produce 65536 possible shader programs ... and that is only 16, not 500, or 1000 ...
+</I>&gt;<i> Having 1024 individually switchable Lightsources would totally wreck your idea of having an alternative to my solution.
+</I>&gt;<i> 2^1024 might exceed the numbers of atoms in the known universe, so there is not a remote chance to solve this with shader combinations...
+</I>&gt;<i>
+</I>
+The question was purely rhetorical. I just wanted to prove my point regarding the uniform's content management vs already provided setDefines(&quot;LIGHT0&quot;, osg::StateAttribute::OFF). I didn't expect all that. Sorry for the fuzz :)  BTW, I'm not planing to toggle all possible on/off combinations just to see all the permutations, the normal graph usage is what I'm after.
+
+&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> There is also an upper limit for the size of the array that needs to be taken into account. 
+</I>&gt;&gt;&gt;<i> At least 512. If this is not enough you can use Uniform buffer objects (UBO)[1] or Shader Storage Blocks[2] which support
+</I>&gt;&gt;&gt;<i> If this is not enough for your light-count you will probably hit performance problems first.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Yes, that is true. The upper limit is not a problem for this specific multi-light problem.
+</I>&gt;<i> Even so, UBOs support in the order of ten-tousands. If this is still isn't enough, a texture will provide maximum space.
+</I>&gt;<i> Might be your example, but the number of individual uniforms is less than that. And putting a heap of uniforms into the stateset will fasten the handbrake on the CPU side.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Also, the loop represents unnecessary overhead (though, this is not a problem on a never hardware). 
+</I>&gt;&gt;&gt;<i> That's an assumption of yours. Usually constant folded loops with single return and without break, continue-statements are unrolled by the compiler.
+</I>&gt;&gt;&gt;<i> I'll accept performance comparisons however ;)
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Yes, you are right about that. The constant loop will most probably be unrolled by the compiler. Of courses, that is another assumption on top of the previous assumption :)
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> On the other hand, my suggestion fits well into existing pragmatic shader composition logic and probably has less downsides.
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Downside is that you're trying to invent a meta-language here out of reasons that I commented on. The downside of your approach is a preprocessor language with no clear advantages over the tools already at your disposal.
+</I>&gt;&gt;&gt;<i> So to say, the current language is already turing-complete and you're trying to put some syntactic sugar on top, which adds some high degree of complexity to the parser and to the shader-code.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i> Exactly, that was my intention, to add a higher degree of complexity and hopefully solve some problems that &quot;turing-complete&quot; language can't.
+</I>&gt;<i> Turing complete solves all computable problems ;-)
+</I>&gt;<i> I do understand your motivation, but I still don't see the gain really.
+</I>&gt;<i> I've presented some alternative ways to solve your problem, as I came across some of those challenges too.
+</I>&gt;<i> The idea Robert mentioned might be a good one, basically we could use some kind of callback to let the user-code preprocess the shader, wait actually we can already do this, when it is loaded via a LoadCallback :-)
+</I>&gt;<i> Actually I'm preprocessing my shader code when it's loaded to perform &quot;include&quot; and automated shader-define setup, so this might work for your &quot;loop&quot; too.
+</I>&gt;<i>
+</I>
+That would defeat the purpose of the #pragma(tic) shader composition. You may then as well pre-parse #pragma import_defines and #pragma requires and pre-generate all the shader permutations. The purpose of #pragma(tic) shader composition is shader generation based on current define set (see the osg::State).
+
+Cheers
+Robert Milharcic
+</PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271980.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+	<LI>Next message: <A HREF="271986.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271985">[ date ]</a>
+              <a href="thread.html#271985">[ thread ]</a>
+              <a href="subject.html#271985">[ subject ]</a>
+              <a href="author.html#271985">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

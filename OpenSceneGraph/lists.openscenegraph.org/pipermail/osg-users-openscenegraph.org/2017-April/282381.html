@@ -1,0 +1,123 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG crash on startup
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20crash%20on%20startup&In-Reply-To=%3C1493226464.m2f.70842%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006163.html">
+   <LINK REL="Next"  HREF="282384.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG crash on startup</H1>
+<!--htdig_noindex-->
+    <B>Guy Volckaert</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20crash%20on%20startup&In-Reply-To=%3C1493226464.m2f.70842%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] OSG crash on startup">guy.volckaert at meggitt.com
+       </A><BR>
+    <I>Wed Apr 26 10:07:44 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006163.html">[osg-users] Show children with hidden parent
+</A></li>
+        <LI>Next message: <A HREF="282384.html">[osg-users] Choosing a game engine for an open Roblox/Kodu/Lego	Worlds/LittleBigPlanet-like app
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282381">[ date ]</a>
+              <a href="thread.html#282381">[ thread ]</a>
+              <a href="subject.html#282381">[ subject ]</a>
+              <a href="author.html#282381">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I was wondering if anyone observed a similar problems. In essence, we recently upgrade from v2.8.2 to 3.4.0 and we are now noticing random crashed when launching many of our applications. Note that we also upgraded from VS2005 to VS2013, so technically it can also be a compiler issue as well. Hopefully you guys can guide me a little towards where to investigate;)
+
+I&#8217;ve been able to isolate the crash in Win32Mutex.cpp, the lock() and unlock() functions:
+
+
+Code:
+
+Mutex::Mutex(MutexType type):
+    _mutexType(type)
+{
+    Win32MutexPrivateData *pd = new Win32MutexPrivateData();
+    _prvData = static_cast&lt;void *&gt;(pd);
+}
+
+
+int Mutex::lock() {
+    Win32MutexPrivateData *pd =
+        static_cast&lt;Win32MutexPrivateData*&gt;(_prvData);
+    [b]if(!pd) return 0; /////// ADDED THIS SANITY CHECK[/b]
+
+#ifdef USE_CRITICAL_SECTION
+
+    // Block until we can take this lock.
+    EnterCriticalSection( &amp;(pd-&gt;_cs) );
+
+    return 0;
+
+#else 
+[&#8230;]
+#endif // USE_CRITICAL_SECTION
+
+}
+
+
+
+In essence, from time to time the &lt;pd&gt; pointer would be NULL even though &lt;_prvData&gt; is not, causing a crash when calling EnterCriticalSection(). I suspect that maybe there a racing condition when creating the internal threads. Adding if(!pd) return 0; seems to resolve the problem, albeit not a perfect solution.
+
+Any ideas would be appreciated. 
+
+Thank you!
+
+Cheers,
+Guy
+Code:
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic89a0.php?p=70842#70842">http://forum.openscenegraph.org/viewtopic.php?p=70842#70842</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006163.html">[osg-users] Show children with hidden parent
+</A></li>
+	<LI>Next message: <A HREF="282384.html">[osg-users] Choosing a game engine for an open Roblox/Kodu/Lego	Worlds/LittleBigPlanet-like app
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282381">[ date ]</a>
+              <a href="thread.html#282381">[ thread ]</a>
+              <a href="subject.html#282381">[ subject ]</a>
+              <a href="author.html#282381">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

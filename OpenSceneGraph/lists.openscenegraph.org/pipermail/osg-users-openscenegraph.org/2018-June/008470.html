@@ -1,0 +1,94 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] VBO Bug with 3.6.1 and Normal Arrays
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAFN7Y%2BVHZ%2BFBWFA73zT7DFTEFXZ6%2BP_Qu-0YuU9kC2fFjo--AA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008465.html">
+   <LINK REL="Next"  HREF="008472.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] VBO Bug with 3.6.1 and Normal Arrays</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAFN7Y%2BVHZ%2BFBWFA73zT7DFTEFXZ6%2BP_Qu-0YuU9kC2fFjo--AA%40mail.gmail.com%3E"
+       TITLE="[osg-users] VBO Bug with 3.6.1 and Normal Arrays">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Jun 14 00:25:06 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008465.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+        <LI>Next message (by thread): <A HREF="008472.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8470">[ date ]</a>
+              <a href="thread.html#8470">[ thread ]</a>
+              <a href="subject.html#8470">[ subject ]</a>
+              <a href="author.html#8470">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Daniel,
+
+On Wed, 13 Jun 2018 at 23:29, Daniel Emminizer, Code 5773
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dan.emminizer at nrl.navy.mil</A>&gt; wrote:
+&gt;<i> I don't know enough about the inner workings to know if this is a dumb idea -- but could you perhaps detect the problem during cull (VBO attachment is NULL but array exists and is non-empty), then call addVertexBufferObjectIfRequired() on the geometry between the cull and the draw phases?  Given my brief exposure to Renderer.cpp, I think that is easier to say than do...
+</I>
+Cull can be multi-threaded so calling addVertexufferObjectIfRequired()
+could cause a race condition.
+
+
+&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Just got your new email -- right, the VBO=0 occurs because the array never gets a VBO from array-&gt;setVertexBufferObject().  Because of this, VertexArrayState::setArray() gets 0 when it calls getOrCreateGLBufferObject().
+</I>
+Yes, the osg::Array in question never has a osg::VertexBufferObject so
+you can't create GLBufferObject for it.
+
+One possibility would be to have the GLObjectsVsitor run single
+threaded and do the check, but this won't catch geometry that is
+created on the fly.
+
+Perhaps another approach would be to just warn the user that the
+Binding hasn't been set prior to the Geometry::set*Array() call, or do
+a belt and braces of treat an BIND_UNDEFINED binding as a
+BIND_PER_VERTEX to force a VertexBufferObject to be assign
+automatically even though it might not be needed.  This might waste a
+byte or two but would probably be safe.
+
+Robert.
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008465.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+	<LI>Next message (by thread): <A HREF="008472.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8470">[ date ]</a>
+              <a href="thread.html#8470">[ thread ]</a>
+              <a href="subject.html#8470">[ subject ]</a>
+              <a href="author.html#8470">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

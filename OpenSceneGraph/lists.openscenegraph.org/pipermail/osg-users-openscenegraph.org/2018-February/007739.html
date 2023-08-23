@@ -1,0 +1,185 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Texture Buffer Object Initialization Problem
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Buffer%20Object%20Initialization%20Problem&In-Reply-To=%3C1519718051.m2f.72984%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007738.html">
+   <LINK REL="Next"  HREF="007740.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Texture Buffer Object Initialization Problem</H1>
+<!--htdig_noindex-->
+    <B>Eon Strife</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Buffer%20Object%20Initialization%20Problem&In-Reply-To=%3C1519718051.m2f.72984%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Texture Buffer Object Initialization Problem">eon_strife at yahoo.com
+       </A><BR>
+    <I>Mon Feb 26 23:54:11 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007738.html">[osg-users] Issues with Qt based application and occulusion queries
+</A></li>
+        <LI>Next message (by thread): <A HREF="007740.html">[osg-users] Copy a region of an image x,y,w,h / s,t,r
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7739">[ date ]</a>
+              <a href="thread.html#7739">[ thread ]</a>
+              <a href="subject.html#7739">[ subject ]</a>
+              <a href="author.html#7739">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I am trying to attach additional per-vertex information to each vertex. For each vertex, there are 3 sets of RGBA values I want to attach (each called controlSetA, controlSetB, controlSetC) to. The controlSet values are from an additional file in JSON format, and it is not embedded in the original 3D model. So, my plan here is that I will load those controlSet values and keep each controlSet in a Texture Buffer Object, and I will sample them in GLSL vertex shader.
+
+However I encounter an problem :
+
+Just say my 3D model is a sphere consists of 382 vertices. So the JSON file has 1528 values ( 382 x 4 channels = 1528) for each Control Set. In total : 1528 x 3 sets = 4584 values).  So, in &quot;tboImage-&gt;allocateImage&quot;, I request a texture with dimension 382 x 1 x 1 with RGBA float texels. During the runtime in this initialization function, I see from Visual Studio watch that it has correct 382 x 1 x 1 dimension. However, when I check it using codeXL, the texture's dimension is only 47 x 1 x 1 (if I am not wrong). Moreover, if I try to visualize the value in rendering, I can see that the sphere is painted with the value until about one quarter of the surface (from bottom) only.
+
+I am using OpenSceneGraph version 3.5.6, 64-bit, Visual Studio 2013
+
+The following is the relevant code
+
+
+Code:
+
+
+std::vector&lt;std::string&gt; controlSetNames = { &quot;controlSetA&quot;, &quot;controlSetB&quot;, &quot;controlSetC&quot; };
+std::vector&lt;int&gt; controlSetIDs = { 3, 4, 6 };
+
+...
+
+itrcontrolSet = 0
+//for each control set
+{
+	int vertexCount = 0;
+	std::vector&lt;float&gt; values;
+
+	//just pseudocode here
+	//for each vertex
+	//{
+	//	vertexCount++;
+	//	for each channel
+	//	{
+	//		values.push_back(channel-&gt;GetFloat());
+	//	}
+	//}
+
+	//create the texture image
+	osg::ref_ptr&lt;osg::Image&gt; tboImage = new osg::Image;
+	tboImage-&gt;allocateImage(vertexCount, 1, 1, GL_RGBA, GL_FLOAT);
+	float *dataF = (float*)tboImage-&gt;data();
+
+	//copy the json data to it
+	//memcpy(dataF, texels, sizeof(GL_FLOAT) * values.size());
+	for (int i = 0; i &lt; values.size(); i++)
+		*(dataF++) = values[i];
+
+	//create texture buffer object
+	osg::ref_ptr&lt;osg::TextureBuffer&gt; tbo = new osg::TextureBuffer;
+	tbo-&gt;setImage(tboImage.get());
+	tbo-&gt;setInternalFormat(GL_RGBA32F_ARB);
+	tbo-&gt;setTextureWidth(vertexCount);
+	tbo-&gt;dirtyTextureParameters();
+
+	//attach to the TBO
+	osg::ref_ptr&lt;osg::StateSet&gt; stateset = foundNode-&gt;getOrCreateStateSet();
+	osg::Uniform* texControlSet = new osg::Uniform(controlSetNames[itrcontrolSet].c_str(), controlSetIDs[itrcontrolSet]);
+	stateset-&gt;addUniform(texControlSet); 
+	stateset-&gt;setTextureAttributeAndModes(controlSetIDs[itrcontrolSet], tbo.get());
+
+	itrcontrolSet++;
+}
+
+
+
+
+And here's the shader code
+
+Code:
+
+#version 330 compatibility
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_explicit_uniform_location : enable
+
+layout( location = 3) uniform samplerBuffer controlSetA;
+layout( location = 4) uniform samplerBuffer controlSetB;
+layout( location = 6) uniform samplerBuffer controlSetC;
+
+...
+
+layout( location = 0 ) out vec4 out_vColor0;
+layout( location = 1 ) out vec4 out_vColor1;
+layout( location = 2 ) out vec4 out_vColor2;
+layout( location = 3 ) out vec4 out_vColor3;
+
+..
+
+void main()
+{
+
+...
+	vec4 in_vColor0		= gl_Color; 
+
+	out_vColor0 = saturate(in_vColor0);
+	out_vColor1 = texelFetch(controlSetA, gl_VertexID);
+	out_vColor2 = texelFetch(controlSetB, gl_VertexID);
+	out_vColor3 = texelFetch(controlSetC, gl_VertexID);
+
+...
+
+}
+
+
+
+
+
+Thank you!
+
+Cheers,
+Eon
+[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicaf24.php?p=72984#72984">http://forum.openscenegraph.org/viewtopic.php?p=72984#72984</A>
+
+
+
+
+
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007738.html">[osg-users] Issues with Qt based application and occulusion queries
+</A></li>
+	<LI>Next message (by thread): <A HREF="007740.html">[osg-users] Copy a region of an image x,y,w,h / s,t,r
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7739">[ date ]</a>
+              <a href="thread.html#7739">[ thread ]</a>
+              <a href="subject.html#7739">[ subject ]</a>
+              <a href="author.html#7739">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

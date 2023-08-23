@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Questions about shared compile contexts and thread	safety
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Questions%20about%20shared%20compile%20contexts%20and%20thread%0A%09safety&In-Reply-To=%3CCAFN7Y%2BU7i1BjGLiyKYOsjTY2nTaV_Wcpzu0BKLLqGqRz5Hy%3DEA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001927.html">
+   <LINK REL="Next"  HREF="278146.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Questions about shared compile contexts and thread	safety</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Questions%20about%20shared%20compile%20contexts%20and%20thread%0A%09safety&In-Reply-To=%3CCAFN7Y%2BU7i1BjGLiyKYOsjTY2nTaV_Wcpzu0BKLLqGqRz5Hy%3DEA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Questions about shared compile contexts and thread	safety">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Nov 10 01:33:38 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001927.html">[osg-users] Questions about shared compile contexts and thread	safety
+</A></li>
+        <LI>Next message: <A HREF="278146.html">[osg-users] osgconv converting fbx to osg with animation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1936">[ date ]</a>
+              <a href="thread.html#1936">[ thread ]</a>
+              <a href="subject.html#1936">[ subject ]</a>
+              <a href="author.html#1936">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Kouichi,
+
+On 9 November 2015 at 17:35, Kouichi Yoshizawa &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">kouichi.yoshizawa23 at gmail.com</A>&gt; wrote:
+
+&gt;<i> I see what you mean, but the problem is that I'm already doing the above
+</I>&gt;<i> suggestions and my performance is still far from acceptable so something
+</I>&gt;<i> needs to be done.
+</I>
+
+Are you 100% confident that you are using the most efficient scene graph
+you can create?  I'd be very surprised if this was the case.
+
+However, as you have only ever talked about the chosen solution for the
+performance problem, and nothing about the actual nature of the scene
+graph, OS and hardware you are working with there is nothing others can do
+to help advice on how you might improve things.
+
+
+&gt;<i> Using a separate thread for GPU transfers will enable what Nvidia calls a
+</I>&gt;<i> &quot;copy engine&quot; that can transfer data in parallel with the rendering,
+</I>&gt;<i> something otherwise not possible. This could potentially provide a huge
+</I>&gt;<i> benefit for my application since it is heavy on both rendering and GPU
+</I>&gt;<i> transfers, so I will try to experiment with making it work. So far it's
+</I>&gt;<i> looking very promising.
+</I>&gt;<i>
+</I>
+Using a separate CPU thread and associated graphics context for uploading
+data to the GPU won't actually directly do this, it'll just provide data to
+the driver from two threads.  The driver will still be doing what it does
+to manage all these resources and uploading when it can.   If the
+bottleneck is CPU pre-processing of the data then you &quot;might&quot; see an
+improvement.  However, you might well see worse performance with the driver
+and hardware being more contended.
+
+Using GL buffer objects for data transfer helps the driver in this process
+and the OSG supports this, the driver can actual start doing async copies
+where supported even if you are dispatching the GL data/commands from your
+application single threaded.
+
+Another massive factor in performance when you are pushing a lot of data at
+the GPU is overall management of GPU memory.  The OS/dirver can really
+start managing things really badly when GPU memory starts getting full.
+Performance can suddenly drop massive, with big stalls when you start
+getting near the limits.  Using techniques that minimize memory usage and
+well as memory transfer can be crucial to success.  In OSG-3.4 I introduced
+displacement mapping based terrain rendering in osgTerrain that shares
+geometry data between tiiles specifically to address this issue.  While
+this particular implementation might not be relevant to you the lessons
+should be applicable.  Modern OpenGL/GLSL opens the door to implementing
+scenes in different more memory efficient ways, it might involve higher GPU
+computational loads but by removing a bottleneck you can get far higher and
+more reliable performance.
+
+So I'd advice you look at scene graph itself for optimizations to get the
+performance you are after.
+
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151110/009c1e2d/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151110/009c1e2d/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001927.html">[osg-users] Questions about shared compile contexts and thread	safety
+</A></li>
+	<LI>Next message: <A HREF="278146.html">[osg-users] osgconv converting fbx to osg with animation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1936">[ date ]</a>
+              <a href="thread.html#1936">[ thread ]</a>
+              <a href="subject.html#1936">[ subject ]</a>
+              <a href="author.html#1936">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

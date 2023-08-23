@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Texture Caching Problem with 3.6.3/4
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3Cd726cd31-ce28-43ce-814c-1e293da836b8%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010628.html">
+   <LINK REL="Next"  HREF="010632.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Texture Caching Problem with 3.6.3/4</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3Cd726cd31-ce28-43ce-814c-1e293da836b8%40googlegroups.com%3E"
+       TITLE="[osg-users] Texture Caching Problem with 3.6.3/4">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Dec 10 05:41:37 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010628.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+        <LI>Next message (by thread): <A HREF="010632.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10629">[ date ]</a>
+              <a href="thread.html#10629">[ thread ]</a>
+              <a href="subject.html#10629">[ subject ]</a>
+              <a href="author.html#10629">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+
+On Monday, 9 December 2019 19:57:27 UTC, Greg D wrote:
+&gt;<i>
+</I>&gt;<i> My quick fix is to clear the cache on the first render (and call clear 
+</I>&gt;<i> thereafter).  OpenFlight files open and render fine now.  Is this a safe 
+</I>&gt;<i> fix?
+</I>&gt;<i>
+</I>&gt;<i> void ViewerBase::frame(double simulationTime)
+</I>&gt;<i> {
+</I>&gt;<i>     ....
+</I>&gt;<i> osgDB::Registry::instance()-&gt;clearObjectCache();  // ADDED TO CLEAR CACHE 
+</I>&gt;<i> AFTER RENDER SINCE IT BECOMES CORRUPTED
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>Adding this line to ViewerBase is a point of information about the problem 
+rather than a fix.  FYI, you can override Viewer::frame() by just 
+subclassing Viewer there is no need to modify the OSG itself.  You can also 
+call the clear after the frame() in your own frame loop.  However, all of 
+these clearObjectCache() changes are hacks around a different problem.
+
+&gt;<i>From your previous post that the change to OpenFlight's use of local cache 
+</I>vs ObjectCache indicates to me that the memory optimization of unrefering 
+the osg::Image after the image data has been applied to the Textures 
+texture object.  If an Texture is in the cache and could be reused *and* 
+the texture object data is released between the first use but before that 
+Texture is later reused.
+
+The potential fixes are :
+
+    Nt enable Texture::UnrefImageAfterApply  - this is set to true by the 
+osgUtil::Optimizer's TextureVisitor.  Is you app call the Optimizer on 
+loaded databases?
+    Don't delete the graphics contexts, instead just close the window and 
+reopen it when you need it.
+    Don't enable the object cache usage.
+
+A fix at the OSG would be for the OjbectCache to automatically detect the 
+usage case where a Texture is in the case, it's been compiled and the image 
+unreferred, the context deleted, then the Texture requested from the 
+cache.   The place to do this would probably be 
+ObjectCache::releaseGLObjects(osg::State* state).  It'd need to 
+dynamic_cast&lt;Texture&gt; the Objects in the cache to find the textures then 
+remove the Texture from the cache if it's got UnrefImageAfter enabled and 
+no osg::Image still attached to it.
+
+Robert.
+
+
+
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/d726cd31-ce28-43ce-814c-1e293da836b8%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/d726cd31-ce28-43ce-814c-1e293da836b8%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191210/4a4bea7d/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191210/4a4bea7d/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010628.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+	<LI>Next message (by thread): <A HREF="010632.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10629">[ date ]</a>
+              <a href="thread.html#10629">[ thread ]</a>
+              <a href="subject.html#10629">[ subject ]</a>
+              <a href="author.html#10629">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

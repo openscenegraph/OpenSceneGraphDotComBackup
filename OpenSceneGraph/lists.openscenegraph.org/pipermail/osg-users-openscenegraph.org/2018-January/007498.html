@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Scaling visitor not working as expected
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Scaling%20visitor%20not%20working%20as%20expected&In-Reply-To=%3CCALm6U%2BrgM_Cf%3DV8u%3DnZsSFoBKAB-ZZtbQ2JQKvLeeBefCpHiow%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007497.html">
+   <LINK REL="Next"  HREF="007499.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Scaling visitor not working as expected</H1>
+<!--htdig_noindex-->
+    <B>Christian Buchner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Scaling%20visitor%20not%20working%20as%20expected&In-Reply-To=%3CCALm6U%2BrgM_Cf%3DV8u%3DnZsSFoBKAB-ZZtbQ2JQKvLeeBefCpHiow%40mail.gmail.com%3E"
+       TITLE="[osg-users] Scaling visitor not working as expected">christian.buchner at gmail.com
+       </A><BR>
+    <I>Tue Jan  9 08:57:30 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007497.html">[osg-users] Scaling visitor not working as expected
+</A></li>
+        <LI>Next message (by thread): <A HREF="007499.html">[osg-users] Scaling visitor not working as expected
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7498">[ date ]</a>
+              <a href="thread.html#7498">[ thread ]</a>
+              <a href="subject.html#7498">[ subject ]</a>
+              <a href="author.html#7498">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Are display lists active in your scene? if so, maybe a dirtyDisplayList()
+call might be required
+on the affected drawables.
+
+drawable-&gt;dirtyDisplayList()
+
+As far as I know display lists are still the default in OSG, unless you
+explicitly disable them on
+geometry objects (and possibly enable vertex buffer objects instead, for
+performance reasons)
+
+the corresponding API calls on drawables would be
+
+drawable-&gt;setUseDisplayList( false )
+drawable-&gt;setUseVertexBufferObjects( true )
+
+you could use a visitor right after loading the scene to switch off display
+lists and enabling
+vertex buffer objects instead.
+
+Christian
+
+
+2018-01-09 14:58 GMT+01:00 Werner Modenbach &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Werner.Modenbach at texion.eu</A>&gt;:
+
+&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> I'm loading 3ds scenes as subnodes into my scene. The 3ds coordinates are
+</I>&gt;<i> in a different scale than my scene.
+</I>&gt;<i> Usually I would solve this by a transform. But because of internal reasons
+</I>&gt;<i> I need the vertices being
+</I>&gt;<i> in MY coordinate measure.
+</I>&gt;<i> So I wrote a scaling visitor, that multiplies al vertices of geometries by
+</I>&gt;<i> a given factor.
+</I>&gt;<i> That works perfectly fine when loading the 3ds scene:
+</I>&gt;<i> *        osg::ref_ptr&lt;osg::Node**&gt;* *node* *=* *osgDB**::readRefNodeFile(*
+</I>&gt;<i> *path**); *
+</I>&gt;<i> *        ScaleVisitor* *sv(**initialObjectScale* ***
+</I>&gt;<i> *correctiveObjectScale**); *
+</I>&gt;<i>         *node-&gt;**accept**(sv); *
+</I>&gt;<i>         *addChild**(node); *
+</I>&gt;<i>
+</I>&gt;<i> Unfortunately when rescaling the object after being added as a child this
+</I>&gt;<i> doesn't work any more:
+</I>&gt;<i> *        osg::ref_ptr&lt;osg::Node&gt; node* *=* *getChild(0);*
+</I>&gt;<i> *        ScaleVisitor* *sv(scaleChange);*
+</I>&gt;<i>         *node-&gt;accept(sv);*
+</I>&gt;<i>
+</I>&gt;<i> The 3ds scene doesn't change size on my screen.
+</I>&gt;<i> The visitor calls:
+</I>&gt;<i>         vertices-&gt;dirty();
+</I>&gt;<i>         geom.dirtyBound();
+</I>&gt;<i>
+</I>&gt;<i> But nothing happens. What am I missing? Deleting the 3ds scene and
+</I>&gt;<i> recreating it from scratch works OK but is very inefficient.
+</I>&gt;<i>
+</I>&gt;<i> Thanks for any hint.
+</I>&gt;<i>
+</I>&gt;<i> - Werner -
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180109/29c2825b/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180109/29c2825b/attachment-0001.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007497.html">[osg-users] Scaling visitor not working as expected
+</A></li>
+	<LI>Next message (by thread): <A HREF="007499.html">[osg-users] Scaling visitor not working as expected
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7498">[ date ]</a>
+              <a href="thread.html#7498">[ thread ]</a>
+              <a href="subject.html#7498">[ subject ]</a>
+              <a href="author.html#7498">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

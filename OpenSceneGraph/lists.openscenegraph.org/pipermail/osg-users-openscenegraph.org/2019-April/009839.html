@@ -1,0 +1,155 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CPU%20Performance%20issues%20with%20AMD%202700%20vs%20Intel%20Corei7%0A%204770S&In-Reply-To=%3CCAFN7Y%2BUvDfXZE%3DF3hefZTG5sHZk9ZW7iKKTcwk3Nmn_JqHp%3D_Q%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009838.html">
+   <LINK REL="Next"  HREF="009840.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CPU%20Performance%20issues%20with%20AMD%202700%20vs%20Intel%20Corei7%0A%204770S&In-Reply-To=%3CCAFN7Y%2BUvDfXZE%3DF3hefZTG5sHZk9ZW7iKKTcwk3Nmn_JqHp%3D_Q%40mail.gmail.com%3E"
+       TITLE="[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Apr  1 06:59:28 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009838.html">[osg-users] FPS camera
+</A></li>
+        <LI>Next message (by thread): <A HREF="009840.html">[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9839">[ date ]</a>
+              <a href="thread.html#9839">[ thread ]</a>
+              <a href="subject.html#9839">[ subject ]</a>
+              <a href="author.html#9839">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi All,
+
+I have recently got a new dev machine, a AMD2700 + Geforce 2060
+system. I wanted a quiet mulit-core system as well as to get some
+experiment working with AMD chips as I've been using Intel Corei7
+chips for the last 8 years.  The machine uses passive cooling for
+everything except the graphics card so it's soo quiet you hardly know
+it's on :-)
+
+I've begun performance testing and was expecting most improvements
+across the board for single threaded tasks, and big improvement on
+highly threaded tasks like building.   I expected this based on a
+number of online performance comparisons.  For example:
+
+<A HREF="https://cpu.userbenchmark.com/Compare/Intel-Core-i7-4770S-vs-AMD-Ryzen-7-2700/m2123vs3957">https://cpu.userbenchmark.com/Compare/Intel-Core-i7-4770S-vs-AMD-Ryzen-7-2700/m2123vs3957</A>
+
+    <A HREF="http://hwbench.com/cpus/amd-ryzen-7-2700-vs-intel-core-i7-4770s">http://hwbench.com/cpus/amd-ryzen-7-2700-vs-intel-core-i7-4770s</A>
+
+When using the OSG I'm seeing lower framerates for almost all the test
+models I regularly use, in particular the cull traversal can be 20-40%
+slower.
+
+Doing synthetic OSG + VSG scene graph creation, traversal tests shows
+the OSG 32% slower on the AMD (running osggroups from the osg2vsg
+project) while the equivalent VSG test  is ~14% faster on the AMD
+(running vsgvisitor from the vsgExamples project).
+
+Looking at the Linux perf stat utility it looks like the OSG runs for
+AMD run are hitting up against 498 context-switches for the run of
+osggroups, while the Intel just sees 24 context switches.  Branch
+misses are 0.66% on AMD vs 0.37% on Intel.  Instructions per cycle are
+all worse on the AMD too, 0.72 (AMD) vs 0.95 (Intel)
+instrictions/cycle
+
+The same equivalent tests with the VSG shows that the AMD has 56
+context switches vs 2 on the Intel.  Branch misses are also still
+higher on the AMD, but the instructions per cycle are now 2.13 (AMD)
+vs 1.96 (Intel) instructions/cycle.
+
+Another way of presenting this data, this OSG vs VSG tests runs a
+testing of creation 11 deep quad tree, traversing every node in the
+graph 10 times, then destroying the graph:
+
+VSG Intel 0.615 secs  (VSG 6.33 x faster than OSG)
+OSG Intel 3.895 secs
+
+VSG AMD 0.555 secs (VSG 9.36 x faster than OSG)
+OSG AMD 5.196 secs
+
+
+Despite the raw creation, traversals and destruction being quicker on
+the AMD with the VSG, the VSG framerates on scenes are worse on the
+AMD vs Intel though, except where the 2060's better fill rate gives it
+advantage.  Even when I take the VSG's traversals out of the equation
+and just submitted the same command graph to render each frame the
+frame rate is worse on the AMD vs Intel system, suggesting it's not
+just the slower traversals that is at issue - the Vulkan driver and
+hardware look to be struggling as well.
+
+The two systems aren't identical software wise, the Intel system in on
+Kubuntu 18.04 with gcc 7.3.0 vs Kubuntu 18.10 with gcc 8.2.0.  The
+Intel system has NVidia 396.54.09 vs AMD system with NVidia 415.27.
+
+I wouldn't have thought the OS, compile and drivers to make such stark
+differences in performance.  The VSG's lighterweight design does seem
+to help reduce the impact a bit and for some tests gives the AMD an
+advantage, but it's still overall slower on the AMD.  The OSG sees a
+huge hit on complex scenes on the AMD system.
+
+So I'm perplexed what might be going on.  The perf stat report
+suggests that the AMD is running at around 3.9-4GHz vs Intel running
+at 3.8 to 3.GHz.  The perf stat results suggests that certain
+workloads are really messing up the AMD's chip ability to efficiently
+handle the load.
+
+On one upside, the AMD's 8 cores/16 threads vs Intel's 4cores/8
+threads certainly helps when compiling the OSG, but this is small
+comfort as my job is far more focused on optimizing real-time
+rendering performance than just getting code compiled.
+
+I'd really like some feedback from the community as to what might be
+going wrong on my AMD system.  Are others seeing significantly slower
+CPU performance on AMD vs Intel for certain tasks?
+
+Any suggestions as what tests to do next?  What to tweak?
+
+Cheers,
+Robert.
+
+I have
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009838.html">[osg-users] FPS camera
+</A></li>
+	<LI>Next message (by thread): <A HREF="009840.html">[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9839">[ date ]</a>
+              <a href="thread.html#9839">[ thread ]</a>
+              <a href="subject.html#9839">[ subject ]</a>
+              <a href="author.html#9839">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

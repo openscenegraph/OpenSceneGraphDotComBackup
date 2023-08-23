@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LineSegmentIntersector%20NaN%20warnings%20on%20zero-scaled%0A%09nodes.&In-Reply-To=%3CCAFN7Y%2BXyA6M-rr7b-iEgU2M9WPn5UscsVQwnWX0fOWaT65CsFA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278258.html">
+   <LINK REL="Next"  HREF="278261.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LineSegmentIntersector%20NaN%20warnings%20on%20zero-scaled%0A%09nodes.&In-Reply-To=%3CCAFN7Y%2BXyA6M-rr7b-iEgU2M9WPn5UscsVQwnWX0fOWaT65CsFA%40mail.gmail.com%3E"
+       TITLE="[osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Nov 21 08:59:01 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278258.html">[osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.
+</A></li>
+        <LI>Next message: <A HREF="278261.html">[osg-users] What's the difference between put rttcamera under root	node and viewer?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2036">[ date ]</a>
+              <a href="thread.html#2036">[ thread ]</a>
+              <a href="subject.html#2036">[ subject ]</a>
+              <a href="author.html#2036">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Jannik,
+
+I haven't had a look at the modified example yet, it's the weekend so I'm
+just briefly online.  Quick thoughts are:
+
+  inverting a zero'd matrix will naturally lead to an invalid matrix.
+
+My inclination is that the case where a zero matrix could be produced is a
+special case that needs to be caught higher up in the calling methods
+rather than try and implement so lower level workaround.
+
+The actual concept behind the transformations that are being done of the
+line segment is transform into the coordinate frame of a subgraph and then
+trimming it so that you only test the extents that intersect that subgaph's
+bounding volume.  If a bounding volume is invalid then you can't do this
+test and clip.
+
+For a zero radius bounding sphere, such as a sub-graph that contains just a
+single point then this is a special case - the line segment would have to
+exactly pass through the centre of the bounding sphere.  One approach this
+might be to always increase the radius of the sphere by an epsilon so it;'s
+not non zero and do the test and clip against this.  epsilon's are already
+used elsewhere in LineSegmentIntersector,  I need to get back to me family
+now so can't look further into the topic.
+
+Robert.
+
+
+
+On 21 November 2015 at 16:02, Jannik Heller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">scrawl at baseoftrash.de</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> The LineSegmentIntersector creates NaN warnings when applied to a node
+</I>&gt;<i> with zero scale. I've attached a 3 line change to osgintersection.cpp to
+</I>&gt;<i> reproduce the issue.
+</I>&gt;<i>
+</I>&gt;<i> The NaN's first pop up when OSG tries to invert a zero matrix here:
+</I>&gt;<i> <A HREF="https://github.com/openscenegraph/osg/blob/master/src/osgUtil/LineSegmentIntersector.cpp#L294">https://github.com/openscenegraph/osg/blob/master/src/osgUtil/LineSegmentIntersector.cpp#L294</A>
+</I>&gt;<i>
+</I>&gt;<i> Check with the following code snippet:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>         osg::Matrix zero(0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1);
+</I>&gt;<i>
+</I>&gt;<i>         if (zero.invert(zero))
+</I>&gt;<i>             std::cout &lt;&lt; &quot;inverted &quot; &lt;&lt; zero &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> invert() returns true but the inverted matrix is
+</I>&gt;<i>
+</I>&gt;<i> inverted {
+</I>&gt;<i>         -nan -nan -nan 0
+</I>&gt;<i>         -nan -nan -nan 0
+</I>&gt;<i>         -nan -nan -nan 0
+</I>&gt;<i>         nan nan nan 1
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> This looks like a bug in the Matrix invert function.
+</I>&gt;<i>
+</I>&gt;<i> However even if the matrix was still zero instead of NaN, there is another
+</I>&gt;<i> issue here:
+</I>&gt;<i>
+</I>&gt;<i>     osg::ref_ptr&lt;LineSegmentIntersector&gt; lsi = new
+</I>&gt;<i> LineSegmentIntersector(_start * matrix, _end * matrix);
+</I>&gt;<i>
+</I>&gt;<i> Multiplying a vec3 with a zero matrix will cause NaN's, because there is
+</I>&gt;<i> an 1.0 / (mat * vec ...) in the Matrix::preMult(Vec3) function.
+</I>&gt;<i>
+</I>&gt;<i> Not sure on the best way to fix this. Should we add explicit checks for
+</I>&gt;<i> zero scaled matrices in the LineSegmentIntersector, or fix the Matrix and
+</I>&gt;<i> Vec classes so they don't produce NaN's under any circumstances for
+</I>&gt;<i> (borderline) valid input? The latter seems the cleaner fix but would have a
+</I>&gt;<i> performance impact all over OSG.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Jannik
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic19ee.php?p=65720#65720">http://forum.openscenegraph.org/viewtopic.php?p=65720#65720</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151121/82ead8c3/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151121/82ead8c3/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278258.html">[osg-users] LineSegmentIntersector NaN warnings on zero-scaled	nodes.
+</A></li>
+	<LI>Next message: <A HREF="278261.html">[osg-users] What's the difference between put rttcamera under root	node and viewer?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2036">[ date ]</a>
+              <a href="thread.html#2036">[ thread ]</a>
+              <a href="subject.html#2036">[ subject ]</a>
+              <a href="author.html#2036">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

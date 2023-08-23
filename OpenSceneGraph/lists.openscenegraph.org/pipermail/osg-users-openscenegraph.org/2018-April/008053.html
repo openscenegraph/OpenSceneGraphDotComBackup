@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Please test OpenSceneGraph-3.6 branch in prep for 3.6.1
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Please%20test%20OpenSceneGraph-3.6%20branch%20in%20prep%20for%0A%203.6.1&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827E82F4C%40tewdmx.enews.nrl.navy.mil%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008043.html">
+   <LINK REL="Next"  HREF="008057.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Please test OpenSceneGraph-3.6 branch in prep for 3.6.1</H1>
+<!--htdig_noindex-->
+    <B>Daniel Emminizer, Code 5773</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Please%20test%20OpenSceneGraph-3.6%20branch%20in%20prep%20for%0A%203.6.1&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827E82F4C%40tewdmx.enews.nrl.navy.mil%3E"
+       TITLE="[osg-users] Please test OpenSceneGraph-3.6 branch in prep for 3.6.1">dan.emminizer at nrl.navy.mil
+       </A><BR>
+    <I>Mon Apr 23 07:25:53 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008043.html">[osg-users] Please test OpenSceneGraph-3.6 branch in prep for 3.6.1
+</A></li>
+        <LI>Next message (by thread): <A HREF="008057.html">[osg-users] Please test OpenSceneGraph-3.6 branch in prep for 3.6.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8053">[ date ]</a>
+              <a href="thread.html#8053">[ thread ]</a>
+              <a href="subject.html#8053">[ subject ]</a>
+              <a href="author.html#8053">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+&gt;<i> Please let me know of success and failures, or any bugs you've seen in
+</I>&gt;<i> 3.6.0 but haven't reported yet :-)
+</I>
+We've had a lot of success, and a couple of minor issues.  Most of our issues are with either running in GL Core 3.3, or using osgText.  I'm trying to narrow down the scope a bit but thought I should send an email before too long.
+
+
+1) Default GL version with GLCORE
+
+During start-up of most applications we see:
+GL3: Non-GL3 version number: 1.0
+
+I can mitigate this by manually setting OSG_GL_CONTEXT_VERSION=3.3 in environment.  Would it make more sense to, in GLCORE config, to default the DisplaySettings.cpp _glContextVersion to &quot;3.3&quot; instead of &quot;1.0&quot; ?  I can submit a PR if desired.
+
+
+2) osgText backdrop looks very poor with smaller fonts
+
+We have a HUD in our application that uses &quot;normal&quot; sized text -- about what you'd see in a typical console application.  We've been using osgText::Text::DROP_SHADOW_BOTTOM_RIGHT but in 3.6.x it looks much worse than I remember it looking in 3.4.  You can see what I mean by editing osgtext.cpp and adding the DROP_SHADOW_BOTTOM_RIGHT to text5.  It's more apparent with smaller text at about character size 24.
+
+It's almost like there's too much alpha blending in the text and it just isn't crisp and readable.  You can see similar effects with OUTLINE, but it's still nowhere as crisp as NONE.
+
+The osgText demo (even with those edits) does not do justice to the problem I'm seeing.  I'm working on a good demonstration of the problem I'm seeing.
+
+
+
+3) Text Bounding Box calculation changes per frame
+
+I'm seeing incorrect bounding box calculations on text still that uses drop shadows.  This matters for us because we have column based HUD text that depends on the width of the previous column.  I have been able to duplicate this in osgtext.cpp example.  I am attaching a osgtext.cpp that reproduces it with cout statements.
+
+I want to come up with a better example, but in the interest of time I hope this suffices.  In our real code, we're seeing a horizontal shift of 0.5 pixels, but the example here only shows a shift of 0.02.  In the real example, the shift is dramatic enough, that when coupled with #2, it looks like the text shimmers bright and dark with the drop shadow showing through sometimes.  It's very distracting, and not seen in the 3.4.
+
+In the change, I added UpdateTextCallback to text5 instance.  It updates the text string, and makes sure the drop shadow is right.  I then call getBoundingBox() and print out xMax() - xMin(), yMax() - yMin(), etc.  If there is no drop shadow, then there's no change in values.  If there is a drop shadow, the values change every frame.
+
+Also, the text's actual drawn bounding area (white square from setDrawMode(TEXT|BOUNDINGBOX)) is correct at all times.  Can you explain why that is not the same bounding area as getBoundingBox(), which does change?  Probably a misunderstanding on my part.
+
+
+4) BOUNDINGBOX Draw Mode Offset Issue
+
+This one is completely cosmetic and possibly working as intended.  In osgtext.cpp there's an osg::Sequence that shows alignments around a crosshair.  The RIGHT_BOTTOM text is not lined up with the bounding box square.  Is this intentional?  I attached a screenshot of the blown up portion.  It looks completely aligned with the backdrop disabled (NONE).
+
+
+
+I'm still working on trying to get an example of #2 together if I can.
+
+Thanks for your time,
+
+ - Dan
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: AlignmentOff.png
+Type: image/png
+Size: 31729 bytes
+Desc: AlignmentOff.png
+URL: &lt;<A HREF="../attachments/20180423/6e3aae26/attachment-0001.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180423/6e3aae26/attachment-0001.png</A>&gt;
+-------------- next part --------------
+An embedded and charset-unspecified text was scrubbed...
+Name: osgtext.cpp
+URL: &lt;<A HREF="../attachments/20180423/6e3aae26/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180423/6e3aae26/attachment-0001.ksh</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008043.html">[osg-users] Please test OpenSceneGraph-3.6 branch in prep for 3.6.1
+</A></li>
+	<LI>Next message (by thread): <A HREF="008057.html">[osg-users] Please test OpenSceneGraph-3.6 branch in prep for 3.6.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8053">[ date ]</a>
+              <a href="thread.html#8053">[ thread ]</a>
+              <a href="subject.html#8053">[ subject ]</a>
+              <a href="author.html#8053">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

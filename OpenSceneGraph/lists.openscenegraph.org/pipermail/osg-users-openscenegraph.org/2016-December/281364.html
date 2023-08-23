@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Tearing hair out over simple GLSL instancing
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Tearing%20hair%20out%20over%20simple%20GLSL%20instancing&In-Reply-To=%3C1482427046.m2f.69743%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005156.html">
+   <LINK REL="Next"  HREF="005142.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Tearing hair out over simple GLSL instancing</H1>
+<!--htdig_noindex-->
+    <B>Andrew Cunningham</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Tearing%20hair%20out%20over%20simple%20GLSL%20instancing&In-Reply-To=%3C1482427046.m2f.69743%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Tearing hair out over simple GLSL instancing">andrewC at mac.com
+       </A><BR>
+    <I>Thu Dec 22 09:17:26 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005156.html">[osg-users] Intersect Point Cloud wth precision
+</A></li>
+        <LI>Next message: <A HREF="005142.html">[osg-users] Tearing hair out over simple GLSL instancing
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281364">[ date ]</a>
+              <a href="thread.html#281364">[ thread ]</a>
+              <a href="subject.html#281364">[ subject ]</a>
+              <a href="author.html#281364">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>OSG 3.4.0 
+I am trying to use &quot;instancing&quot; (starting from the example osgdrawinstanced) to draw simple square geometry at multiple locations.
+ I am getting all of my instances sitting on top of each other at (0,0,0). That is they are not offset to their expected locations.
+
+I know my shader is working OK because if I add a hack to my shader to add in an offset that depends on gl_InstanceID then the squares do get &quot;offset&quot; per instance.
+
+
+Step 1 
+Add &quot;nInstances&quot; of the square to my osg::Geometry
+    geom.addPrimitiveSet( new osg::DrawArrays( GL_QUADS, 0, 4, nInstances ) );
+
+Step 2
+Create a simple shader program that uses an attribute array of offsets (&quot;d&quot;) to offset the vertex locations
+	std::string vertexSource =
+		&quot;#version 120\n&quot;
+		&quot;#extension GL_EXT_draw_instanced : enable\n&quot;
+		&quot;in vec3 d;\n&quot;
+		&quot;void main() \n&quot;
+		&quot;{ \n&quot;
+		// Use the =coord to translate the position of the vertices.
+			&quot;vec3 pos = vec3(gl_Vertex) + d;\n&quot;
+			&quot;vec4 finalPos = vec4(pos, 1.0);\n&quot;
+			&quot;gl_Position = gl_ModelViewProjectionMatrix * finalPos;\n&quot;
+		&quot;} \n&quot;;
+
+	osg::ref_ptr&lt; osg::Shader &gt; vertexShader = new osg::Shader();
+	vertexShader-&gt;setType(osg::Shader::VERTEX);
+	vertexShader-&gt;setShaderSource(vertexSource);
+
+	osg::ref_ptr&lt; osg::Program &gt; program = new osg::Program();
+	program-&gt;addShader(vertexShader.get());
+	ss-&gt;setAttribute(program.get(),osg::StateAttribute::ON);
+
+	program-&gt;addBindAttribLocation(&quot;d&quot;, 1);
+
+Step 3
+      Create an array of offsets 4 * nInstances that contain the offsets for each vertex. Is this where I am going wrong??? I have checked that &quot;d&quot; is not (0,0,0) and is varying for each instance. It seems to be that all the instances are using  the same offset.
+			osg::Vec3Array *attrib = new osg::Vec3Array;
+			size_t vecIndex = 0;
+			for (size_t i = 0; i &lt; nInstances ; i++) {
+				osg::Vec3 d=GetOffSetForInstance(i);
+				attrib-&gt;push_back(d);
+				attrib-&gt;push_back(d);
+				attrib-&gt;push_back(d);
+				attrib-&gt;push_back(d);
+			}
+			geom-&gt;setVertexAttribArray(1, attrib);
+			geom-&gt;setVertexAttribBinding(1, osg::Geometry::BIND_PER_VERTEX);
+
+
+
+
+Andrew
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc384.php?p=69743#69743">http://forum.openscenegraph.org/viewtopic.php?p=69743#69743</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005156.html">[osg-users] Intersect Point Cloud wth precision
+</A></li>
+	<LI>Next message: <A HREF="005142.html">[osg-users] Tearing hair out over simple GLSL instancing
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281364">[ date ]</a>
+              <a href="thread.html#281364">[ thread ]</a>
+              <a href="subject.html#281364">[ subject ]</a>
+              <a href="author.html#281364">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

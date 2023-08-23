@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] event callback after viewer is done
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20event%20callback%20after%20viewer%20is%20done&In-Reply-To=%3CCAHhSfti9hVkKXm6RT8UjbQOD_f9U50YJuJ1AzoRe6oYs%3D0tsWA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001690.html">
+   <LINK REL="Next"  HREF="001695.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] event callback after viewer is done</H1>
+<!--htdig_noindex-->
+    <B>Riccardo Corsi</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20event%20callback%20after%20viewer%20is%20done&In-Reply-To=%3CCAHhSfti9hVkKXm6RT8UjbQOD_f9U50YJuJ1AzoRe6oYs%3D0tsWA%40mail.gmail.com%3E"
+       TITLE="[osg-users] event callback after viewer is done">riccardo.corsi at kairos3d.it
+       </A><BR>
+    <I>Wed Oct  7 00:50:40 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001690.html">[osg-users] event callback after viewer is done
+</A></li>
+        <LI>Next message: <A HREF="001695.html">[osg-users] event callback after viewer is done
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1694">[ date ]</a>
+              <a href="thread.html#1694">[ thread ]</a>
+              <a href="subject.html#1694">[ subject ]</a>
+              <a href="author.html#1694">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+what I'm trying to do is integrating the ImGui framework and render it
+natively through osg primitives.
+This gui works in immediate mode, meaning you have to call the code to
+create your widgets every frame,
+which is what I do in the custom code in the frame loop (as this changes
+for every application).
+All the rest is handled in custom callbacks attached to some nodes.
+
+Basically, ImGui needs these things to happen in order at every frame
+1. getting inputs (done in the event callback )
+2. call to NewFrame() (called on the &quot;FRAME&quot; event, which is the last one
+received in the event callback)
+3. code to create widgets (explicit in the main loop)
+4. call to Render() which produces geometries to be rendered by osg (this
+is done in the update callback)
+
+Now, a call to the code that creates widgets (3.) without a proper
+NewFrame() (2.) causes a crash.
+When osgViewer is done, I don't get the event callback, and the code which
+creates the gui crashes.
+
+Any suggestion for an alternative design?
+
+Thank you,
+Ricky
+
+
+
+On Tue, Oct 6, 2015 at 8:56 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Ricky,
+</I>&gt;<i>
+</I>&gt;<i> I don't know what is in your event callback but for exit to cause a crash
+</I>&gt;<i> it sounds like something is probably not being managed robustly.  As I know
+</I>&gt;<i> so little I can't provide any specific advice.
+</I>&gt;<i>
+</I>&gt;<i> One possibility might be to call viewer.eventTravseral() after the main
+</I>&gt;<i> rendering loop.  I can't help be feel there is something amiss in the way
+</I>&gt;<i> your are managing your event callback and it's associated faculties, and
+</I>&gt;<i> suspect a small redesign could probably resolve the issue.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 6 October 2015 at 18:03, Riccardo Corsi &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">riccardo.corsi at kairos3d.it</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi all,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I have an event callback which needed to be called before some custom
+</I>&gt;&gt;<i> code I call in the main application loop, something like:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> while()
+</I>&gt;&gt;<i> {
+</I>&gt;&gt;<i> viewer.eventTraversal();  // &lt;&lt; needed callback here
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> // custom code
+</I>&gt;&gt;<i> // prepare stuff to be drawn during next frames
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> viewer.updateTraversal();
+</I>&gt;&gt;<i> // ...
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> When the viewer is about to exit, the event callbacks are not called.
+</I>&gt;&gt;<i> In my case the callback is needed instead,
+</I>&gt;&gt;<i> not to cause a segfault to the custom code between osg calls.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The obvious solution is to place the callback directly in the main loop,
+</I>&gt;&gt;<i> but I'd like to avoid that
+</I>&gt;&gt;<i> (to keep it more &quot;transparent&quot;, as it's a kind of framework to be used in
+</I>&gt;&gt;<i> several applications).
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Have you got any suggestion?
+</I>&gt;&gt;<i> Thank you!
+</I>&gt;&gt;<i> Ricky
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151007/62362ca6/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151007/62362ca6/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001690.html">[osg-users] event callback after viewer is done
+</A></li>
+	<LI>Next message: <A HREF="001695.html">[osg-users] event callback after viewer is done
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1694">[ date ]</a>
+              <a href="thread.html#1694">[ thread ]</a>
+              <a href="subject.html#1694">[ subject ]</a>
+              <a href="author.html#1694">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

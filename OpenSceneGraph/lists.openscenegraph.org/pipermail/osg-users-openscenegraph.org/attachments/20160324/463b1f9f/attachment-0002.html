@@ -1,0 +1,109 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;HI&nbsp;Zheng,&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;I&nbsp;am&nbsp;away&nbsp;from&nbsp;my&nbsp;dev&nbsp;machine&nbsp;so&nbsp;not&nbsp;in&nbsp;a&nbsp;position&nbsp;to&nbsp;look&nbsp;up&nbsp;the&nbsp;implementation&nbsp;side&nbsp;for&nbsp;subload&nbsp;callback&nbsp;to&nbsp;double&nbsp;check&nbsp;your&nbsp;code.&nbsp; &lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;In&nbsp;general&nbsp;though&nbsp;I&nbsp;wouldn&#39;t&nbsp;recommend&nbsp;having&nbsp;the&nbsp;draw&nbsp;traversal&nbsp;doing&nbsp;a&nbsp;read&nbsp;from&nbsp;a&nbsp;device&nbsp;as&nbsp;this&nbsp;is&nbsp;very&nbsp;likely&nbsp;to&nbsp;cause&nbsp;a&nbsp;frame&nbsp;drop.&nbsp;The&nbsp;standard&nbsp;way&nbsp;to&nbsp;tackle&nbsp;this&nbsp;type&nbsp;of&nbsp;problem&nbsp;is&nbsp;to&nbsp;have&nbsp;a&nbsp;back&nbsp;ground&nbsp;thread&nbsp;read&nbsp;from&nbsp;the&nbsp;device&nbsp;copying&nbsp;the&nbsp;data&nbsp;an&nbsp;osg::Image,&nbsp;after&nbsp;copying&nbsp;calling&nbsp;dirty()&nbsp;on&nbsp;the&nbsp;image. &nbsp;This&nbsp;osg::Image&nbsp;would&nbsp;also&nbsp;be&nbsp;attached&nbsp;to&nbsp;the&nbsp;osg::Texture&nbsp;in&nbsp;the&nbsp;scene&nbsp;graph,&nbsp;but&nbsp;there&nbsp;is&nbsp;no&nbsp;need&nbsp;to&nbsp;implement&nbsp;a&nbsp;subload&nbsp;callback&nbsp;as&nbsp;the&nbsp;Texture::apply()&nbsp;checks&nbsp;the&nbsp;Image&nbsp;modifiedCount()&nbsp;and&nbsp;automatically&nbsp;subloads&nbsp;for&nbsp;you.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;The&nbsp;video&nbsp;plugins&nbsp;like&nbsp;ffmpeg,&nbsp;quicktime&nbsp;and&nbsp;directshow&nbsp;ones&nbsp;implement&nbsp;this&nbsp;approach.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Robert.&nbsp;  &lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;23&nbsp;March&nbsp;2016&nbsp;at&nbsp;15:10,&nbsp;Zheng&nbsp;Li&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:908835930@qq.com&quot;&nbsp;target=&quot;_blank&quot;&gt;908835930@qq.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;wrote&nbsp;a&nbsp;&quot;SubloadCallback&quot;&nbsp;derived&nbsp;class&nbsp;and&nbsp;attach&nbsp;it&nbsp;to&nbsp;a&nbsp;texture2D&nbsp;object&nbsp;to&nbsp;update&nbsp;image&nbsp;dynamically,but&nbsp;unfortunately&nbsp;the&nbsp;texture&nbsp;image&nbsp;can&nbsp;not&nbsp;be&nbsp;updated,the&nbsp;texture&nbsp;always&nbsp;show&nbsp;a&nbsp;piece&nbsp;of&nbsp;white;below&nbsp;is&nbsp;my&nbsp;code,what&nbsp;wrong&nbsp;happened&nbsp;to&nbsp;it?&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;main()&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;the&nbsp;class&nbsp;to&nbsp;update&nbsp;texture&nbsp;image&nbsp;dynamically;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;class&nbsp;UpdateTextureCallback&nbsp;:&nbsp;public&nbsp;osg::Texture2D::SubloadCallback&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;public:&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Image&gt;&nbsp;_image;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;SIZE&nbsp;m_szVideo;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;public:&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;UpdateTextureCallback(int&nbsp;vwidth,int&nbsp;vheight)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;m_szVideo.cx&nbsp;=&nbsp;vwidth;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;m_szVideo.cy&nbsp;=&nbsp;vheight;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_image&nbsp;=&nbsp;osgDB::readImageFile(&quot;C:\\test.jpg&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;assert(_image-&gt;valid());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_image-&gt;scaleImage(vwidth,vheight,_image-&gt;r());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;};&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;virtual&nbsp;~UpdateTextureCallback()&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;_image&nbsp;=&nbsp;NULL;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;};&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;virtual&nbsp;void&nbsp;load(const&nbsp;osg::Texture2D&amp;&nbsp;texture,osg::State&amp;&nbsp;state)&nbsp;const&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,m_szVideo.cx,m_szVideo.cy,0,GL_BGRA_EXT,GL_UNSIGNED_BYTE,NULL);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;};&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;virtual&nbsp;void&nbsp;subload(const&nbsp;osg::Texture2D&amp;&nbsp;texture,osg::State&amp;&nbsp;state)&nbsp;const&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;readImageFromDevice(_image);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glTexSubImage2D(GL_TEXTURE_2D,0,0,0,_image-&gt;s(),_image-&gt;t(),_image-&gt;getPixelFormat(),_image-&gt;getDataType(),_image-&gt;getDataPointer());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;};&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;};&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;const&nbsp;int&nbsp;VideoWidth&nbsp;=&nbsp;3840;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;const&nbsp;int&nbsp;VideoHeight&nbsp;=&nbsp;2160;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Texture2D&gt;&nbsp;texVideo&nbsp;=&nbsp;new&nbsp;osg::Texture2D();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texVideo-&gt;setResizeNonPowerOfTwoHint(false);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texVideo-&gt;setTextureSize(VideoWidth,VideoHeight);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texVideo-&gt;setInternalFormat(GL_RGBA);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texVideo-&gt;setSubloadCallback(new&nbsp;UpdateTextureCallback(VideoWidth,VideoHeight));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Geode&gt;&nbsp;quad&nbsp;=&nbsp;new&nbsp;osg::Geode();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;quad-&gt;addDrawable(createDrawable_Quad());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;quad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,texVideo.get());&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osgViewer::Viewer&gt;&nbsp;viewer&nbsp;=&nbsp;new&nbsp;osgViewer::Viewer();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;viewer-&gt;realize();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;viewer-&gt;getCamera()-&gt;setAllowEventFocus(false);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;viewer-&gt;getCamera()-&gt;setProjectionMatrixAsOrtho2D(0,1,0,1);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;viewer-&gt;getCamera()-&gt;setViewMatrix(osg::Matrix::identity());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;viewer-&gt;setSceneData(&nbsp;quad&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;viewer-&gt;run();&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+osg::Geometry&nbsp;*&nbsp;createDrawable_Quad(float&nbsp;alpha=1.0f)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Vec2Array&gt;&nbsp;vertices&nbsp;=&nbsp;new&nbsp;osg::Vec2Array;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vertices-&gt;push_back(&nbsp;osg::Vec2(0,0)&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vertices-&gt;push_back(&nbsp;osg::Vec2(0,1)&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vertices-&gt;push_back(&nbsp;osg::Vec2(1,1)&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vertices-&gt;push_back(&nbsp;osg::Vec2(1,0)&nbsp;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Vec2Array&gt;&nbsp;texcoords&nbsp;=&nbsp;new&nbsp;osg::Vec2Array;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texcoords-&gt;push_back(&nbsp;osg::Vec2(0.0f,&nbsp;0.0f)&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texcoords-&gt;push_back(&nbsp;osg::Vec2(0.0f,&nbsp;1.0f)&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texcoords-&gt;push_back(&nbsp;osg::Vec2(1.0f,&nbsp;1.0f)&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texcoords-&gt;push_back(&nbsp;osg::Vec2(1.0f,&nbsp;0.0f)&nbsp;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Vec4Array&gt;&nbsp;colors&nbsp;=&nbsp;new&nbsp;osg::Vec4Array();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;colors-&gt;push_back(osg::Vec4(1.0f,1.0f,1.0f,alpha));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Geometry&gt;&nbsp;quad&nbsp;=&nbsp;new&nbsp;osg::Geometry;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;quad-&gt;setVertexArray(&nbsp;vertices.get()&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;quad-&gt;setColorArray(colors.get());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;quad-&gt;setColorBinding(&nbsp;osg::Geometry::BIND_OVERALL&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;quad-&gt;setTexCoordArray(&nbsp;0,&nbsp;texcoords.get()&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;quad-&gt;addPrimitiveSet(&nbsp;new&nbsp;osg::DrawArrays(GL_QUADS,&nbsp;0,&nbsp;4)&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;return&nbsp;quad.release();&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Zheng&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;span&nbsp;class=&quot;&quot;&gt;------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;/span&gt;&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=66611#66611&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=66611#66611&lt;/a&gt;&lt;br&gt;<br>
+&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

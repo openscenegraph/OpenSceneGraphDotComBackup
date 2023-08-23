@@ -1,0 +1,281 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users]  Texture Caching Problem with 3.6.3/4
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3C6f68265d-b8d2-4f74-b55a-f119fc807d37%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010622.html">
+   <LINK REL="Next"  HREF="010626.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users]  Texture Caching Problem with 3.6.3/4</H1>
+<!--htdig_noindex-->
+    <B>Greg D</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3C6f68265d-b8d2-4f74-b55a-f119fc807d37%40googlegroups.com%3E"
+       TITLE="[osg-users]  Texture Caching Problem with 3.6.3/4">g.danaha at networkharbor.com
+       </A><BR>
+    <I>Fri Dec  6 11:35:45 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010622.html">[osg-users] Testing cross posting from googlegroup to osg-users mailing list
+</A></li>
+        <LI>Next message (by thread): <A HREF="010626.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10625">[ date ]</a>
+              <a href="thread.html#10625">[ thread ]</a>
+              <a href="subject.html#10625">[ subject ]</a>
+              <a href="author.html#10625">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+
+I have been using OSG for a number of years for a commercial product.  Our 
+product loads various models and earth views as the user requires them (for 
+security monitoring &#8211; buildings and campuses mostly).  I have a problem 
+with 3.6.3/4 that wasn't there in 3.4.0.
+
+ 
+
+I have an OpenFlight model (sample/demo model) that uses textures for 
+terrain and on buildings.  The first time I load it all is fine.  However, 
+if I load another model (or another graphics file &#8211; the application 
+supports AutoCAD, raster, OSG Earth, and ArcGIS formats as well) then 
+reload the model the terrain is black and the textures are corrupted if 
+they are not black.  This worked fine with 3.4.0 and 3.4.1 but does not 
+work with 3.6.3 or 3.6.4.
+
+ 
+
+I have debugged into the code and it appears that the model and textures 
+are always reloaded from the cache and I cannot override this (setting 
+Options::CACHE_NONE doesn&#8217;t affect it - in 3.4.0 the model always loaded 
+from files with Options set to CACHE_NONE).  If I look at the model graph 
+in memory (after the first load), the textures appear to be erased or 
+over-written during the traversals in one of the classes called in 
+ViewerBase::runOperations() (though it&#8217;s a little confusing to me at that 
+point, it appears to be when GlobalObjectVisitor::compile() calls 
+node.accept(*this)).  During the traversals where the textures appear to be 
+over-written, I noticed the context ID is always 0, so the textures appear 
+to be reloaded, over-writing the original data in the process (though I 
+could be quite confused as to what I am seeing and it may all be irrelevant 
+to the issue). 
+
+
+Below is a short snippet from my initialization and cleanup code between 
+model loads.  I load the model, add a clip node to peel down through the 
+models vertically.  I also add other nodes to hold embedded bitmaps 
+(Billboards) representing security devices &#8211; cameras, doors, alarm points, 
+etc.  Those details are omitted from the code below.  After the model is 
+loaded I set up the graphics context and render the image to an offscreen 
+window (which is then copied to a memory bitmap).  The application is a 
+Windows console app (with hidden window) that streams bitmap images to the 
+client app via named pipe on the same machine (I know, it&#8217;s complicated, 
+but it&#8217;s a complex environment, including live video windows).
+
+ 
+
+As I said, it has worked fine with previous versions of OSG (back to 3.0.1, 
+if not earlier).  This may be specific to Open Flight models, as I can load 
+FBX models, OSG earth files, or the cessnafire.osg model and the textures 
+appear correct.
+
+
+Any help would be appreciated.  If the model would always be loaded from 
+the file when Options::CACHE_NONE were set it would solve my problem.
+
+
+OSGLoadResult OpenSceneGraphBitmap::LoadModel(std::string fileName, osgDB::
+Options* dbOptions)
+
+{
+
+       CleanupModel();
+
+ 
+
+       if (m_Root == nullptr)
+
+              m_Root = new osg::Group;          // Init the main Root 
+Node/Group
+
+ 
+
+       // Load the Model from the model name
+
+       osg::Group* model = dynamic_cast&lt;osg::Group*&gt;(osgDB::readNodeFile(
+fileName, dbOptions));
+
+       if (model != nullptr)
+
+       {
+
+              // Optimize the model
+
+              osgUtil::Optimizer optimizer;
+
+              optimizer.optimize(model);
+
+              optimizer.reset();
+
+ 
+
+              // Create the clip node and add to scene
+
+              osg::ComputeBoundsVisitor cbbv;
+
+              model-&gt;accept(cbbv);
+
+              osg::BoundingBox bb = cbbv.getBoundingBox();
+
+ 
+
+              osg::ref_ptr&lt;osg::ClipPlane&gt; clipPlane = new osg::ClipPlane;
+
+              clipPlane-&gt;setClipPlane(0.0, 0.0, -1.0, bb.zMin() + 
+(bb.zMax() - bb.zMin()));
+
+              clipPlane-&gt;setClipPlaneNum(0);
+
+ 
+
+              osg::ref_ptr&lt;osg::ClipNode&gt; clipNode = new osg::ClipNode;
+
+              clipNode-&gt;setName(&quot;CLIP_NODE&quot;);
+
+              clipNode-&gt;addClipPlane(clipPlane.get());
+
+ 
+
+              clipNode-&gt;setCullingActive(false);
+
+ 
+
+              model-&gt;setStateSet(clipNode-&gt;getStateSet());
+
+ 
+
+              m_Root-&gt;addChild(clipNode);
+
+ 
+
+              m_Root-&gt;addChild(model);
+
+ 
+
+              m_Root-&gt;setDataVariance(osg::Object::DYNAMIC);
+
+ 
+
+ 
+
+              return OSGLoadResult::Sucess;
+
+       }
+
+ 
+
+       // since load failed, reset the wait event so the render thread 
+resumes
+
+       return OSGLoadResult::FileLoadError;
+
+}
+
+ 
+
+void OpenSceneGraphBitmap::CleanupModel()
+
+{
+
+       RemoveViews();
+
+ 
+
+       if (m_Root != nullptr)     // if root already exists (already loaded 
+previous scene) remove children to clean up
+
+       {
+
+              m_Root-&gt;releaseGLObjects();
+
+              m_Root-&gt;removeChildren(0, m_Root-&gt;getNumChildren());
+
+ 
+
+              void* ptr = m_Root.release();
+
+              delete ptr;
+
+              m_Root = nullptr;
+
+       }
+
+}
+
+ 
+
+void OpenSceneGraphBitmap::RemoveViews()
+
+{
+
+       if (m_nhiCompositeViewer != nullptr)
+
+       {
+
+              m_nhiCompositeViewer-&gt;setDone(true);
+
+ 
+
+              delete m_nhiCompositeViewer;
+
+              m_nhiCompositeViewer = nullptr;
+
+       }
+
+}
+
+ 
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/6f68265d-b8d2-4f74-b55a-f119fc807d37%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/6f68265d-b8d2-4f74-b55a-f119fc807d37%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191206/abb680a9/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191206/abb680a9/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010622.html">[osg-users] Testing cross posting from googlegroup to osg-users mailing list
+</A></li>
+	<LI>Next message (by thread): <A HREF="010626.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10625">[ date ]</a>
+              <a href="thread.html#10625">[ thread ]</a>
+              <a href="subject.html#10625">[ subject ]</a>
+              <a href="author.html#10625">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

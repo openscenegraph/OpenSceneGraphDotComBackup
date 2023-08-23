@@ -1,0 +1,104 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Qt5 integration
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Qt5%20integration&In-Reply-To=%3C2BF54B8E-798E-4A97-92D0-A98929597954%40mac.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001245.html">
+   <LINK REL="Next"  HREF="001330.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Qt5 integration</H1>
+<!--htdig_noindex-->
+    <B>James Turner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Qt5%20integration&In-Reply-To=%3C2BF54B8E-798E-4A97-92D0-A98929597954%40mac.com%3E"
+       TITLE="[osg-users] Qt5 integration">zakalawe at mac.com
+       </A><BR>
+    <I>Mon Aug 24 07:14:04 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001245.html">[osg-users] Qt5 integration
+</A></li>
+        <LI>Next message: <A HREF="001330.html">[osg-users] Qt5 integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1308">[ date ]</a>
+              <a href="thread.html#1308">[ thread ]</a>
+              <a href="subject.html#1308">[ subject ]</a>
+              <a href="author.html#1308">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+&gt;<i> On 18 Aug 2015, at 09:44, John Vidar Larring &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">john.larring at chyronhego.com</A>&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i> I've attempted to update the osgQt code to use the new QOpenGLWidget rather than the deprecated QGLWindow currently subclassed, but I've hit a snag with the the order of when when QOpenGLContext is created and when CompositeViewer expects it to be available (Probably a silly mistake that I'm overlooking). Have you had to restructure the osgQt::GraphicsWindow or osgQt::GLWindow class and the osgViewerQt example in any way to get your implementation to work? 
+</I>
+I&#8217;ve had to restructure osgViewerQt a little, because I didn&#8217;t try to get the CompositeViewer working yet.
+
+&gt;<i> 
+</I>&gt;<i> Also, I would like to know why you chose to use QOpenGLWindow rather QOpenGLWidget considering the Qt documenation below.
+</I>&gt;<i> 
+</I>&gt;<i> From <A HREF="http://doc.qt.io/qt-5/qopenglwidget.html">http://doc.qt.io/qt-5/qopenglwidget.html</A> &lt;<A HREF="http://doc.qt.io/qt-5/qopenglwidget.html">http://doc.qt.io/qt-5/qopenglwidget.html</A>&gt;:
+</I>&gt;<i> 
+</I>&gt;<i> Adding a QOpenGLWidget &lt;<A HREF="http://doc.qt.io/qt-5/qopenglwidget.html">http://doc.qt.io/qt-5/qopenglwidget.html</A>&gt; into a window turns on OpenGL-based compositing for the entire window. In some special cases this may not be ideal, and the old QGLWidget-style behavior with a separate, native child window is desired. Desktop applications that understand the limitations of this approach (for example when it comes to overlaps, transparency, scroll views and MDI areas), can use QOpenGLWindow &lt;<A HREF="http://doc.qt.io/qt-5/qopenglwindow.html">http://doc.qt.io/qt-5/qopenglwindow.html</A>&gt; with QWidget::createWindowContainer &lt;<A HREF="http://doc.qt.io/qt-5/qwidget.html#createWindowContainer">http://doc.qt.io/qt-5/qwidget.html#createWindowContainer</A>&gt;(). This is a modern alternative to QGLWidget and is faster than QOpenGLWidget &lt;<A HREF="http://doc.qt.io/qt-5/qopenglwidget.html">http://doc.qt.io/qt-5/qopenglwidget.html</A>&gt; due to the lack of the additional composition step. It is strongly recommended to limit the usage of this approach to cases where there is no other choice. Note that this option is not suitable for most embedded and mobile platforms, and it is known to have issues on certain desktop platforms (e.g. OS X) too. The stable, cross-platform solution is always QOpenGLWidget &lt;<A HREF="http://doc.qt.io/qt-5/qopenglwidget.html">http://doc.qt.io/qt-5/qopenglwidget.html</A>&gt;.
+</I>
+My personal take is that the QOpenGLWidget approach is inferior to the QOpenGLWindow+createWindowContainer approach, because of the slightly rapid way it was introduced, and the tradeoffs it makes in composting the different elements. However, this is subjective, and I will cheerfully support both, because as the documentation you pasted notes, there are cases where each approach is better or worse.
+
+Note that from my understanding, the QOpenGLWidget approach will effectively force OSG into single threaded mode, becuase tge API gives no control over when makeCurrent is called, or which thread paintGL is called on. (But I need to check this with some colleagues and lazlo who created the code). In contrast my QWindow-based approach supports all the OSG threading modes directly.
+
+I expect to end up with three different window options:
+
+	- osgQt::GraphicsWindowQt5 - gives you a QWindow, can be embedded with createWindowContainer or used standalone
+
+	(QtGui dependency only)
+
+	- osgQt::GraphicsWidget - gives you a QOpenGLWidget
+
+	(QtWidget dependency)
+
+	- osgQt::GraphicsWindowQtQuick - gives a window similar to QQuickWindow/QQuickView which can have a QML file setSource()-ed on it
+
+	(QtGui + QtQuick2 dependency)
+
+I have the first case done, will work on the second and third cases now, before worrying about QWidgetImage and other less common forms of integration.
+
+Kind regards,
+James
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150824/76912efb/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150824/76912efb/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001245.html">[osg-users] Qt5 integration
+</A></li>
+	<LI>Next message: <A HREF="001330.html">[osg-users] Qt5 integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1308">[ date ]</a>
+              <a href="thread.html#1308">[ thread ]</a>
+              <a href="subject.html#1308">[ subject ]</a>
+              <a href="author.html#1308">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

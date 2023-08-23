@@ -1,0 +1,107 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Removing objects with shared GL state from scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1562078614.m2f.76357%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010170.html">
+   <LINK REL="Next"  HREF="010176.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Removing objects with shared GL state from scene graph</H1>
+<!--htdig_noindex-->
+    <B>Chris Djali</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3C1562078614.m2f.76357%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Removing objects with shared GL state from scene graph">krizdjali at gmail.com
+       </A><BR>
+    <I>Tue Jul  2 07:43:34 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010170.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="010176.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10174">[ date ]</a>
+              <a href="thread.html#10174">[ thread ]</a>
+              <a href="subject.html#10174">[ subject ]</a>
+              <a href="author.html#10174">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+When the text node's releaseGLObjects is called, it calls the same method of:
+	The 
+GlyphQuads
+	The 
+Font (which is potentially problematic when it doesn't get skipped).
+	The vertex attributes (
+_coords, _normals, _colorCoords, _texcoords)
+	The primitives in 
+_decorationPrimitives
+	The base 
+Drawable.
+
+The Text destructor releases none of these, neither does the TextBase destructor, and the Drawable destructor doesn't release everything that its releaseGLObjects does, but that might be inconsequential.
+
+The GlyphQuads should be fine as it's just its primitives that get released, and all the primitive sets seem to release their own stuff in their destructors. It should be similar for _decorationPrimitives.
+
+The vertex attributes might be fine with the handling in their destructors, too.
+
+As I've been saying, the font might be shared with other text nodes, so may or may not be released later depending on what happens with other text nodes.
+
+
+That means that it's possible that within all the nested releasing of GL objects for a text node, only the font actually owns anything that needs releasing, so in the case where only one text node is removed, we get away without calling releaseGLObjects.
+
+If that's the case, though, it seems like relying on it for correctness isn't a good strategy - surely all these release calls exist because there's some chance an implementation detail might change at some point and make them necessary.
+
+It also isn't a great strategy to apply generally - if we removed all the text nodes, and didn't release the last one, the texture and program(s) the font owns would definitely leak. In the case of an application where for whatever reason it's difficult to keep track of which text node is the last, and so a consistent strategy is required, you're back with the release-or-leak choice.
+
+Surely the best solution is an osgText::Text::releaseGLObjects implementation that's always safe to call for text nodes that won't get used again?
+
+Cheers,
+Chris
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic683d.php?p=76357#76357">http://forum.openscenegraph.org/viewtopic.php?p=76357#76357</A>
+
+
+
+
+
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010170.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="010176.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10174">[ date ]</a>
+              <a href="thread.html#10174">[ thread ]</a>
+              <a href="subject.html#10174">[ subject ]</a>
+              <a href="author.html#10174">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

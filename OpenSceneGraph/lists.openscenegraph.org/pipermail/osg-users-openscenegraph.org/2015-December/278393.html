@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Alter tree in safe mode.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Alter%20tree%20in%20safe%20mode.&In-Reply-To=%3C1450371412.m2f.65891%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002165.html">
+   <LINK REL="Next"  HREF="002171.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Alter tree in safe mode.</H1>
+<!--htdig_noindex-->
+    <B>Dario Minieri</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Alter%20tree%20in%20safe%20mode.&In-Reply-To=%3C1450371412.m2f.65891%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Alter tree in safe mode.">paradox at cheapnet.it
+       </A><BR>
+    <I>Thu Dec 17 08:56:52 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002165.html">[osg-users] Cloning doesn't copy all values
+</A></li>
+        <LI>Next message: <A HREF="002171.html">[osg-users] Alter tree in safe mode.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278393">[ date ]</a>
+              <a href="thread.html#278393">[ thread ]</a>
+              <a href="subject.html#278393">[ subject ]</a>
+              <a href="author.html#278393">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I have a system which use an UpdateCallback for every node which can be modified (adding or removing his children).  Sometime I have segmentation fault inside the callback, like this one:
+
+#0  0x00007ffff4b02cc9 in __GI_raise (sig=<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sig at entry</A>=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:56
+#1  0x00007ffff4b060d8 in __GI_abort () at abort.c:89
+#2  0x00007ffff5107535 in __gnu_cxx::__verbose_terminate_handler() () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+#3  0x00007ffff51056d6 in ?? () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+#4  0x00007ffff5105703 in std::terminate() () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+#5  0x00007ffff5105922 in __cxa_throw () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+#6  0x00007ffff5105e0d in operator new(unsigned long) () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+#7  0x00007ffff0e83ac6 in std::vector&lt;osg::Group*, std::allocator&lt;osg::Group*&gt; &gt;::_M_insert_aux(__gnu_cxx::__normal_iterator&lt;osg::Group**, std::vector&lt;osg::Group*, std::allocator&lt;osg::Group*&gt; &gt; &gt;, osg::Group* const&amp;) () from /usr/local/lib/libosg.so.100
+#8  0x00007ffff0e83266 in osg::Node::addParent(osg::Group*) () from /usr/local/lib/libosg.so.100
+#9  0x00007ffff0e14bad in osg::Group::insertChild(unsigned int, osg::Node*) () from /usr/local/lib/libosg.so.100
+#10 0x00007ffff488501f in AlterTreeNodeCallback::operator()(osg::Node*, osg::NodeVisitor*) () from /usr/local/lib/libSimWorld.so
+#11 0x00007ffff0e150b2 in osg::Group::accept(osg::NodeVisitor&amp;) () from /usr/local/lib/libosg.so.100
+#12 0x00007ffff0e13af3 in osg::Group::traverse(osg::NodeVisitor&amp;) () from /usr/local/lib/libosg.so.100
+#13 0x00007ffff0e150b2 in osg::Group::accept(osg::NodeVisitor&amp;) () from /usr/local/lib/libosg.so.100
+#14 0x00007ffff0e13af3 in osg::Group::traverse(osg::NodeVisitor&amp;) () from /usr/local/lib/libosg.so.100
+#15 0x00007ffff0e150b2 in osg::Group::accept(osg::NodeVisitor&amp;) () from /usr/local/lib/libosg.so.100
+#16 0x00007fffeff514a1 in osgViewer::Viewer::updateTraversal() () from /usr/local/lib/libosgViewer.so.100
+#17 0x00007fffeff5b685 in osgViewer::ViewerBase::frame(double) () from /usr/local/lib/libosgViewer.so.100
+#18 0x00007ffff04356e4 in QGLWidget::glDraw() () from /usr/lib/x86_64-linux-gnu/libQt5OpenGL.so.5
+#19 0x00007ffff04326f9 in QGLWidget::paintEvent(QPaintEvent*) () from /usr/lib/x86_64-linux-gnu/libQt5OpenGL.so.5
+#20 0x00007ffff5521302 in QWidget::event(QEvent*) () from /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5
+#21 0x00007ffff54e5c8c in QApplicationPrivate::notify_helper(QObject*, QEvent*) () from /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5
+#22 0x00007ffff54eae56 in QApplication::notify(QObject*, QEvent*) () from /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5
+#23 0x00007ffff6488c2d in QCoreApplication::notifyInternal(QObject*, QEvent*) () from /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
+#24 0x00007ffff551bbea in QWidgetPrivate::drawWidget(QPaintDevice*, QRegion const&amp;, QPoint const&amp;, int, QPainter*, QWidgetBackingStore*) ()
+   from /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5
+  
+Adding (insertChild) some new node at runtime, show the problem. This happens especially when I made some remove and insert in short time.
+
+The callback is something like this:
+
+
+Code:
+void AlterCallback::operator()(Node* p_node, NodeVisitor* p_nv) {
+  if (p_node != NULL) {
+    Group* p_group = p_node-&gt;asGroup();
+    if (p_group != NULL) {
+      while (m_add_nodes.size() &gt; 0) {
+          Node* l_node = (Node*)m_add_nodes.popFront();
+          p_group-&gt;addChild(l_node);
+        }
+
+      while (m_remove_nodes.size() &gt; 0) {
+        Node* l_node = (Node*)m_remove_nodes.popFront();
+        p_group-&gt;removeChild(l_node);
+      }
+    }
+    
+    traverse(p_node, p_nv);
+  }
+}
+
+
+
+m_add_nodes and m_remove_nodes are thread-safe structures which holds the list of nodes (pointers) to add and remove. 
+
+This is a good way to alter the tree at runtime?
+
+Thank you!
+
+Cheers,
+Dario
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicff69.php?p=65891#65891">http://forum.openscenegraph.org/viewtopic.php?p=65891#65891</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002165.html">[osg-users] Cloning doesn't copy all values
+</A></li>
+	<LI>Next message: <A HREF="002171.html">[osg-users] Alter tree in safe mode.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278393">[ date ]</a>
+              <a href="thread.html#278393">[ thread ]</a>
+              <a href="subject.html#278393">[ subject ]</a>
+              <a href="author.html#278393">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

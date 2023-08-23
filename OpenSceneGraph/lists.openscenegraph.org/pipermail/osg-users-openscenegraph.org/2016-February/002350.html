@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to resize when using PIXEL_BUFFER?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20resize%20when%20using%20PIXEL_BUFFER%3F&In-Reply-To=%3CCAFN7Y%2BWFqcH4Nk%2B3agLtMDvs6N1cD0%2BgwvL2E6O8wAgXCQqWgA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002347.html">
+   <LINK REL="Next"  HREF="278524.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to resize when using PIXEL_BUFFER?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20resize%20when%20using%20PIXEL_BUFFER%3F&In-Reply-To=%3CCAFN7Y%2BWFqcH4Nk%2B3agLtMDvs6N1cD0%2BgwvL2E6O8wAgXCQqWgA%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to resize when using PIXEL_BUFFER?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Feb 12 02:48:24 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002347.html">[osg-users] How to resize when using PIXEL_BUFFER?
+</A></li>
+        <LI>Next message: <A HREF="278524.html">[osg-users] 3.4.0 osgshadercomposition texture issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2350">[ date ]</a>
+              <a href="thread.html#2350">[ thread ]</a>
+              <a href="subject.html#2350">[ subject ]</a>
+              <a href="author.html#2350">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Greg,
+
+It's hard to know specifically what is wrong as I don't have any of
+your code to test first hand.  If you are re-creating the PixelBuffer
+on each resize then I'd guess that there is an issue with the graphics
+object handles being invalidated in some way.  There are mechanisms in
+the OSG for release graphics objects but perhaps you are bypassing
+these or using an older version of the OSG that doesn't manage this
+correctly.
+
+In my previous email I suggested that the best approach is to using a
+single PixelBuffer and then using a FrameBufferObject within this to
+do the rendering to and copying from rather than the using the
+PixelBuffer's frame buffer - this approach would allow you to avoid
+the need to release and then recreating GL objects on each resize, the
+only resource that would need to be reallocated with the FBO.
+
+Robert.
+
+On 11 February 2016 at 22:58, Greg Danaha &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osgforum at tevs.eu</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> Here's a follow-up.  I have it about 95% working (finally!).
+</I>&gt;<i>
+</I>&gt;<i> Here's my code to resize the pixel-buffer models.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> osg::Camera * camera = m_nhiViewer-&gt;getCamera();
+</I>&gt;<i> if (camera != nullptr)
+</I>&gt;<i> {
+</I>&gt;<i>    osg::ref_ptr&lt;osg::GraphicsContext&gt; gc = camera-&gt;getGraphicsContext();
+</I>&gt;<i>    if (gc != nullptr)
+</I>&gt;<i>    {
+</I>&gt;<i>       if (gc-&gt;releaseContext())
+</I>&gt;<i>       {
+</I>&gt;<i>          gc-&gt;close(); // will release PixelBufferWin32 and resources
+</I>&gt;<i>
+</I>&gt;<i>          // create new graphics context
+</I>&gt;<i>          osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+</I>&gt;<i>          traits-&gt;x = 0;
+</I>&gt;<i>          traits-&gt;y = 0;
+</I>&gt;<i>          traits-&gt;width = m_width;
+</I>&gt;<i>          traits-&gt;height = m_height;
+</I>&gt;<i>          traits-&gt;red = 8;
+</I>&gt;<i>          traits-&gt;green = 8;
+</I>&gt;<i>          traits-&gt;blue = 8;
+</I>&gt;<i>          traits-&gt;depth = 24;
+</I>&gt;<i>          traits-&gt;pbuffer = true;
+</I>&gt;<i>          traits-&gt;doubleBuffer = true;
+</I>&gt;<i>          traits-&gt;readDISPLAY();
+</I>&gt;<i>          traits-&gt;supportsResize = true;
+</I>&gt;<i>
+</I>&gt;<i>          gc = osg::GraphicsContext::createGraphicsContext(traits.get());
+</I>&gt;<i>          if (gc != nullptr)
+</I>&gt;<i>          {
+</I>&gt;<i>             gc-&gt;setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+</I>&gt;<i>             gc-&gt;setClearColor(m_background);
+</I>&gt;<i>
+</I>&gt;<i>             camera-&gt;setGraphicsContext(gc.get());
+</I>&gt;<i>
+</I>&gt;<i>             osg::ref_ptr&lt;osg::Image&gt; image = nullptr;
+</I>&gt;<i>             std::map&lt;osg::Camera::BufferComponent, osg::Camera::Attachment&gt; bam = camera-&gt;getBufferAttachmentMap();
+</I>&gt;<i>             if (!bam.empty())
+</I>&gt;<i>             {
+</I>&gt;<i>                osg::Camera::BufferAttachmentMap::iterator iter = bam.find(osg::Camera::COLOR_BUFFER);
+</I>&gt;<i>                if (iter != bam.end())
+</I>&gt;<i>                   image = iter-&gt;second._image;
+</I>&gt;<i>             }
+</I>&gt;<i>
+</I>&gt;<i>             if (image != nullptr)
+</I>&gt;<i>             {
+</I>&gt;<i>                image-&gt;allocateImage(m_width, m_height, image-&gt;r(),                                              image-&gt;getPixelFormat(), image-&gt;getDataType(),
+</I>&gt;<i>                image-&gt;getPacking());
+</I>&gt;<i>             }
+</I>&gt;<i>
+</I>&gt;<i>             m_nhiViewer-&gt;realize();
+</I>&gt;<i>
+</I>&gt;<i>             double widthChangeRatio = double(m_width) / double(m_lastWidth);
+</I>&gt;<i>             double heightChangeRatio = double(m_height) / double(m_lastHeight);
+</I>&gt;<i>             double aspectRatioChange = widthChangeRatio / heightChangeRatio;
+</I>&gt;<i>
+</I>&gt;<i>             if (aspectRatioChange != 1.0)
+</I>&gt;<i>             {
+</I>&gt;<i>                switch (camera-&gt;getProjectionResizePolicy())
+</I>&gt;<i>                {
+</I>&gt;<i>                   case(osg::Camera::HORIZONTAL) :
+</I>&gt;<i>                      camera-&gt;getProjectionMatrix() *= osg::Matrix::scale(1.0 / aspectRatioChange, 1.0, 1.0);
+</I>&gt;<i>                      break;
+</I>&gt;<i>                   case(osg::Camera::VERTICAL) :
+</I>&gt;<i>                      camera-&gt;getProjectionMatrix() *= osg::Matrix::scale(1.0, aspectRatioChange, 1.0);
+</I>&gt;<i>                      break;
+</I>&gt;<i>
+</I>&gt;<i>                   default:
+</I>&gt;<i>                      break;
+</I>&gt;<i>                }
+</I>&gt;<i>             }
+</I>&gt;<i>
+</I>&gt;<i>             camera-&gt;setViewport(0, 0, m_width, m_height);
+</I>&gt;<i>
+</I>&gt;<i>             double eventTime = m_nhiViewer-&gt;getEventQueue()-&gt;getTime();
+</I>&gt;<i>             m_nhiViewer-&gt;getEventQueue()-&gt;windowResize(0, 0, m_width, m_height, eventTime);
+</I>&gt;<i>          }
+</I>&gt;<i>       }
+</I>&gt;<i>    }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> But the real problem was that when I set up the rendering when the model loaded, I specified
+</I>&gt;<i>
+</I>&gt;<i> camera-&gt;setRenderTargetImplementation(osg::Camera::PIXEL_BUFFER);
+</I>&gt;<i>
+</I>&gt;<i> That seemed to throw everything off.  Now it is defaulting to FRAME_BUFFER and using traits-&gt;pbuffer = true; to set up the pixel buffering.
+</I>&gt;<i>
+</I>&gt;<i> I still have one problem though.  It works great with models (e.g. .flt) but when I resize an earth file it doesn't render properly.  I also get an error 'invalid enumerant' after RenderBin::draw() in osgUtil RenderBin.cpp.  The error value is 1280.  The earth image looks as below after I resize it (or it comes up black).  If I resize it again the globe is black.
+</I>&gt;<i>
+</I>&gt;<i> Any additional help would be greatly appreciated.
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Greg[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic4f70.php?p=66275#66275">http://forum.openscenegraph.org/viewtopic.php?p=66275#66275</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002347.html">[osg-users] How to resize when using PIXEL_BUFFER?
+</A></li>
+	<LI>Next message: <A HREF="278524.html">[osg-users] 3.4.0 osgshadercomposition texture issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2350">[ date ]</a>
+              <a href="thread.html#2350">[ thread ]</a>
+              <a href="subject.html#2350">[ subject ]</a>
+              <a href="author.html#2350">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

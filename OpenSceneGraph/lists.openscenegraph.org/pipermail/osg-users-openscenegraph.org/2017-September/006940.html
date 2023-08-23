@@ -1,0 +1,122 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to pre-compile shaders before actual usage?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20pre-compile%20shaders%20before%20actual%20usage%3F&In-Reply-To=%3CCAFN7Y%2BV8NBiH3rLsLCX8W-g6ujLamF0LGBMizsz6wc7dvKUnow%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006937.html">
+   <LINK REL="Next"  HREF="006941.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to pre-compile shaders before actual usage?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20pre-compile%20shaders%20before%20actual%20usage%3F&In-Reply-To=%3CCAFN7Y%2BV8NBiH3rLsLCX8W-g6ujLamF0LGBMizsz6wc7dvKUnow%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to pre-compile shaders before actual usage?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Sep 29 00:38:55 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="006937.html">[osg-users] How to pre-compile shaders before actual usage?
+</A></li>
+        <LI>Next message (by thread): <A HREF="006941.html">[osg-users] TextureBuffer memory not being released from GPU
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6940">[ date ]</a>
+              <a href="thread.html#6940">[ thread ]</a>
+              <a href="subject.html#6940">[ subject ]</a>
+              <a href="author.html#6940">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Michael,
+
+You can't compile GL objects unless you do if from a thread with the
+appropriate graphics context current, this means you can't just force a
+compile from any thread.  The way the OSG manages this is to mark GL
+related objects (textures, shader programs, VBO's etc) as needing to be
+compile before you and then compiling them once the scene graph needs to
+dispatch those GL related objects to the OpenGL FIFO.  This will all happen
+automatically so usually you don't need to worry about it, what needs to
+happen will be done for you.
+
+In cases where compilation of GL objects might take a while and endanger a
+break of frame then it can be useful to pre-compile these GL objects prior
+to them being merged with the main scene graph.  The osgViewer has support
+for forcing a compile GL objects traversal on the first frame that the
+viewer is run, this will happen automatically, but if you assign scene
+graph elements after the first frame then the new GL objects will be just
+compiled just prior to being used.
+
+The exception to this is when using the DatabasePager - it has support for
+collecting all the GL objects that will be needed to be compiled for any
+new scene graphs and passes these on to the
+osgUtil::IncrementalCompileOperation that is run on every frame to compile
+GL objects, it does so incrementally, only compiling what GL objects it has
+time available to compile.  Once all the required objects are compiled the
+subgraphs they are associated with then can be merged with the main scene
+graph without risking breaking a frame.
+
+In your case I can't say whether you need to do anything at all, or whether
+use of the IncrementalCompileOperation would be appropriate, it all depends
+upon the performance requirements of your application.
+
+Robert.
+
+On 28 September 2017 at 21:42, michael kapelko &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">kornerr at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi.
+</I>&gt;<i>
+</I>&gt;<i> I want to pre-compile shader programs before they are actually used by
+</I>&gt;<i> real nodes.
+</I>&gt;<i> I tried to create empty node (new osg::Node) and assign an
+</I>&gt;<i> osg::StateSet with an osg::Program, but such action did not trigger
+</I>&gt;<i> shader compilation.
+</I>&gt;<i> In the logs I see shader compilation happening only when I assign
+</I>&gt;<i> osg::StateSet to actual nodes at my screen.
+</I>&gt;<i>
+</I>&gt;<i> What am I missing?
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170929/50081407/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170929/50081407/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="006937.html">[osg-users] How to pre-compile shaders before actual usage?
+</A></li>
+	<LI>Next message (by thread): <A HREF="006941.html">[osg-users] TextureBuffer memory not being released from GPU
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6940">[ date ]</a>
+              <a href="thread.html#6940">[ thread ]</a>
+              <a href="subject.html#6940">[ subject ]</a>
+              <a href="author.html#6940">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,387 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [customizing manipulator] problem with delta mouse pos
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bcustomizing%20manipulator%5D%20problem%20with%20delta%20mouse%0A%20pos&In-Reply-To=%3C1524617574.m2f.73503%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008072.html">
+   <LINK REL="Next"  HREF="008078.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [customizing manipulator] problem with delta mouse pos</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bcustomizing%20manipulator%5D%20problem%20with%20delta%20mouse%0A%20pos&In-Reply-To=%3C1524617574.m2f.73503%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [customizing manipulator] problem with delta mouse pos">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Tue Apr 24 17:52:54 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008072.html">[osg-users] [customizing manipulator] problem with delta mouse pos
+</A></li>
+        <LI>Next message (by thread): <A HREF="008078.html">[osg-users] On-screen Stats Display
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8075">[ date ]</a>
+              <a href="thread.html#8075">[ thread ]</a>
+              <a href="subject.html#8075">[ subject ]</a>
+              <a href="author.html#8075">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Here's the code, 
+
+Code:
+
+class myFirstPersonManipulator : public osgGA::FirstPersonManipulator{
+public:
+    osg::ref_ptr&lt;osgGA::GUIEventAdapter&gt; myMouseEvent;
+    myFirstPersonManipulator():osgGA::FirstPersonManipulator(){
+        setAllowThrow(false);
+        setVerticalAxisFixed(true);
+        setAcceleration(0);
+        this-&gt;setHomePosition(osg::Vec3(0,-0.2,0.5),osg::Vec3(0.0,0,0.0),osg::Vec3(1,0,0));
+        flushMouseEventStack();
+            myMouseEvent=new osgGA::GUIEventAdapter();
+            myMouseEvent-&gt;setEventType(osgGA::GUIEventAdapter::MOVE);
+            myMouseEvent-&gt;setButton(osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON);
+            myMouseEvent-&gt;setTime(00);
+            _ga_t1=myMouseEvent.get();
+        //addMouseEvent( *new osgGA::GUIEventAdapter);
+        //this-&gt;setPosition(osg::Vec3(0,0,0));
+    }
+protected:
+    //bool performMovementLeftMouseButton( const double /*eventTimeDelta*/, const double dx, const double dy )
+    //{   // world up vector
+    //	osg::CoordinateFrame coordinateFrame = getCoordinateFrame( _eye );	osg::Vec3d localUp = getUpVector( coordinateFrame );
+    //	rotateYawPitch( _rotation, dx*100, dy*100, localUp );//hack rotation x100
+    //	return true;
+    //}
+
+    virtual bool handle( const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; us ){
+        /*  switch(ea.getEventType())
+        {*/
+        //case(osgGA::GUIEventAdapter::KEYDOWN):
+            switch( ea.getEventType() )
+        {
+            case  osgGA::GUIEventAdapter::MOVE:
+            //mouse event
+            //move the mouse away from window borders (100,100) may be good enoug
+            //but viewport center is more accurate
+
+            //addMouseEvent( ea );
+                if(!_ga_t0.valid())   _ga_t0 = &ea;
+                    myMouseEvent-&gt;setTime(_ga_t0-&gt;getTime());
+                    myMouseEvent-&gt;setXmin(_ga_t0-&gt;getXmin());
+                    myMouseEvent-&gt;setXmax(_ga_t0-&gt;getXmax());
+                    myMouseEvent-&gt;setYmin(_ga_t0-&gt;getYmin());
+                    myMouseEvent-&gt;setYmax(_ga_t0-&gt;getYmax());
+  dynamic_cast&lt;osgViewer::View*&gt;(&amp;us)-&gt;requestWarpPointer( 0.5*(_ga_t0-&gt;getXmax()-_ga_t0-&gt;getXmin()),0.5*(_ga_t0-&gt;getYmax()-_ga_t0-&gt;getYmin()));
+             //   dynamic_cast&lt;osgViewer::GraphicsWindow*&gt;(us.asView()-&gt;getCamera()-&gt;getGraphicsContext())-&gt;requestWarpPointer( 0.5*(_ga_t0-&gt;getXmax()-_ga_t0-&gt;getXmin()),0.5*(_ga_t0-&gt;getYmax()-_ga_t0-&gt;getYmin()));
+                 _ga_t1=myMouseEvent;
+           // _ga_t1 = _ga_t0;
+            _ga_t0 = &ea;
+
+             if( performMovement() )
+                us.requestRedraw();
+             //dynamic_cast&lt;osgViewer::GraphicsWindow*&gt;(us.asView()-&gt;getCamera()-&gt;getGraphicsContext())-&gt;requestWarpPointer(100,100);
+
+        default:
+            //check 4 keyboard event
+        switch(ea.getKey())
+        {
+        case osgGA::GUIEventAdapter::KEY_Up :
+
+            moveForward(1);
+            break;
+        case osgGA::GUIEventAdapter::KEY_Down :
+
+            moveForward(-1);
+            break;
+        case osgGA::GUIEventAdapter::KEY_Left :
+
+            moveRight(-1);
+            break;
+        case osgGA::GUIEventAdapter::KEY_Right :
+
+            moveRight(1);
+            break;
+        default:
+            break;
+        }
+
+        /* default:
+        }*/
+
+
+
+        return true;
+        //return osgGA::FirstPersonManipulator::handle(ea,us);
+    }
+    }
+    virtual bool handleMousePush( const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; us )
+    {
+
+
+        if( performMovement() )
+            us.requestRedraw();
+
+      //  us.requestContinuousUpdate( false );
+        _thrown = false;
+
+        return true;
+    }
+
+    /// Handles GUIEventAdapter::RELEASE event.
+    virtual bool handleMouseRelease( const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; us )
+    {
+        if( ea.getButtonMask() == 0 )
+        {
+
+            double timeSinceLastRecordEvent = _ga_t0.valid() ? (ea.getTime() - _ga_t0-&gt;getTime()) : DBL_MAX;
+           /* if( timeSinceLastRecordEvent &gt; 0.02 )
+                flushMouseEventStack();*/
+
+            if( isMouseMoving() )
+            {
+
+                if( performMovement() &amp;&amp; _allowThrow )
+                {
+                    us.requestRedraw();
+                    us.requestContinuousUpdate( true );
+                    _thrown = true;
+                }
+
+                return true;
+            }
+        }
+             //   dynamic_cast&lt;osgViewer::View*&gt;(&amp;us)-&gt;requestWarpPointer(0,0);
+        //flushMouseEventStack();
+        //addMouseEvent( ea );
+        if( performMovement() )
+            us.requestRedraw();
+       // us.requestContinuousUpdate( false );
+        _thrown = false;
+
+        return true;
+    }
+
+
+    /// Make movement step of manipulator. Returns true if any movement was made.
+    bool performMovement()
+    {
+        // return if less then two events have been added
+        if( _ga_t0.get() == NULL || _ga_t1.get() == NULL )
+            return false;
+
+        // get delta time
+        double eventTimeDelta = _ga_t0-&gt;getTime() - _ga_t1-&gt;getTime();
+        if( eventTimeDelta &lt; 0. )
+        {
+            OSG_WARN &lt;&lt; &quot;Manipulator warning: eventTimeDelta = &quot; &lt;&lt; eventTimeDelta &lt;&lt; std::endl;
+            eventTimeDelta = 0.;
+        }
+
+        // get deltaX and deltaY_ga_t0
+        float dx = _ga_t0-&gt;getXnormalized() ;//- _ga_t1-&gt;getXnormalized();
+        float dy = _ga_t0-&gt;getYnormalized() ;//- _ga_t1-&gt;getYnormalized();
+
+        // return if there is no movement.
+        if( dx == 0. &amp;&amp; dy == 0. )
+            return false;
+
+
+        // call appropriate methods
+        unsigned int buttonMask = _ga_t1-&gt;getButtonMask();
+        unsigned int modKeyMask = _ga_t1-&gt;getModKeyMask();
+        if( buttonMask == osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON )
+        {
+            return performMovementLeftMouseButton( eventTimeDelta, dx, dy );
+        }
+        else if( ( buttonMask == osgGA::GUIEventAdapter::MIDDLE_MOUSE_BUTTON ) ||
+                 ( buttonMask == osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON &amp;&amp; modKeyMask &amp; osgGA::GUIEventAdapter::MODKEY_CTRL ) ||
+                 ( buttonMask == (osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON | osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON) ) )
+        {
+            return performMovementMiddleMouseButton( eventTimeDelta, dx, dy );
+        }
+        else if( buttonMask == osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON )
+        {
+            return performMovementRightMouseButton( eventTimeDelta, dx, dy );
+        }else{
+            // world up vector
+            CoordinateFrame coordinateFrame = getCoordinateFrame( _eye );
+            Vec3d localUp = Vec3d(0,1,0);//getUpVector( coordinateFrame );
+         RotateYawPitch( _rotation, dx, dy, localUp );
+
+            return true;
+         }
+          //   return performMovementLeftMouseButton( eventTimeDelta, dx, dy );
+
+        return false;
+    }
+
+    static void RotateYawPitch( Quat&amp; rotation, const double yaw, const double pitch,
+                                               const Vec3d&amp; localUp )
+    {
+        bool verticalAxisFixed = (localUp != Vec3d( 0.,0.,0. ));
+
+        // fix current rotation
+        if( verticalAxisFixed )
+            fixVerticalAxis( rotation, localUp, true );
+
+        // rotations
+        Quat rotateYaw( -yaw, verticalAxisFixed ? localUp : rotation * Vec3d( 0.,1.,0. ) );
+        Quat rotatePitch;
+        Quat newRotation;
+        Vec3d cameraRight( rotation * Vec3d( 1.,0.,0. ) );
+
+        double my_dy = pitch;
+        int i = 0;
+
+        do {
+
+            // rotations
+            rotatePitch.makeRotate( my_dy, cameraRight );
+            newRotation = rotation * rotateYaw * rotatePitch;
+
+            // update vertical axis
+            if( verticalAxisFixed )
+                fixVerticalAxis( newRotation, localUp, false );
+
+            // check for viewer's up vector to be more than 90 degrees from &quot;up&quot; axis
+            Vec3d newCameraUp = newRotation * Vec3d( 0.,1.,0. );
+         //   if( newCameraUp * localUp &gt; 0. )
+            {
+
+                // apply new rotation
+                rotation = newRotation;
+                return;
+
+            }
+
+            my_dy /= 2.;
+            if( ++i == 20 )
+            {
+                rotation = rotation * rotateYaw;
+                return;
+            }
+
+        } while( true );
+    }
+};
+
+
+
+Hope it helps to diagnose the problem....
+Thanks,
+
+
+mp3butcher wrote:
+&gt;<i> ok, i misinterpreted eventqueue::mouseWarped which in fact is not an event..
+</I>&gt;<i> so no there's nothin strange in how it's manage and my problem comes from somewhere elsewhere..
+</I>&gt;<i> 
+</I>&gt;<i> So I'll try to be concise
+</I>&gt;<i> -I derive my manip  from FirstPersonManipulator
+</I>&gt;<i> -i override handle and performMovement:
+</I>&gt;<i>    in handle I store only last evt time and warpmousepointer to window center
+</I>&gt;<i>    in performaction i remove from dx dy substraction of  lastevt.getXnormalized()  (as it's in theory 0,0 after warprequest) and pass dx,dy to FirstPersonManipulator::performMovementLeftMouseButton
+</I>&gt;<i> 
+</I>&gt;<i> It seams to work for small mouse moves but when I make larger mouse movement i get lost. It look like  the where numerical drift in the transformation from normalized screen to Euler Angle...or something..
+</I>&gt;<i> 
+</I>&gt;<i> I can post the code but if someone already experience the problem it would be welcome 
+</I>&gt;<i> Edit:
+</I>&gt;<i> Is the loop in StandardManipulator::rotateYawPitch refer to some exp mapping.I really dont understand
+</I>&gt;<i> Cheers
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> robertosfield wrote:
+</I>&gt;<i> &gt; Hi Julian,
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; On 23 April 2018 at 20:13, Julien Valentin &lt;&gt; wrote:
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; &gt; I'm beginning the implementation of my own StandardManipulator
+</I>&gt;<i> &gt; &gt; and would like to make a classic fps controller.
+</I>&gt;<i> &gt; &gt; So mouse must stay centered all delta mouse pos be captured
+</I>&gt;<i> &gt; &gt; However I found out that requestWarpPointer posts a wrapMouse event both in Viewer and GraphicWindows implementations.
+</I>&gt;<i> &gt; &gt; it leads to duplication of the event (which is not so bad) but more dramatic, it prevent to recenter mouse without trigger an osgevent.
+</I>&gt;<i> &gt; &gt; Is it a desired behavior?
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Yes.  If the mouse moves you want objects that depend upon mouse
+</I>&gt;<i> &gt; position to wake up to the fact that it's moved using an event.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; I can't work out what the problem you are having.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Robert.
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt;  ------------------
+</I>&gt;<i> &gt; Post generated by Mail2Forum
+</I>&gt;<i> 
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2985.php?p=73503#73503">http://forum.openscenegraph.org/viewtopic.php?p=73503#73503</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008072.html">[osg-users] [customizing manipulator] problem with delta mouse pos
+</A></li>
+	<LI>Next message (by thread): <A HREF="008078.html">[osg-users] On-screen Stats Display
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8075">[ date ]</a>
+              <a href="thread.html#8075">[ thread ]</a>
+              <a href="subject.html#8075">[ subject ]</a>
+              <a href="author.html#8075">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

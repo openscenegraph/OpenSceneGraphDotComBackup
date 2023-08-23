@@ -1,0 +1,147 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20render%20to%20a%20texure%20bound%20to%20an%20FBO%20and%20re-generate%0A%20mipmaps%20every%20frame&In-Reply-To=%3CCAFN7Y%2BXe2uVd5kOxkMYEMSS%3DNuMhTbpXFiGr%2BCRGEqamohk7XQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007994.html">
+   <LINK REL="Next"  HREF="008000.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20render%20to%20a%20texure%20bound%20to%20an%20FBO%20and%20re-generate%0A%20mipmaps%20every%20frame&In-Reply-To=%3CCAFN7Y%2BXe2uVd5kOxkMYEMSS%3DNuMhTbpXFiGr%2BCRGEqamohk7XQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Apr 10 13:06:10 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007994.html">[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame
+</A></li>
+        <LI>Next message (by thread): <A HREF="008000.html">[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7999">[ date ]</a>
+              <a href="thread.html#7999">[ thread ]</a>
+              <a href="subject.html#7999">[ subject ]</a>
+              <a href="author.html#7999">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Julius,
+
+There isn't much we can do to help at this stage as you don't provide
+any information about the hadware, OS, driver, OSG version, all we
+know is that you are using a render to texture technique and there is
+some issue with mipmapping and some unspecified hardware, OS and OSG
+version.  We don't have your sofftware, data or hardware configuration
+to test against.
+
+It could be a driver bug, it could be a scene graph set up issue, it
+could be a data problem, it could be an OSG  bug, at this stage that's
+all anyone could say with the information provided.
+
+The most productive way for others to help would be if you could
+provide a small test program that illustrates the problem so that
+others can run this test on their own systems to see if problem
+appears, this then should shine more light on the nature of the
+problem and give us a better chance of getting a solution.  Sometimes
+issues like this turn out to hardware/driver/OS specific so wider
+testing can show this.  If it's a OSG bug then we can then use this a
+unit test for testing any fixes that will be made.
+
+Failing a means to tests things ourselves, the only workaround I an
+suggest is to not using mipmapping on the texture you are rendering
+to.
+
+Robert.
+
+
+
+On 10 April 2018 at 20:45, Julius Ziegler &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ziegler at atlatec.de</A>&gt; wrote:
+&gt;<i> Dear OSG-friends,
+</I>&gt;<i>
+</I>&gt;<i> I currently have a scene graph set up where a pre-render camera renders
+</I>&gt;<i> content to a texture via an FBO, and the main camera uses this texture to
+</I>&gt;<i> texture a quad with it. This works, in principle.
+</I>&gt;<i>
+</I>&gt;<i> However I need mipmapping for that texture, and all but the 0th mipmap level
+</I>&gt;<i> of the texture are empty.
+</I>&gt;<i>
+</I>&gt;<i> With an apitracer, I found out that the glGenerateMipMap call happens
+</I>&gt;<i>
+</I>&gt;<i> 1. only in the first frame (but I want it to be called every frame).
+</I>&gt;<i> 2. before any draw calls towards the FBO (but I want it after the draw
+</I>&gt;<i> calls).
+</I>&gt;<i>
+</I>&gt;<i> I tried to inject a glGenerateMipMap via a DrawCallback which I attached to
+</I>&gt;<i> the quad, and which just extends the original draw implementation
+</I>&gt;<i> (glGenerateMipMap immediately before the original draw implementation).
+</I>&gt;<i>
+</I>&gt;<i> With the apitracer, I validated that, at the position where I injected the
+</I>&gt;<i> glGenerateMipMap
+</I>&gt;<i>
+</I>&gt;<i> a. the correct texture is bound
+</I>&gt;<i> b. the frame buffer is un-bound.
+</I>&gt;<i>
+</I>&gt;<i> But glGenerateMipMap just seg'faults. Because of the seg'fault (I mean we
+</I>&gt;<i> are all used to GL_ERRORS, but seg'faults?) I suspected a driver issue, but
+</I>&gt;<i> I tried it on an alternative platform (one is Intel Graphics, one is Nvidia,
+</I>&gt;<i> both on Linux). Both to the same result.
+</I>&gt;<i>
+</I>&gt;<i> Can you please help? Maybe I overlooked a simple osg-ish way to achieve this
+</I>&gt;<i> (maybe I just have to set something dirty()?)
+</I>&gt;<i>
+</I>&gt;<i> Thanks!
+</I>&gt;<i>
+</I>&gt;<i> Julius
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007994.html">[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame
+</A></li>
+	<LI>Next message (by thread): <A HREF="008000.html">[osg-users] render to a texure bound to an FBO and re-generate mipmaps every frame
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7999">[ date ]</a>
+              <a href="thread.html#7999">[ thread ]</a>
+              <a href="subject.html#7999">[ subject ]</a>
+              <a href="author.html#7999">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

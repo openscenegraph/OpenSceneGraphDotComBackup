@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CPU%20Performance%20issues%20with%20AMD%202700%20vs%20Intel%0A%20Corei7%204770S&In-Reply-To=%3CCAFN7Y%2BVQLiLUqiVSESc%3DNTrP3K7OvS8DESshqpHadSjSvKKu%2Bg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009845.html">
+   <LINK REL="Next"  HREF="009847.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CPU%20Performance%20issues%20with%20AMD%202700%20vs%20Intel%0A%20Corei7%204770S&In-Reply-To=%3CCAFN7Y%2BVQLiLUqiVSESc%3DNTrP3K7OvS8DESshqpHadSjSvKKu%2Bg%40mail.gmail.com%3E"
+       TITLE="[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Apr  2 07:33:28 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009845.html">[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S
+</A></li>
+        <LI>Next message (by thread): <A HREF="009847.html">[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9846">[ date ]</a>
+              <a href="thread.html#9846">[ thread ]</a>
+              <a href="subject.html#9846">[ subject ]</a>
+              <a href="author.html#9846">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Fran&#231;ois
+
+Thanks for the suggestion and links.  I had been wondering about there
+was an issue with thread affinity and your links illustrates how this
+can be even worse than normal with the two group of cores on the
+Ryzen.
+
+I have followed your suggestion of using taskset to set the affinity
+to -c 0-7 and various other combinations but don't see any consistent
+difference to be able to declare that it's having a positive affect -
+the variation in frame rates between different runs is wider than any
+differences using taskset has.  I've been trying runs of the same
+software (osgviewer &amp; osg2vsg viewer) and with the same dataset on my
+Intel and AMD boxes with different taskset and if anything the Intel
+benefits more, and the results are perhaps slightly more consistent.
+Differences are in the 1-2% range, but each run I can see as much
+variation as this so I'd say the results are statistically
+significant.
+
+The tests I've been doing just now use an old city model that I have,
+it's not a large model and doesn't use any advanced features being
+derived originally from a Creator/OpenFlight model.  Total number of
+Geometries is 2268, number of Group nodes 1518, Transforms 552,
+Vertices and Primtives 161,061 and 46,396 respectively and finally
+1105 StateSet's.  When using the same animation path file, and
+rendering at 192x108 (1/100th pixels of my display to avoid fill
+limit) this small city model renders at:
+
+                              OSG      OSG(vfs)    VSG
+core-i7-4770s     672fps    432fps       2845fps
+AMD 2700           547fps   347fps        2320fps
+
+The OSG(vsg) is running osgviewer with just view frustum sides enabled
+so that small feature culling is not enabled.  This makes quite a bit
+of difference to the OSG performance on this model, so switching it
+off rather hobbles the OSG for this dataset and animation path but as
+the VSG doesn't have small feature culling or LOD it's a bit of better
+comparison like for like with the VSG.  The OSG in these case are
+running with DrawThreadPerContext while the VSG is running single
+threaded.
+
+The OSG with small feature culling results see a 22% slow down on the AMD 2700.
+The OSG with small feature culling off see a 26% slow down on AMD 2700
+The VSG sees a 22% slow down on the AMD2700
+
+This is all despite having a Geforce 2060 in the AMD box vs a 1060 in
+the Intel one, so it's looks strongly like a CPU related issue and a
+pretty consistent once given we have two totally different scene
+graphs exhibiting a similar slow down.
+
+For those curious about how much multi-threaded helps the OSG.
+Running Single threaded the results I get are:
+
+                              OSG      OSG(vfs)    VSG
+core-i7-4770s     483fps    322fps       2845fps
+AMD 2700           399fps   256fps        2320fps
+
+So DrawThreadPerContext vs SingleThread with small feature culling is
+39% faster on the Intel, 37% faster on the AMD.
+While DrawThreadPerContext vs SingleThread without small feature
+culling is 34% faster on the Intel, 35% faster on the AMD.
+
+The figures for the VSG are the same in the above tests as I haven't
+yet tackled multi-threading.  The VSG also doesn't yet do depth
+sorting of the transparent objects or do billboarding so it's not
+quite a 1:1 match up for visuals, these features will slow the VSG by
+some %, while multi-threading will get us back some.  The VSG hasn't
+been optimized either so it's too early to make any conclusion from
+the figures beyond comparing Intel vs AMD and that the VSG with Vulkan
+is going to be significantly faster than the OSG/OpenGL for models
+that have lots of separate geometries and state.
+
+Another oddity is that in the osg2vsg test app I've added a test of
+not fulling in the command buffer each frame, instead just
+resubmitting the same command buffer each frame, when I do this I
+remove the VSG's command dispatch traversal.  It doens't update the
+eye point so it's a pretty crappy test in terms of something that is
+widely useful in real applications but it can provide some insight in
+the CPU overhead associated with the scene graph traversal and filling
+the command buffer.  On the Intel system I see frame rate jump from
+2800fps to 6700fps, while on the AMD system frame rate stays around
+2200-2300fps point and if anything it actually averages slightly lower
+fps.  This is a really odd result on the AMD system and suggest that
+perhaps the driver/OS is doing something odd as I'm running exactly
+the VSG version and data on both systems.
+
+At this point I'd love to get some better performance parity between
+Intel and AMD as a ~25% penalty is far larger than I was expecting.
+Yesterday I tried out clang-7 on my AMD box and didn't spot any
+notable differences with gcc 8.2.  Now taskset suggests that thread
+migration between cores is not a significant issue for the these
+particular scene graph tests under Linux.
+
+Where to look next?  Happy to take suggestions.
+
+I'm now going to install Kubuntu 18.04 on the AMD system to see if
+18.10 and the later NVidia drivers are both having an negative effect.
+
+Cheers,
+Robert.
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009845.html">[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S
+</A></li>
+	<LI>Next message (by thread): <A HREF="009847.html">[osg-users] CPU Performance issues with AMD 2700 vs Intel Corei7 4770S
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9846">[ date ]</a>
+              <a href="thread.html#9846">[ thread ]</a>
+              <a href="subject.html#9846">[ subject ]</a>
+              <a href="author.html#9846">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

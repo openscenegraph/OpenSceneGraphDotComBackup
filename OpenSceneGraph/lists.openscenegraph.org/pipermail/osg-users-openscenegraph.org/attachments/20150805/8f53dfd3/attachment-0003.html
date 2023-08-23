@@ -1,0 +1,63 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;HI&nbsp;Gianni,&lt;br&gt;&lt;br&gt;&lt;/div&gt;There&nbsp;is&nbsp;no&nbsp;need&nbsp;to&nbsp;modify&nbsp;the&nbsp;OSG&nbsp;code,&nbsp;all&nbsp;you&nbsp;need&nbsp;to&nbsp;do&nbsp;is&nbsp;move&nbsp;the&nbsp;update&nbsp;of&nbsp;your&nbsp;transform&nbsp;to&nbsp;after&nbsp;the&nbsp;call&nbsp;to&nbsp;updateTraversals(). &nbsp;You&nbsp;could&nbsp;do&nbsp;this&nbsp;lots&nbsp;of&nbsp;different&nbsp;ways&nbsp;-&nbsp;all&nbsp;under&nbsp;your&nbsp;application&nbsp;control. &nbsp;Personally&nbsp;I&#39;d&nbsp;do&nbsp;it&nbsp;by&nbsp;expanding&nbsp;the&nbsp;call&nbsp;to&nbsp;viewer-&gt;frame()&nbsp;to&nbsp;it&#39;s&nbsp;component&nbsp;parts&nbsp;as&nbsp;I&nbsp;suggested&nbsp;earlier. &nbsp;Alternatively&nbsp;you&nbsp;could&nbsp;subclass&nbsp;from&nbsp;the&nbsp;Viewer/CompositeViewer&nbsp;and&nbsp;override&nbsp;the&nbsp;updateTraversal()&nbsp;method&nbsp;-&nbsp;it&#39;s&nbsp;a&nbsp;virtual&nbsp;method&nbsp;to&nbsp;allow&nbsp;you&nbsp;to&nbsp;customize&nbsp;things.&lt;br&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;5&nbsp;August&nbsp;2015&nbsp;at&nbsp;16:58,&nbsp;Gianni&nbsp;Ambrosio&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:g.ambrosio+osg@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;g.ambrosio+osg@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;Robert,&nbsp;I&nbsp;didn&#39;t&nbsp;understand&nbsp;your&nbsp;answer.&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;use&nbsp;OSG&nbsp;3.0.1&nbsp;but&nbsp;I&nbsp;tried&nbsp;with&nbsp;3.4.0.-rc8&nbsp;and&nbsp;the&nbsp;behavior&nbsp;is&nbsp;the&nbsp;same.&nbsp;Moreover&nbsp;updateTraversal()&nbsp;of&nbsp;CompositeViewer&nbsp;is&nbsp;basically&nbsp;the&nbsp;same&nbsp;for&nbsp;these&nbsp;versions.&lt;br&gt;<br>
+Anyway&nbsp;we&nbsp;are&nbsp;probably&nbsp;talking&nbsp;of&nbsp;a&nbsp;slightly&nbsp;different&nbsp;scenario:&nbsp;I&nbsp;have&nbsp;a&nbsp;slave&nbsp;camera&nbsp;which&nbsp;update&nbsp;callback&nbsp;needs&nbsp;an&nbsp;up&nbsp;to&nbsp;date&nbsp;viewer&nbsp;master&nbsp;camera&#39;s&nbsp;view&nbsp;matrix.&nbsp;In&nbsp;this&nbsp;case,&nbsp;as&nbsp;you&nbsp;told&nbsp;me,&nbsp;since&nbsp;the&nbsp;master&nbsp;camera&nbsp;matrix&nbsp;is&nbsp;updated&nbsp;(with&nbsp;the&nbsp;inverse&nbsp;matrix&nbsp;of&nbsp;the&nbsp;manipulator)&nbsp;after&nbsp;the&nbsp;slave&nbsp;camera&nbsp;update&nbsp;callback,&nbsp;then&nbsp;the&nbsp;value&nbsp;is&nbsp;that&nbsp;of&nbsp;the&nbsp;previous&nbsp;frame.&nbsp;I&nbsp;can&nbsp;understand&nbsp;and&nbsp;the&nbsp;reason&nbsp;is&nbsp;in&nbsp;CompositeViewer::updateTraversal()&nbsp;because&nbsp;the&nbsp;for&nbsp;loop&nbsp;&quot;//&nbsp;Do&nbsp;UpdateTraversal&nbsp;for&nbsp;slaves&nbsp;with&nbsp;their&nbsp;own&nbsp;subgraph&quot;&nbsp;is&nbsp;done&nbsp;before&nbsp;&quot;view-&gt;getCameraManipulator()-&gt;updateCamera(*(view-&gt;getCamera()));&quot;.&lt;br&gt;<br>
+So,&nbsp;to&nbsp;make&nbsp;scenarios&nbsp;like&nbsp;mine&nbsp;working,&nbsp;my&nbsp;suggestion&nbsp;is&nbsp;to&nbsp;move:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;Do&nbsp;UpdateTraversal&nbsp;for&nbsp;slaves&nbsp;with&nbsp;their&nbsp;own&nbsp;subgraph&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;for(unsigned&nbsp;int&nbsp;i=0;&nbsp;i&lt;view-&gt;getNumSlaves();&nbsp;++i)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::View::Slave&amp;&nbsp;slave&nbsp;=&nbsp;view-&gt;getSlave(i);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Camera*&nbsp;camera&nbsp;=&nbsp;slave._camera.get();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if(camera&nbsp;&amp;&amp;&nbsp;!slave._useMastersSceneData)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;camera-&gt;accept(*_updateVisitor);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt;after&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(view-&gt;getCameraManipulator())&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;view-&gt;setFusionDistance(&nbsp;view-&gt;getCameraManipulator()-&gt;getFusionDistanceMode(),&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;view-&gt;getCameraManipulator()-&gt;getFusionDistanceValue()&nbsp;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;view-&gt;getCameraManipulator()-&gt;updateCamera(*(view-&gt;getCamera()));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;tried&nbsp;this&nbsp;solution&nbsp;and&nbsp;it&nbsp;works&nbsp;fine.&lt;br&gt;<br>
+With&nbsp;this&nbsp;modification&nbsp;the&nbsp;scene&nbsp;remains&nbsp;updated&nbsp;before&nbsp;the&nbsp;main&nbsp;camera,&nbsp;so&nbsp;nothing&nbsp;you&nbsp;already&nbsp;told&nbsp;me&nbsp;should&nbsp;be&nbsp;broken.&lt;br&gt;<br>
+Moreover&nbsp;the&nbsp;for&nbsp;loop&nbsp;to&nbsp;move&nbsp;down&nbsp;is&nbsp;related&nbsp;to&nbsp;slave&nbsp;cameras&nbsp;with&nbsp;thier&nbsp;own&nbsp;subgraph.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Regards,&lt;br&gt;<br>
+Gianni[/code]&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;/span&gt;&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=64634#64634&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=64634#64634&lt;/a&gt;&lt;br&gt;<br>
+&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

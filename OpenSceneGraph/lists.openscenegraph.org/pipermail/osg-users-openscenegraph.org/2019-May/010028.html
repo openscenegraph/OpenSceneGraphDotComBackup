@@ -1,0 +1,756 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] off screen rendering with OSG
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20off%20screen%20rendering%20with%20OSG&In-Reply-To=%3CCABcQsGy4tQz7FZKo_U9_F-X3ZtPqr2-X0KBU9ahfSFpYqVMd_A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010027.html">
+   <LINK REL="Next"  HREF="010029.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] off screen rendering with OSG</H1>
+<!--htdig_noindex-->
+    <B>Sorin Rob</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20off%20screen%20rendering%20with%20OSG&In-Reply-To=%3CCABcQsGy4tQz7FZKo_U9_F-X3ZtPqr2-X0KBU9ahfSFpYqVMd_A%40mail.gmail.com%3E"
+       TITLE="[osg-users] off screen rendering with OSG">sorin.rob at visualretailing.com
+       </A><BR>
+    <I>Mon May 13 01:14:31 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010027.html">[osg-users] Is it possible to load texture without applying to a drawable
+</A></li>
+        <LI>Next message (by thread): <A HREF="010029.html">[osg-users] OpenSceneGraph-3.6.4 release candidate 3 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10028">[ date ]</a>
+              <a href="thread.html#10028">[ thread ]</a>
+              <a href="subject.html#10028">[ subject ]</a>
+              <a href="author.html#10028">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+In my project, I need to render an OSG frame without any window appearing
+on the screen. So called &quot;off screen&quot;.
+In order to do that, I found the following code taken osgprerenderer.cpp
+that I intend to inspire from if I can make it work correctly:
+
+AsyncRTTViewer class:
+
+/* -*-c++-*- Taken from osgprerenderer.cpp
+ *
+ * This application is open source and may be redistributed and/or
+modified
+ * freely and without restriction, both in commericial and non commericial
+applications,
+ * as long as this copyright notice is maintained.
+ *
+ * This application is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ g++ -losgShadow -losgText -losgUtil -losgViewer -losgGA -lOpenThreads
+-losg -lGL -lGLU -lglut async_test.cpp
+
+*/
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgDB/WriteFile&gt;
+
+#include &lt;osgUtil/Optimizer&gt;
+#include &lt;osg/CoordinateSystemNode&gt;
+
+#include &lt;osg/Switch&gt;
+#include &lt;osgText/Text&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+#include &lt;osgViewer/Renderer&gt;
+
+
+#include &lt;osgGA/TrackballManipulator&gt;
+#include &lt;osgGA/FlightManipulator&gt;
+#include &lt;osgGA/DriveManipulator&gt;
+#include &lt;osgGA/KeySwitchMatrixManipulator&gt;
+#include &lt;osgGA/StateSetManipulator&gt;
+
+#include &lt;iostream&gt;
+#include &lt;sstream&gt;
+#include &lt;string.h&gt;
+
+
+class AsyncRTTViewer : public osgViewer::Viewer {
+public:
+
+  AsyncRTTViewer(){
+    asyncRTTViewerConstructorInit();
+  }
+
+  AsyncRTTViewer(osg::ArgumentParser&amp; arguments)
+    : osgViewer::Viewer(arguments) {
+    asyncRTTViewerConstructorInit();
+  }
+
+  AsyncRTTViewer(const osgViewer::Viewer&amp; viewer,
+                 const osg::CopyOp&amp; copyop=osg::CopyOp::SHALLOW_COPY)
+    : osgViewer::Viewer(viewer,copyop) {
+    asyncRTTViewerConstructorInit();
+  }
+
+  virtual ~AsyncRTTViewer() {}
+
+  /// adds a render to texture camera
+  void addOffScreenRTTNode(osg::Node* node){
+    offScreenNodes-&gt;addChild(node);
+  }
+
+  /// removes a render to texture camera
+  void removeOffScreenRTTNode(osg::Node* node){
+    offScreenNodes-&gt;removeChild(node);
+  }
+
+  /** call this function to render the off screen scene.
+      If no off screen nodes (RTT) are supplied than nothing is done
+  */
+  virtual void renderOffScreen( ) {
+    if (_done || offScreenNodes-&gt;getNumChildren() == 0) return;
+
+    osg::Node* origNode = _camera-&gt;getChild(0);
+    _camera-&gt;setChild(0,offScreenNodes);
+    //    printf(&quot;before offscreen\n&quot;);
+    offScreenRenderingTraversals();
+    //printf(&quot;after offscreen\n&quot;);
+    _camera-&gt;setChild(0,origNode);
+  }
+
+protected:
+
+
+  virtual void offScreenRenderingTraversals() {
+
+    /*** This is copied from ViewerBase::renderingTraversals() and
+         statistics and swapbuffer and so on are removed.
+    */
+
+    if (_done) return;
+
+    offScreenNodes-&gt;getBound();
+
+    Contexts contexts;
+    getContexts(contexts);
+
+    Cameras cameras;
+    getCameras(cameras);
+
+    Contexts::iterator itr;
+
+    bool doneMakeCurrentInThisThread = false;
+
+    if (_endDynamicDrawBlock.valid())
+      {
+        _endDynamicDrawBlock-&gt;reset();
+      }
+
+    // dispatch the rendering threads
+    if (_startRenderingBarrier.valid()) _startRenderingBarrier-&gt;block();
+
+    // reset any double buffer graphics objects
+    for(Cameras::iterator camItr = cameras.begin();
+        camItr != cameras.end();
+        ++camItr)
+      {
+        osg::Camera* camera = *camItr;
+        osgViewer::Renderer* renderer =
+dynamic_cast&lt;osgViewer::Renderer*&gt;(camera-&gt;getRenderer());
+        if (renderer)
+          {
+            if (!renderer-&gt;getGraphicsThreadDoesCull() &amp;&amp;
+!(camera-&gt;getCameraThread()))
+              {
+                renderer-&gt;cull();
+              }
+          }
+
+      }
+
+    for(itr = contexts.begin();
+        itr != contexts.end();
+        ++itr)
+      {
+        if (_done) return;
+        if (!((*itr)-&gt;getGraphicsThread()) &amp;&amp; (*itr)-&gt;valid())
+          {
+            doneMakeCurrentInThisThread = true;
+            makeCurrent(*itr);
+            (*itr)-&gt;runOperations();
+          }
+      }
+
+    /*for (itr = contexts.begin();
+        itr != contexts.end() &amp;&amp; !_done;
+        ++itr)
+    {
+        if (!((*itr)-&gt;getGraphicsThread()) &amp;&amp; (*itr)-&gt;valid())
+        {
+            doneMakeCurrentInThisThread = true;
+            makeCurrent(*itr);
+            (*itr)-&gt;swapBuffers();
+        }
+    }*/
+
+    // osg::notify(osg::NOTICE)&lt;&lt;&quot;Joing _endRenderingDispatchBarrier block
+&quot;&lt;&lt;_endRenderingDispatchBarrier.get()&lt;&lt;std::endl;
+
+    // wait till the rendering dispatch is done.
+    if (_endRenderingDispatchBarrier.valid())
+_endRenderingDispatchBarrier-&gt;block();
+
+    // wait till the dynamic draw is complete.
+    if (_endDynamicDrawBlock.valid())
+      {
+        // osg::Timer_t startTick = osg::Timer::instance()-&gt;tick();
+        _endDynamicDrawBlock-&gt;block();
+        // osg::notify(osg::NOTICE)&lt;&lt;&quot;Time waiting
+&quot;&lt;&lt;osg::Timer::instance()-&gt;delta_m(startTick,
+osg::Timer::instance()-&gt;tick())&lt;&lt;std::endl;;
+      }
+
+    if (_releaseContextAtEndOfFrameHint &amp;&amp; doneMakeCurrentInThisThread)
+      {
+        //osg::notify(osg::NOTICE)&lt;&lt;&quot;Doing release context&quot;&lt;&lt;std::endl;
+        releaseContext();
+      }
+
+  }
+
+  void asyncRTTViewerConstructorInit(){
+    offScreenNodes = new osg::Group();
+  }
+
+  osg::ref_ptr&lt;osg::Group&gt; offScreenNodes;
+};
+
+
+
+
+struct MyCameraPostDrawCallback : public osg::Camera::DrawCallback
+{
+  MyCameraPostDrawCallback(osg::Image* image):
+    _image(image)
+  {
+  }
+
+  virtual void operator () (osg::RenderInfo&amp; renderInfo) const
+  {
+    if (_image &amp;&amp; _image-&gt;getPixelFormat()==GL_RGBA &amp;&amp;
+_image-&gt;getDataType()==GL_UNSIGNED_BYTE)
+      {
+        printf(&quot;hello from image processing\n&quot;);
+        // we'll pick out the center 1/2 of the whole image,
+        int column_start = _image-&gt;s()/4;
+        int column_end = 3*column_start;
+
+        int row_start = _image-&gt;t()/4;
+        int row_end = 3*row_start;
+
+        // and then invert these pixels
+        for(int r=row_start; r&lt;row_end; ++r)
+          {
+            unsigned char* data = _image-&gt;data(column_start, r);
+            for(int c=column_start; c&lt;column_end; ++c)
+              {
+                (*data) = 255-(*data); ++data;
+                (*data) = 255-(*data); ++data;
+                (*data) = 255-(*data); ++data;
+                (*data) = 255; ++data;
+              }
+          }
+
+        // dirty the image (increments the modified count) so that any
+textures
+        // using the image can be informed that they need to update.
+        _image-&gt;dirty();
+
+        if (osgDB::writeImageFile(*_image, std::string(&quot;C:\\image.jpg&quot;)))
+        {
+            std::cout &lt;&lt; R&quot;(Saved screen image to `C:\image.jpg`)&quot; &lt;&lt;
+std::endl;
+        }
+
+      }
+
+  }
+
+  virtual void operator () (const osg::Camera&amp; /*camera*/) const
+  {
+      if (_image &amp;&amp; _image-&gt;getPixelFormat() == GL_RGBA &amp;&amp;
+_image-&gt;getDataType() == GL_UNSIGNED_BYTE)
+      {
+          printf(&quot;hello from image processing\n&quot;);
+          // we'll pick out the center 1/2 of the whole image,
+          int column_start = _image-&gt;s() / 4;
+          int column_end = 3 * column_start;
+
+          int row_start = _image-&gt;t() / 4;
+          int row_end = 3 * row_start;
+
+          // and then invert these pixels
+          for (int r = row_start; r &lt; row_end; ++r)
+          {
+              unsigned char* data = _image-&gt;data(column_start, r);
+              for (int c = column_start; c &lt; column_end; ++c)
+              {
+                  (*data) = 255 - (*data); ++data;
+                  (*data) = 255 - (*data); ++data;
+                  (*data) = 255 - (*data); ++data;
+                  (*data) = 255; ++data;
+              }
+          }
+
+          // dirty the image (increments the modified count) so that any
+textures
+          // using the image can be informed that they need to update.
+          _image-&gt;dirty();
+
+          if (osgDB::writeImageFile(*_image, std::string(&quot;C:\\image.jpg&quot;)))
+          {
+              std::cout &lt;&lt; R&quot;(Saved screen image to `C:\image.jpg`)&quot; &lt;&lt;
+std::endl;
+          }
+      }
+
+  }
+
+  osg::Image* _image;
+};
+
+
+int main222()
+{
+
+  bool useImage=true;
+
+    //    osgViewer::Viewer viewer(arguments);
+  AsyncRTTViewer viewer;
+  viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+
+  // set up the camera manipulators.
+  {
+    osg::ref_ptr&lt;osgGA::KeySwitchMatrixManipulator&gt; keyswitchManipulator =
+new osgGA::KeySwitchMatrixManipulator;
+
+    keyswitchManipulator-&gt;addMatrixManipulator( '1', &quot;Trackball&quot;, new
+osgGA::TrackballManipulator() );
+    keyswitchManipulator-&gt;addMatrixManipulator( '2', &quot;Flight&quot;, new
+osgGA::FlightManipulator() );
+    keyswitchManipulator-&gt;addMatrixManipulator( '3', &quot;Drive&quot;, new
+osgGA::DriveManipulator() );
+    viewer.setCameraManipulator( keyswitchManipulator.get() );
+  }
+
+  // add the state manipulator
+  viewer.addEventHandler( new
+osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()) );
+  viewer.addEventHandler(new osgViewer::ThreadingHandler);
+  viewer.addEventHandler(new osgViewer::WindowSizeHandler);
+  viewer.addEventHandler(new osgViewer::StatsHandler);
+  //viewer.addEventHandler(new
+osgViewer::HelpHandler(arguments.getApplicationUsage()));
+  viewer.addEventHandler(new osgViewer::RecordCameraPathHandler);
+  viewer.addEventHandler(new osgViewer::LODScaleHandler);
+  viewer.realize();
+
+
+  // load the data
+  osg::ref_ptr&lt;osg::Node&gt; loadedModel =
+osgDB::readNodeFile(std::string(&quot;C:\\cow.osg&quot;));
+  if (!loadedModel)
+    {
+      //std::cout &lt;&lt; arguments.getApplicationName() &lt;&lt;&quot;: No data loaded&quot; &lt;&lt;
+std::endl;
+      return 1;
+    }
+
+  // we have a root object that contains a scene and some overlayed
+textures to show
+  // the content if a independently rendered texture
+  osg::Group* root = new osg::Group();
+  osg::Group* scene = new osg::Group();
+  root-&gt;addChild(scene);
+  scene-&gt;addChild(loadedModel.get());
+  // any option left unread are converted into errors to write out later.
+  //arguments.reportRemainingOptionsAsUnrecognized();
+
+  // optimize the scene graph, remove redundant nodes and state etc.
+  osgUtil::Optimizer optimizer;
+  optimizer.optimize(loadedModel.get());
+
+  viewer.setSceneData(root);
+
+  // Now we create a normal Render to Texture camera
+  // Create the texture to render to
+  osg::Texture2D* texture = new osg::Texture2D;
+  texture-&gt;setTextureSize(256, 256);
+  texture-&gt;setInternalFormat(GL_RGBA);
+  texture-&gt;setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR);
+  texture-&gt;setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
+
+  // set up the render to texture camera.
+  osg::Camera* cam = new osg::Camera;
+  cam-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // set up projection.
+  cam-&gt;setProjectionMatrixAsPerspective(30, 1,0.1,30);
+  // set view
+  cam-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+  cam-&gt;setViewport(0, 0, 256, 256);
+  // Frame buffer objects are the best option
+  cam-&gt;setRenderTargetImplementation(osg::Camera::PIXEL_BUFFER_RTT);
+  // We need to render to the texture BEFORE we render to the screen
+  cam-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+
+  osg::Image* image = new osg::Image;
+  if(useImage){
+    image-&gt;allocateImage(256, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE);
+    //image-&gt;allocateImage(tex_width, tex_height, 1, GL_RGBA, GL_FLOAT);
+    // attach the image so its copied on each frame.
+    cam-&gt;attach(osg::Camera::COLOR_BUFFER, image);
+    cam-&gt;setPostDrawCallback(new MyCameraPostDrawCallback(image));
+    texture-&gt;setImage(0, image);
+  }else{
+    // The camera will render into the texture that we created earlier
+    cam-&gt;attach(osg::Camera::COLOR_BUFFER, texture);
+  }
+
+  // Add world to be drawn to the texture
+  cam-&gt;addChild(loadedModel.get());
+
+  // now we add the RTT camera to our custom viewer
+  viewer.addOffScreenRTTNode(cam);
+
+  // set up the place where the content of the texture is seen in the
+normal scene
+  osg::ref_ptr&lt;osg::Geometry&gt; screenQuad;
+  screenQuad = osg::createTexturedQuadGeometry(osg::Vec3(),
+                                               osg::Vec3(256, 0.0, 0.0),
+                                               osg::Vec3(0.0, 256, 0.0));
+  osg::ref_ptr&lt;osg::Geode&gt; quadGeode = new osg::Geode;
+  quadGeode-&gt;addDrawable(screenQuad.get());
+  osg::StateSet *quadState = quadGeode-&gt;getOrCreateStateSet();
+  quadState-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+  quadState-&gt;setTextureAttributeAndModes(0, texture,
+osg::StateAttribute::ON);
+  osg::ref_ptr&lt;osg::Camera&gt; orthoCamera = new osg::Camera;
+  // We don't want to apply perspective, just overlay using orthographic
+  orthoCamera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0, 256, 0,
+256));
+  orthoCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+  orthoCamera-&gt;setViewMatrix(osg::Matrix::identity());
+
+  orthoCamera-&gt;setViewport(0, 0, 256,256);
+  orthoCamera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+
+  //osg::Image* image = new osg::Image;
+  //image-&gt;allocateImage(256, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE);
+  //image-&gt;allocateImage(tex_width, tex_height, 1, GL_RGBA, GL_FLOAT);
+  // attach the image so its copied on each frame.
+  //orthoCamera-&gt;attach(osg::Camera::COLOR_BUFFER, image);
+  //orthoCamera-&gt;setPostDrawCallback(new MyCameraPostDrawCallback(image));
+
+  orthoCamera-&gt;addChild(quadGeode.get());
+  // and add it to the root note
+  root-&gt;addChild(orthoCamera.get());
+
+
+  int frame_count=0;
+  const int swap_every=200; // the texture rendering occurs only every
+200th frame
+  bool swap=true;
+  while(!viewer.done())
+    {
+      if (swap &amp;&amp; 0 == (frame_count % swap_every))
+        {
+        osg::Vec3 eye; osg::Vec3 center; osg::Vec3 up;
+        viewer.getCamera()-&gt;getViewMatrixAsLookAt(eye,center,up);
+        // simply turn the up vector around
+        cam-&gt;setViewMatrixAsLookAt(eye, center, -up);
+        // do the offscreen rendering
+        viewer.renderOffScreen();
+
+        //viewer.frame();
+
+        image-&gt;readPixels(0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE);
+
+        int column_start = image-&gt;s() / 4;
+        int column_end = 3 * column_start;
+
+        int row_start = image-&gt;t() / 4;
+        int row_end = 3 * row_start;
+
+        // and then invert these pixels
+        for (int r = row_start; r &lt; row_end; ++r)
+        {
+            unsigned char* data = image-&gt;data(column_start, r);
+            for (int c = column_start; c &lt; column_end; ++c)
+            {
+                (*data) = 255 - (*data); ++data;
+                (*data) = 255 - (*data); ++data;
+                (*data) = 255 - (*data); ++data;
+                (*data) = 255; ++data;
+            }
+        }
+
+        //// dirty the image (increments the modified count) so that any
+textures
+        //// using the image can be informed that they need to update.
+        image-&gt;dirty();
+
+        //if (osgDB::writeImageFile(*image, std::string(&quot;C:\\image.jpg&quot;)))
+        //{
+        //    std::cout &lt;&lt; R&quot;(Saved screen image to `C:\image.jpg`)&quot; &lt;&lt;
+std::endl;
+        //}
+
+      }
+    else
+    {
+        viewer.frame();
+    }
+
+      frame_count++;
+    }
+
+  return 0;
+}
+
+*The way I am using this class is:*
+
+  bool useImage=true;
+
+    //    osgViewer::Viewer viewer(arguments);
+  AsyncRTTViewer viewer;
+  viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+
+  // set up the camera manipulators.
+  {
+    osg::ref_ptr&lt;osgGA::KeySwitchMatrixManipulator&gt; keyswitchManipulator =
+new osgGA::KeySwitchMatrixManipulator;
+
+    keyswitchManipulator-&gt;addMatrixManipulator( '1', &quot;Trackball&quot;, new
+osgGA::TrackballManipulator() );
+    keyswitchManipulator-&gt;addMatrixManipulator( '2', &quot;Flight&quot;, new
+osgGA::FlightManipulator() );
+    keyswitchManipulator-&gt;addMatrixManipulator( '3', &quot;Drive&quot;, new
+osgGA::DriveManipulator() );
+    viewer.setCameraManipulator( keyswitchManipulator.get() );
+  }
+
+  // add the state manipulator
+  viewer.addEventHandler( new
+osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()) );
+  viewer.addEventHandler(new osgViewer::ThreadingHandler);
+  viewer.addEventHandler(new osgViewer::WindowSizeHandler);
+  viewer.addEventHandler(new osgViewer::StatsHandler);
+  //viewer.addEventHandler(new
+osgViewer::HelpHandler(arguments.getApplicationUsage()));
+  viewer.addEventHandler(new osgViewer::RecordCameraPathHandler);
+  viewer.addEventHandler(new osgViewer::LODScaleHandler);
+  viewer.realize();
+
+
+  // load the data
+  osg::ref_ptr&lt;osg::Node&gt; loadedModel =
+osgDB::readNodeFile(std::string(&quot;C:\\cow.osg&quot;));
+  if (!loadedModel)
+    {
+      //std::cout &lt;&lt; arguments.getApplicationName() &lt;&lt;&quot;: No data loaded&quot; &lt;&lt;
+std::endl;
+      return 1;
+    }
+
+  // we have a root object that contains a scene and some overlayed
+textures to show
+  // the content if a independently rendered texture
+  osg::Group* root = new osg::Group();
+  osg::Group* scene = new osg::Group();
+  root-&gt;addChild(scene);
+  scene-&gt;addChild(loadedModel.get());
+  // any option left unread are converted into errors to write out later.
+  //arguments.reportRemainingOptionsAsUnrecognized();
+
+  // optimize the scene graph, remove redundant nodes and state etc.
+  osgUtil::Optimizer optimizer;
+  optimizer.optimize(loadedModel.get());
+
+  viewer.setSceneData(root);
+
+  // Now we create a normal Render to Texture camera
+  // Create the texture to render to
+  osg::Texture2D* texture = new osg::Texture2D;
+  texture-&gt;setTextureSize(256, 256);
+  texture-&gt;setInternalFormat(GL_RGBA);
+  texture-&gt;setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR);
+  texture-&gt;setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
+
+  // set up the render to texture camera.
+  osg::Camera* cam = new osg::Camera;
+  cam-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // set up projection.
+  cam-&gt;setProjectionMatrixAsPerspective(30, 1,0.1,30);
+  // set view
+  cam-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+  cam-&gt;setViewport(0, 0, 256, 256);
+  // Frame buffer objects are the best option
+  cam-&gt;setRenderTargetImplementation(osg::Camera::PIXEL_BUFFER_RTT);
+  // We need to render to the texture BEFORE we render to the screen
+  cam-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+
+  osg::Image* image = new osg::Image;
+  if(useImage){
+    image-&gt;allocateImage(256, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE);
+    //image-&gt;allocateImage(tex_width, tex_height, 1, GL_RGBA, GL_FLOAT);
+    // attach the image so its copied on each frame.
+    cam-&gt;attach(osg::Camera::COLOR_BUFFER, image);
+    cam-&gt;setPostDrawCallback(new MyCameraPostDrawCallback(image));
+    texture-&gt;setImage(0, image);
+  }else{
+    // The camera will render into the texture that we created earlier
+    cam-&gt;attach(osg::Camera::COLOR_BUFFER, texture);
+  }
+
+  // Add world to be drawn to the texture
+  cam-&gt;addChild(loadedModel.get());
+
+  // now we add the RTT camera to our custom viewer
+  viewer.addOffScreenRTTNode(cam);
+
+  // set up the place where the content of the texture is seen in the
+normal scene
+  osg::ref_ptr&lt;osg::Geometry&gt; screenQuad;
+  screenQuad = osg::createTexturedQuadGeometry(osg::Vec3(),
+                                               osg::Vec3(256, 0.0, 0.0),
+                                               osg::Vec3(0.0, 256, 0.0));
+  osg::ref_ptr&lt;osg::Geode&gt; quadGeode = new osg::Geode;
+  quadGeode-&gt;addDrawable(screenQuad.get());
+  osg::StateSet *quadState = quadGeode-&gt;getOrCreateStateSet();
+  quadState-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+  quadState-&gt;setTextureAttributeAndModes(0, texture,
+osg::StateAttribute::ON);
+  osg::ref_ptr&lt;osg::Camera&gt; orthoCamera = new osg::Camera;
+  // We don't want to apply perspective, just overlay using orthographic
+  orthoCamera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0, 256, 0,
+256));
+  orthoCamera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+  orthoCamera-&gt;setViewMatrix(osg::Matrix::identity());
+
+  orthoCamera-&gt;setViewport(0, 0, 256,256);
+  orthoCamera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+
+  //osg::Image* image = new osg::Image;
+  //image-&gt;allocateImage(256, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE);
+  //image-&gt;allocateImage(tex_width, tex_height, 1, GL_RGBA, GL_FLOAT);
+  // attach the image so its copied on each frame.
+  //orthoCamera-&gt;attach(osg::Camera::COLOR_BUFFER, image);
+  //orthoCamera-&gt;setPostDrawCallback(new MyCameraPostDrawCallback(image));
+
+  orthoCamera-&gt;addChild(quadGeode.get());
+  // and add it to the root note
+  root-&gt;addChild(orthoCamera.get());
+
+
+  int frame_count=0;
+  const int swap_every=200; // the texture rendering occurs only every
+200th frame
+  bool swap=true;
+  while(!viewer.done())
+    {
+      if (swap &amp;&amp; 0 == (frame_count % swap_every))
+        {
+        osg::Vec3 eye; osg::Vec3 center; osg::Vec3 up;
+        viewer.getCamera()-&gt;getViewMatrixAsLookAt(eye,center,up);
+        // simply turn the up vector around
+        cam-&gt;setViewMatrixAsLookAt(eye, center, -up);
+        // do the offscreen rendering
+        viewer.renderOffScreen();
+
+        //// dirty the image (increments the modified count) so that any
+textures
+        //// using the image can be informed that they need to update.
+        image-&gt;dirty();
+
+        //if (osgDB::writeImageFile(*image, std::string(&quot;C:\\image.jpg&quot;)))
+        //{
+        //    std::cout &lt;&lt; R&quot;(Saved screen image to `C:\image.jpg`)&quot; &lt;&lt;
+std::endl;
+        //}
+
+      }
+    else
+    {
+        viewer.frame();
+    }
+
+      frame_count++;
+    }
+
+This code in no longer present in OSG 3.4.0, so it must be older and may
+have worked with earlier versions of OSG? I am not sure....
+
+The issue is that the image I need, that should be done in PRE_RENDER, so
+before the first frame, is not produced. And none of the sybsequent 200'th
+frame are not done either.
+The call back installed here:
+
+cam-&gt;setPostDrawCallback(new MyCameraPostDrawCallback(image));
+
+is not invoked in MyCameraPostDrawCallback::operator () (osg::RenderInfo&amp;
+renderInfo) const
+
+Any idea why this callback is not called? I can't move on because of this
+issue.
+
+If I install it on the other camera on osg::Camera::POST_RENDER phase
+(orthoCamera) than it gets called, but this is not what I need as it
+creates a window...I must avoid that...
+
+Any help will be aprreciated.
+
+Thank you,
+Sorin.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190513/2ce4f669/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190513/2ce4f669/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010027.html">[osg-users] Is it possible to load texture without applying to a drawable
+</A></li>
+	<LI>Next message (by thread): <A HREF="010029.html">[osg-users] OpenSceneGraph-3.6.4 release candidate 3 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10028">[ date ]</a>
+              <a href="thread.html#10028">[ thread ]</a>
+              <a href="subject.html#10028">[ subject ]</a>
+              <a href="author.html#10028">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

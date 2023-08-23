@@ -1,0 +1,188 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Changes in osgVolume from 3.0 to 3.4
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changes%20in%20osgVolume%20from%203.0%20to%203.4&In-Reply-To=%3CCAHKmQh9a0UMVnb%2BHgpKp2rWtK%2BtFrPsGeoh66cpf5nEuvDp%3DOA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002349.html">
+   <LINK REL="Next"  HREF="002371.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Changes in osgVolume from 3.0 to 3.4</H1>
+<!--htdig_noindex-->
+    <B>Alex Taylor</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changes%20in%20osgVolume%20from%203.0%20to%203.4&In-Reply-To=%3CCAHKmQh9a0UMVnb%2BHgpKp2rWtK%2BtFrPsGeoh66cpf5nEuvDp%3DOA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Changes in osgVolume from 3.0 to 3.4">alextaylor at gmail.com
+       </A><BR>
+    <I>Tue Feb 16 06:59:38 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002349.html">[osg-users] Changes in osgVolume from 3.0 to 3.4
+</A></li>
+        <LI>Next message: <A HREF="002371.html">[osg-users] Changes in osgVolume from 3.0 to 3.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2370">[ date ]</a>
+              <a href="thread.html#2370">[ thread ]</a>
+              <a href="subject.html#2370">[ subject ]</a>
+              <a href="author.html#2370">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Robert,
+
+Thanks again. I do have one quick follow up question related to something
+you said.
+
+&quot;Check the alpha values settings that you have set up for the VolumeTile.&quot;
+
+I'm trying to figure out exactly what you mean by the &quot;alpha values
+settings&quot; on the VolumeTile. I define my VolumeTile as shown below. As you
+can see, I'm not setting Alpha anywhere in the setup of my tile. The one
+place where alpha comes in is when I set the TransferFunctionProperty on my
+tile. This brings me to my question.
+
+It looks to me like the intention of Isosurface property is to specify the
+isovalue for the isosurface rendering. What happens if you specify an
+Isosurface property but your transfer function contains alpha values
+between the ranges of (0,1)? Meaning, if you are defining an isosurface at
+isovalue = X, do you also have to specify the alpha in your transfer
+function as a unit step function U(I-X) with transition at X?
+
+I'm trying to understand the motivation for blending being on for the
+Isosurface codepath in RayTracedTechnique and how the alpha in the transfer
+function interacts with the specification of an IsosurfaceProperty. I had
+originally thought/guessed that the alpha in your transfer function would
+just be ignored if you specify an IsosurfaceProperty.
+
+- Alex
+
+*            osg::ref_ptr&lt;osg::Image&gt; intensityImage =
+createTexture3D(data);*
+
+*            osg::ref_ptr&lt;osg::Image&gt; image_3d =
+(volumeProperties.volumeTechnique == VolumeTechnique::FixedFunction) ?*
+
+*
+osgVolume::applyTransferFunction(intensityImage.get(),volumeProperties.transferFunction.get())
+:<i>*
+</I>
+*
+intensityImage.release();*
+
+
+
+*            osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer = new
+osgVolume::ImageLayer(image_3d);*
+
+*            tile-&gt;setLayer(layer.get());*
+
+Where createTexture3D is defined as:
+
+*    osg::Image* createTexture3D(const mxArray* src) {*
+
+*        if (src == NULL || mxGetNumberOfDimensions(src) != 3 ||
+mxGetClassID(src) != mxUINT8_CLASS) {*
+
+*            return NULL;*
+
+*        }*
+
+*        size_t num_s = mxGetDimensions(src)[0];*
+
+*        size_t num_t = mxGetDimensions(src)[1];*
+
+*        size_t num_r = mxGetDimensions(src)[2];*
+
+*        // now allocate the 3d texture;*
+
+*        osg::ref_ptr&lt;osg::Image&gt; image_3d = new osg::Image;*
+
+*        image_3d-&gt;setImage(num_s, num_t, num_r,*
+
+*                GL_LUMINANCE, GL_LUMINANCE, GL_UNSIGNED_BYTE,*
+
+*                static_cast&lt;uint8_T *&gt;(mxGetData(src)),*
+
+*                osg::Image::NO_DELETE);*
+
+
+
+*        return image_3d.release();*
+
+*    }*
+
+Other than that, the only other specification Alpha comes from setting the
+TransferFunctionProperty on the tile with my TransferFunction. This brings
+me to my question.
+
+When
+
+
+
+On Fri, Feb 12, 2016 at 5:42 AM Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Alex,
+</I>&gt;<i>
+</I>&gt;<i> On 11 February 2016 at 20:47, Alex Taylor &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">alextaylor at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Also, if it matters, I found that I can get the rendering I'd expect if I
+</I>&gt;<i> &gt; explicitly set the BlendFunc in the special case of Isosurface:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;   if (volumeProperties.useIsosurface){
+</I>&gt;<i> &gt;             stateset-&gt;setAttribute(new osg::BlendFunc(GL_ONE, GL_ZERO),
+</I>&gt;<i> &gt; osg::StateAttribute::ON);
+</I>&gt;<i> &gt;    }
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I'm not sure why I need to do this in OSG 3.4 when I didn't in OSG 3.0,
+</I>&gt;<i> &gt; probably another issue with the viewer or something on my end.
+</I>&gt;<i>
+</I>&gt;<i> From the details above and the picture it looks to me that OSG-3.4 is
+</I>&gt;<i> probably doing the right thing w.r.t the settings, such as alpha
+</I>&gt;<i> settings, you are using and OSG-3.0 implementation was incorrect and
+</I>&gt;<i> ignored these settings so you never saw this.
+</I>&gt;<i>
+</I>&gt;<i> Check the alpha values settings that you have set up for the VolumeTile.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160216/fdf9953c/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160216/fdf9953c/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002349.html">[osg-users] Changes in osgVolume from 3.0 to 3.4
+</A></li>
+	<LI>Next message: <A HREF="002371.html">[osg-users] Changes in osgVolume from 3.0 to 3.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2370">[ date ]</a>
+              <a href="thread.html#2370">[ thread ]</a>
+              <a href="subject.html#2370">[ subject ]</a>
+              <a href="author.html#2370">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

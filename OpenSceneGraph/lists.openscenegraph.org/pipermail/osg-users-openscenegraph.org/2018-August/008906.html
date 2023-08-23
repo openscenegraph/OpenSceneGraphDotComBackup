@@ -1,0 +1,178 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to create a 3D ray from cursor position?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20create%20a%203D%20ray%20from%20cursor%20position%3F&In-Reply-To=%3C025d7b95-4fe5-10d2-d536-b32f3eb37b54%40texion.eu%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008902.html">
+   <LINK REL="Next"  HREF="008944.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to create a 3D ray from cursor position?</H1>
+<!--htdig_noindex-->
+    <B>Werner Modenbach</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20create%20a%203D%20ray%20from%20cursor%20position%3F&In-Reply-To=%3C025d7b95-4fe5-10d2-d536-b32f3eb37b54%40texion.eu%3E"
+       TITLE="[osg-users] How to create a 3D ray from cursor position?">Werner.Modenbach at texion.eu
+       </A><BR>
+    <I>Wed Aug 15 01:01:42 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008902.html">[osg-users] How to create a 3D ray from cursor position?
+</A></li>
+        <LI>Next message (by thread): <A HREF="008944.html">[osg-users] OsgParticle when is the particleSystemUpdater called
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8906">[ date ]</a>
+              <a href="thread.html#8906">[ thread ]</a>
+              <a href="subject.html#8906">[ subject ]</a>
+              <a href="author.html#8906">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Jad,
+
+this is how I do it:
+
+double x = mEv-&gt;x(); &#160;double y = mEv-&gt;y(); &#160;double w =
+view-&gt;getGraphicsWidth(); &#160;double h = view-&gt;getGraphicsHeight(); x =
+x/w; y = y/h; // Normalize to range -1.0 - 1.0 x = (2.0 * _x) - 1.0; y =
+-((2.0 * _y) - 1.0); // -1.0 is at bottom!!! &#160;osg::Matrix MVPW(
+view-&gt;getCamera()-&gt;getViewMatrix() *
+view-&gt;getCamera()-&gt;getProjectionMatrix()); osg::Matrixd inverseMVPW =
+osg::Matrixd::inverse(MVPW); osg::Vec3 near_point =
+osg::Vec3(_x,_y,-1.0f) * inverseMVPW; osg::Vec3 far_point =
+osg::Vec3(_x,_y, 1.0f) * inverseMVPW;
+
+- Werner -
+
+Am 16.07.2018 um 17:34 schrieb Jad Killian:
+&gt;<i> Given a 2D cursor position from a mouse event, how do I compute a 3D ray into the scene?
+</I>&gt;<i>
+</I>&gt;<i> This is my attempt so far but it's not giving sensible results:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> float width = viewer-&gt;getCamera()-&gt;getViewport()-&gt;width();
+</I>&gt;<i> float height = viewer-&gt;getCamera()-&gt;getViewport()-&gt;width();
+</I>&gt;<i>
+</I>&gt;<i> float x = (2.0f * ea.getX()) / width - 1.0f;
+</I>&gt;<i> float y = 1.0f - (2.0f * ea.getY()) / height;
+</I>&gt;<i> float z = 1.0f;
+</I>&gt;<i>
+</I>&gt;<i> osg::Vec3 ray_nds(x, y, z);
+</I>&gt;<i>
+</I>&gt;<i> osg::Vec4 ray_clip(ray_nds.x(), ray_nds.y(), -1.0, 1.0);
+</I>&gt;<i>
+</I>&gt;<i> osg::Matrixd proj_inv = viewer-&gt;getCamera()-&gt;getProjectionMatrix();
+</I>&gt;<i> proj_inv = proj_inv.inverse(proj_inv);
+</I>&gt;<i>
+</I>&gt;<i> osg::Vec4 ray_eye = proj_inv * ray_clip;
+</I>&gt;<i> ray_eye.z() = -1.0;
+</I>&gt;<i> ray_eye.w() = 0.0;
+</I>&gt;<i>
+</I>&gt;<i> osg::Vec4 ray_wor4 = viewer-&gt;getCamera()-&gt;getInverseViewMatrix() * ray_eye;
+</I>&gt;<i> osg::Vec3 ray_wor(ray_wor4.x(), ray_wor4.y(), ray_wor4.z());
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> P.S: I need such a ray so I can drag a 3D object around the scene like this:
+</I>&gt;<i> new_position = camera_position + ray_direction * depth_value;
+</I>&gt;<i> Or is there an easier way to accomplish this?
+</I>&gt;<i>
+</I>&gt;<i> Thanks
+</I>&gt;<i> [/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicc977.php?p=74349#74349">http://forum.openscenegraph.org/viewtopic.php?p=74349#74349</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-- 
+*TEXION Software Solutions, Rotter Bruch 26a, D-52068 Aachen*
+Phone: +49 241 475757-0
+Fax: +49 241 475757-29
+Web: <A HREF="http://texion.eu/">http://texion.eu</A>
+eMail: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">info at texion.eu</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180815/a0b31977/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180815/a0b31977/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008902.html">[osg-users] How to create a 3D ray from cursor position?
+</A></li>
+	<LI>Next message (by thread): <A HREF="008944.html">[osg-users] OsgParticle when is the particleSystemUpdater called
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8906">[ date ]</a>
+              <a href="thread.html#8906">[ thread ]</a>
+              <a href="subject.html#8906">[ subject ]</a>
+              <a href="author.html#8906">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

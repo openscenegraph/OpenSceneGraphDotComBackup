@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Exporting OpenFlight Models
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Exporting%20OpenFlight%20Models&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827EFDFBB%40tewdmx.enews.nrl.navy.mil%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008590.html">
+   <LINK REL="Next"  HREF="008591.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Exporting OpenFlight Models</H1>
+<!--htdig_noindex-->
+    <B>Daniel Emminizer, Code 5773</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Exporting%20OpenFlight%20Models&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827EFDFBB%40tewdmx.enews.nrl.navy.mil%3E"
+       TITLE="[osg-users] Exporting OpenFlight Models">dan.emminizer at nrl.navy.mil
+       </A><BR>
+    <I>Thu Jun 28 03:55:37 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008590.html">[osg-users] Exporting OpenFlight Models
+</A></li>
+        <LI>Next message (by thread): <A HREF="008591.html">[osg-users] OpenSceneGraph-3.6.2 release candidate 3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8596">[ date ]</a>
+              <a href="thread.html#8596">[ thread ]</a>
+              <a href="subject.html#8596">[ subject ]</a>
+              <a href="author.html#8596">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Thanks for the merge!  It helps.
+
+
+A little explanation, if you have any interest.  It's a little long, but I hope to explain why we're looking at Core Profile.  I'd like to think it's for good reason.
+
+I'm with you on the OSX issues.  I think it's a shame about what's going on over there.  I've seen your comments on the mailing list about their direction of development and I do agree with it.
+
+However, core profile isn't a requirement only on OSX.  We have a lot of users that run our software on a variety of hardware and platforms, supporting primarily Windows and RedHat systems, but also other Linux variants, on both real and virtual hardware.  In a perfect world, everyone is using a reasonable graphics card (better than an etch-a-sketch) with good drivers.  But what we've found is far from that.
+
+Requirements wise, we're using osgEarth on top of OSG.  They're invested pretty heavily in Interface Blocks ( <A HREF="https://www.khronos.org/opengl/wiki/Interface_Block_(GLSL">https://www.khronos.org/opengl/wiki/Interface_Block_(GLSL</A>) ), which require OpenGL 3.1 (GLSL 1.4), but there are also several shaders that start to push into GLSL 3.3 territory (GLSL 3.3).  Ultimately we have a required minimum version of OpenGL in the 3.3 territory. That is no problem on most systems.
+
+But we've run into more issues on three system configurations in particular:
+
+* VMware systems running Windows using hardware acceleration
+* Linux systems running Intel drivers (open source)
+* Linux systems running Nvidia cards with open source drivers
+
+In all three of these systems, we're seeing Mesa-based accelerated systems where core profile is supported somewhere between version GL 3.3 and GL 4.2.  But compatibility profile support is extremely lacking.  Some of these systems report &quot;high&quot; OpenGL versions of 2.0, with GLSL shader versions of 1.4 or 1.5 (note the official mismatch between OpenGL version and GLSL version).  Others support only OpenGL 1.x, with GLSL versions as low as 1.2 in compatibility profile.
+
+But they have full core profile support.
+
+We're stuck with these systems because we don't get to configure the hardware on our users' systems.  The third bullet in particular can be frustrating because the users have good hardware, but are unable (for a variety of reasons) to install the proprietary drivers that address these issues.
+
+
+As I understand, some of the newer Mesa drivers are pushing towards better compatibility profile support.  While that's great, we've seen a drastic difference in correctness of compatibility profile features across Nvidia to ATI to Intel drivers.  Now there's Mesa drivers to consider too, and the various related variants.  We've noticed fewer differences (bugs) as we migrate towards a more shader-heavy infrastructure and away from relying on compatibility profile, er, hacks.
+
+However, even if Mesa were to support better compatibility mode drivers, that does not help us now, where we are stuck supporting RedHat 6 and RedHat 7 machines with the much older Mesa implementations.
+
+Simply telling our users they must upgrade their hardware and drivers isn't a reasonable path forward; in many cases they cannot.  We could try to back up to OpenGL 1.x and GLSL 1.2 to hit lowest common denominator, but that is extremely limiting, and would take a great deal of effort.  Vulkan isn't an option for hopefully obvious reasons.  Our remaining option to run on these systems is Core Profile.
+
+Core Profile is supported on far more systems past 3.3 since Compatibility Profile is optional.  It's messy comparatively and although I don't like it, I understand why Compatibility Profile support is more dicey for drivers to implement correctly (or at all in some cases)
+
+I also understand your desire to want to support and push primarily Compatibility Profile.  Mixing and matching the two is messy, and requiring a full new build of OpenSceneGraph to run on systems that only support Core Profile can be painful, at least on the Windows side, due to long build times (thanks MSVC) and poor system support for modern GL (e.g. glcorearb.h discussion in the last week).  But that's our problem to deal with, not necessarily yours, and that's OK.
+
+Anyways, I just wanted to point out that it's more than just OSX that needs Core Profile.  If you're doing anything with more modern GLSL you'll also need to be looking at Core Profile, or you'll lock yourself away from a reasonable segment of a potential user base.  And unlike Vulkan, support for Core Profile seems to be pretty reasonable across drivers for hardware that's been deployed in the last 8 years, at least in our particular user base.
+
+I appreciate your receptiveness to patches that help with Core Profile support.  The work you did on VAO and Text in particular have been invaluable.  Thanks for your work on OpenSceneGraph.  Sorry for the long message.
+
+ - Dan
+
+ 
+
+&gt;<i> -----Original Message-----
+</I>&gt;<i> From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On
+</I>&gt;<i> Behalf Of Robert Osfield
+</I>&gt;<i> Sent: Wednesday, June 27, 2018 4:08 PM
+</I>&gt;<i> To: OpenSceneGraph Users
+</I>&gt;<i> Subject: Re: [osg-users] Exporting OpenFlight Models
+</I>&gt;<i> 
+</I>&gt;<i> Hi Dan,
+</I>&gt;<i> 
+</I>&gt;<i> The PR looks like an acceptable level of hackiness to resolve this
+</I>&gt;<i> problem so I've merged this.
+</I>&gt;<i> 
+</I>&gt;<i> There is limit in how much we should go chasing our tails on this
+</I>&gt;<i> suff, there is fixed function code all over the OSG so it'd be a
+</I>&gt;<i> massive undertaking to try and find fall-backs for all these.  I would
+</I>&gt;<i> recommend that users don't use GLCORE unless they need to make it easy
+</I>&gt;<i> port to GLES2/3 or to have to the latest GL features under OSX where
+</I>&gt;<i> it's only possible with GLCORE.  If you have to use GLCORE then I
+</I>&gt;<i> think we just need to look at the real trouble points and resolve them
+</I>&gt;<i> locally - this PR is an example where I think this is acceptable, but
+</I>&gt;<i> it's not something I'd want to see spread across the whole OSG.
+</I>&gt;<i> 
+</I>&gt;<i> If users really want a clean GL then that's Vulkan, it's what GLCORE
+</I>&gt;<i> was attempting to achieve but falling along way short.  So personally
+</I>&gt;<i> I'd rather user just leave the legacy features of GL on when using the
+</I>&gt;<i> OSG if there isn't any pressing need otherwise.
+</I>&gt;<i> 
+</I>&gt;<i> Robert.
+</I>
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008590.html">[osg-users] Exporting OpenFlight Models
+</A></li>
+	<LI>Next message (by thread): <A HREF="008591.html">[osg-users] OpenSceneGraph-3.6.2 release candidate 3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8596">[ date ]</a>
+              <a href="thread.html#8596">[ thread ]</a>
+              <a href="subject.html#8596">[ subject ]</a>
+              <a href="author.html#8596">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

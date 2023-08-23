@@ -1,0 +1,146 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to resize when using PIXEL_BUFFER?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20resize%20when%20using%20PIXEL_BUFFER%3F&In-Reply-To=%3C1454682632.m2f.66225%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002299.html">
+   <LINK REL="Next"  HREF="002305.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to resize when using PIXEL_BUFFER?</H1>
+<!--htdig_noindex-->
+    <B>Greg Danaha</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20resize%20when%20using%20PIXEL_BUFFER%3F&In-Reply-To=%3C1454682632.m2f.66225%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] How to resize when using PIXEL_BUFFER?">osgforum at tevs.eu
+       </A><BR>
+    <I>Fri Feb  5 06:30:32 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002299.html">[osg-users] How to resize when using PIXEL_BUFFER?
+</A></li>
+        <LI>Next message: <A HREF="002305.html">[osg-users] How to resize when using PIXEL_BUFFER?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2300">[ date ]</a>
+              <a href="thread.html#2300">[ thread ]</a>
+              <a href="subject.html#2300">[ subject ]</a>
+              <a href="author.html#2300">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+greg_nhi1 wrote:
+&gt;<i> Hi,
+</I>&gt;<i> 
+</I>&gt;<i> Our application (Windows x64) writes to a memory buffer rather than a window.  The app using OSG runs as a hidden console app and streams the rendered images via named pipe to a client app.  (Even if we weren't using a separate process for OSG we need to render using PIXEL_BUFFER since our app is WPF and doesn't provide a usable window handle.)
+</I>&gt;<i> 
+</I>&gt;<i> When I resize the display window I send a message to my processor so it can resize the OSG components.  However, I cannot find a way to do this that works.  I get the following results by trying different methods.
+</I>&gt;<i> 
+</I>&gt;<i> I've searched the sample code and forums and can't find anything (other than the methods I have tried based on sample code).  Any help would be appreciated.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> For reference (I'm using an earth image to check proportions and coordinates - I get the same results using models):
+</I>&gt;<i> 
+</I>&gt;<i> The last image (SmallEarthEventQueue) was generated using this source code to resize.
+</I>&gt;<i> 
+</I>&gt;<i> double eventTime = m_nhiViewer-&gt;getEventQueue()-&gt;getTime();
+</I>&gt;<i> 			m_nhiViewer-&gt;getEventQueue()-&gt;windowResize(0, 0, m_width, m_height, eventTime);
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> The next up (SmallEarth-NoProjChange) was generated using this source code to resize.
+</I>&gt;<i> 
+</I>&gt;<i> gc-&gt;resized(0, 0, m_width, m_height);
+</I>&gt;<i> 
+</I>&gt;<i> camera-&gt;resize(m_width, m_height, osg::Camera::ResizeMask::RESIZE_ATTACHMENTS | osg::Camera::ResizeMask::RESIZE_VIEWPORT);
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> The next up (SmallEarth-ProjChange) was generated using this source code.
+</I>&gt;<i> 
+</I>&gt;<i> osg::Camera * camera = m_nhiViewer-&gt;getCamera();
+</I>&gt;<i> if (camera != nullptr)
+</I>&gt;<i> {
+</I>&gt;<i> 	osg::ref_ptr&lt;osg::GraphicsContext&gt; gc = camera-&gt;getGraphicsContext();
+</I>&gt;<i> 	if (gc != nullptr)
+</I>&gt;<i> 	{
+</I>&gt;<i> 		osg::Matrixd origCamProjMatrix = camera-&gt;getProjectionMatrix();
+</I>&gt;<i> 
+</I>&gt;<i> 		gc-&gt;resized(0, 0, m_width, m_height);
+</I>&gt;<i> 
+</I>&gt;<i> 		double widthChangeRatio = double(m_width) / double(m_lastWidth);
+</I>&gt;<i> 		double heightChangeRatio = double(m_height) / double(m_lastHeight);
+</I>&gt;<i> 		double aspectRatioChange = widthChangeRatio / heightChangeRatio;
+</I>&gt;<i> 
+</I>&gt;<i> 		if (aspectRatioChange != 1.0)
+</I>&gt;<i> 		{
+</I>&gt;<i> 			switch (camera-&gt;getProjectionResizePolicy())
+</I>&gt;<i> 			{
+</I>&gt;<i> 			case(osg::Camera::HORIZONTAL) :
+</I>&gt;<i> 			case(osg::Camera::VERTICAL) :
+</I>&gt;<i> 				origCamProjMatrix *= osg::Matrix::scale(1.0 / aspectRatioChange, 1.0 / aspectRatioChange, 1.0);
+</I>&gt;<i> 				origCamProjMatrix *= osg::Matrix::translate(-(1.0 - widthChangeRatio), -(1.0 - heightChangeRatio), 0.0);
+</I>&gt;<i> 				break;
+</I>&gt;<i> 
+</I>&gt;<i> 			default: 
+</I>&gt;<i> 				break;
+</I>&gt;<i> 			}
+</I>&gt;<i> 		}
+</I>&gt;<i> 
+</I>&gt;<i> 		camera-&gt;resize(m_width, m_height, osg::Camera::ResizeMask::RESIZE_ATTACHMENTS | osg::Camera::ResizeMask::RESIZE_VIEWPORT);
+</I>&gt;<i> 
+</I>&gt;<i> 		camera-&gt;setProjectionMatrix(origCamProjMatrix);
+</I>&gt;<i> 	}
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> ... 
+</I>&gt;<i> 
+</I>&gt;<i> Thank you!
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Greg
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopice4fd.php?p=66225#66225">http://forum.openscenegraph.org/viewtopic.php?p=66225#66225</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002299.html">[osg-users] How to resize when using PIXEL_BUFFER?
+</A></li>
+	<LI>Next message: <A HREF="002305.html">[osg-users] How to resize when using PIXEL_BUFFER?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2300">[ date ]</a>
+              <a href="thread.html#2300">[ thread ]</a>
+              <a href="subject.html#2300">[ subject ]</a>
+              <a href="author.html#2300">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

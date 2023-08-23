@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [vpb] vpbmaster appears to slow down after thousands of tasks completed
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bvpb%5D%20vpbmaster%20appears%20to%20slow%20down%20after%0A%20thousands%20of%20tasks%20completed&In-Reply-To=%3CCAFN7Y%2BULQ0oRzRnoDzCep1LXyZ%3DSdagJYTL-AM7jguYoe_J8Nw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280233.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [vpb] vpbmaster appears to slow down after thousands of tasks completed</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bvpb%5D%20vpbmaster%20appears%20to%20slow%20down%20after%0A%20thousands%20of%20tasks%20completed&In-Reply-To=%3CCAFN7Y%2BULQ0oRzRnoDzCep1LXyZ%3DSdagJYTL-AM7jguYoe_J8Nw%40mail.gmail.com%3E"
+       TITLE="[osg-users] [vpb] vpbmaster appears to slow down after thousands of tasks completed">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Aug 31 04:49:56 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280233.html">[osg-users] [vpb] vpbmaster appears to slow down after thousands of	tasks completed
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4011">[ date ]</a>
+              <a href="thread.html#4011">[ thread ]</a>
+              <a href="subject.html#4011">[ subject ]</a>
+              <a href="author.html#4011">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Knut,
+
+It's a number of years since I worked on VirtualPlanetBuilder so I'm
+afraid I don't recall details, problems with handling many thousands
+of tasks doesn't ring any bells, it could easily be problem that
+wasn't picked up during development and testing.  I don't recall the
+function of the .added file off the top of my head.  I also don't have
+a cluster available to test things right now.
+
+The best I can recommend would be to put some debugging into the
+vpbmaster run to see what file writes are happing and overall memory
+consumption on the master.  Perhaps if it's just progress logs that
+are being generated and this is becoming a bottleneck then this part
+could possibly be adapted to avoid the bottleneck or made optional.
+
+Another approach you could take is to change the build so that the
+individual tasks take on the generation of more levels so that the
+number of tasks reduces below the level that is causing the
+bottleneck. This is a bit of hack but might get your further without
+the need to.
+
+Robert.
+
+
+On 31 August 2016 at 10:35, Knut Karlsen &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">knut.karlsen at gmail.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> We have setup vpmaster to use a machinepool to distribute the work of making a large terrain db. This works fairly well and we are getting the expected results after about 40 hours of work. However, after a few thousand of 32000 tasks has been completed it appears that the master can't provide tasks fast enought to the other workers. It will drop from ~ 100 running tasks to 3-4 for a long time. We have ~100 processes configured across 6 machines (40-40-8-8-8-8), and when running tasks are few the other machines have almost no load.
+</I>&gt;<i>
+</I>&gt;<i> See the htop snapshot from the master to see the situation.
+</I>&gt;<i>
+</I>&gt;<i> After som investigation it appears (and I'm just specualting) that the main vpmaster process writes an enourmous amount of data to the
+</I>&gt;<i>
+</I>&gt;<i> &quot;terrainname.ive.0.added&quot; file in the output folder.
+</I>&gt;<i>
+</I>&gt;<i> This files gets an increasing number of task names written to it at a rate of 600 MB in a few seconds.
+</I>&gt;<i>
+</I>&gt;<i> Tlines are like this:
+</I>&gt;<i> /mnt/master/vpb/PlanetSAT150m_Mexico15m_vpbmaster/output/PlanetSAT150m_Mexico15m_vpbmaster_subtile_L3_X1_Y2/PlanetSAT150m_Mexico15m_vpbmaster_subtile_L8_X56_Y77/PlanetSAT150m_Mexico15m_vpbmaster_L12_X905_Y1246_subtile.ive
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> It appears to add 600 MB worth of these lines every few seconds, which really saturates the disk i/o and keeps one of the processes at 100%
+</I>&gt;<i>
+</I>&gt;<i> At some point this line is added:
+</I>&gt;<i> PlanetSAT150m_Mexico15m_vpbmaster.ive.0.added: file truncated
+</I>&gt;<i>
+</I>&gt;<i> And the file is set to 0 MB and it starts to write to it again.
+</I>&gt;<i>
+</I>&gt;<i> If I cancle the vpbmaster run and resubmit the tasks, it will start with normal effiency, but after a few thousand tasks this behaviour starts again.
+</I>&gt;<i>
+</I>&gt;<i> Has anyone seen this behaviour before?
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Knut
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopice70b.php?p=68495#68495">http://forum.openscenegraph.org/viewtopic.php?p=68495#68495</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Attachments:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/files/htop_265.jpg">http://forum.openscenegraph.org//files/htop_265.jpg</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280233.html">[osg-users] [vpb] vpbmaster appears to slow down after thousands of	tasks completed
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4011">[ date ]</a>
+              <a href="thread.html#4011">[ thread ]</a>
+              <a href="subject.html#4011">[ subject ]</a>
+              <a href="author.html#4011">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

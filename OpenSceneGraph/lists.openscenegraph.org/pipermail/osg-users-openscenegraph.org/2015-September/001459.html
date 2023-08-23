@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] bug in primitiveset.cpp?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20bug%20in%20primitiveset.cpp%3F&In-Reply-To=%3CCAFN7Y%2BXAUVgvH8xHp61p3PgfuF5yJQwJyPRx_fG_mu%3DEbHryxg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277680.html">
+   <LINK REL="Next"  HREF="001460.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] bug in primitiveset.cpp?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20bug%20in%20primitiveset.cpp%3F&In-Reply-To=%3CCAFN7Y%2BXAUVgvH8xHp61p3PgfuF5yJQwJyPRx_fG_mu%3DEbHryxg%40mail.gmail.com%3E"
+       TITLE="[osg-users] bug in primitiveset.cpp?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Sep  7 11:39:15 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277680.html">[osg-users] bug in primitiveset.cpp?
+</A></li>
+        <LI>Next message: <A HREF="001460.html">[osg-users] bug in primitiveset.cpp?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1459">[ date ]</a>
+              <a href="thread.html#1459">[ thread ]</a>
+              <a href="subject.html#1459">[ subject ]</a>
+              <a href="author.html#1459">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Julien,
+
+I've just looked at the State::bindElementBufferObject(..) implementation
+and it looks like it attempts to access the ebo even if the ptr is 0 which
+will cause a crash.
+
+I'm guess this probably doesn't happen if the osg::Geometry is set up
+correctly as the EBO should be created, as if useVertexBufferObjects is
+true then the ebo &quot;should&quot; be non zero.
+
+This doesn't mean that either the State::bindElementBufferObject(..) or the
+DrawElements could should not be fixed though.
+
+Are you seeing a crash?
+
+Robert.
+
+Robert.
+
+On 7 September 2015 at 18:45, Julien Valentin &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">julienvalentin51 at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hello all
+</I>&gt;<i> I notice strange code at l231 of PrimitiveSet.cpp:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> if (useVertexBufferObjects)
+</I>&gt;<i>     {
+</I>&gt;<i>         GLBufferObject* ebo =
+</I>&gt;<i> getOrCreateGLBufferObject(state.getContextID());
+</I>&gt;<i>         state.bindElementBufferObject(ebo);
+</I>&gt;<i>         if (ebo)
+</I>&gt;<i>         {
+</I>&gt;<i>             if (_numInstances&gt;=1) state.glDrawElementsInstanced(mode,
+</I>&gt;<i> size(), GL_UNSIGNED_SHORT, (const GLvoid
+</I>&gt;<i> *)(ebo-&gt;getOffset(getBufferIndex())), _numInstances);
+</I>&gt;<i>             else glDrawElements(mode, size(), GL_UNSIGNED_SHORT, (const
+</I>&gt;<i> GLvoid *)(ebo-&gt;getOffset(getBufferIndex())));
+</I>&gt;<i>         }
+</I>&gt;<i>         else
+</I>&gt;<i>         {
+</I>&gt;<i>             if (_numInstances&gt;=1) state.glDrawElementsInstanced(mode,
+</I>&gt;<i> size(), GL_UNSIGNED_SHORT, &amp;front(), _numInstances);
+</I>&gt;<i>             else glDrawElements(mode, size(), GL_UNSIGNED_SHORT, &amp;front());
+</I>&gt;<i>         }
+</I>&gt;<i>     }
+</I>&gt;<i>     else
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Does state.bindElementBufferObject(ebo); shouldn't be included in the
+</I>&gt;<i> if(ebo) test in case theres no index for the geometry?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Julien[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopice939.php?p=65052#65052">http://forum.openscenegraph.org/viewtopic.php?p=65052#65052</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150907/7a806f9c/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150907/7a806f9c/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277680.html">[osg-users] bug in primitiveset.cpp?
+</A></li>
+	<LI>Next message: <A HREF="001460.html">[osg-users] bug in primitiveset.cpp?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1459">[ date ]</a>
+              <a href="thread.html#1459">[ thread ]</a>
+              <a href="subject.html#1459">[ subject ]</a>
+              <a href="author.html#1459">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

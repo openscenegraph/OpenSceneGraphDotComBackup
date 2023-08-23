@@ -1,0 +1,35 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Thanks&nbsp;Robert.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;I&nbsp;hadn&#39;t&nbsp;actually&nbsp;considered&nbsp;the&nbsp;fact&nbsp;that&nbsp;the&nbsp;NodePath&nbsp;wouldn&#39;t&nbsp;be&nbsp;safe&nbsp;outside&nbsp;the&nbsp;main&nbsp;thread.&nbsp;What&nbsp;I&#39;ve&nbsp;now&nbsp;done&nbsp;is&nbsp;in&nbsp;a&nbsp;similar&nbsp;manner&nbsp;to&nbsp;the&nbsp;terrain&nbsp;pointer&nbsp;-&nbsp;I&nbsp;added&nbsp;a&nbsp;&quot;parent&nbsp;group&quot;&nbsp;pointer&nbsp;to&nbsp;the&nbsp;Options&nbsp;object,&nbsp;which&nbsp;is&nbsp;taken&nbsp;from&nbsp;the&nbsp;_group&nbsp;observer_ptr&nbsp;in&nbsp;the&nbsp;DatabaseRequest.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Then&nbsp;in&nbsp;our&nbsp;ReadFileCallback&nbsp;I&nbsp;can&nbsp;pass&nbsp;the&nbsp;parent&nbsp;group&nbsp;pointer&nbsp;off&nbsp;to&nbsp;the&nbsp;main&nbsp;thread,&nbsp;which&nbsp;can&nbsp;lock&nbsp;it,&nbsp;safely&nbsp;extract&nbsp;the&nbsp;NodePaths&nbsp;and&nbsp;return&nbsp;the&nbsp;results&nbsp;to&nbsp;the&nbsp;database&nbsp;pager&nbsp;thread.&nbsp;If&nbsp;the&nbsp;parent&nbsp;group&nbsp;has&nbsp;been&nbsp;removed&nbsp;or&nbsp;detached&nbsp;from&nbsp;the&nbsp;scenegraph&nbsp;before&nbsp;we&nbsp;can&nbsp;obtain&nbsp;the&nbsp;lock&nbsp;that&#39;s&nbsp;no&nbsp;problem&nbsp;-&nbsp;the&nbsp;loaded&nbsp;node&nbsp;isn&#39;t&nbsp;going&nbsp;to&nbsp;be&nbsp;inserted&nbsp;anyway.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;In&nbsp;this&nbsp;way&nbsp;we&nbsp;keep&nbsp;the&nbsp;heavy&nbsp;processing&nbsp;(~800ms)&nbsp;in&nbsp;the&nbsp;background&nbsp;thread,&nbsp;and&nbsp;only&nbsp;block&nbsp;the&nbsp;rendering&nbsp;thread&nbsp;for&nbsp;a&nbsp;minimal&nbsp;time&nbsp;-&nbsp;analysing&nbsp;the&nbsp;NodePaths&nbsp;is&nbsp;of&nbsp;course&nbsp;fast,&nbsp;and&nbsp;the&nbsp;change&nbsp;to&nbsp;OSG&nbsp;is&nbsp;minimal.&nbsp;&lt;br&gt;&lt;br&gt;&lt;/div&gt;best&nbsp;wishes&lt;br&gt;&lt;br&gt;&lt;/div&gt;Mike&lt;br&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;On&nbsp;Thu,&nbsp;28&nbsp;May&nbsp;2015&nbsp;at&nbsp;10:43&nbsp;Robert&nbsp;Osfield&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;Mike,&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;ReadFileCallback&nbsp;is&nbsp;an&nbsp;ideal&nbsp;place&nbsp;to&nbsp;modify&nbsp;the&nbsp;loaded&nbsp;scene&lt;br&gt;<br>
+graph&nbsp;as&nbsp;it&#39;s&nbsp;called&nbsp;from&nbsp;the&nbsp;database&nbsp;thread&nbsp;so&nbsp;won&#39;t&nbsp;impact&nbsp;the&lt;br&gt;<br>
+rendering&nbsp;performance. &nbsp;The&nbsp;only&nbsp;problem&nbsp;is&nbsp;that&nbsp;you&nbsp;are&nbsp;wanting&nbsp;to&lt;br&gt;<br>
+know&nbsp;where&nbsp;the&nbsp;loaded&nbsp;subgraph&nbsp;will&nbsp;be&nbsp;attached&nbsp;to&nbsp;the&nbsp;scene&nbsp;graph.&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;only&nbsp;info&nbsp;available&nbsp;about&nbsp;this&nbsp;in&nbsp;the&nbsp;ReadFileCallback&nbsp;is&nbsp;the&lt;br&gt;<br>
+Terrain&nbsp;pointer&nbsp;that&nbsp;the&nbsp;DatabasePager&nbsp;passes&nbsp;into&nbsp;the&nbsp;read&nbsp;call&nbsp;via&lt;br&gt;<br>
+the&nbsp;Options&nbsp;object. &nbsp;This&nbsp;Terrain&nbsp;pointer&nbsp;isn&#39;t&nbsp;the&nbsp;exact&nbsp;position&nbsp;the&lt;br&gt;<br>
+subgraph&nbsp;will&nbsp;be&nbsp;inserted,&nbsp;but&nbsp;for&nbsp;the&nbsp;purpose&nbsp;of&nbsp;osgTerrain&nbsp;it&#39;s&lt;br&gt;<br>
+sufficient&nbsp;for&nbsp;finding&nbsp;neighbouring&nbsp;tiles&nbsp;etc.&nbsp;to&nbsp;help&nbsp;with&nbsp;the&lt;br&gt;<br>
+tessellation&nbsp;process.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Providing&nbsp;the&nbsp;NodePath&nbsp;for&nbsp;the&nbsp;insertion&nbsp;point&nbsp;from&nbsp;the&nbsp;DatabasePager&lt;br&gt;<br>
+to&nbsp;the&nbsp;Options&nbsp;object&nbsp;to&nbsp;read&nbsp;operation&nbsp;is&nbsp;something&nbsp;I&nbsp;looked&nbsp;at&lt;br&gt;<br>
+previous,&nbsp;but&nbsp;this&nbsp;wasn&#39;t&nbsp;thread&nbsp;safe&nbsp;as&nbsp;the&nbsp;NodePath&nbsp;itself&nbsp;can&lt;br&gt;<br>
+become&nbsp;invalidated&nbsp;by&nbsp;other&nbsp;threads&nbsp;-&nbsp;sometimes&nbsp;the&nbsp;DatabasePager&nbsp;has&lt;br&gt;<br>
+to&nbsp;deal&nbsp;with&nbsp;the&nbsp;node&nbsp;it&nbsp;intends&nbsp;to&nbsp;add&nbsp;the&nbsp;new&nbsp;subgraph&nbsp;to&nbsp;have&nbsp;been&lt;br&gt;<br>
+already&nbsp;deleted,&nbsp;so&nbsp;has&nbsp;to&nbsp;discard&nbsp;to&nbsp;the&nbsp;new&nbsp;subgraph.&lt;br&gt;<br>
+&lt;br&gt;<br>
+One&nbsp;option&nbsp;open&nbsp;to&nbsp;you&nbsp;could&nbsp;be&nbsp;to&nbsp;subclass&nbsp;from&nbsp;DatabasePager&nbsp;and&lt;br&gt;<br>
+override&nbsp;the&nbsp;updateSceneGraph(..)&nbsp;method. &nbsp;Unfortunately&nbsp;this&nbsp;would&nbsp;be&lt;br&gt;<br>
+an&nbsp;operation&nbsp;done&nbsp;in&nbsp;the&nbsp;main&nbsp;thread&nbsp;so&nbsp;you&#39;d&nbsp;need&nbsp;to&nbsp;be&nbsp;careful&nbsp;about&lt;br&gt;<br>
+the&nbsp;costs&nbsp;involved.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Robert.&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;<br>
+
+</tt>

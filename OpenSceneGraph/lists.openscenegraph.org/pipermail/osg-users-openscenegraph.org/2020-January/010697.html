@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to access material properties from a GLSL shader?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20access%20material%20properties%20from%20a%20GLSL%0A%20shader%3F&In-Reply-To=%3CCAM8Fz%2BmB-TPGrfgOePKyQojNun31Qw7%2BQFhFHNKH8Y5WRggBRg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010678.html">
+   <LINK REL="Next"  HREF="010679.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to access material properties from a GLSL shader?</H1>
+<!--htdig_noindex-->
+    <B>Armin Samii</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20access%20material%20properties%20from%20a%20GLSL%0A%20shader%3F&In-Reply-To=%3CCAM8Fz%2BmB-TPGrfgOePKyQojNun31Qw7%2BQFhFHNKH8Y5WRggBRg%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to access material properties from a GLSL shader?">artoonie at gmail.com
+       </A><BR>
+    <I>Fri Jan 10 14:08:59 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010678.html">[osg-users] How to access material properties from a GLSL shader?
+</A></li>
+        <LI>Next message (by thread): <A HREF="010679.html">[osg-users] Clamping models to an osgTerrain
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10697">[ date ]</a>
+              <a href="thread.html#10697">[ thread ]</a>
+              <a href="subject.html#10697">[ subject ]</a>
+              <a href="author.html#10697">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks, Chris. Those materials are not available post-GLES 1.2, and I
+couldn't find anywhere in the OSG codebase that exposed materials as
+uniforms. I did find this:
+<A HREF="https://github.com/gwaldron/osgearth/blob/master/src/osgEarth/Lighting.cpp">https://github.com/gwaldron/osgearth/blob/master/src/osgEarth/Lighting.cpp</A>
+
+Which traverses the scene graph, finds Materials, and replaces them with
+Uniforms. I think that's a reasonable solution.
+
+- Armin
+
+On Wed, Jan 8, 2020 at 6:21 PM Chris Djali / AnyOldName3 &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">krizdjali at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> osg::Material pretty much encapsulates OpenGL's fixed-function material
+</I>&gt;<i> state, so things like glMaterialfv (that controls material settings for
+</I>&gt;<i> whole draw calls) and glColorMaterial (that controls what vertex colours
+</I>&gt;<i> actually affect). If you're using a suitably old GLSL version, you can
+</I>&gt;<i> access this state through the built-in uniforms. These aren't featured
+</I>&gt;<i> prominently in lots of the modern OpenGL documentation like the wiki as
+</I>&gt;<i> they're removed in modern OpenGL, but I have this bookmarked and it at
+</I>&gt;<i> least says what's there: <A HREF="http://mew.cx/glsl_quickref.pdf.">http://mew.cx/glsl_quickref.pdf.</A> Once you know
+</I>&gt;<i> an actual uniform name, relevant stuff should show up in a search engine.
+</I>&gt;<i> The one problem you'll hit is that there's no built-in uniform to say
+</I>&gt;<i> whether glColorMaterial is enabled or what mode it's in, so you'll have to
+</I>&gt;<i> set that up yourself with a uniform or shader define.
+</I>&gt;<i>
+</I>&gt;<i> I *think* that with the right combination of settings, OSG exposes
+</I>&gt;<i> similar uniforms in newer OpenGL/GLSL versions where the fixed function
+</I>&gt;<i> pipeline has been removed, so that's something to look into. I've never
+</I>&gt;<i> needed this, though, so don't know if it just happens when OSG is compiled
+</I>&gt;<i> with GL3 support, or whether there's more that you need to do.
+</I>&gt;<i>
+</I>&gt;<i> Hope this helps,
+</I>&gt;<i>
+</I>&gt;<i> Chris
+</I>&gt;<i>
+</I>&gt;<i> On Wednesday, 8 January 2020 22:53:28 UTC, Armin Samii wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Does openscenegraph provide easy access to osg::Material values in the
+</I>&gt;&gt;<i> shaders? If so, in which Uniforms are the various properties set? If not,
+</I>&gt;&gt;<i> is the best path forward to set my own Uniforms based on osg::Material?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> For context: I had an OBJ/MTL that loaded and rendered fine by default,
+</I>&gt;&gt;<i> but when I turn on `setUseVertexAttributeAliasing`, the texture coordinates
+</I>&gt;&gt;<i> seem to break. I am trying to replace the default rendering with my own
+</I>&gt;&gt;<i> shader instead, but can't reproduce the original look and feel. While
+</I>&gt;&gt;<i> texture coordinates and texture loading does work with shaders, I cannot
+</I>&gt;&gt;<i> seem to find how to access the colors specified in the MTL files.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> (A google search shows several results for &quot;openscenegraph material
+</I>&gt;&gt;<i> shaders&quot; which looks helpful, but they are all in the forum, which is now
+</I>&gt;&gt;<i> inaccessible. Apologies if this question has been asked and answered
+</I>&gt;&gt;<i> elsewhere.)
+</I>&gt;&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> You received this message because you are subscribed to the Google Groups
+</I>&gt;<i> &quot;OpenSceneGraph Users&quot; group.
+</I>&gt;<i> To unsubscribe from this group and stop receiving emails from it, send an
+</I>&gt;<i> email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+</I>&gt;<i> To view this discussion on the web visit
+</I>&gt;<i> <A HREF="https://groups.google.com/d/msgid/osg-users/5b4d4380-6d02-4726-a13f-2068c47d70d6%40googlegroups.com">https://groups.google.com/d/msgid/osg-users/5b4d4380-6d02-4726-a13f-2068c47d70d6%40googlegroups.com</A>
+</I>&gt;<i> &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/5b4d4380-6d02-4726-a13f-2068c47d70d6%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/5b4d4380-6d02-4726-a13f-2068c47d70d6%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt;
+</I>&gt;<i> .
+</I>&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/CAM8Fz+mB-TPGrfgOePKyQojNun31Qw7+QFhFHNKH8Y5WRggBRg%40mail.gmail.com.">https://groups.google.com/d/msgid/osg-users/CAM8Fz%2BmB-TPGrfgOePKyQojNun31Qw7%2BQFhFHNKH8Y5WRggBRg%40mail.gmail.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200110/5d44485e/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200110/5d44485e/attachment.html</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010678.html">[osg-users] How to access material properties from a GLSL shader?
+</A></li>
+	<LI>Next message (by thread): <A HREF="010679.html">[osg-users] Clamping models to an osgTerrain
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10697">[ date ]</a>
+              <a href="thread.html#10697">[ thread ]</a>
+              <a href="subject.html#10697">[ subject ]</a>
+              <a href="author.html#10697">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

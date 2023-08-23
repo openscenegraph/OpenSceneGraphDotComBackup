@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Offscreen rendering of large scenes
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Offscreen%20rendering%20of%20large%20scenes&In-Reply-To=%3C0ac99069-ec02-4af0-9f17-77743dcc871b%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010635.html">
+   <LINK REL="Next"  HREF="010636.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Offscreen rendering of large scenes</H1>
+<!--htdig_noindex-->
+    <B>Brad Colbert</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Offscreen%20rendering%20of%20large%20scenes&In-Reply-To=%3C0ac99069-ec02-4af0-9f17-77743dcc871b%40googlegroups.com%3E"
+       TITLE="[osg-users] Offscreen rendering of large scenes">bcolbert at rscusa.com
+       </A><BR>
+    <I>Fri Dec 20 15:54:06 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010635.html">[osg-users] Offscreen rendering of large scenes
+</A></li>
+        <LI>Next message (by thread): <A HREF="010636.html">[osg-users] DEEP_COPY_USERDATA isn't that deep
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10660">[ date ]</a>
+              <a href="thread.html#10660">[ thread ]</a>
+              <a href="subject.html#10660">[ subject ]</a>
+              <a href="author.html#10660">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Oh darn!  I had a good reply to this :)   Congrat's on the find!
+
+On Thursday, December 12, 2019 at 12:51:02 AM UTC-8, Philipp Wagner wrote:
+&gt;<i>
+</I>&gt;<i> Sorry, the issue has been that the camera automatically adjusted the near 
+</I>&gt;<i> and far plane when rendering the individual parts.
+</I>&gt;<i> Problem solved.
+</I>&gt;<i>
+</I>&gt;<i> Grettings,
+</I>&gt;<i> Phil
+</I>&gt;<i>
+</I>&gt;<i> Am Dienstag, 10. Dezember 2019 16:42:23 UTC+1 schrieb Philipp Wagner:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I want to perform an offscreen rendering of a scene that is too large to 
+</I>&gt;&gt;<i> fit into the GPU memory at once (lots of big textures).
+</I>&gt;&gt;<i> My idea was to render parts of the scene each in its own frame, and 
+</I>&gt;&gt;<i> disable the clearing of the depth and color buffer.
+</I>&gt;&gt;<i> This does work for the color buffer, but the depth buffer seems to be 
+</I>&gt;&gt;<i> cleared after each frame, which leads to incorrect results (The later parts 
+</I>&gt;&gt;<i> are drawn over the previous ones, even though they are behind the other 
+</I>&gt;&gt;<i> parts).
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The algorithm:
+</I>&gt;&gt;<i> 1. Create camera/context/...
+</I>&gt;&gt;<i> 2. Clear the buffers (i.e. Render an empty scene with a clear mask of 
+</I>&gt;&gt;<i> (GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT)
+</I>&gt;&gt;<i> 3. Disable buffer clearing
+</I>&gt;&gt;<i> 4. Render each part in its own frame
+</I>&gt;&gt;<i>  a. Add part to the scene
+</I>&gt;&gt;<i>  b. Render
+</I>&gt;&gt;<i>  c. Remove part from the scene
+</I>&gt;&gt;<i> 5. Read back color buffer
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> osg::ref_ptr&lt;::osg::Camera&gt; camera = new osg::Camera();
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> //Here we set the camera orientation/projection matrix
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> camera-&gt;setClearColor(...);
+</I>&gt;&gt;<i> camera-&gt;setGraphicsContext(context);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> osg::ref_ptr&lt;osg::Image&gt; img = new osg::Image;
+</I>&gt;&gt;<i> img-&gt;allocateImage(textureWidth, textureHeight, 1, GL_RGBA, 
+</I>&gt;&gt;<i> GL_UNSIGNED_BYTE);
+</I>&gt;&gt;<i> camera-&gt;attach(osg::Camera::COLOR_BUFFER0, img, numSamples);
+</I>&gt;&gt;<i> camera-&gt;attach(osg::Camera::DEPTH_BUFFER, GL_DEPTH_COMPONENT32);
+</I>&gt;&gt;<i> camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> camera-&gt;setRenderTargetImplementation(osg::Camera::RenderTargetImplementation::FRAME_BUFFER_OBJECT);
+</I>&gt;&gt;<i> camera-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+</I>&gt;&gt;<i> camera-&gt;setProjectionResizePolicy(osg::Camera::FIXED);
+</I>&gt;&gt;<i> camera-&gt;setViewport(0, 0, img-&gt;s(), img-&gt;t());
+</I>&gt;&gt;<i> viewer-&gt;addSlave(camera);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> camera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+</I>&gt;&gt;<i> viewer-&gt;frame();
+</I>&gt;&gt;<i> camera-&gt;setClearMask(0);
+</I>&gt;&gt;<i> for (auto&amp; item : parts)
+</I>&gt;&gt;<i> {
+</I>&gt;&gt;<i>    //Here we create and add the item to the scene...
+</I>&gt;&gt;<i>        viewer-&gt;frame();
+</I>&gt;&gt;<i>    //Here we remove item from the scene and delete it
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks in advance
+</I>&gt;&gt;<i> Phil
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/0ac99069-ec02-4af0-9f17-77743dcc871b%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/0ac99069-ec02-4af0-9f17-77743dcc871b%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191220/8ff8d3ed/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191220/8ff8d3ed/attachment.html</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010635.html">[osg-users] Offscreen rendering of large scenes
+</A></li>
+	<LI>Next message (by thread): <A HREF="010636.html">[osg-users] DEEP_COPY_USERDATA isn't that deep
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10660">[ date ]</a>
+              <a href="thread.html#10660">[ thread ]</a>
+              <a href="subject.html#10660">[ subject ]</a>
+              <a href="author.html#10660">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

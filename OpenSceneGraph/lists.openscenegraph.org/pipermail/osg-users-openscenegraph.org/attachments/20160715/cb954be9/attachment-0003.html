@@ -1,0 +1,83 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;David,&lt;div&gt;This&nbsp;may&nbsp;or&nbsp;may&nbsp;not&nbsp;be&nbsp;helpful,&nbsp;but&nbsp;a&nbsp;while&nbsp;back&nbsp;I&nbsp;made&nbsp;a&nbsp;bindless&nbsp;version&nbsp;of&nbsp;osg::Texture2D&nbsp;here&nbsp;you&nbsp;can&nbsp;look&nbsp;at.&nbsp;It&#39;s&nbsp;mostly&nbsp;a&nbsp;experiment&nbsp;but&nbsp;you&nbsp;might&nbsp;be&nbsp;able&nbsp;to&nbsp;glean&nbsp;something&nbsp;front&nbsp;it:&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;a&nbsp;href=&quot;https://github.com/gwaldron/osgearth/blob/bindless/src/osgEarth/Texture&quot;&gt;https://github.com/gwaldron/osgearth/blob/bindless/src/osgEarth/Texture&lt;/a&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;a&nbsp;href=&quot;https://github.com/gwaldron/osgearth/blob/bindless/src/osgEarth/Texture.cpp&quot;&gt;https://github.com/gwaldron/osgearth/blob/bindless/src/osgEarth/Texture.cpp&lt;/a&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;div&nbsp;class=&quot;gmail_signature&quot;&nbsp;data-smartmail=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;Glenn&nbsp;Waldron&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;<br>
+&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;Fri,&nbsp;Jul&nbsp;15,&nbsp;2016&nbsp;at&nbsp;10:21&nbsp;AM,&nbsp;David&nbsp;Heitbrink&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:david-heitbrink@uiowa.edu&quot;&nbsp;target=&quot;_blank&quot;&gt;david-heitbrink@uiowa.edu&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Has&nbsp;any&nbsp;one&nbsp;implemented&nbsp;bindless&nbsp;textures?&nbsp;I&nbsp;am&nbsp;trying&nbsp;to&nbsp;add&nbsp;this&nbsp;to&nbsp;my&nbsp;app&nbsp;to&nbsp;improve&nbsp;batching.&nbsp;I&nbsp;have&nbsp;a&nbsp;large&nbsp;scene,&nbsp;with&nbsp;lots&nbsp;of&nbsp;unique&nbsp;draw&nbsp;calls.&nbsp;We&nbsp;do&nbsp;use&nbsp;texture&nbsp;atlas&#39;s,&nbsp;the&nbsp;number&nbsp;of&nbsp;small&nbsp;objects&nbsp;is&nbsp;limited.&nbsp;I&nbsp;would&nbsp;like&nbsp;to&nbsp;further&nbsp;improve&nbsp;batching&nbsp;without&nbsp;having&nbsp;to&nbsp;redo&nbsp;textures.&nbsp;I&nbsp;do&nbsp;have&nbsp;LODs&nbsp;and&nbsp;occluder&nbsp;nodes&nbsp;as&nbsp;well.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Conveniently&nbsp;most&nbsp;of&nbsp;my&nbsp;objects&nbsp;use&nbsp;triangle&nbsp;list,&nbsp;so&nbsp;merging&nbsp;those&nbsp;worked&nbsp;out&nbsp;pretty&nbsp;well.&nbsp;I&nbsp;am&nbsp;using&nbsp;a&nbsp;shader&nbsp;storage&nbsp;buffer&nbsp;object&nbsp;to&nbsp;upload&nbsp;the&nbsp;texture&nbsp;handles&nbsp;to&nbsp;the&nbsp;shader.&nbsp;I&nbsp;have&nbsp;confirmed&nbsp;the&nbsp;value&nbsp;for&nbsp;the&nbsp;handles&nbsp;that&nbsp;I&nbsp;have&nbsp;set&nbsp;are&nbsp;getting&nbsp;into&nbsp;the&nbsp;shader.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Here&nbsp;is&nbsp;the&nbsp;segment&nbsp;of&nbsp;my&nbsp;shader&nbsp;where&nbsp;I&nbsp;get&nbsp;the&nbsp;texture:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+layout&nbsp;(binding&nbsp;=&nbsp;0,&nbsp;std140)&nbsp;coherent&nbsp;buffer&nbsp;TEXTURE_BLOCK&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;uint64_t &nbsp; &nbsp; &nbsp;tex[512];&lt;br&gt;<br>
+};&lt;br&gt;<br>
+uniform&nbsp;int&nbsp;textureIndex;&lt;br&gt;<br>
+void&nbsp;doTexture(inout&nbsp;vec4&nbsp;color)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; sampler2D&nbsp;s&nbsp;=&nbsp;sampler2D(tex[textureIndex]);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; vec4&nbsp;texel&nbsp;=&nbsp;texture2D(s,TexCoord[0]);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; color.rgb&nbsp;=&nbsp;texel.rgb*color.rgb;&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;have&nbsp;a&nbsp;draw&nbsp;call&nbsp;back&nbsp;that&nbsp;grabs&nbsp;the&nbsp;extensions:&lt;br&gt;<br>
+glGetTextureHandleARB&lt;br&gt;<br>
+glMakeTextureHandleResidentARB&lt;br&gt;<br>
+&lt;br&gt;<br>
+Also&nbsp;it&nbsp;grabs&nbsp;the&nbsp;texture&nbsp;handles,&nbsp;I&nbsp;have&nbsp;visitor&nbsp;go&nbsp;and&nbsp;grab&nbsp;references&nbsp;to&nbsp;all&nbsp;the&nbsp;relevant&nbsp;textures&nbsp;(when&nbsp;the&nbsp;scene&nbsp;is&nbsp;loaded&nbsp;and&nbsp;the&nbsp;objects&nbsp;are&nbsp;merged),&nbsp;and&nbsp;I&nbsp;do:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::UIntArray*&nbsp;array&nbsp;=&nbsp;static_cast&lt;osg::UIntArray*&gt;(m_ssbo-&gt;getBufferData(0));&lt;br&gt;<br>
+ &nbsp; &nbsp;vector&lt;GLuint&gt;&nbsp;&amp;rawData&nbsp;=&nbsp;array-&gt;asVector();&lt;br&gt;<br>
+ &nbsp; &nbsp;GLuint64*&nbsp;raw64ptr&nbsp;=&nbsp;(GLuint64*)(rawData.data());&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(!bindings)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;return&nbsp;false;&lt;br&gt;<br>
+ &nbsp; &nbsp;for&nbsp;(auto&nbsp;itr&nbsp;=&nbsp;m_textureIdMap.begin();&nbsp;itr&nbsp;!=&nbsp;m_textureIdMap.end();&nbsp;++itr){&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::Texture*&nbsp;text= &nbsp; m_textureMap[itr-&gt;first];&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;int&nbsp;id&nbsp;=&nbsp;itr-&gt;second;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;auto&nbsp;textObject &nbsp;=&nbsp;text-&gt;getTextureObject(rinfo.getContextID());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; if&nbsp;(!textObject){&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; text-&gt;apply(*rinfo.getState());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; textObject &nbsp;=&nbsp;text-&gt;getTextureObject(rinfo.getContextID());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; if&nbsp;(!textObject)&nbsp;return&nbsp;false;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; }&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; uint64&nbsp;textId&nbsp;=&nbsp;glGetTextureHandleARB(textObject-&gt;_id);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; if&nbsp;(glIsTextureHandleResidentARB(textId)==GL_FALSE)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;glMakeTextureHandleResidentARB(textObject-&gt;_id);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; raw64ptr[id]&nbsp;=&nbsp;textId;&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Right&nbsp;now&nbsp;I&nbsp;am&nbsp;getting&nbsp;black&nbsp;for&nbsp;my&nbsp;texture,&nbsp;I&nbsp;cycle&nbsp;through&nbsp;textureIndex&nbsp;from&nbsp;my&nbsp;first&nbsp;texture&nbsp;to&nbsp;my&nbsp;last,&nbsp;I&nbsp;plan&nbsp;on&nbsp;replacing&nbsp;this&nbsp;with&nbsp;an&nbsp;attribute&nbsp;later,&nbsp;but&nbsp;there&nbsp;is&nbsp;not&nbsp;much&nbsp;point&nbsp;right&nbsp;now&nbsp;if&nbsp;I&nbsp;cannot&nbsp;get&nbsp;any&nbsp;textures&nbsp;to&nbsp;show&nbsp;up.&nbsp;If&nbsp;I&nbsp;do&nbsp;get&nbsp;this&nbsp;to&nbsp;work&nbsp;I&nbsp;do&nbsp;plan&nbsp;on&nbsp;building&nbsp;an&nbsp;example&nbsp;app&nbsp;and&nbsp;submitting&nbsp;it.&lt;br&gt;<br>
+&lt;br&gt;<br>
+#version&nbsp;430&nbsp;compatibility&lt;br&gt;<br>
+#extension&nbsp;GL_NV_bindless_texture&nbsp;:&nbsp;require&lt;br&gt;<br>
+#extension&nbsp;GL_NV_shader_buffer_load&nbsp;:&nbsp;require&lt;br&gt;<br>
+#extension&nbsp;GL_NV_gpu_shader5&nbsp;:&nbsp;require&nbsp;//&nbsp;uint64_t&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;am&nbsp;not&nbsp;sure&nbsp;doing&nbsp;a&nbsp;apply()&nbsp;to&nbsp;the&nbsp;texture&nbsp;and&nbsp;grabbing&nbsp;the&nbsp;id&nbsp;is&nbsp;the&nbsp;best&nbsp;idea.&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;am&nbsp;using&nbsp;OSG&nbsp;3.4.0,&nbsp;I&nbsp;did&nbsp;make&nbsp;some&nbsp;modifications&nbsp;to&nbsp;support&nbsp;unsigned&nbsp;64&nbsp;bit&nbsp;uniforms,&nbsp;and&nbsp;to&nbsp;built&nbsp;OSG&nbsp;built-ins&nbsp;to&nbsp;after&nbsp;the&nbsp;last&nbsp;#extension.&nbsp;I&nbsp;have&nbsp;not&nbsp;checked&nbsp;to&nbsp;see&nbsp;if&nbsp;some&nbsp;has&nbsp;added&nbsp;this&nbsp;to&nbsp;the&nbsp;most&nbsp;recent&nbsp;development&nbsp;branch,&nbsp;if&nbsp;not&nbsp;I&nbsp;would&nbsp;gladly&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=68142#68142&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=68142#68142&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

@@ -1,0 +1,475 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Normal Mapping using Dynamic Cubemap
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Normal%20Mapping%20using%20Dynamic%20Cubemap&In-Reply-To=%3C6e90baa2-4b83-c5b7-7cde-b585faae3b62%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007445.html">
+   <LINK REL="Next"  HREF="007419.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Normal Mapping using Dynamic Cubemap</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Normal%20Mapping%20using%20Dynamic%20Cubemap&In-Reply-To=%3C6e90baa2-4b83-c5b7-7cde-b585faae3b62%40gmx.de%3E"
+       TITLE="[osg-users] Normal Mapping using Dynamic Cubemap">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Wed Dec 27 03:50:27 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007445.html">[osg-users] Normal Mapping using Dynamic Cubemap
+</A></li>
+        <LI>Next message (by thread): <A HREF="007419.html">[osg-users] Trying to understand GraphicsWindow system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7449">[ date ]</a>
+              <a href="thread.html#7449">[ thread ]</a>
+              <a href="subject.html#7449">[ subject ]</a>
+              <a href="author.html#7449">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+Hi R&#244;mulo,
+
+I already tried to describe the building-blocks for the way:
+
+1. Render to FBO with MRT (see osgmultiplerendertargets example for 
+this). The MRT/FBO-attachments should be your color, normal and depth.
+You'll need to use a shader that writes the correct information to the 
+correct buffers. That's all in the example. Basically that's deferred 
+rendering's approach. An example by Michael Kapelko can be found here: [0].
+
+2. Once you understand how to render to one FBO you can use your 
+approach to render to the individual faces of your cubemap.
+
+You need to learn the basics. Pasting source code might not attract a 
+lot of attention, so please try to follow my hints before asking the 
+question over and over.
+
+
+[0] 
+<A HREF="https://bitbucket.org/kornerr/osg-deferred-shading/src/5b8555059707?at=default">https://bitbucket.org/kornerr/osg-deferred-shading/src/5b8555059707?at=default</A>
+
+
+Cheers
+Sebastian
+
+
+
+Am 26.12.2017 um 18:17 schrieb R&#244;mulo Cerqueira:
+&gt;<i> Hi Roberto and Sebastian,
+</I>&gt;<i> 
+</I>&gt;<i> sorry for my duplicated post. I need to render the depth/normal surface to texture of reflected objects by cube maps.
+</I>&gt;<i> 
+</I>&gt;<i> Until this moment, I got the depth data. Could you help me to get the normal data too (as single channel data). My current code follows below:
+</I>&gt;<i> 
+</I>&gt;<i> C++ code:
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> 
+</I>&gt;<i> // OSG includes
+</I>&gt;<i> #include &lt;osgViewer/Viewer&gt;
+</I>&gt;<i> #include &lt;osg/Texture&gt;
+</I>&gt;<i> #include &lt;osg/TexGen&gt;
+</I>&gt;<i> #include &lt;osg/Geode&gt;
+</I>&gt;<i> #include &lt;osg/ShapeDrawable&gt;
+</I>&gt;<i> #include &lt;osg/TextureCubeMap&gt;
+</I>&gt;<i> #include &lt;osg/TexMat&gt;
+</I>&gt;<i> #include &lt;osg/MatrixTransform&gt;
+</I>&gt;<i> #include &lt;osg/PositionAttitudeTransform&gt;
+</I>&gt;<i> #include &lt;osg/Camera&gt;
+</I>&gt;<i> #include &lt;osg/TexGenNode&gt;
+</I>&gt;<i> #include &lt;osgDB/FileUtils&gt;
+</I>&gt;<i> 
+</I>&gt;<i> // C++ includes
+</I>&gt;<i> #include &lt;iostream&gt;
+</I>&gt;<i> 
+</I>&gt;<i> #define SHADER_PATH_FRAG &quot;normal_depth_map/shaders/normalDepthMap.frag&quot;
+</I>&gt;<i> #define SHADER_PATH_VERT &quot;normal_depth_map/shaders/normalDepthMap.vert&quot;
+</I>&gt;<i> 
+</I>&gt;<i> #define BOOST_TEST_MODULE &quot;DynamicCubeMap_test&quot;
+</I>&gt;<i> 
+</I>&gt;<i> using namespace osg;
+</I>&gt;<i> 
+</I>&gt;<i> unsigned int numTextures = 6;
+</I>&gt;<i> 
+</I>&gt;<i> enum TextureUnitTypes {
+</I>&gt;<i>      TEXTURE_UNIT_DIFFUSE,
+</I>&gt;<i>      TEXTURE_UNIT_NORMAL,
+</I>&gt;<i>      TEXTURE_UNIT_CUBEMAP
+</I>&gt;<i> };
+</I>&gt;<i> 
+</I>&gt;<i> osg::ref_ptr&lt;osg::Group&gt; _create_scene() {
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Group&gt; scene = new osg::Group;
+</I>&gt;<i> 
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+</I>&gt;<i>      scene-&gt;addChild(geode.get());
+</I>&gt;<i> 
+</I>&gt;<i>      const float radius = 0.8f;
+</I>&gt;<i>      const float height = 1.0f;
+</I>&gt;<i>      osg::ref_ptr&lt;osg::ShapeDrawable&gt; shape;
+</I>&gt;<i> 
+</I>&gt;<i>      // sphere
+</I>&gt;<i>      shape = new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(-3.0f, 0.0f, 0.0f), radius));
+</I>&gt;<i>      shape-&gt;setColor(osg::Vec4(0.6f, 0.8f, 0.8f, 1.0f));
+</I>&gt;<i>      geode-&gt;addDrawable(shape.get());
+</I>&gt;<i> 
+</I>&gt;<i>      // box
+</I>&gt;<i>      shape = new osg::ShapeDrawable(new osg::Box(osg::Vec3(3.0f, 0.0f, 0.0f), 2 * radius));
+</I>&gt;<i>      shape-&gt;setColor(osg::Vec4(0.4f, 0.9f, 0.3f, 1.0f));
+</I>&gt;<i>      geode-&gt;addDrawable(shape.get());
+</I>&gt;<i> 
+</I>&gt;<i>      // cone
+</I>&gt;<i>      shape = new osg::ShapeDrawable(new osg::Cylinder(osg::Vec3(0.0f, 0.0f, -3.0f), radius, height));
+</I>&gt;<i>      shape-&gt;setColor(osg::Vec4(1.0f, 0.3f, 0.3f, 1.0f));
+</I>&gt;<i>      geode-&gt;addDrawable(shape.get());
+</I>&gt;<i> 
+</I>&gt;<i>      // cylinder
+</I>&gt;<i>      shape = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0.0f, 0.0f, 3.0f), 2* radius));
+</I>&gt;<i>      shape-&gt;setColor(osg::Vec4(0.8f, 0.8f, 0.4f, 1.0f));
+</I>&gt;<i>      geode-&gt;addDrawable(shape.get());
+</I>&gt;<i> 
+</I>&gt;<i>      return scene;
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> osg::NodePath createReflector() {
+</I>&gt;<i>      Geode* node = new Geode;
+</I>&gt;<i>      const float radius = 0.8f;
+</I>&gt;<i>      ref_ptr&lt;TessellationHints&gt; hints = new TessellationHints;
+</I>&gt;<i>      hints-&gt;setDetailRatio(2.0f);
+</I>&gt;<i>      ShapeDrawable* shape = new ShapeDrawable(new Sphere(Vec3(0.0f, 0.0f, 0.0f), radius * 1.5f), hints.get());
+</I>&gt;<i>      shape-&gt;setColor(Vec4(0.8f, 0.8f, 0.8f, 1.0f));
+</I>&gt;<i>      node-&gt;addDrawable(shape);
+</I>&gt;<i> 
+</I>&gt;<i>      osg::NodePath nodeList;
+</I>&gt;<i>      nodeList.push_back(node);
+</I>&gt;<i> 
+</I>&gt;<i>      return nodeList;
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> class UpdateCameraAndTexGenCallback : public osg::NodeCallback
+</I>&gt;<i> {
+</I>&gt;<i>      public:
+</I>&gt;<i> 
+</I>&gt;<i>          typedef std::vector&lt; osg::ref_ptr&lt;osg::Camera&gt; &gt;  CameraList;
+</I>&gt;<i> 
+</I>&gt;<i>          UpdateCameraAndTexGenCallback(osg::NodePath&amp; reflectorNodePath, CameraList&amp; Cameras):
+</I>&gt;<i>              _reflectorNodePath(reflectorNodePath),
+</I>&gt;<i>              _Cameras(Cameras)
+</I>&gt;<i>          {
+</I>&gt;<i>          }
+</I>&gt;<i> 
+</I>&gt;<i>          virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+</I>&gt;<i>          {
+</I>&gt;<i>              // first update subgraph to make sure objects are all moved into position
+</I>&gt;<i>              traverse(node,nv);
+</I>&gt;<i> 
+</I>&gt;<i>              // compute the position of the center of the reflector subgraph
+</I>&gt;<i>              osg::Matrixd worldToLocal = osg::computeWorldToLocal(_reflectorNodePath);
+</I>&gt;<i>              osg::BoundingSphere bs = _reflectorNodePath.back()-&gt;getBound();
+</I>&gt;<i>              osg::Vec3 position = bs.center();
+</I>&gt;<i> 
+</I>&gt;<i>              typedef std::pair&lt;osg::Vec3, osg::Vec3&gt; ImageData;
+</I>&gt;<i>              const ImageData id[] =
+</I>&gt;<i>              {
+</I>&gt;<i>                  ImageData( osg::Vec3( 1,  0,  0), osg::Vec3( 0, -1,  0) ), // +X
+</I>&gt;<i>                  ImageData( osg::Vec3(-1,  0,  0), osg::Vec3( 0, -1,  0) ), // -X
+</I>&gt;<i>                  ImageData( osg::Vec3( 0,  1,  0), osg::Vec3( 0,  0,  1) ), // +Y
+</I>&gt;<i>                  ImageData( osg::Vec3( 0, -1,  0), osg::Vec3( 0,  0, -1) ), // -Y
+</I>&gt;<i>                  ImageData( osg::Vec3( 0,  0,  1), osg::Vec3( 0, -1,  0) ), // +Z
+</I>&gt;<i>                  ImageData( osg::Vec3( 0,  0, -1), osg::Vec3( 0, -1,  0) )  // -Z
+</I>&gt;<i>              };
+</I>&gt;<i> 
+</I>&gt;<i>              for(unsigned int i = 0; i &lt; 6 &amp;&amp; i &lt; _Cameras.size(); ++i) {
+</I>&gt;<i>                  osg::Matrix localOffset;
+</I>&gt;<i>                  localOffset.makeLookAt(position,position+id[i].first,id[i].second);
+</I>&gt;<i> 
+</I>&gt;<i>                  osg::Matrix viewMatrix = worldToLocal*localOffset;
+</I>&gt;<i> 
+</I>&gt;<i>                  _Cameras[i]-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+</I>&gt;<i>                  _Cameras[i]-&gt;setProjectionMatrixAsFrustum(-1.0,1.0,-1.0,1.0,1.0,10000.0);
+</I>&gt;<i>                  _Cameras[i]-&gt;setViewMatrix(viewMatrix);
+</I>&gt;<i>              }
+</I>&gt;<i>          }
+</I>&gt;<i> 
+</I>&gt;<i>      protected:
+</I>&gt;<i> 
+</I>&gt;<i>          virtual ~UpdateCameraAndTexGenCallback() {}
+</I>&gt;<i> 
+</I>&gt;<i>          osg::NodePath               _reflectorNodePath;
+</I>&gt;<i>          CameraList                  _Cameras;
+</I>&gt;<i> };
+</I>&gt;<i> 
+</I>&gt;<i> class TexMatCullCallback : public osg::NodeCallback
+</I>&gt;<i> {
+</I>&gt;<i>      public:
+</I>&gt;<i> 
+</I>&gt;<i>          TexMatCullCallback(osg::TexMat* texmat):
+</I>&gt;<i>              _texmat(texmat)
+</I>&gt;<i>          {
+</I>&gt;<i>          }
+</I>&gt;<i> 
+</I>&gt;<i>          virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+</I>&gt;<i>          {
+</I>&gt;<i>              // first update subgraph to make sure objects are all moved into position
+</I>&gt;<i>              traverse(node,nv);
+</I>&gt;<i> 
+</I>&gt;<i>              osgUtil::CullVisitor* cv = dynamic_cast&lt;osgUtil::CullVisitor*&gt;(nv);
+</I>&gt;<i>              if (cv)
+</I>&gt;<i>              {
+</I>&gt;<i> 				osg::Quat q = osg::Matrix::inverse(*cv-&gt;getModelViewMatrix()).getRotate();
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 				float yaw2 = asin(-2.0f*(q.x()*q.z() - q.w()*q.y()));
+</I>&gt;<i> 				osg::Matrixd mxY;
+</I>&gt;<i> 				mxY.makeRotate(yaw2,osg::Vec3(0,0,1));
+</I>&gt;<i> 
+</I>&gt;<i> 				osg::Matrixd mx = mxY;
+</I>&gt;<i>                  _texmat-&gt;setMatrix(mx);
+</I>&gt;<i>              }
+</I>&gt;<i>          }
+</I>&gt;<i> 
+</I>&gt;<i>      protected:
+</I>&gt;<i> 
+</I>&gt;<i>          osg::ref_ptr&lt;TexMat&gt;    _texmat;
+</I>&gt;<i> };
+</I>&gt;<i> 
+</I>&gt;<i> class UpdateCameraPosUniformCallback : public osg::Uniform::Callback
+</I>&gt;<i> {
+</I>&gt;<i> public:
+</I>&gt;<i> 	UpdateCameraPosUniformCallback(osg::Camera* camera)
+</I>&gt;<i> 		: mCamera(camera)
+</I>&gt;<i> 	{
+</I>&gt;<i> 	}
+</I>&gt;<i> 
+</I>&gt;<i> 	virtual void operator () (osg::Uniform* u, osg::NodeVisitor*)
+</I>&gt;<i> 	{
+</I>&gt;<i> 		osg::Vec3 eye;
+</I>&gt;<i> 		osg::Vec3 center;
+</I>&gt;<i> 		osg::Vec3 up;
+</I>&gt;<i> 		mCamera-&gt;getViewMatrixAsLookAt(eye,center,up);
+</I>&gt;<i> 
+</I>&gt;<i> 		u-&gt;set(eye);
+</I>&gt;<i> 	}
+</I>&gt;<i> protected:
+</I>&gt;<i> 	osg::Camera* mCamera;
+</I>&gt;<i> };
+</I>&gt;<i> 
+</I>&gt;<i> osg::Group* createShadowedScene(osg::Node* reflectedSubgraph, osg::NodePath reflectorNodePath, unsigned int unit, const osg::Vec4&amp; clearColor, unsigned tex_width, unsigned tex_height, osg::Camera::RenderTargetImplementation renderImplementation, osg::Camera* camera = 0) {
+</I>&gt;<i>      osg::Group* group = new osg::Group;
+</I>&gt;<i> 
+</I>&gt;<i>      osg::TextureCubeMap* texture = new osg::TextureCubeMap;
+</I>&gt;<i>      texture-&gt;setTextureSize(tex_width, tex_height);
+</I>&gt;<i>      texture-&gt;setInternalFormat(GL_DEPTH_COMPONENT);
+</I>&gt;<i>      texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+</I>&gt;<i>      texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+</I>&gt;<i>      texture-&gt;setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+</I>&gt;<i>      texture-&gt;setFilter(osg::TextureCubeMap::MIN_FILTER,osg::TextureCubeMap::LINEAR);
+</I>&gt;<i>      texture-&gt;setFilter(osg::TextureCubeMap::MAG_FILTER,osg::TextureCubeMap::LINEAR);
+</I>&gt;<i> 
+</I>&gt;<i>      // set up the render to texture cameras.
+</I>&gt;<i>      UpdateCameraAndTexGenCallback::CameraList Cameras;
+</I>&gt;<i>      for(unsigned int i = 0; i &lt; 6; ++i) {
+</I>&gt;<i>          // create the camera
+</I>&gt;<i>          osg::Camera* camera = new osg::Camera;
+</I>&gt;<i> 
+</I>&gt;<i>          camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+</I>&gt;<i>          camera-&gt;setClearColor(clearColor);
+</I>&gt;<i> 
+</I>&gt;<i>          // set viewport
+</I>&gt;<i>          camera-&gt;setViewport(0,0,tex_width,tex_height);
+</I>&gt;<i> 
+</I>&gt;<i>          // set the camera to render before the main camera.
+</I>&gt;<i>          camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+</I>&gt;<i> 
+</I>&gt;<i>          // tell the camera to use OpenGL frame buffer object where supported.
+</I>&gt;<i>          camera-&gt;setRenderTargetImplementation(renderImplementation);
+</I>&gt;<i> 
+</I>&gt;<i>          // attach the texture and use it as the color buffer.
+</I>&gt;<i>          camera-&gt;attach(osg::Camera::DEPTH_BUFFER, texture, 0, i);
+</I>&gt;<i> 
+</I>&gt;<i>          // add subgraph to render
+</I>&gt;<i>          camera-&gt;addChild(reflectedSubgraph);
+</I>&gt;<i> 
+</I>&gt;<i>          group-&gt;addChild(camera);
+</I>&gt;<i> 
+</I>&gt;<i>          Cameras.push_back(camera);
+</I>&gt;<i>      }
+</I>&gt;<i> 
+</I>&gt;<i>      // create the texgen node to project the tex coords onto the subgraph
+</I>&gt;<i>      osg::TexGenNode* texgenNode = new osg::TexGenNode;
+</I>&gt;<i>      texgenNode-&gt;getTexGen()-&gt;setMode(osg::TexGen::REFLECTION_MAP);
+</I>&gt;<i>      texgenNode-&gt;setTextureUnit(unit);
+</I>&gt;<i>      group-&gt;addChild(texgenNode);
+</I>&gt;<i> 
+</I>&gt;<i>      // set the reflected subgraph so that it uses the texture and tex gen settings.
+</I>&gt;<i> 	osg::Node* reflectorNode = reflectorNodePath.front();
+</I>&gt;<i>      {
+</I>&gt;<i> 
+</I>&gt;<i>          group-&gt;addChild(reflectorNode);
+</I>&gt;<i> 
+</I>&gt;<i>          osg::StateSet* stateset = reflectorNode-&gt;getOrCreateStateSet();
+</I>&gt;<i> 		stateset-&gt;setTextureAttributeAndModes(unit,texture,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+</I>&gt;<i>          stateset-&gt;setTextureMode(unit,GL_TEXTURE_GEN_S,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+</I>&gt;<i>          stateset-&gt;setTextureMode(unit,GL_TEXTURE_GEN_T,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+</I>&gt;<i>          stateset-&gt;setTextureMode(unit,GL_TEXTURE_GEN_R,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+</I>&gt;<i>          stateset-&gt;setTextureMode(unit,GL_TEXTURE_GEN_Q,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+</I>&gt;<i> 
+</I>&gt;<i>          osg::TexMat* texmat = new osg::TexMat;
+</I>&gt;<i>          stateset-&gt;setTextureAttributeAndModes(unit,texmat,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+</I>&gt;<i> 
+</I>&gt;<i>          reflectorNode-&gt;setCullCallback(new TexMatCullCallback(texmat));
+</I>&gt;<i>      }
+</I>&gt;<i> 
+</I>&gt;<i> 	osg::StateSet* ss = reflectorNode-&gt;getOrCreateStateSet();
+</I>&gt;<i> 	ss-&gt;setTextureAttributeAndModes(unit,texture,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+</I>&gt;<i> 
+</I>&gt;<i> 	osg::Program* program = new osg::Program;
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Shader&gt; shaderVertex = osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(SHADER_PATH_VERT));
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Shader&gt; shaderFragment = osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(SHADER_PATH_FRAG));
+</I>&gt;<i>      program-&gt;addShader(shaderFragment);
+</I>&gt;<i>      program-&gt;addShader(shaderVertex);
+</I>&gt;<i>      ss-&gt;setAttributeAndModes( program, osg::StateAttribute::ON );
+</I>&gt;<i> 	ss-&gt;addUniform( new osg::Uniform(&quot;cubeMap&quot;, unit) );
+</I>&gt;<i> 
+</I>&gt;<i> 	osg::Uniform* u = new osg::Uniform(&quot;cameraPos&quot;,osg::Vec3());
+</I>&gt;<i> 	u-&gt;setUpdateCallback( new UpdateCameraPosUniformCallback( camera ) );
+</I>&gt;<i> 	ss-&gt;addUniform( u );
+</I>&gt;<i> 
+</I>&gt;<i>      // add the reflector scene to draw just as normal
+</I>&gt;<i>      group-&gt;addChild(reflectedSubgraph);
+</I>&gt;<i> 
+</I>&gt;<i>      // set an update callback to keep moving the camera and tex gen in the right direction.
+</I>&gt;<i>      group-&gt;setUpdateCallback(new UpdateCameraAndTexGenCallback(reflectorNodePath, Cameras));
+</I>&gt;<i> 
+</I>&gt;<i>      return group;
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> int main() {
+</I>&gt;<i>      // construct the viewer.
+</I>&gt;<i>      osgViewer::Viewer viewer;
+</I>&gt;<i> 
+</I>&gt;<i>      unsigned tex_width = 256;
+</I>&gt;<i>      unsigned tex_height = 256;
+</I>&gt;<i> 
+</I>&gt;<i>      osg::Camera::RenderTargetImplementation renderImplementation = osg::Camera::FRAME_BUFFER_OBJECT;
+</I>&gt;<i> 
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Group&gt; scene = new osg::Group;
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Group&gt; reflectedSubgraph = _create_scene();
+</I>&gt;<i>      if (!reflectedSubgraph.valid()) exit(0);
+</I>&gt;<i> 
+</I>&gt;<i>      osg::ref_ptr&lt;osg::Group&gt; reflectedScene = createShadowedScene(
+</I>&gt;<i> 			reflectedSubgraph.get(),
+</I>&gt;<i> 			createReflector(),
+</I>&gt;<i> 			TEXTURE_UNIT_CUBEMAP,
+</I>&gt;<i> 			viewer.getCamera()-&gt;getClearColor(),
+</I>&gt;<i>              tex_width,
+</I>&gt;<i> 			tex_height,
+</I>&gt;<i> 			renderImplementation,
+</I>&gt;<i> 			viewer.getCamera());
+</I>&gt;<i> 
+</I>&gt;<i>      scene-&gt;addChild(reflectedScene.get());
+</I>&gt;<i>      viewer.setSceneData(scene.get());
+</I>&gt;<i>      viewer.setUpViewInWindow(0,0,600,600);
+</I>&gt;<i>      viewer.run();
+</I>&gt;<i>      return 0;
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Vertex Shader:
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> #version 130
+</I>&gt;<i> 
+</I>&gt;<i> uniform mat4 osg_ViewMatrixInverse;
+</I>&gt;<i> uniform vec3 cameraPos;
+</I>&gt;<i> 
+</I>&gt;<i> void main() {
+</I>&gt;<i>      gl_Position = ftransform();
+</I>&gt;<i>      gl_TexCoord[0] = gl_MultiTexCoord0;
+</I>&gt;<i>      mat4 ModelWorld4x4 = osg_ViewMatrixInverse * gl_ModelViewMatrix;
+</I>&gt;<i>      mat3 ModelWorld3x3 = mat3( ModelWorld4x4 );
+</I>&gt;<i>      vec4 WorldPos = ModelWorld4x4 *  gl_Vertex;
+</I>&gt;<i>      vec3 N = normalize( ModelWorld3x3 * gl_Normal );
+</I>&gt;<i>      vec3 E = normalize( WorldPos.xyz - cameraPos.xyz );
+</I>&gt;<i>      gl_TexCoord[1].xyz = reflect( E, N );
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Fragment Shader:
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> #version 130
+</I>&gt;<i> 
+</I>&gt;<i> uniform samplerCube cubeMap;
+</I>&gt;<i> uniform sampler2D colorMap;
+</I>&gt;<i> const float reflect_factor = 0.5;
+</I>&gt;<i> 
+</I>&gt;<i> void main (void)
+</I>&gt;<i> {
+</I>&gt;<i>      vec3 base_color = texture2D(colorMap, gl_TexCoord[0].xy).rgb;
+</I>&gt;<i>      vec3 cube_color = textureCube(cubeMap, gl_TexCoord[1].xyz).rgb;
+</I>&gt;<i>      gl_FragColor = vec4( mix(cube_color, base_color, reflect_factor).rgb, 1.0);
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> ...
+</I>&gt;<i> 
+</I>&gt;<i> Thank you!
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> R&#244;mulo
+</I>&gt;<i> 
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic351e.php?p=72639#72639">http://forum.openscenegraph.org/viewtopic.php?p=72639#72639</A>
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I></PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007445.html">[osg-users] Normal Mapping using Dynamic Cubemap
+</A></li>
+	<LI>Next message (by thread): <A HREF="007419.html">[osg-users] Trying to understand GraphicsWindow system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7449">[ date ]</a>
+              <a href="thread.html#7449">[ thread ]</a>
+              <a href="subject.html#7449">[ subject ]</a>
+              <a href="author.html#7449">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

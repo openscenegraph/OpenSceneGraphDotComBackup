@@ -1,0 +1,142 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Just&nbsp;out&nbsp;of&nbsp;curiousity,&nbsp;what&nbsp;are&nbsp;you&nbsp;volume&nbsp;rendering&nbsp;and&nbsp;what&nbsp;are&nbsp;your&nbsp;requirements?&nbsp;We&nbsp;did&nbsp;some&nbsp;interesting&nbsp;volume&nbsp;rendering&nbsp;work&nbsp;a&nbsp;few&nbsp;years&nbsp;ago&nbsp;for&nbsp;Iowa&nbsp;State&nbsp;University&#39;s&nbsp;Ames&nbsp;Lab.&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Mon,&nbsp;Apr&nbsp;15,&nbsp;2019&nbsp;at&nbsp;1:08&nbsp;PM&nbsp;Anna&nbsp;Osvin&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:annieloveowls@gmail.com&quot;&gt;annieloveowls@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;Hi.&nbsp;In&nbsp;a&nbsp;project&nbsp;that&nbsp;I&#39;m&nbsp;working&nbsp;on&nbsp;I&nbsp;have&nbsp;an&nbsp;osgVolume::VolumeScene&nbsp;containing&nbsp;one&nbsp;volume&nbsp;model&nbsp;and&nbsp;some&nbsp;polygonal&nbsp;models.&nbsp;I&nbsp;need&nbsp;to&nbsp;do&nbsp;some&nbsp;depth&nbsp;buffer&nbsp;checks&nbsp;on&nbsp;that&nbsp;scene,&nbsp;so&nbsp;I&#39;ve&nbsp;attached&nbsp;depth&nbsp;buffer&nbsp;to&nbsp;viewer&nbsp;camera.&nbsp;When&nbsp;I&nbsp;fetch&nbsp;osg::Image&nbsp;representing&nbsp;depth&nbsp;buffer&nbsp;content,&nbsp;everything&nbsp;is&nbsp;fine,&nbsp;except&nbsp;background&nbsp;values&nbsp;are&nbsp;not&nbsp;calculated&nbsp;properly&nbsp;(they&nbsp;should&nbsp;be&nbsp;1,&nbsp;but&nbsp;instead&nbsp;it&#39;s&nbsp;~0.15).&nbsp;And&nbsp;when&nbsp;I&nbsp;add&nbsp;osg::Depth(&nbsp;osg::Depth::Function::LESS,&nbsp;zNear,&nbsp;zFar&nbsp;)&nbsp;attribute&nbsp;to&nbsp;the&nbsp;camera,&nbsp;background&nbsp;values&nbsp;are&nbsp;calculated&nbsp;correctly,&nbsp;but&nbsp;I&nbsp;lose&nbsp;all&nbsp;of&nbsp;the&nbsp;polygonal&nbsp;models&nbsp;data&nbsp;(they&nbsp;are&nbsp;no&nbsp;longer&nbsp;visible,&nbsp;and&nbsp;not&nbsp;presented&nbsp;in&nbsp;depth&nbsp;buffer).&lt;br&gt;<br>
+&lt;br&gt;<br>
+Here&nbsp;is&nbsp;function&nbsp;that&nbsp;does&nbsp;depth&nbsp;buffer&nbsp;checking:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+bool&nbsp;pickZBufferIntersection(&nbsp;osgViewer::View&amp;&nbsp;view,&nbsp;bool&nbsp;perspectiveProjection,&nbsp;const&nbsp;osg::Vec2&amp;&nbsp;point2d,&nbsp;osg::Vec3&amp;&nbsp;pickedPoint&nbsp;)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Camera*&nbsp;camera&nbsp;=&nbsp;view.getCamera();&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(&nbsp;camera&nbsp;==&nbsp;nullptr&nbsp;)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Q_ASSERT_X(&nbsp;false,&nbsp;&quot;bool&nbsp;pickZBufferIntersection(&nbsp;...&nbsp;)&quot;,&nbsp;&quot;View&nbsp;has&nbsp;no&nbsp;camera.&quot;&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;return&nbsp;false;&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;const&nbsp;osg::Image*&nbsp;zImage&nbsp;=&nbsp;camera-&gt;getBufferAttachmentMap()[osg::Camera::BufferComponent::DEPTH_BUFFER]._image;&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(&nbsp;zImage&nbsp;==&nbsp;nullptr&nbsp;)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Q_ASSERT_X(&nbsp;false,&nbsp;&quot;bool&nbsp;pickZBufferIntersection(&nbsp;...&nbsp;)&quot;,&nbsp;&quot;ZBuffer&nbsp;is&nbsp;not&nbsp;attached&nbsp;to&nbsp;view&nbsp;camera.&quot;&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;return&nbsp;false;&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Vec3f&nbsp;cameraPos;&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Vec3f&nbsp;center;&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Vec3f&nbsp;up;&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;getViewMatrixAsLookAt(&nbsp;cameraPos,&nbsp;center,&nbsp;up&nbsp;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Matrixd&nbsp;prInv&nbsp;=&nbsp;osg::Matrixd::inverse(&nbsp;camera-&gt;getProjectionMatrix()&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Matrixd&nbsp;viewInv&nbsp;=&nbsp;osg::Matrixd::inverse(&nbsp;camera-&gt;getViewMatrix()&nbsp;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;const&nbsp;osg::Viewport*&nbsp;viewPort&nbsp;=&nbsp;camera-&gt;getViewport();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;int&nbsp;x&nbsp;=&nbsp;point2d.x()&nbsp;-&nbsp;viewPort-&gt;x();&lt;br&gt;<br>
+ &nbsp; &nbsp;int&nbsp;y&nbsp;=&nbsp;point2d.y()&nbsp;-&nbsp;viewPort-&gt;y();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Vec3&nbsp;s(0,&nbsp;0,&nbsp;-1);&lt;br&gt;<br>
+ &nbsp; &nbsp;s[0]&nbsp;=&nbsp;(point2d[0]&nbsp;/&nbsp;viewPort-&gt;width())&nbsp;*&nbsp;2.0&nbsp;-&nbsp;1.0;&lt;br&gt;<br>
+ &nbsp; &nbsp;s[1]&nbsp;=&nbsp;(point2d[1]&nbsp;/&nbsp;viewPort-&gt;height())&nbsp;*&nbsp;2.0&nbsp;-&nbsp;1.0;&lt;br&gt;<br>
+ &nbsp; &nbsp;s&nbsp;=&nbsp;s&nbsp;*&nbsp;prInv&nbsp;*&nbsp;viewInv;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Vec3d&nbsp;v&nbsp;=&nbsp;s&nbsp;-&nbsp;cameraPos;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;double&nbsp;zNear&nbsp;=&nbsp;1.0f;&lt;br&gt;<br>
+ &nbsp; &nbsp;double&nbsp;zFar&nbsp;=&nbsp;10000.0f;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;static&nbsp;uint&nbsp;pickNumber&nbsp;=&nbsp;0;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;double&nbsp;zV,&nbsp;z_n,&nbsp;z;&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Vec3f&nbsp;point;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;zV&nbsp;=&nbsp;(&nbsp;(float*)zImage-&gt;data(&nbsp;x,&nbsp;y&nbsp;)&nbsp;)[&nbsp;0&nbsp;];&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;if(&nbsp;perspectiveProjection&nbsp;)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;z_n&nbsp;=&nbsp;2.0*zV&nbsp;-&nbsp;1.0;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;z&nbsp;=&nbsp;2.0&nbsp;*&nbsp;zNear&nbsp;*&nbsp;zFar&nbsp;/&nbsp;(&nbsp;zFar&nbsp;+&nbsp;zNear&nbsp;-&nbsp;z_n&nbsp;*&nbsp;(&nbsp;zFar&nbsp;-&nbsp;zNear&nbsp;)&nbsp;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;point&nbsp;=&nbsp;cameraPos&nbsp;+&nbsp;v*z;&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;else&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;z&nbsp;=&nbsp;(&nbsp;zFar&nbsp;-&nbsp;zNear&nbsp;)*zV;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;point&nbsp;=&nbsp;s&nbsp;+&nbsp;(&nbsp;center&nbsp;-&nbsp;cameraPos&nbsp;)*z;&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;if(&nbsp;z&nbsp;&gt;&nbsp;zNear&nbsp;+&nbsp;1e-8&nbsp;&amp;&amp;&nbsp;z&nbsp;&lt;&nbsp;zFar&nbsp;-&nbsp;1&nbsp;-&nbsp;1e-8&nbsp;)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;pickedPoint&nbsp;=&nbsp;point;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;return&nbsp;true;&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;return&nbsp;false;&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+And&nbsp;here&nbsp;is&nbsp;viewer&nbsp;setup&nbsp;bit:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+QWidget*&nbsp;createViewWidget(osgQt::GraphicsWindowQt*&nbsp;gw,&nbsp;osgVolume::VolumeScene&amp;&nbsp;scene)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;osgViewer::View*&nbsp;view&nbsp;=&nbsp;new&nbsp;osgViewer::View;&lt;br&gt;<br>
+ &nbsp; &nbsp;/*&nbsp;...&nbsp;*/&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::Camera*&nbsp;camera&nbsp;=&nbsp;view-&gt;getCamera();&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;setGraphicsContext(gw);&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;const&nbsp;osg::GraphicsContext::Traits*&nbsp;traits&nbsp;=&nbsp;gw-&gt;getTraits();&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;setClearColor(osgColor(&nbsp;SCENE3D_BACKGROUND_COLOR&nbsp;));&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;setViewport(new&nbsp;osg::Viewport(0,&nbsp;0,&nbsp;traits-&gt;width,&nbsp;traits-&gt;height));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osg::Image&gt;&nbsp;zImage&nbsp;=&nbsp;new&nbsp;osg::Image();&lt;br&gt;<br>
+ &nbsp; &nbsp;zImage-&gt;allocateImage(1000,&nbsp;1000,&nbsp;1,&nbsp;GL_DEPTH_COMPONENT,&nbsp;GL_FLOAT);&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;attach(osg::Camera::DEPTH_BUFFER,&nbsp;zImage);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;const&nbsp;int&nbsp;orthoRange&nbsp;=&nbsp;120;&lt;br&gt;<br>
+ &nbsp; &nbsp;const&nbsp;float&nbsp;zNear&nbsp;=&nbsp;1.0f;&lt;br&gt;<br>
+ &nbsp; &nbsp;const&nbsp;float&nbsp;zFar&nbsp;=&nbsp;10000.0f;&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;setProjectionMatrixAsOrtho(-orthoRange,&nbsp;orthoRange,&nbsp;-orthoRange,&nbsp;orthoRange,&nbsp;zNear,&nbsp;zFar);&lt;br&gt;<br>
+ &nbsp; &nbsp;//camera-&gt;getOrCreateStateSet()-&gt;setAttribute(&nbsp;new&nbsp;osg::Depth(&nbsp;osg::Depth::Function::LESS,&nbsp;zNear,&nbsp;zFar&nbsp;),&nbsp;osg::StateAttribute::ON&nbsp;|&nbsp;osg::StateAttribute::OVERRIDE&nbsp;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;/*&nbsp;...&nbsp;*/&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;view-&gt;setSceneData(&amp;scene);&lt;br&gt;<br>
+ &nbsp; &nbsp;view-&gt;addEventHandler(new&nbsp;osgViewer::StatsHandler);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;gw-&gt;setTouchEventsEnabled(true);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;return&nbsp;gw-&gt;getGLWidget();&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+...&nbsp;&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Annie[/img]&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=75829#75829&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=75829#75829&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Attachments:&nbsp;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org//files/depth_buffer_depthrange_185.png&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org//files/depth_buffer_depthrange_185.png&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org//files/depth_buffer_154.png&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org//files/depth_buffer_154.png&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Chris&nbsp;&#39;Xenon&#39;&nbsp;Hanson,&nbsp;omo&nbsp;sanza&nbsp;lettere.&nbsp;Xenon@AlphaPixel.com&nbsp;&lt;a&nbsp;href=&quot;http://www.alphapixel.com/&quot;&nbsp;target=&quot;_blank&quot;&gt;http://www.alphapixel.com/&lt;/a&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Training&nbsp;•&nbsp;Consulting&nbsp;•&nbsp;Contracting&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;3D&nbsp;•&nbsp;Scene&nbsp;Graphs&nbsp;(Open&nbsp;Scene&nbsp;Graph/OSG)&nbsp;•&nbsp;OpenGL&nbsp;2&nbsp;•&nbsp;OpenGL&nbsp;3&nbsp;•&nbsp;OpenGL&nbsp;4&nbsp;•&nbsp;GLSL&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;1&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;2&nbsp;•&nbsp;OpenCL&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;Legal/IP&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;Forensics&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;Imaging &lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;UAVs &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&nbsp;GIS&nbsp;•&nbsp;GPS&nbsp;•&nbsp;osgEarth • Terrain • Telemetry&nbsp;•&nbsp;Cryptography&nbsp;•&nbsp;LIDAR&nbsp;•&nbsp;Embedded&nbsp;•&nbsp;Mobile&nbsp;•&nbsp;iPhone/iPad/iOS&nbsp;•&nbsp;Android&lt;/span&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;a&nbsp;href=&quot;https://twitter.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;@alphapixel&lt;/a&gt;&nbsp;&lt;a&nbsp;href=&quot;http://facebook.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;facebook.com/alphapixel&lt;/a&gt; (775)&nbsp;623-PIXL&nbsp;[7495]&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;<br>
+
+</tt>

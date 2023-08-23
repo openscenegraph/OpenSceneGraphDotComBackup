@@ -1,0 +1,442 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG 3.2.1 and Qt5 Widget integration
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%203.2.1%20and%20Qt5%20Widget%20integration&In-Reply-To=%3C55BF6FE6.6010506%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277254.html">
+   <LINK REL="Next"  HREF="001038.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG 3.2.1 and Qt5 Widget integration</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%203.2.1%20and%20Qt5%20Widget%20integration&In-Reply-To=%3C55BF6FE6.6010506%40gmx.de%3E"
+       TITLE="[osg-users] OSG 3.2.1 and Qt5 Widget integration">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Mon Aug  3 06:43:02 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277254.html">[osg-users] Moving object in a trajectory
+</A></li>
+        <LI>Next message: <A HREF="001038.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277257">[ date ]</a>
+              <a href="thread.html#277257">[ thread ]</a>
+              <a href="subject.html#277257">[ subject ]</a>
+              <a href="author.html#277257">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Can,
+
+Have you created a full code example yet?
+My problem right now is the lack of keyboard events being passed through 
+to OSG. Any hints on this?
+
+Cheers
+Sebastian
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I have been working Qt5 integration for my current rendering application implementing deferred rendering and came up with couple of solutions. I want to share it with the people struggling Qt5 integration while waiting official stable release :)
+</I>&gt;<i>
+</I>&gt;<i> Since the current stable release is OSG 3.2.1, this will be based on that version.
+</I>&gt;<i>
+</I>&gt;<i> For Qt5 version, I recommend using &gt;= 5.4, because in earlier versions you have to do a lot by yourself. In 5.4, at least you have QOpenGLWidget.
+</I>&gt;<i>
+</I>&gt;<i> Even though I will give solution for widget, this can be applied to QWindow solution as well. The codes will be bits and pieces, unfortunately cannot share full working code.
+</I>&gt;<i>
+</I>&gt;<i> Firstly, create a new widget rendering class subclassing QOpenGLWidget. This one is almost same as the QGLWidget version of it.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> class RenderWidget : public [b]QOpenGLWidget[/b]
+</I>&gt;<i> {
+</I>&gt;<i>      Q_OBJECT
+</I>&gt;<i>      
+</I>&gt;<i> public:
+</I>&gt;<i>      RenderWidget(QWidget* parent = 0, Qt::WindowFlags f = 0);
+</I>&gt;<i>      ~RenderWidget();
+</I>&gt;<i>
+</I>&gt;<i> protected:
+</I>&gt;<i>      virtual void initializeGL();
+</I>&gt;<i>      virtual void paintGL();
+</I>&gt;<i>      virtual void resizeGL(int width, int height);
+</I>&gt;<i>
+</I>&gt;<i>      osg::ref_ptr&lt;osgViewer::GraphicsWindow&gt; gw;
+</I>&gt;<i>      osg::ref_ptr&lt;osgViewer::Viewer&gt; viewer;
+</I>&gt;<i>
+</I>&gt;<i> private:
+</I>&gt;<i>      QTimer heartbeat;
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> RenderWidget::RenderWidget(QWidget* parent, Qt::WindowFlags f)
+</I>&gt;<i> {
+</I>&gt;<i>      // instead of osgViewer::setUpViewerAsEmbeddedInWindow, we are going to
+</I>&gt;<i>      // inject our osg::State subclass
+</I>&gt;<i>      gw = new GraphicsWindowEx(0, 0, width(), height());
+</I>&gt;<i>      viewer = new osgViewer::Viewer();
+</I>&gt;<i>      viewer-&gt;setThreadingModel(osgViewer::Viewer::SingleThreaded);
+</I>&gt;<i>      
+</I>&gt;<i>      // setup viewer's camera etc.
+</I>&gt;<i>      // In my case, I don't want the base camera to clear anything
+</I>&gt;<i>      // I have a lot of other cameras queued as FBO rendering
+</I>&gt;<i>      viewer-&gt;getCamera()-&gt;setViewport(0, 0, width(), height())
+</I>&gt;<i>      viewer-&gt;getCamera()-&gt;setGraphicsContext(gw);
+</I>&gt;<i>      viewer-&gt;getCamera()-&gt;setClearMask(0);
+</I>&gt;<i>      //...
+</I>&gt;<i>      
+</I>&gt;<i>      connect(&amp;heartbeat, SIGNAL(timeout()), this, SLOT(update()), Qt::QueuedConnection);
+</I>&gt;<i>      hearbeat.start(10);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void RenderWidget::initializeGL()
+</I>&gt;<i> {
+</I>&gt;<i>      viewer-&gt;realize();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void RenderWidget::paintGL()
+</I>&gt;<i> {
+</I>&gt;<i>      static_cast&lt;StateEx *&gt;(&amp;state)-&gt;setDefaultFbo(defaultFramebufferObject());
+</I>&gt;<i>
+</I>&gt;<i>      viewer-&gt;frame();
+</I>&gt;<i>      
+</I>&gt;<i>      // OR if you want to mix OSG with Qt 2D API
+</I>&gt;<i>      
+</I>&gt;<i>      QPainter painter(this);
+</I>&gt;<i>      painter.beginNativePainting();
+</I>&gt;<i>      viewer-&gt;frame();
+</I>&gt;<i>      painter.endNativePainting();
+</I>&gt;<i>      
+</I>&gt;<i>      // calculate fps...
+</I>&gt;<i>      painter.setPen(Qt::white);
+</I>&gt;<i>      painter.drawText(width() - 100, 10, 50, 25, Qt::AlignLeft, QString::number(fps));
+</I>&gt;<i>      painter.end();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void RenderWidget::resizeGL(int width, int height)
+</I>&gt;<i> {
+</I>&gt;<i>      gw-&gt;getEventQueue()-&gt;windowResize(0, 0, width, height);
+</I>&gt;<i>      gw-&gt;resized(0, 0, width, height);
+</I>&gt;<i>      //...
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The difference between old QGLWidget and QOpenGLWidget is how they handle the rendering in the background. QOpenGLWidget is using QOffscreenSurface and QFrameBufferObject to render its content. The main problem of the current OSG integration is that it does not expect a superior FBO as main framebuffer. Like in my case, if you are using a lot of FBOs, some point OSG unbinds them and returns to direct drawing or leaves the last FBO bound after drawing. However, it should return(bind) to our superior FBO used by QOpenGLWidget.
+</I>&gt;<i>
+</I>&gt;<i> Let me explain it with the source code of OSG.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void RenderStage::drawInner(osg::RenderInfo&amp; renderInfo, osgUtil::RenderLeaf*&amp; previous, bool&amp; doCopyTexture)
+</I>&gt;<i> {
+</I>&gt;<i>      //...
+</I>&gt;<i>      
+</I>&gt;<i>      osg::State&amp; state = *renderInfo.getState();
+</I>&gt;<i>
+</I>&gt;<i>      osg::FBOExtensions* fbo_ext = _fbo.valid() ? osg::FBOExtensions::instance(state.getContextID(),true) : 0;
+</I>&gt;<i>      bool fbo_supported = fbo_ext &amp;&amp; fbo_ext-&gt;isSupported();
+</I>&gt;<i>
+</I>&gt;<i>      bool using_multiple_render_targets = fbo_supported &amp;&amp; _fbo-&gt;hasMultipleRenderingTargets();
+</I>&gt;<i>
+</I>&gt;<i>      if (!using_multiple_render_targets)
+</I>&gt;<i>      {
+</I>&gt;<i>          #if !defined(OSG_GLES1_AVAILABLE) &amp;&amp; !defined(OSG_GLES2_AVAILABLE)
+</I>&gt;<i>
+</I>&gt;<i>              if( getDrawBufferApplyMask() )
+</I>&gt;<i>                  glDrawBuffer(_drawBuffer);
+</I>&gt;<i>
+</I>&gt;<i>              if( getReadBufferApplyMask() )
+</I>&gt;<i>                  glReadBuffer(_readBuffer);
+</I>&gt;<i>
+</I>&gt;<i>          #endif
+</I>&gt;<i>      }
+</I>&gt;<i>
+</I>&gt;<i>      if (fbo_supported)
+</I>&gt;<i>      {
+</I>&gt;<i>          _fbo-&gt;apply(state);
+</I>&gt;<i>      }
+</I>&gt;<i>      
+</I>&gt;<i>      RenderBin::draw(renderInfo,previous);
+</I>&gt;<i>      
+</I>&gt;<i>      //...
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> As you can see, _fbo-&gt;apply(state); is the only point where FBO of the camera (which comes from our osg::Camera and RenderStage::runCameraSetUp) is bound before drawing our geometry etc. However, there is no line to handle returning back to FBO of QOpenGLWidget. Even we put a empty FBO as a last camera, it will executes following line:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void FrameBufferObject::apply(State &amp;state, BindTarget target) const
+</I>&gt;<i> {
+</I>&gt;<i>      //...
+</I>&gt;<i>      
+</I>&gt;<i>      if (_attachments.empty())
+</I>&gt;<i>      {
+</I>&gt;<i>          ext-&gt;glBindFramebuffer(target, 0);
+</I>&gt;<i>          return;
+</I>&gt;<i>      }
+</I>&gt;<i>      
+</I>&gt;<i>      //...
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> So basicly, it switches back to direct rendering because of 0 argument. Therefore, we have to inject default FBO of QOpenGLWidget somehow. You might already notice two special lines in paintGL() and constructor methods of RenderWidget implementation. We are going to subclass osg::State and osgViewer::GraphicsWindow. Here are the classes:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> class StateEx : public osg::State
+</I>&gt;<i> {
+</I>&gt;<i> public:
+</I>&gt;<i>      StateEx();
+</I>&gt;<i>
+</I>&gt;<i>      inline void setDefaultFbo(GLuint fbo);
+</I>&gt;<i>      inline GLuint getDefaultFbo() const;
+</I>&gt;<i>
+</I>&gt;<i> protected:
+</I>&gt;<i>      GLuint defaultFbo;
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> StateEx::StateEx() :
+</I>&gt;<i>      defaultFbo(0)
+</I>&gt;<i> {
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> inline void StateEx::setDefaultFbo(GLuint fbo)
+</I>&gt;<i> {
+</I>&gt;<i>      defaultFbo = fbo;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> inline GLuint getDefaultFbo() const
+</I>&gt;<i> {
+</I>&gt;<i>      return defaultFbo;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> class GraphicsWindowEx : public osgViewer::GraphicsWindow
+</I>&gt;<i> {
+</I>&gt;<i> public:
+</I>&gt;<i>      GraphicsWindowEx(osg::GraphicsContext::Traits* traits);
+</I>&gt;<i>      GraphicsWindowEx(int x, int y, int width, int height);
+</I>&gt;<i>
+</I>&gt;<i>      void init();
+</I>&gt;<i>
+</I>&gt;<i>      virtual bool isSameKindAs(const osg::Object* object) const { return dynamic_cast&lt;const GraphicsWindowEx *&gt;(object) != 0; }
+</I>&gt;<i>      virtual const char* libraryName() const { return &quot;&quot;; }
+</I>&gt;<i>      virtual const char* className() const { return &quot;GraphicsWindowEx&quot;; }
+</I>&gt;<i>
+</I>&gt;<i>      // dummy implementations, assume that graphics context is *always* current and valid.
+</I>&gt;<i>      virtual bool valid() const { return true; }
+</I>&gt;<i>      virtual bool realizeImplementation() { return true; }
+</I>&gt;<i>      virtual bool isRealizedImplementation() const  { return true; }
+</I>&gt;<i>      virtual void closeImplementation() {}
+</I>&gt;<i>      virtual bool makeCurrentImplementation() { return true; }
+</I>&gt;<i>      virtual bool releaseContextImplementation() { return true; }
+</I>&gt;<i>      virtual void swapBuffersImplementation() {}
+</I>&gt;<i>      virtual void grabFocus() {}
+</I>&gt;<i>      virtual void grabFocusIfPointerInWindow() {}
+</I>&gt;<i>      virtual void raiseWindow() {}
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> GraphicsWindowEx::GraphicsWindowEx(osg::GraphicsContext::Traits* traits)
+</I>&gt;<i> {
+</I>&gt;<i>      _traits = traits;
+</I>&gt;<i>      
+</I>&gt;<i>      init();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> GraphicsWindowEx::GraphicsWindowEx(int x, int y, int width, int height);
+</I>&gt;<i> {
+</I>&gt;<i>      _traits = new osg::GraphicsContext::Traits();
+</I>&gt;<i>      _traits-&gt;x = x;
+</I>&gt;<i>      _traits-&gt;x = y;
+</I>&gt;<i>      _traits-&gt;width = width;
+</I>&gt;<i>      _traits-&gt;height = height;
+</I>&gt;<i>
+</I>&gt;<i>      init();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void GraphicsWindowEx::init()
+</I>&gt;<i> {
+</I>&gt;<i>      if(valid())
+</I>&gt;<i>      {
+</I>&gt;<i>          // inject our &quot;extended&quot; state
+</I>&gt;<i>          setState(new StateEx());
+</I>&gt;<i>          getState()-&gt;setGraphicsContext(this);
+</I>&gt;<i>          
+</I>&gt;<i>          if (_traits.valid() &amp;&amp; _traits-&gt;sharedContext.valid())
+</I>&gt;<i>          {
+</I>&gt;<i>              getState()-&gt;setContextID(_traits-&gt;sharedContext-&gt;getState()-&gt;getContextID() );
+</I>&gt;<i>              incrementContextIDUsageCount(getState()-&gt;getContextID());
+</I>&gt;<i>          }
+</I>&gt;<i>          else
+</I>&gt;<i>          {
+</I>&gt;<i>              getState()-&gt;setContextID(osg::GraphicsContext::createNewContextID());
+</I>&gt;<i>          }
+</I>&gt;<i>      }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Now, our rendering knows the default FBO of the QOpenGLWidget so with custom RenderStage we can use this information. Only method we have to override is drawInner.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void RenderStageEx::drawInner(osg::RenderInfo&amp; renderInfo, osgUtil::RenderLeaf*&amp; previous, bool&amp; doCopyTexture)
+</I>&gt;<i> {
+</I>&gt;<i>      //...
+</I>&gt;<i>      osg::State&amp; state = *renderInfo.getState();
+</I>&gt;<i>   
+</I>&gt;<i>      osg::FBOExtensions* fbo_ext = osg::FBOExtensions::instance(state.getContextID(), true);
+</I>&gt;<i>      bool fbo_supported = fbo_ext &amp;&amp; fbo_ext-&gt;isSupported();
+</I>&gt;<i>   
+</I>&gt;<i>      if (fbo_supported)
+</I>&gt;<i>      {
+</I>&gt;<i>          if(_fbo.valid())
+</I>&gt;<i>          {
+</I>&gt;<i>              if (!_fbo-&gt;hasMultipleRenderingTargets())
+</I>&gt;<i>              {
+</I>&gt;<i>                  #if !defined(OSG_GLES1_AVAILABLE) &amp;&amp; !defined(OSG_GLES2_AVAILABLE)
+</I>&gt;<i>
+</I>&gt;<i>                  if( getDrawBufferApplyMask() )
+</I>&gt;<i>                     glDrawBuffer(_drawBuffer);
+</I>&gt;<i>
+</I>&gt;<i>                  if( getReadBufferApplyMask() )
+</I>&gt;<i>                     glReadBuffer(_readBuffer);
+</I>&gt;<i>
+</I>&gt;<i>                  #endif
+</I>&gt;<i>              }
+</I>&gt;<i>
+</I>&gt;<i>              _fbo-&gt;apply(state);
+</I>&gt;<i>          }
+</I>&gt;<i>          else
+</I>&gt;<i>              fbo_ext-&gt;glBindFramebuffer(osg::FrameBufferObject::READ_DRAW_FRAMEBUFFER, static_cast&lt;StateEx *&gt;(&amp;state)-&gt;getDefaultFbo());
+</I>&gt;<i>      }
+</I>&gt;<i>      
+</I>&gt;<i>      RenderBin::draw(renderInfo,previous);
+</I>&gt;<i>      
+</I>&gt;<i>      //...
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> After all this hussle, the most strange part of this solutions is extending osgUtil::CullVisitor. Unfortunately, there is no easy way to inject our RenderStageEx into the rendering pipeline. To solve it, I have overriden the apply(osg::Camera&amp; camera) method. Actually almost all the code come from the original source code but two special care should be given. Firstly, here is what I did:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> void CullVisitorEx::apply(osg::Camera &amp;camera)
+</I>&gt;<i> {
+</I>&gt;<i>      //...
+</I>&gt;<i>      
+</I>&gt;<i>      if(camera.getRenderOrder() == osg::Camera::NESTED_RENDER)
+</I>&gt;<i>      {
+</I>&gt;<i>          handle_cull_callbacks_and_traverse(camera);
+</I>&gt;<i>      }
+</I>&gt;<i>      else
+</I>&gt;<i>      {
+</I>&gt;<i>          osgUtil::RenderStage *prevRenderStage = getCurrentRenderBin()-&gt;getStage();
+</I>&gt;<i>          osg::ref_ptr&lt;RenderStageCacheEx&gt; rsCache = dynamic_cast&lt;RenderStageCacheEx *&gt;(camera.getRenderingCache());
+</I>&gt;<i>          if(!rsCache)
+</I>&gt;<i>          {
+</I>&gt;<i>              rsCache = new RenderStageCacheEx();
+</I>&gt;<i>              camera.setRenderingCache(rsCache);
+</I>&gt;<i>          }
+</I>&gt;<i>
+</I>&gt;<i>          osg::ref_ptr&lt;osgUtil::RenderStage&gt; rtts = rsCache-&gt;getRenderStage(this);
+</I>&gt;<i>          if(!rtts)
+</I>&gt;<i>          {
+</I>&gt;<i>              rtts = new RenderStageEx();
+</I>&gt;<i>
+</I>&gt;<i>              //...
+</I>&gt;<i>          }
+</I>&gt;<i>          else
+</I>&gt;<i>              rtts-&gt;reset();
+</I>&gt;<i>
+</I>&gt;<i>          //...
+</I>&gt;<i>      }
+</I>&gt;<i>
+</I>&gt;<i>      //...
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I kept only the parts that changed. Instead of new osgUtil::RenderStage(), we should call new RenderStageEx(). Unfortunately, renderstage caching implementation is hidden (implemented inside CPP) so you have to create your own RenderStageCache from scratch. Just copy the source code of it into the beginning of your CullVisitorEx.cpp and rename it.
+</I>&gt;<i>
+</I>&gt;<i> If you can manage to properly inject all these classes into your project, you can use any combination of FBO rendering with Qt5 and OSG 3.2.1. I have struggled a lot to make it work in current stable release. Hope this helps.
+</I>&gt;<i>
+</I>&gt;<i> P.S. I am preparing full source code and post it later.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Happy coding,
+</I>&gt;<i> Can[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicfadc.php?p=64403#64403">http://forum.openscenegraph.org/viewtopic.php?p=64403#64403</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277254.html">[osg-users] Moving object in a trajectory
+</A></li>
+	<LI>Next message: <A HREF="001038.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277257">[ date ]</a>
+              <a href="thread.html#277257">[ thread ]</a>
+              <a href="subject.html#277257">[ subject ]</a>
+              <a href="author.html#277257">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

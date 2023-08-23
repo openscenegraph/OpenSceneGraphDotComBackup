@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Removing objects with shared GL state from scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3CCAFN7Y%2BUzS5G-3TbjG0qaGCnOMqLsGOtGPNT3K1YgXSxN6CcnEw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010241.html">
+   <LINK REL="Next"  HREF="010243.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Removing objects with shared GL state from scene graph</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3CCAFN7Y%2BUzS5G-3TbjG0qaGCnOMqLsGOtGPNT3K1YgXSxN6CcnEw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Removing objects with shared GL state from scene graph">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Jul 25 10:00:05 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010241.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="010243.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10242">[ date ]</a>
+              <a href="thread.html#10242">[ thread ]</a>
+              <a href="subject.html#10242">[ subject ]</a>
+              <a href="author.html#10242">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chris,
+
+On Thu, 25 Jul 2019 at 17:33, Chris Djali &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">krizdjali at gmail.com</A>&gt; wrote:
+
+&gt;<i> Annoyingly, while that branch fixes the issue in my examples, it isn't
+</I>&gt;<i> fixing it in my actual application.
+</I>
+
+I guess that's an improvement :-)
+
+This change is in the OpenSceneGraph-3.6 branch and the 3.6.4-rc9 so will
+part of the release.
+
+
+&gt;<i> The cache gets cleared when the application exits (potentially after all
+</I>&gt;<i> OpenGL contexts have been closed), but not when views are added to and
+</I>&gt;<i> removed from the composite viewer, so I'm still getting the same Warning:
+</I>&gt;<i> detected OpenGL error 'invalid value' at after RenderBin::draw(..) message.
+</I>&gt;<i> I'm not seeing Renderer::releaseGLObjects get called ever, but I can't tell
+</I>&gt;<i> whether it would be called if there was a view active when the application
+</I>&gt;<i> was closed, as I'm also battling a Qt bug that causes a crash in that
+</I>&gt;<i> situation.
+</I>&gt;<i>
+</I>
+Are the Camera's being removed from the Window before it gets closed?  I
+have just checked the GraphicsContext::close() method and it calls all the
+Camera::releaseGLObjects(), which in turn will call the
+Renderer::releaseGLObjects(), which will now call the
+ObjectCache::releaseGLObjects().  After calling all the releaseGLObjects()
+the GraphicsContext::close() then calls the
+osg::deleteAllGLObjects(_state-&gt;getContextID())  of the context isn't
+shared.
+
+There might be something weird that needs fixing at my end. I can see with
+&gt;<i> tracepoints that a pair of Renderers gets constructed when the application
+</I>&gt;<i> constructs a View and StatsHandler and they get destroyed when the last
+</I>&gt;<i> ref_ptr to the view is destroyed, so the Renderers aren't sticking around
+</I>&gt;<i> forever.
+</I>&gt;<i>
+</I>
+I don't have your application or test app with similar behavior so can't
+add much more.
+
+With the Qt error, it could be that the OSG integration or the OSG itself
+isn't doing something perfectly for this usage case so the problem pops in
+Qt, it could also be just a Qt bug...
+
+Robert
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190725/6bcd12d5/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190725/6bcd12d5/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010241.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="010243.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10242">[ date ]</a>
+              <a href="thread.html#10242">[ thread ]</a>
+              <a href="subject.html#10242">[ subject ]</a>
+              <a href="author.html#10242">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

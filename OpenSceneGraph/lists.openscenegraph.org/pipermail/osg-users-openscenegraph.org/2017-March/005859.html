@@ -1,0 +1,200 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How do cameras handle the render target?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20do%20cameras%20handle%20the%20render%20target%3F&In-Reply-To=%3C37ea95f7-90fb-4c04-518e-a6089aa991bb%40texion.eu%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005858.html">
+   <LINK REL="Next"  HREF="005860.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How do cameras handle the render target?</H1>
+<!--htdig_noindex-->
+    <B>Werner Modenbach</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20do%20cameras%20handle%20the%20render%20target%3F&In-Reply-To=%3C37ea95f7-90fb-4c04-518e-a6089aa991bb%40texion.eu%3E"
+       TITLE="[osg-users] How do cameras handle the render target?">Werner.Modenbach at texion.eu
+       </A><BR>
+    <I>Wed Mar 15 04:56:37 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005858.html">[osg-users] How do cameras handle the render target?
+</A></li>
+        <LI>Next message: <A HREF="005860.html">[osg-users] How do cameras handle the render target?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5859">[ date ]</a>
+              <a href="thread.html#5859">[ thread ]</a>
+              <a href="subject.html#5859">[ subject ]</a>
+              <a href="author.html#5859">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sebastion,
+
+thanks for the quick reply.
+What do you mean by composing to the same FBO? As i wrote attaching the
+FBO to the child cameras the same way as with the main camera just 
+delivers a black fbImage.
+
+Concerning the screen capture example:
+I remember an easier version where a slave camera was created with a 
+pbuffer context and then
+an image attached like thgat:
+
+osg::ref_ptr&lt;osg::PixelBufferObject&gt;pbo=newosg::PixelBufferObject(image.get()); 
+
+
+image-&gt;setPixelBufferObject(pbo.get());
+
+image-&gt;allocateImage(width,height,1,GL_RGBA,GL_UNSIGNED_BYTE,1);
+
+camera-&gt;attach(osg::Camera::COLOR_BUFFER,image.get());
+
+pbuffer-&gt;realize();
+
+This seams more convenient than fiddling with gl functions.
+I still have that version but it also shows only the rendered model.
+Is it possible that the rendering is just not completed after the 
+viewer-&gt;frame() call?
+Is it necessary having a finalDrawCallback instead?
+
+Thanks again
+
+- Werner -
+
+Am 15.03.2017 um 11:28 schrieb Sebastian Messerschmidt:
+&gt;<i>
+</I>&gt;<i> Hi Werner,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> from diagonal reading:
+</I>&gt;<i>
+</I>&gt;<i> You could make all cameras composing to the same FBO and get the 
+</I>&gt;<i> texture in a final pass that can either put the image to Framebuffer 
+</I>&gt;<i> or read back the texture. Also take a look at the screenshot example 
+</I>&gt;<i> (using pbuffer) and the various draw callbacks.
+</I>&gt;<i>
+</I>&gt;<i> Cheers
+</I>&gt;<i> Sebastian
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi all.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I have a problem understanding how cameras handle render targets.
+</I>&gt;&gt;<i> My special case:
+</I>&gt;&gt;<i> I have a standard camera on a view.
+</I>&gt;&gt;<i> The root node of the scene is a group with the following children:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> - my model
+</I>&gt;&gt;<i> - hud camera for wallpaper
+</I>&gt;&gt;<i> - hud camera for text
+</I>&gt;&gt;<i> - more cameras for special cases
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> All the cameras are children of the group node and do POST_RENDER 
+</I>&gt;&gt;<i> operation.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I need snapshots of the complete scene from various camera positions.
+</I>&gt;&gt;<i> What I do:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> osg::ref_ptr&lt;osg::Camera&gt;camera=view-&gt;getCamera();
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> osg::ref_ptr&lt;osg::Image&gt;fbImage=newosg::Image;
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> fbImage-&gt;allocateImage(width,height,1,GL_RGBA,GL_UNSIGNED_BYTE,1);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> osg::Camera::RenderTargetImplementationrti=camera-&gt;getRenderTargetImplementation(); 
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+</I>&gt;&gt;<i> camera-&gt;attach(osg::Camera::COLOR_BUFFER,fbImage.get(),0,0);
+</I>&gt;&gt;<i> camera-&gt;dirtyAttachmentMap();
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Then I do snapshots with the modified projection matrix of the camera.
+</I>&gt;&gt;<i> After each snapshot I read the contents of the fbImage.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I reset everything to the initial status by:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> camera-&gt;setRenderTargetImplementation(rti);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> camera-&gt;detach(osg::Camera::COLOR_BUFFER);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> camera-&gt;dirtyAttachmentMap();
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Unfortunately the fbImage always only contains my model but not the
+</I>&gt;&gt;<i> child cameras renderings.
+</I>&gt;&gt;<i> Attaching the fbImage to the child cameras as well gives me just a black
+</I>&gt;&gt;<i> fbImage.
+</I>&gt;&gt;<i> Of course the child cameras do not clear the color buffer.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> What is the proper way of receiving the complete rendering? I also tried
+</I>&gt;&gt;<i> already
+</I>&gt;&gt;<i> installing a slave camera to the main camera but that also gives me only
+</I>&gt;&gt;<i> the rendered model.
+</I>&gt;&gt;<i> And rendering to the fbImage by installing an additional child camera
+</I>&gt;&gt;<i> with POST_RENDER instead
+</I>&gt;&gt;<i> of a slave camera leads to the same result.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Rendering to screen is perfect, but to fbImage is not.
+</I>&gt;&gt;<i> It seems I'm blind on some basic functionality and all my research
+</I>&gt;&gt;<i> doesn't open my eyes.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I instantly hope for some help.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> - Werner -
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A> 
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-- 
+*TEXION Software Solutions, Rotter Bruch 26a, D-52068 Aachen*
+Phone: +49 241 475757-0
+Fax: +49 241 475757-29
+Web: <A HREF="http://texion.eu/">http://texion.eu</A>
+eMail: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">info at texion.eu</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170315/b90ca9f8/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170315/b90ca9f8/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005858.html">[osg-users] How do cameras handle the render target?
+</A></li>
+	<LI>Next message: <A HREF="005860.html">[osg-users] How do cameras handle the render target?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5859">[ date ]</a>
+              <a href="thread.html#5859">[ thread ]</a>
+              <a href="subject.html#5859">[ subject ]</a>
+              <a href="author.html#5859">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

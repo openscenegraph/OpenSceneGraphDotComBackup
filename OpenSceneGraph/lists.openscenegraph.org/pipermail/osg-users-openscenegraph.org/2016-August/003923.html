@@ -1,0 +1,146 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAbout%20VertexArrayObject%20Branch%5D%20FeedBack%20and%0A%09Insight&In-Reply-To=%3CCAFN7Y%2BVwLU1A4dcH_Wtct8GNwQx92gcb%3Dx_pdd%3D2oD-4PZ0JTw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003919.html">
+   <LINK REL="Next"  HREF="003925.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAbout%20VertexArrayObject%20Branch%5D%20FeedBack%20and%0A%09Insight&In-Reply-To=%3CCAFN7Y%2BVwLU1A4dcH_Wtct8GNwQx92gcb%3Dx_pdd%3D2oD-4PZ0JTw%40mail.gmail.com%3E"
+       TITLE="[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Aug 17 03:25:56 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003919.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+        <LI>Next message: <A HREF="003925.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3923">[ date ]</a>
+              <a href="thread.html#3923">[ thread ]</a>
+              <a href="subject.html#3923">[ subject ]</a>
+              <a href="author.html#3923">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Wang,
+
+The RenderLeaf is a object that is dynamically allocated and reused,
+it doesn't have a lifetime linked to any specific drawable let alone
+the vertex arrays or buffer objects objects associated with them.  The
+RenderLeaf only exists to help the cull traversal specify what parts
+of the scene graph should be rendered and when, it isn't and shouldn't
+be directly linked to the scene graph as there is the mapping is
+entirely dynamic and deliberately separated from the scene graph i.e.
+the scene graph itself knows nothing about what RenderLeafs might
+reference it.
+
+Vertex array objects are very much the domain of the scene graph and
+have a natural affinity to the other OpenGL objects that the scene
+graph maintains.  Furthermore, the strongest affinity that VAO's have
+is with vertex arrays and vertex buffer objects, which in the OSG's
+case are tied to osg::Geometry. this means the natural place to manage
+VAO's is with Drawable/Geometry.  The only open question I see is
+whether we enable/encourage sharing of VAO's between osg::Geoemetry.
+
+For most OSG users osg::Geometry will all have their own osg::Array's
+for vertex arrays etc. and each of these would have their own VBO's,
+so in turn this would map to each Geometry having their own VAO.  This
+implementation is supported right now in the OSG' vertex_array_object
+branch.
+
+All the OSG plugins that load 3rd party data create models such that
+each osg::Geometry has it's own vertex arrays etc, without sharing.
+
+In special cases users could create their own vertex arrays and share
+these between osg::Geometry, or have separate vertex arrays but share
+the osg::VertexBufferObject between them.  I don't know how many end
+users do this, over the years it's not something that has been
+discussed much.  The OSG has been written to support this sharing but
+how much potential benefit there might be from building your scene
+graphs this way I can't say as I haven't tested it.
+
+&gt;<i>From what I understand Julian is proposing is for those sharing vertex
+</I>arrays then sharing VAO's also would be valuable.
+
+Right now my focus is on getting the vertex_array_object branch
+working well across the full range of OSG usage models, this is far
+from trivial task.  The sharing of VAO's might be interesting to a
+small number of users so I'm open to it, but it's always going to be
+niche feature given how sharing of vertex arrays hasn't historically
+been a hot topic in the OSG community.
+
+What is really important for the OSG right now is that end users
+actually have a look at the vertex_array_object branch and test it out
+on their models.
+
+Robert.
+
+
+
+
+
+On 17 August 2016 at 05:43, wang dexing &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">wangdexingit at gmail.com</A>&gt; wrote:
+&gt;<i> Hi Julien,
+</I>&gt;<i>
+</I>&gt;<i> Thank you for your reply,I think there is no separation between user level and system level,since the development of OpenGL also exposes more low-level implementation.
+</I>&gt;<i> the reason why I didn't use 'vao' in 'drawable' is that I think  'vao' is used to manage 'vbos',but 'vbos' is not only from 'drawables' ,but also from somwhere else,for example,'instance arrays' of 'status information' .It's rigid to put 'vao' in 'drawable'.So I'd like to find a better place using 'vao'.I think 'RenderLeaf' can be a good place because it has the member '_drawable' and its parent is 'stategraph', it can be closely linked to the two.
+</I>&gt;<i> I know that cullvisitor isn't fit for instance culling,so I didn't change the original structure,only calculated 'instance data' when cullvisitor traverse 'instance node' which I signed.just as I wrote,I didn't want to give up osg's 'cull' function,I only add some extra features when cullvisitor traversing.I extended some classes to support it.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> wang
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic359a.php?p=68399#68399">http://forum.openscenegraph.org/viewtopic.php?p=68399#68399</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003919.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+	<LI>Next message: <A HREF="003925.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3923">[ date ]</a>
+              <a href="thread.html#3923">[ thread ]</a>
+              <a href="subject.html#3923">[ subject ]</a>
+              <a href="author.html#3923">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

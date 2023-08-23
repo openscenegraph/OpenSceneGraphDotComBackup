@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] SingleThreaded leading to whole application just running on one core
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3CCAFN7Y%2BVTeOMyBJxw%3DbcmZa-N9nEbAFVNqtLuiqgp8iLHqpPobg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004206.html">
+   <LINK REL="Next"  HREF="004209.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] SingleThreaded leading to whole application just running on one core</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3CCAFN7Y%2BVTeOMyBJxw%3DbcmZa-N9nEbAFVNqtLuiqgp8iLHqpPobg%40mail.gmail.com%3E"
+       TITLE="[osg-users] SingleThreaded leading to whole application just running on one core">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Sep 23 01:02:33 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004206.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+        <LI>Next message: <A HREF="004209.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4208">[ date ]</a>
+              <a href="thread.html#4208">[ thread ]</a>
+              <a href="subject.html#4208">[ subject ]</a>
+              <a href="author.html#4208">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>On 23 September 2016 at 08:42, Christoph Weiss &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">weiss at wsoptics.de</A>&gt; wrote:
+&gt;<i> Thank you so much for pointing this out, Pete.  So in
+</I>&gt;<i> ViewerBase::setUpThreading() osg decides the whole application should be
+</I>&gt;<i> confined to a single core.
+</I>
+When running SingleThread the OSG just sets the affinity of the
+current thread.  That's it, that's all it's doing.
+
+It does not explicitly change the affinity of any of threads created
+by user applications.  I think what Pete found was under Linux is that
+threads created after the set affinity to the current thread, all
+threads created by that thread then inherit that affinity, which what
+his code snippet looks to work around.
+
+&gt;<i> Judging by your comment, this has already been discussed and not deemed a
+</I>&gt;<i> fault that should be fixed?
+</I>
+Changing something that was done by design because one class of usage
+on one platform doesn't do exactly what they want.  There isn't a bug
+to fix here.  It's sub-optimal behavior for certain types of
+application usage on certain platforms.
+
+&gt;<i>
+</I>&gt;<i> Also, I suppose there is no way to it portably?
+</I>&gt;<i> Thread::setProcessorAffinity() only allows restricting to a single core and
+</I>&gt;<i> has tons of ifdefs, so I guess I need to handle every cross compilation
+</I>&gt;<i> target individually?
+</I>&gt;<i>
+</I>&gt;<i> Thanks again, I really hope this behavior can be changed in a future
+</I>&gt;<i> release!
+</I>
+I haven't yet seen a reason to change the behaviour, it's not the case
+that the behaviour is wrong for all users, it's not a bug.  Removing
+the setting of affinity would leave the main thread to float around
+and increase the changes of breaking cache.  The OSG is just trying to
+do something sensible out of the box for most users.
+
+In the case of Qt application, they should be run multi-theaded, for
+all the native windowing systems the OSG support all work
+multi-threaded without any problem.  Unfortunately Qt has created a
+series of problems on the threading front that we've had to try and
+work around, Qt then goes and moves the goal posts though between
+releases. it's been a real pain to try and keep osgQt working well
+over the years.  If you don't need a traditional 2D UI then it's
+generally best to avoid Qt as it causes problems because it has it's
+way of working that doesn't fit well with the needs of real-time
+visualization.
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004206.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+	<LI>Next message: <A HREF="004209.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4208">[ date ]</a>
+              <a href="thread.html#4208">[ thread ]</a>
+              <a href="subject.html#4208">[ subject ]</a>
+              <a href="author.html#4208">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

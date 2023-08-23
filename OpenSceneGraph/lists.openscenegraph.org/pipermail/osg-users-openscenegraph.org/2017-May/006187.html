@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Multiple render passes and multithreading
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Multiple%20render%20passes%20and%20multithreading&In-Reply-To=%3C219ff84e-de49-ffd4-570e-a28eac9be121%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006186.html">
+   <LINK REL="Next"  HREF="282411.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Multiple render passes and multithreading</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Multiple%20render%20passes%20and%20multithreading&In-Reply-To=%3C219ff84e-de49-ffd4-570e-a28eac9be121%40gmx.de%3E"
+       TITLE="[osg-users] Multiple render passes and multithreading">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Wed May  3 09:11:44 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006186.html">[osg-users] Multiple render passes and multithreading
+</A></li>
+        <LI>Next message: <A HREF="282411.html">[osg-users] [osgPlugins] Osg to fbx
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6187">[ date ]</a>
+              <a href="thread.html#6187">[ thread ]</a>
+              <a href="subject.html#6187">[ subject ]</a>
+              <a href="author.html#6187">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Glenn,
+
+
+&gt;<i> Sebastian,
+</I>&gt;<i>
+</I>&gt;<i> Have you tried setting the data variance to DYNAMIC on the StateSet
+</I>&gt;<i> containing the Uniform?
+</I>&gt;<i>
+</I>&gt;<i> That's the first thing I would try -- not sure whether it works on
+</I>&gt;<i> Uniforms though.
+</I>
+Thanks, that indeed did the trick :-)
+Thinking twice makes it obvious; declaring it dynamic will prevent it 
+from being written to while being read.
+
+Cheers
+Sebastian
+
+&gt;<i>
+</I>&gt;<i> Glenn Waldron
+</I>&gt;<i>
+</I>&gt;<i> On Wed, May 3, 2017 at 11:49 AM, Sebastian Messerschmidt
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A>&gt;&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;<i>     Hi,
+</I>&gt;<i>
+</I>&gt;<i>     I've just stumbled upon something I find hard to understand.
+</I>&gt;<i>     My setup contains multiple cameras (using FBO and MRT) with a
+</I>&gt;<i>     specific render-order set to them. The first camera is essentially a
+</I>&gt;<i>     render-scene-to-MRT pass.
+</I>&gt;<i>     In the simplest case a second camera will pick up the textures
+</I>&gt;<i>     rendered to and use them to draw to the framebuffer.
+</I>&gt;<i>
+</I>&gt;<i>     A cull-callback is attached to the group containing the cameras. The
+</I>&gt;<i>     callback simply extracts the current ViewMatrix and passes it to the
+</I>&gt;<i>     stateset as a uniform. This uniform is used in one of later
+</I>&gt;<i>     cameras/passed to reconstruct worldspace from the depth buffer.
+</I>&gt;<i>
+</I>&gt;<i>     Now while this all works great when setting the viewer to
+</I>&gt;<i>     SingleThreaded, it seems that using multithreading in the viewer
+</I>&gt;<i>     causes the Uniform for the ViewMatrix to be from the previous frame
+</I>&gt;<i>     in some cases. From my understanding the cull-visitor runs
+</I>&gt;<i>     asynchronously to the drawing, causing the uniform to be either from
+</I>&gt;<i>     the correct or from another frame.
+</I>&gt;<i>
+</I>&gt;<i>     What would be the multithreaded-cull/draw alternative to get the
+</I>&gt;<i>     ViewMatrix (or any other camera-related values) used for rendering
+</I>&gt;<i>     in the first camera down the chain reliably?
+</I>&gt;<i>
+</I>&gt;<i>     Cheers
+</I>&gt;<i>     Sebastian
+</I>&gt;<i>     _______________________________________________
+</I>&gt;<i>     osg-users mailing list
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>&gt;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006186.html">[osg-users] Multiple render passes and multithreading
+</A></li>
+	<LI>Next message: <A HREF="282411.html">[osg-users] [osgPlugins] Osg to fbx
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6187">[ date ]</a>
+              <a href="thread.html#6187">[ thread ]</a>
+              <a href="subject.html#6187">[ subject ]</a>
+              <a href="author.html#6187">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

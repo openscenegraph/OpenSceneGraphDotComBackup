@@ -1,0 +1,313 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] qt5 qml plugin
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20qt5%20qml%20plugin&In-Reply-To=%3C1447586625.m2f.65646%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001985.html">
+   <LINK REL="Next"  HREF="001996.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] qt5 qml plugin</H1>
+<!--htdig_noindex-->
+    <B>Roy Arents</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20qt5%20qml%20plugin&In-Reply-To=%3C1447586625.m2f.65646%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] qt5 qml plugin">osgforum at tevs.eu
+       </A><BR>
+    <I>Sun Nov 15 03:23:45 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001985.html">[osg-users] MSVS2015 3rdparty build
+</A></li>
+        <LI>Next message: <A HREF="001996.html">[osg-users] qt5 qml plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278209">[ date ]</a>
+              <a href="thread.html#278209">[ thread ]</a>
+              <a href="subject.html#278209">[ subject ]</a>
+              <a href="author.html#278209">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I'm trying to create a qml pluing to display qt5 qtQuick qml files in osg directly.
+
+The code below seems to work and I can see qml being draw and events are processed. However, the qml image does not seem to be updated/redrawn after receiving events. The image seems static.
+
+I'm not sure were the problem lies. Does qt not update the osg image, or does osg does not show a new image. Perhaps someone can help with this?
+
+Thank you!
+
+Cheers,
+Roy
+
+
+Code:
+
+
+#include &quot;pluginsQML.h&quot;
+#include &quot;QMLParameters.h&quot;
+
+#include &lt;osg/MatrixTransform&gt;
+#include &lt;osg/TextureRectangle&gt;
+#include &lt;osg/Texture2D&gt;
+#include &lt;osg/Object&gt;
+
+#include &lt;osgDB/ReaderWriter&gt;
+#include &lt;osgDB/FileNameUtils&gt;
+#include &lt;osgDB/FileUtils&gt;
+
+#include &lt;osgQt/QWidgetImage&gt;
+
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+#include &lt;QQuickWidget&gt;
+#include &lt;QVBoxLayout&gt;
+
+class QmlEventHandler : public osgGA::GUIEventHandler
+{
+public:
+    QmlEventHandler(QQuickWidget* widget) : _widget(widget) {}
+
+    virtual bool handle( const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; aa )
+    {
+        switch(ea.getEventType())
+        {
+            case(osgGA::GUIEventAdapter::FRAME):
+            {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+
+//                QCoreApplication::postEvent(_widget,new QEvent(QEvent::UpdateRequest));
+//                _widget-&gt;repaint();
+//                _widget-&gt;update();
+                break;
+            }
+            default:
+	            break;
+        }
+        return false;
+    }
+    protected:
+        QQuickWidget* _widget;
+};
+
+static QmlEventHandler* qmlEventHandler = NULL;
+
+class ReaderWriterQML : public osgDB::ReaderWriter
+{
+public:
+
+    ReaderWriterQML()
+    {
+        supportsExtension(&quot;qml&quot;, &quot;&quot;);
+        
+        //supportsOption(&quot;shmem&quot;,        &quot;Enable shared memory&quot;);
+    }
+
+    virtual ~ReaderWriterQML()
+    {
+    }
+
+    virtual const char * className() const
+    {
+        return &quot;ReaderWriterQML&quot;;
+    }
+
+    virtual ReadResult readNode(const std::string &amp; filename, const osgDB::ReaderWriter::Options* options) const
+    {
+        const std::string ext = osgDB::getLowerCaseFileExtension(filename);
+        if (ext==&quot;qml&quot;)
+        {
+            osg::ref_ptr&lt;osgQML::QMLParameters&gt; parameters(new osgQML::QMLParameters);
+            parseOptions(parameters.get(), options);
+
+            std::string cmd = filename + &quot; &quot; + parameters-&gt;getOptionString();
+
+            bool inScene = true;
+
+            // There should be one QApplication
+            if(!QApplication::instance()) 
+            {
+                char *argv[] = {&quot;app&quot;, (char*)filename.c_str(), NULL};
+                int argc = sizeof(argv) / sizeof(char*) - 1;
+                new QApplication(argc,argv);
+            }
+
+            //QWidget* widget = new QWidget;
+            //widget-&gt;setLayout(new QVBoxLayout);
+
+            QQuickWidget* widget = new QQuickWidget;
+            widget-&gt;setSource(QUrl::fromLocalFile(filename.c_str()));
+            //widget-&gt;layout()-&gt;addWidget(quickWidget);
+
+            // Size hack
+            QSize initSize = widget-&gt;initialSize();
+            if(initSize.width() != initSize.height()) osg::notify(osg::WARN) &lt;&lt; &quot;ReaderWriterQML - qml files with square size seem to work better in osg&quot; &lt;&lt; std::endl;
+            widget-&gt;setGeometry(0, 0, 2*initSize.width(),2*initSize.height());
+
+            osg::ref_ptr&lt;osgQt::QWidgetImage&gt; widgetImage = new osgQt::QWidgetImage(widget);
+            //widgetImage-&gt;setDataVariance(osg::Object::DYNAMIC);
+#if (QT_VERSION &gt;= QT_VERSION_CHECK(4, 5, 0))
+            widgetImage-&gt;getQWidget()-&gt;setAttribute(Qt::WA_TranslucentBackground);
+#endif
+            widgetImage-&gt;getQGraphicsViewAdapter()-&gt;setBackgroundColor(QColor(0, 0, 0, 0));
+            widgetImage-&gt;getQGraphicsViewAdapter()-&gt;resize(initSize.width(), initSize.height()); // Size hack
+            QGraphicsScene* graphicsScene = widgetImage-&gt;getQGraphicsViewAdapter()-&gt;getQGraphicsScene();
+
+            osg::Camera* camera = 0;        // Will stay NULL in the inScene case.
+            osg::Geometry* quad = osg::createTexturedQuadGeometry(osg::Vec3(0,0,0), osg::Vec3(1,0,0), osg::Vec3(0,1,0), 1, 1);
+            osg::Geode* geode = new osg::Geode;
+            geode-&gt;addDrawable(quad);
+
+            osg::MatrixTransform* mt = new osg::MatrixTransform;
+
+            osg::Texture2D* texture = new osg::Texture2D(widgetImage.get());
+            texture-&gt;setResizeNonPowerOfTwoHint(false);
+            texture-&gt;setFilter(osg::Texture::MIN_FILTER,osg::Texture::LINEAR);
+            texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+            texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+            mt-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+
+            osgViewer::InteractiveImageHandler* handler; 
+            if (inScene)
+            {
+                mt-&gt;setMatrix(osg::Matrix::rotate(osg::Vec3(0,1,0), osg::Vec3(0,0,1)));
+                mt-&gt;addChild(geode);
+
+                handler = new osgViewer::InteractiveImageHandler(widgetImage.get());
+            }
+            else    // fullscreen
+            {
+                // The HUD camera's viewport needs to follow the size of the 
+                // window. MyInteractiveImageHandler will make sure of this.
+                // As for the quad and the camera's projection, setting the 
+                // projection resize policy to FIXED takes care of them, so
+                // they can stay the same: (0,1,0,1) with a quad that fits.
+
+                // Set the HUD camera's projection and viewport to match the screen.
+                camera = new osg::Camera;
+                camera-&gt;setProjectionResizePolicy(osg::Camera::FIXED);
+                camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0,1,0,1));
+                camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+                camera-&gt;setViewMatrix(osg::Matrix::identity());
+                camera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+                camera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+                camera-&gt;addChild(geode);
+                camera-&gt;setViewport(0, 0, 1024, 768);
+
+                mt-&gt;addChild(camera);
+
+                handler = new osgViewer::InteractiveImageHandler(widgetImage.get(), texture, camera);
+            }
+
+            mt-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+            mt-&gt;getOrCreateStateSet()-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+            mt-&gt;getOrCreateStateSet()-&gt;setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+            mt-&gt;getOrCreateStateSet()-&gt;setAttribute(new osg::Program);
+
+            osg::Group* overlay = new osg::Group;
+            overlay-&gt;addChild(mt);
+
+            //root-&gt;addChild(overlay);
+            
+            quad-&gt;setEventCallback(handler);
+            quad-&gt;setCullCallback(handler);
+
+            if(!qmlEventHandler) // Only add ONE QmlEventHandler to process all qt events
+            {
+                qmlEventHandler = new QmlEventHandler(widget);
+                overlay-&gt;setEventCallback(qmlEventHandler);
+            }
+
+            return overlay;
+
+        }
+        return ReadResult::FILE_NOT_HANDLED;
+    }
+
+    
+private:
+    
+    void parseOptions(osgQML::QMLParameters* parameters, const osgDB::ReaderWriter::Options * options) const
+    {
+        if(!options) return;
+
+        const std::string name = options-&gt;getName();
+        int numPluginData = options-&gt;getNumPluginData();
+        int numPluginStringData = options-&gt;getNumPluginStringData();
+        const std::string optionString = options-&gt;getOptionString();
+        if (options &amp;&amp; options-&gt;getNumPluginStringData()&gt;0)
+        {
+            const FormatDescriptionMap&amp; supportedOptList = supportedOptions();
+
+            for (FormatDescriptionMap::const_iterator itr = supportedOptList.begin();
+                 itr != supportedOptList.end(); ++itr)
+            {
+                // Find the name
+                std::string name(itr-&gt;first);
+                size_t found = name.find(&quot;=&quot;);
+                if(found!=std::string::npos)
+                {
+                    name = name.substr(0,found);
+                }
+                name.insert(0,&quot;-&quot;);
+
+                const std::string value = options-&gt;getPluginStringData(name);
+
+                parameters-&gt;parse(name, value);
+            }
+        }
+    }
+};
+
+
+
+REGISTER_OSGPLUGIN(qml, ReaderWriterQML)
+
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic6278.php?p=65646#65646">http://forum.openscenegraph.org/viewtopic.php?p=65646#65646</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001985.html">[osg-users] MSVS2015 3rdparty build
+</A></li>
+	<LI>Next message: <A HREF="001996.html">[osg-users] qt5 qml plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278209">[ date ]</a>
+              <a href="thread.html#278209">[ thread ]</a>
+              <a href="subject.html#278209">[ subject ]</a>
+              <a href="author.html#278209">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

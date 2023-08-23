@@ -1,0 +1,155 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Best practice for dynamic StateSets &amp; Geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Best%20practice%20for%20dynamic%20StateSets%20%26%20Geometry&In-Reply-To=%3CCAFN7Y%2BUH_ujX-GZuHqJxZtz-5sFfVDKsT8JG9bxZFJA0SRZkRw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="276316.html">
+   <LINK REL="Next"  HREF="000116.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Best practice for dynamic StateSets &amp; Geometry</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Best%20practice%20for%20dynamic%20StateSets%20%26%20Geometry&In-Reply-To=%3CCAFN7Y%2BUH_ujX-GZuHqJxZtz-5sFfVDKsT8JG9bxZFJA0SRZkRw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Best practice for dynamic StateSets &amp; Geometry">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Apr 15 02:53:16 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="276316.html">[osg-users] Best practice for dynamic StateSets &amp; Geometry
+</A></li>
+        <LI>Next message: <A HREF="000116.html">[osg-users] Best practice for dynamic StateSets &amp; Geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#108">[ date ]</a>
+              <a href="thread.html#108">[ thread ]</a>
+              <a href="subject.html#108">[ subject ]</a>
+              <a href="author.html#108">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Jannik,
+
+General purpose double buffering of data is something I've considered in
+the past but not attempted to implement into the core OSG as it introduces
+a range of complexities in implementation and API.  There are places in the
+OSG where buffering is done locally but in general these are areas where
+the implementation is lightweight and there is a clear benefit.
+
+In your case it's cool that you've found a way of implementing and got a
+performance benefit.  It's a complexity that most users haven't tried to
+tackle before, but I suspect this is probably partly down to not having the
+same bottlenecks that you are probably seeing.
+
+I don't know the bottlenecks in your app, but for DrawThreadPerContext to
+make such big difference in performance it would suggest that your are CPU
+bound.  Are you update, cull, draw dispatch or draw GPU bound?  Use the
+osgViewer::StatsHandler to show the relatively load on screen.  Most scene
+graphs app will have a pretty light update, a modest cull and draw
+dispatch.  If any of these phases are the bottleneck then look to resolving
+these might be the key to getting best performance rather than adding
+double buffering.
+
+Also, make sure that you are using a release build when performance
+profiling, the results you get in debug make a huge difference and can
+totally distort the relative cost of different phases.
+
+Cheers,
+Robert.
+
+
+
+On 14 April 2015 at 18:28, Jannik Heller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">scrawl at baseoftrash.de</A>&gt; wrote:
+
+&gt;<i> Hi OSG friends,
+</I>&gt;<i>
+</I>&gt;<i> A common challenge for OSG users are the implications of the viewer
+</I>&gt;<i> threading model - by default the viewer.frame() will return before the draw
+</I>&gt;<i> dispatch is complete, meaning users (and the OSG) can start preparing the
+</I>&gt;<i> next frame before the current frame has completed. However, if you attempt
+</I>&gt;<i> to change a StateSet or Drawable in the frame update, you run the risk of
+</I>&gt;<i> modifying data that the OSG is still working with in a background thread,
+</I>&gt;<i> resulting in crashes.
+</I>&gt;<i> Often times you will see code dealing with this by setting the
+</I>&gt;<i> DataVariance of the object to DYNAMIC. Unfortunately as result the draw
+</I>&gt;<i> dispatch has to complete before the frame() returns, for me this dropped
+</I>&gt;<i> the frame rate in half.
+</I>&gt;<i> Recently I developed a more efficient solution for dealing with this and
+</I>&gt;<i> would like to hear your thoughts.
+</I>&gt;<i> The idea is similar to &quot;double buffering&quot; with the framebuffer - you
+</I>&gt;<i> create two copies of the data on start, one copy is write only, another
+</I>&gt;<i> copy is read only, and when the frame completes the roles are swapped. You
+</I>&gt;<i> can implement this idea for both Drawables and StateSets:
+</I>&gt;<i> - Dynamic Drawables (RigGeometry, MorphGeometry, etc): create a deep copy
+</I>&gt;<i> of the Drawable, decorate both Drawables with a FrameSwitch node. A
+</I>&gt;<i> FrameSwitch node is a variant of Group that only traverses even or non-even
+</I>&gt;<i> children based on the current FrameStamp. Code (
+</I>&gt;<i> <A HREF="https://github.com/OpenMW/openmw/blob/f7da9796692e14c79632cb85fa75a90b082cd863/components/nifosg/nifloader.cpp#L179">https://github.com/OpenMW/openmw/blob/f7da9796692e14c79632cb85fa75a90b082cd863/components/nifosg/nifloader.cpp#L179</A>
+</I>&gt;<i> )
+</I>&gt;<i> - Dynamic StateSets: Create two copies of the StateSet on start, then
+</I>&gt;<i> every frame in a NodeCallback swap the roles of these StateSets, apply
+</I>&gt;<i> changes to the first StateSet, then set the currently active StateSet on
+</I>&gt;<i> the Node. Code (
+</I>&gt;<i> <A HREF="https://github.com/scrawl/openmw/blob/osg/components/sceneutil/statesetupdater.cpp#L8">https://github.com/scrawl/openmw/blob/osg/components/sceneutil/statesetupdater.cpp#L8</A>
+</I>&gt;<i> )
+</I>&gt;<i>
+</I>&gt;<i> There are some downsides to this approach (mostly that for data that is
+</I>&gt;<i> just rarely changing, you have to apply every change twice), but other than
+</I>&gt;<i> that it works beautifully and now I've got 2x the framerate again.
+</I>&gt;<i>
+</I>&gt;<i> I'm curious how the OSG veterans are dealing with this. Anything I've
+</I>&gt;<i> missed?
+</I>&gt;<i>
+</I>&gt;<i> Cheers
+</I>&gt;<i> Jannik
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopica72a.php?p=63390#63390">http://forum.openscenegraph.org/viewtopic.php?p=63390#63390</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150415/9484ee07/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150415/9484ee07/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="276316.html">[osg-users] Best practice for dynamic StateSets &amp; Geometry
+</A></li>
+	<LI>Next message: <A HREF="000116.html">[osg-users] Best practice for dynamic StateSets &amp; Geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#108">[ date ]</a>
+              <a href="thread.html#108">[ thread ]</a>
+              <a href="subject.html#108">[ subject ]</a>
+              <a href="author.html#108">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

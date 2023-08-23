@@ -1,0 +1,214 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG in Gtk3 GLArea
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20in%20Gtk3%20GLArea&In-Reply-To=%3C1528181266.m2f.73969%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008372.html">
+   <LINK REL="Next"  HREF="008375.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG in Gtk3 GLArea</H1>
+<!--htdig_noindex-->
+    <B>Mean Taipan</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20in%20Gtk3%20GLArea&In-Reply-To=%3C1528181266.m2f.73969%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] OSG in Gtk3 GLArea">osgforum at tevs.eu
+       </A><BR>
+    <I>Mon Jun  4 23:47:46 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008372.html">[osg-users] OSG in Gtk3 GLArea
+</A></li>
+        <LI>Next message (by thread): <A HREF="008375.html">[osg-users] OSG in Gtk3 GLArea
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8371">[ date ]</a>
+              <a href="thread.html#8371">[ thread ]</a>
+              <a href="subject.html#8371">[ subject ]</a>
+              <a href="author.html#8371">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>For now I have given up on trying to use core profile (my limited OpenGL knowledge is way obsolete), so I'm falling back to the previously mentioned workaround of rendering to a pbuffer and copying that back to the normal 2D engine.
+
+Basing it around the osgscreencapture.cpp example, as if the --pbuffer-only option was used, it's working in the simplest case, but resizing the window does not work (only the original window size image is placed in the lower left of the resulting osg::Image, with the rest padded out with transparent pix).
+
+I don't understand why, in the example, the following code is used (straightened out for the --pbuffer-only case):
+
+
+Code:
+    osg::ref_ptr&lt;osg::GraphicsContext&gt; pbuffer;
+        osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+        ...
+        traits-&gt;pbuffer = true;
+        ...
+        pbuffer = osg::GraphicsContext::createGraphicsContext(traits.get());
+         
+        ...
+
+        osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+        camera-&gt;setGraphicsContext(pbuffer.get());
+        camera-&gt;setViewport(new osg::Viewport(0,0,width,height));
+        GLenum buffer = pbuffer-&gt;getTraits()-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+        camera-&gt;setDrawBuffer(buffer);
+        camera-&gt;setReadBuffer(buffer);
+        camera-&gt;setFinalDrawCallback(new WindowCaptureCallback(mode, position, readBuffer));
+
+        viewer.addSlave(camera.get(), osg::Matrixd(), osg::Matrixd());
+
+        viewer.realize();
+
+    return viewer.run();
+
+
+
+
+So why is addSlave() then realize() necessary?
+
+I tried simplifying it to just setting the pbuffer GraphicsContext directly on viewer.getCamera() (before realize()) but that results in a completely empty image.  But the normal viewer.getCamera() seems like a waste if I'm not using it.
+
+It also fails if viewer.realize() is removed.
+
+Anyway, the bigger problem is resizing.  In my viewer subclass, when the window is resized it calls resized() on the relevant GCs, which makes a bigger image but padded with transparent (I can't see on-screen in real time as yet, but instead it is writing the Image to a .png file).
+
+FWIW, here is my code to set up the pbuffer GC and the resize method:
+
+
+Code:
+void MyViewer::embedInMemory(int x, int y, int width, int height)
+{
+    osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+    GLenum readBuffer = GL_BACK;
+    WindowCaptureCallback::FramePosition position = WindowCaptureCallback::END_FRAME;
+    WindowCaptureCallback::Mode mode = WindowCaptureCallback::READ_PIXELS;
+    setThreadingModel(SingleThreaded);
+    _gw = new GraphicsWindowMemory(x,y,width,height);
+    camera-&gt;setViewport(new osg::Viewport(0,0,width,height));
+    camera-&gt;setGraphicsContext(_gw);
+    GLenum buffer = _gw-&gt;getTraits()-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+    camera-&gt;setDrawBuffer(buffer);
+    camera-&gt;setReadBuffer(buffer);
+    camera-&gt;setFinalDrawCallback(new WindowCaptureCallback(mode, position, readBuffer));
+    
+    addSlave(camera.get(), osg::Matrixd(), osg::Matrixd());
+    realize();
+}
+
+void MyViewer::reconfigure(int x, int y, int width, int height) 
+{
+    _queue.windowResize(x, y, width, height);  // osgGA::EventQueue &amp; _queue
+    if (_gw-&gt;isRealized()) {  // _gw is my GC created above
+        _gw-&gt;makeCurrent();
+    }
+    _gw-&gt;resized(x, y, width, height);
+    if (getCamera()-&gt;getGraphicsContext() &amp;&amp; getCamera()-&gt;getGraphicsContext()-&gt;isRealized()) {
+        getCamera()-&gt;getGraphicsContext()-&gt;resized(x, y, width, height);
+        getCamera()-&gt;setViewport(new osg::Viewport(0,0,width,height));
+        getCamera()-&gt;setProjectionMatrixAsPerspective(30.0f, static_cast&lt;double&gt;(width)/static_cast&lt;double&gt;(height), 1.0f, 10000.0f);
+    }
+}
+
+
+
+
+
+Maybe you can point out the dumb mistake I have made.
+
+[Sorry if the code has funny chars instead of spaces; it seems to be spaces in the text widget but preview looks a bit weird.]
+
+Regards,
+SJH
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicdc3e.php?p=73969#73969">http://forum.openscenegraph.org/viewtopic.php?p=73969#73969</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008372.html">[osg-users] OSG in Gtk3 GLArea
+</A></li>
+	<LI>Next message (by thread): <A HREF="008375.html">[osg-users] OSG in Gtk3 GLArea
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8371">[ date ]</a>
+              <a href="thread.html#8371">[ thread ]</a>
+              <a href="subject.html#8371">[ subject ]</a>
+              <a href="author.html#8371">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

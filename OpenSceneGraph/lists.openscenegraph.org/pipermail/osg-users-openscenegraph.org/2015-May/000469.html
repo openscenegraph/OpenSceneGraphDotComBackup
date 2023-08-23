@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] DatabasePager - how to modify data during loading
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20DatabasePager%20-%20how%20to%20modify%20data%20during%20loading&In-Reply-To=%3CCAKbUNYwfyjPU%2Bm4UnJSSMNfJNQNG8VbC3-CimgQgXc4DNZUEYw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000467.html">
+   <LINK REL="Next"  HREF="000472.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] DatabasePager - how to modify data during loading</H1>
+<!--htdig_noindex-->
+    <B>Mike Connell</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20DatabasePager%20-%20how%20to%20modify%20data%20during%20loading&In-Reply-To=%3CCAKbUNYwfyjPU%2Bm4UnJSSMNfJNQNG8VbC3-CimgQgXc4DNZUEYw%40mail.gmail.com%3E"
+       TITLE="[osg-users] DatabasePager - how to modify data during loading">michael.connell at gmail.com
+       </A><BR>
+    <I>Thu May 28 01:05:52 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000467.html">[osg-users] DatabasePager - how to modify data during loading
+</A></li>
+        <LI>Next message: <A HREF="000472.html">[osg-users] DatabasePager - how to modify data during loading
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#469">[ date ]</a>
+              <a href="thread.html#469">[ thread ]</a>
+              <a href="subject.html#469">[ subject ]</a>
+              <a href="author.html#469">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks Sebastian!
+
+The ReadFileCallback is how I'm doing it now: we take an observer_ptr of
+nodes loaded in the RFC, then in the main thread before rendering we can
+see if the node is still valid and if is inserted in the scenegraph. If we
+can find it, then we can perform the edit.
+
+The problem is that since the node is already inserted, we either have to
+block rendering whilst we do the edit (which can take hundreds of ms per
+node), or edit in the background whilst rendering either the unedited node
+(which looks wrong), or no node at all (looks just as wrong! :-)
+
+There also a problem in that the pager compiles objects before insertion -
+but this operation is a waste for objects which we will immediately edit.
+
+The more I think about it the more sure I am that the DatabaseThread is the
+right place to do it, but exactly how to best insert ourselves into the
+process is harder to know!
+
+best wishes
+
+Mike
+
+On Thu, 28 May 2015 at 09:22 Sebastian Messerschmidt &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A>&gt; wrote:
+
+&gt;<i>  Hi Mike,
+</I>&gt;<i>
+</I>&gt;<i> you can add an
+</I>&gt;<i>  osgDB::Registry::ReadFileCallback
+</I>&gt;<i> and implement the readImage member function.
+</I>&gt;<i> For registering it to the registry use:
+</I>&gt;<i> osgDB::Registry::instance()-&gt;setReadFileCallback(myCloneReadFileCallback);
+</I>&gt;<i>
+</I>&gt;<i> This will be triggered by the database-pager when loading the image.
+</I>&gt;<i> It won't help you with the destination-problem however.
+</I>&gt;<i>
+</I>&gt;<i> Cheers
+</I>&gt;<i> Sebastian
+</I>&gt;<i>
+</I>&gt;<i>   Hi all!
+</I>&gt;<i>
+</I>&gt;<i>  I am finishing up some work which involves modifying nodes as they are
+</I>&gt;<i> loaded via the database pager - I want to edit the data after it is loaded,
+</I>&gt;<i> but before it is added to the scenegraph. I also need to know the
+</I>&gt;<i> destination (future parent) node in the scenegraph where the edited node
+</I>&gt;<i> will be located.
+</I>&gt;<i>
+</I>&gt;<i>  It looks to me like a suitable location for this work is pretty much in
+</I>&gt;<i> the middle of DatabaseThread::run - after the node is loaded via readNode
+</I>&gt;<i> (), but before it is added to the file cache. All the data I need appears
+</I>&gt;<i> to be held in the DatabaseRequest object.
+</I>&gt;<i>
+</I>&gt;<i>  Is there another (simpler?) way of inserting my code into the loading
+</I>&gt;<i> process?
+</I>&gt;<i>
+</I>&gt;<i>  If the middle of the run method is the best location, would a patch to
+</I>&gt;<i> allow a optional callback function to be called be considered?
+</I>&gt;<i>
+</I>&gt;<i>  best wishes
+</I>&gt;<i>
+</I>&gt;<i>  Mike
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">listosg-users at lists.openscenegraph.orghttp</A>://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>  _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150528/0847ebf0/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150528/0847ebf0/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000467.html">[osg-users] DatabasePager - how to modify data during loading
+</A></li>
+	<LI>Next message: <A HREF="000472.html">[osg-users] DatabasePager - how to modify data during loading
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#469">[ date ]</a>
+              <a href="thread.html#469">[ thread ]</a>
+              <a href="subject.html#469">[ subject ]</a>
+              <a href="author.html#469">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

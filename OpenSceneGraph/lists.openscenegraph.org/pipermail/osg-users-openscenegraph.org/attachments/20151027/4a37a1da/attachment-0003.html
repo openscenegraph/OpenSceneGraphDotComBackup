@@ -1,0 +1,69 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Lv,&lt;br&gt;&lt;br&gt;&lt;/div&gt;osgText::Text&nbsp;implementation&nbsp;is&nbsp;very&nbsp;pretty&nbsp;old&nbsp;now,&nbsp;with&nbsp;a&nbsp;design&nbsp;driven&nbsp;by&nbsp;the&nbsp;needs&nbsp;of&nbsp;very&nbsp;old&nbsp;hardware. &nbsp;If&nbsp;I&nbsp;were&nbsp;to&nbsp;rewrite&nbsp;osgText&nbsp;I&nbsp;would&nbsp;not&nbsp;implement&nbsp;it&nbsp;the&nbsp;has&nbsp;been. &nbsp;I&nbsp;would&nbsp;not&nbsp;recommend&nbsp;adding&nbsp;OpenGL&nbsp;coding&nbsp;into&nbsp;osgText::Text&nbsp;as&nbsp;this&nbsp;breaks&nbsp;OSG&#39;s&nbsp;ability&nbsp;to&nbsp;do&nbsp;lazy&nbsp;state&nbsp;updating.&lt;br&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;27&nbsp;October&nbsp;2015&nbsp;at&nbsp;16:48,&nbsp;Lv&nbsp;Qing&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:donlvqing@msn.com&quot;&nbsp;target=&quot;_blank&quot;&gt;donlvqing@msn.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Thx!Robert!&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;The&nbsp;situation&nbsp;is,we &nbsp;have&nbsp;modified&nbsp;the&nbsp;text.cpp&nbsp;to&nbsp;create&nbsp;some&nbsp;other&nbsp;styles&nbsp;rather&nbsp;than&nbsp;boundingbox.&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;Like&nbsp;a&nbsp;BoundingLine,one&nbsp;end&nbsp;to&nbsp;one&nbsp;of&nbsp;the&nbsp;corner&nbsp;of&nbsp;a&nbsp;BoundingBox,the&nbsp;other&nbsp;end&nbsp;linked&nbsp;to&nbsp;a&nbsp;osg::Node.&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; So&nbsp;if&nbsp;a&nbsp;text&nbsp;have&nbsp;a&nbsp;BoundingLine&nbsp;and&nbsp;a&nbsp;BoundingBox,I&nbsp;just&nbsp;want&nbsp;draw&nbsp;the&nbsp;BoundingBox&nbsp;as&nbsp;normal,but&nbsp;draw&nbsp;the&nbsp;BoundingLine&nbsp;with&nbsp;LineStipple&nbsp;.So&nbsp;I&nbsp;think&nbsp;one&nbsp;osg::StateSet&nbsp;may&nbsp;not&nbsp;solve&nbsp;this&nbsp;problem.&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;I&nbsp;am&nbsp;not&nbsp;quiet &nbsp;familiar&nbsp;with&nbsp;the&nbsp;openGL&nbsp;programming&nbsp;since&nbsp;I&nbsp;use&nbsp;osg&nbsp;at&nbsp;first.I&nbsp;search&nbsp;the&nbsp;web&nbsp;found&nbsp;people&nbsp;use&nbsp;this&nbsp;code&nbsp;to&nbsp;set&lt;br&gt;<br>
+Linewidth&nbsp;and&nbsp;Stipple&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+glLineWidth&nbsp;(2.0);&lt;br&gt;<br>
+glLineStipple&nbsp;(1,&nbsp;0x0F0F);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt;And&nbsp;I&nbsp;look&nbsp;into&nbsp;text.cpp,found&nbsp;lots&nbsp;of&nbsp;code&nbsp;like&nbsp;use&nbsp;openGL&nbsp;directly,such&nbsp;as&nbsp;:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ //glClear(GL_STENCIL_BUFFER_BIT);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ //&nbsp;enable&nbsp;stencil&nbsp;buffer&lt;br&gt;<br>
+ &nbsp; &nbsp;glEnable(GL_STENCIL_TEST);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;write&nbsp;a&nbsp;one&nbsp;to&nbsp;the&nbsp;stencil&nbsp;buffer&nbsp;everywhere&nbsp;we&nbsp;are&nbsp;about&nbsp;to&nbsp;draw&lt;br&gt;<br>
+ &nbsp; &nbsp;glStencilFunc(GL_ALWAYS,&nbsp;1,&nbsp;1);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;write&nbsp;only&nbsp;to&nbsp;the&nbsp;stencil&nbsp;buffer&nbsp;if&nbsp;we&nbsp;pass&nbsp;the&nbsp;depth&nbsp;test&lt;br&gt;<br>
+ &nbsp; &nbsp;glStencilOp(GL_KEEP,&nbsp;GL_KEEP,&nbsp;GL_REPLACE);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Disable&nbsp;writing&nbsp;to&nbsp;the&nbsp;color&nbsp;buffer&nbsp;so&nbsp;we&nbsp;only&nbsp;write&nbsp;to&nbsp;the&nbsp;stencil&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;buffer&nbsp;and&nbsp;the&nbsp;depth&nbsp;buffer&lt;br&gt;<br>
+ &nbsp; &nbsp;glColorMask(GL_FALSE,&nbsp;GL_FALSE,&nbsp;GL_FALSE,&nbsp;GL_FALSE);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;make&nbsp;sure&nbsp;the&nbsp;depth&nbsp;buffer&nbsp;is&nbsp;enabled&lt;br&gt;<br>
+// &nbsp; &nbsp;glEnable(GL_DEPTH_TEST);&lt;br&gt;<br>
+// &nbsp; &nbsp;glDepthMask(GL_TRUE);&lt;br&gt;<br>
+// &nbsp; &nbsp;glDepthFunc(GL_LESS);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Arrrgh!&nbsp;Why&nbsp;does&nbsp;the&nbsp;code&nbsp;only&nbsp;seem&nbsp;to&nbsp;work&nbsp;correctly&nbsp;if&nbsp;I&nbsp;call&nbsp;this?&lt;br&gt;<br>
+ &nbsp; &nbsp;glDepthMask(GL_FALSE);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ So&nbsp;I&nbsp;think&nbsp;use&nbsp;the&nbsp;openGL&nbsp;code&nbsp;to&nbsp;draw&nbsp;different&nbsp;style&nbsp;may&nbsp;be&nbsp;the&nbsp;qucik&nbsp;way.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+...&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Lv&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;/span&gt;&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=65462#65462&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=65462#65462&lt;/a&gt;&lt;br&gt;<br>
+&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

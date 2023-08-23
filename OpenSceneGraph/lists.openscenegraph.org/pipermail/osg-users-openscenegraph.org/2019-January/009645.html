@@ -1,0 +1,154 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Capturing all visible nodes
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Capturing%20all%20visible%20nodes&In-Reply-To=%3C1548358480.m2f.75540%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009636.html">
+   <LINK REL="Next"  HREF="009649.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Capturing all visible nodes</H1>
+<!--htdig_noindex-->
+    <B>Isaac Wolf</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Capturing%20all%20visible%20nodes&In-Reply-To=%3C1548358480.m2f.75540%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Capturing all visible nodes">ijwolf8 at gmail.com
+       </A><BR>
+    <I>Thu Jan 24 11:34:40 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009636.html">[osg-users] Capturing all visible nodes
+</A></li>
+        <LI>Next message (by thread): <A HREF="009649.html">[osg-users] Capturing all visible nodes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9645">[ date ]</a>
+              <a href="thread.html#9645">[ thread ]</a>
+              <a href="subject.html#9645">[ subject ]</a>
+              <a href="author.html#9645">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Rob,
+
+This was a huge help! Thank you so much! A few questions for you though. I have the following code implemented based off examples:
+
+
+Code:
+
+osg::StateSet* createSpotLightDecoratorState(unsigned int textureUnit)
+	{
+		osg::StateSet* stateset = new osg::StateSet;
+
+		// set up spot light texture
+		osg::Texture2D* texture = new osg::Texture2D();
+		texture-&gt;setImage(osgDB::readImageFile(&quot;numbered_colors.png&quot;));
+		texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_BORDER);
+		texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_BORDER);
+		texture-&gt;setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_BORDER);
+		stateset-&gt;setTextureAttributeAndModes(textureUnit, texture, osg::StateAttribute::ON);
+
+		// set up tex gens
+		stateset-&gt;setTextureMode(textureUnit, GL_TEXTURE_GEN_S, osg::StateAttribute::ON);
+		stateset-&gt;setTextureMode(textureUnit, GL_TEXTURE_GEN_T, osg::StateAttribute::ON);
+		stateset-&gt;setTextureMode(textureUnit, GL_TEXTURE_GEN_R, osg::StateAttribute::ON);
+		stateset-&gt;setTextureMode(textureUnit, GL_TEXTURE_GEN_Q, osg::StateAttribute::ON);
+		return stateset;
+	}
+
+osg::Node* createSpotLightNode(osg::ref_ptr&lt;osg::Camera&gt; camera, unsigned int textureUnit)
+	{
+		osg::Group* group = new osg::Group;
+		osg::Vec3f eye, center, up;
+
+		camera-&gt;getViewMatrixAsLookAt(eye, center, up);
+
+		osg::Matrixd viewM = camera-&gt;getViewMatrix();
+		osg::Matrixd projM = camera-&gt;getProjectionMatrix();
+		osg::Matrixd windowM = camera-&gt;getViewport()-&gt;computeWindowMatrix();
+		osg::Matrixd worldToScreen = viewM * projM * windowM;
+
+		// create tex gen.
+		float scaleVal = 0.5f, translateVal = 1.0f;
+		osg::TexGenNode* texgenNode = new osg::TexGenNode;
+		texgenNode-&gt;setTextureUnit(textureUnit);
+		osg::TexGen* texgen = texgenNode-&gt;getTexGen();
+		texgen-&gt;setMode(osg::TexGen::EYE_LINEAR);
+		texgen-&gt;setPlanesFromMatrix(viewM*projM*
+			osg::Matrixd::translate(translateVal, translateVal, translateVal)*
+			osg::Matrixd::scale(scaleVal, scaleVal, scaleVal));
+		group-&gt;addChild(texgenNode);
+
+		return group;
+	}
+
+
+
+
+
+Which is called in the main animation loop by:
+
+
+Code:
+
+		curGroup-&gt;setStateSet(createSpotLightDecoratorState(1));
+		curGroup-&gt;addChild(createSpotLightNode(camera, 1));
+
+
+
+
+This projects my png on to the body nicely based on the camera location; however, I'd like it to project as if the camera is at some distance x closer to the body. So instead of the texture filling the entire screen, it fills only a certain percentage. I tried just using the setViewMatrix() to move the camera (eye - center) / 2 closer to the body, projecting the texture, then setting the camera back to the original position. But that seems like a very hacky way to do it, and I didn't get exactly the results I wanted!
+
+The second issue I am having is that the portion of the model that is not hit by the projected texture disappears completely. I am assuming this as something to do with the stateset, but I am not sure what to do differently.
+
+Finally, how to I turn off projecting through surfaces? i.e. if I am looking at the front of a cube, it only projects onto the front face, and not onto the back face as well.
+
+Thanks again Robert, I appreciate all the work you put in to answering so many questions on this forum!
+
+Regards,
+
+Isaac
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic3584.php?p=75540#75540">http://forum.openscenegraph.org/viewtopic.php?p=75540#75540</A>
+
+
+
+
+
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009636.html">[osg-users] Capturing all visible nodes
+</A></li>
+	<LI>Next message (by thread): <A HREF="009649.html">[osg-users] Capturing all visible nodes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9645">[ date ]</a>
+              <a href="thread.html#9645">[ thread ]</a>
+              <a href="subject.html#9645">[ subject ]</a>
+              <a href="author.html#9645">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

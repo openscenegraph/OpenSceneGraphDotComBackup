@@ -1,0 +1,166 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Point Selection in Point Cloud
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Point%20Selection%20in%20Point%20Cloud&In-Reply-To=%3C1459775569.m2f.66722%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278909.html">
+   <LINK REL="Next"  HREF="002716.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Point Selection in Point Cloud</H1>
+<!--htdig_noindex-->
+    <B>David Knipp</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Point%20Selection%20in%20Point%20Cloud&In-Reply-To=%3C1459775569.m2f.66722%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Point Selection in Point Cloud">David.Knipp at gmx.net
+       </A><BR>
+    <I>Mon Apr  4 06:12:49 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278909.html">[osg-users] Point Selection in Point Cloud
+</A></li>
+        <LI>Next message: <A HREF="002716.html">[osg-users] Point Selection in Point Cloud
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2690">[ date ]</a>
+              <a href="thread.html#2690">[ thread ]</a>
+              <a href="subject.html#2690">[ subject ]</a>
+              <a href="author.html#2690">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Bruno,
+
+You can choose many different ways. OSG is not a collision detection library but it has some functionality you can play with. Also you can use bullet physics which is a free physics library. Also this is a pretty easy detection implementation and you can just do it on your own.
+
+1. osg:
+
+look at: 
+osg::PolytopyIntersector:
+
+
+Code:
+
+osgUtil::PolytopeIntersector * picker = new osgUtil::PolytopeIntersector(osgUtil::Intersector::CoordinateFrame::PROJECTION, rectangle_min_x, rectangle_min_y, rectangle_max_x, rectangle_maxy);
+
+// setup picker ...
+osgUtil::IntersectionVisitor intersecvisitor(picker);
+// setup iv
+viewer-&gt;getCamera()-&gt;accept(iv);
+
+
+
+
+I'm not shure if it's possible to select a SINGLE Point from a geometry with this.
+
+2. bullet physics
+
+ask at bullet physics for this
+
+3. own implementation:
+
+an easy point in rectangle implementation:
+
+Code:
+
+bool point3DinsideRectangle2D(Position p, Rectangle r) {
+   if(p.x &lt; r.minPos.x || p.y &lt; r.minPos.y)
+       return false;
+   if(p.x &gt; r.maxPos.x || p.y &gt; r.maxPos.y)
+       return false;
+   
+}
+
+
+
+
+If you would check every point like this it would take hours. So make this test above for each point after you checked the boundingbox of a geometry or drawable:
+
+
+Code:
+
+bool boundingBox3DinsideRectangle2D(BoundingBox bb, Rectangle r) {
+   if(bb.xMin() &lt; r.minPos.x || bb.yMin() &lt; r.minPos.y)
+       return false;
+   if(bb.xMax() &gt; r.maxPos.x || bb.yMax() &gt; r.maxPos.y)
+       return false;
+   
+}
+
+
+
+
+You can implement this with a simple NodeVisitor. For the Rectangle make shure to transform the choosen min and max right.
+
+
+Code:
+
+   Rectangle r;
+   
+   // minP, maxP from selection
+    // transform them
+   minP = this-&gt;mViewer-&gt;getCamera()-&gt;getProjectionMatrix() * this-&gt;mViewer-&gt;getCamera()-&gt;getViewMatrix() * minP;
+   maxP = this-&gt;mViewer-&gt;getCamera()-&gt;getProjectionMatrix() * this-&gt;mViewer-&gt;getCamera()-&gt;getViewMatrix() * maxP;
+   // compute new min max
+  r.min.x = min(minP.x, maxP.x);
+  r.min.y = min(minP.y, maxP.y);
+  r.max.x = max(minP.x, maxP.x);
+  r.max.y = max(minP.y, maxP.y);
+
+
+
+
+Something like this should work. But using a Rectangle isn't actually right. A rectangle drawn on display will actually create a frustum with the view. (If look at a cuboid in 3D, you will see a frustum that you'r brain will interpret as cuboid)
+
+If you like to use frustum google for:
+&quot;Point in Frustum&quot;
+And
+&quot;Intersection BoundingBox and Frustum&quot;
+
+I guess you will find plenty of stuff.
+
+Cheers,
+NoxxKn
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic0538.php?p=66722#66722">http://forum.openscenegraph.org/viewtopic.php?p=66722#66722</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278909.html">[osg-users] Point Selection in Point Cloud
+</A></li>
+	<LI>Next message: <A HREF="002716.html">[osg-users] Point Selection in Point Cloud
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2690">[ date ]</a>
+              <a href="thread.html#2690">[ thread ]</a>
+              <a href="subject.html#2690">[ subject ]</a>
+              <a href="author.html#2690">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,197 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Memory leak with PrimitiveSets who stay alive
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Memory%20leak%20with%20PrimitiveSets%20who%20stay%20alive&In-Reply-To=%3CCAFN7Y%2BX5LS9kirLF0kXWh_ZLF9J05SwNky_3beZ0f%3DH5wn3spA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="276949.html">
+   <LINK REL="Next"  HREF="276951.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Memory leak with PrimitiveSets who stay alive</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Memory%20leak%20with%20PrimitiveSets%20who%20stay%20alive&In-Reply-To=%3CCAFN7Y%2BX5LS9kirLF0kXWh_ZLF9J05SwNky_3beZ0f%3DH5wn3spA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Memory leak with PrimitiveSets who stay alive">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Jun 25 09:54:03 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="276949.html">[osg-users] Memory leak with PrimitiveSets who stay alive
+</A></li>
+        <LI>Next message: <A HREF="276951.html">[osg-users] osgQt on Android armv7a
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#727">[ date ]</a>
+              <a href="thread.html#727">[ thread ]</a>
+              <a href="subject.html#727">[ subject ]</a>
+              <a href="author.html#727">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Christian,
+
+I can't spot a problem with a quick read through, copy and paste code in
+isolation isn't sufficient to spot what might be wrong.
+
+As a general note the OSG ref counting is extremely robust, hammered by
+many thousands of developers in over a decade of it's existence, it's
+unlikely that that this will be the source of what or what may not be a
+leak.
+
+While ref counting is robust when used correctly there are ways to cause
+problems - creating circular references in the scene graph is one example,
+another is retaining a ref_ptr&lt;&gt; to objects globally but not keeping track
+of these, another is code where ref/unref() is called manually without them
+being properly balanced.
+
+If you want assistance from the community perhaps the best way would be to
+create a small example that illustrates the problem.  It might be that you
+spot the error in your code just doing this, but if then a nice succinct
+example that others can review and test first hand will provide the best
+means of getting to the bottom of the problem.
+
+Robert.
+
+
+On 25 June 2015 at 17:42, Christian Kunz &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian.kunz83 at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi everyone,
+</I>&gt;<i>
+</I>&gt;<i> I have a big memory leak in my application.
+</I>&gt;<i>
+</I>&gt;<i> Generally I have n Spheres I put in my scene. When I add a Sphere a
+</I>&gt;<i> Drawable is added to the scene, when I remove it, it disapears. So the
+</I>&gt;<i> ref_ptr system is working good here.
+</I>&gt;<i>
+</I>&gt;<i> Now I want to connect all the Spheres with osg::PrimitiveSet::LINE_STRIP.
+</I>&gt;<i> That also works fine. The thing is, that the position of the Spheres are
+</I>&gt;<i> dynamically changing and it can be
+</I>&gt;<i> that new ones appear, etc. So what I do is to just draw the LINE_STRIP
+</I>&gt;<i> every Frame new.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> First I clear the old vertices array then iterate over my Spheres and add
+</I>&gt;<i> there positions:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>  _verticesLines-&gt;resize(0);
+</I>&gt;<i>
+</I>&gt;<i> //****for( ... iterate over Spheres and fill vertices array
+</I>&gt;<i> _verticesLines-&gt;push_back(osg::Vec3(tmpTrackpoint.x, tmpTrackpoint.y,
+</I>&gt;<i> tmpTrackpoint.z+1));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> So all the x, y, z positions of my spheres are now in the vertices array.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> int iCountPrimitives=_geometryLines-&gt;getNumPrimitiveSets();
+</I>&gt;<i>
+</I>&gt;<i> _geometryLines-&gt;removePrimitiveSet(0, iCountPrimitives);
+</I>&gt;<i>
+</I>&gt;<i>  if(sizeTrackList&gt;1)
+</I>&gt;<i> {
+</I>&gt;<i> _geometryLines-&gt;setVertexArray(_verticesLines);
+</I>&gt;<i>
+</I>&gt;<i> // set the colors as before, plus using the aobve
+</I>&gt;<i> osg::Vec4Array* colors = new osg::Vec4Array;
+</I>&gt;<i> colors-&gt;push_back(osg::Vec4(0.7f,0.7f,0.7f,1.0f));
+</I>&gt;<i> _geometryLines-&gt;setColorArray(colors);
+</I>&gt;<i> _geometryLines-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+</I>&gt;<i>
+</I>&gt;<i> // set the normal in the same way color.
+</I>&gt;<i> osg::Vec3Array* normals = new osg::Vec3Array;
+</I>&gt;<i> normals-&gt;push_back(osg::Vec3(0.0f,-1.0f,0.0f));
+</I>&gt;<i> _geometryLines-&gt;setNormalArray(normals);
+</I>&gt;<i> _geometryLines-&gt;setNormalBinding(osg::Geometry::BIND_OVERALL);
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::DrawArrays&gt; drawArray = new
+</I>&gt;<i> osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,sizeTrackList);
+</I>&gt;<i> _geometryLines-&gt;addPrimitiveSet(drawArray);
+</I>&gt;<i>
+</I>&gt;<i> _geodeLines-&gt;addDrawable(_geometryLines);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Then I simply add a new DrawArrays instance to the geometry and before
+</I>&gt;<i> that I`m removing any other DrawArray from the geometry.
+</I>&gt;<i> The problem with that is, that the count of LINE_STRIPS increases with
+</I>&gt;<i> every frame. so the last DrawArray is not deleted and stays in memory.
+</I>&gt;<i> At this point I tried a lot and I don&#180;t understand why the DrawArray
+</I>&gt;<i> objects are not destroyed.
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::DrawArrays&gt; drawArray = new
+</I>&gt;<i> osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,0,sizeTrackList); -&gt; so
+</I>&gt;<i> drawArray is of type osg::ref_ptr,
+</I>&gt;<i> when I remove it from the osg::Geometry &quot;geometryLines&quot; it is not
+</I>&gt;<i> referenced by any node and should be destroyed?
+</I>&gt;<i>
+</I>&gt;<i> Am i&#180;m seeing this wrong? What would be a proper solution to solve this
+</I>&gt;<i> memory leak? How can I destroy the last DrawArrays instance so that memory
+</I>&gt;<i> is not leaking?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thanks for your help...
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Christian
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic1e25.php?p=64195#64195">http://forum.openscenegraph.org/viewtopic.php?p=64195#64195</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150625/c413c5c2/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150625/c413c5c2/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="276949.html">[osg-users] Memory leak with PrimitiveSets who stay alive
+</A></li>
+	<LI>Next message: <A HREF="276951.html">[osg-users] osgQt on Android armv7a
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#727">[ date ]</a>
+              <a href="thread.html#727">[ thread ]</a>
+              <a href="subject.html#727">[ subject ]</a>
+              <a href="author.html#727">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

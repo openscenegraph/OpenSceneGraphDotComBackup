@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Integrate Qt into OSG - not OSG into Qt osgQt
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Integrate%20Qt%20into%20OSG%20-%20not%20OSG%20into%20Qt%20osgQt&In-Reply-To=%3C9fd5fa56-2572-3f37-7f79-6789d8adf958%40gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010492.html">
+   <LINK REL="Next"  HREF="010497.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Integrate Qt into OSG - not OSG into Qt osgQt</H1>
+<!--htdig_noindex-->
+    <B>Jan Ciger</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Integrate%20Qt%20into%20OSG%20-%20not%20OSG%20into%20Qt%20osgQt&In-Reply-To=%3C9fd5fa56-2572-3f37-7f79-6789d8adf958%40gmail.com%3E"
+       TITLE="[osg-users] Integrate Qt into OSG - not OSG into Qt osgQt">jan.ciger at gmail.com
+       </A><BR>
+    <I>Wed Oct  2 11:02:15 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010492.html">[osg-users] Integrate Qt into OSG - not OSG into Qt osgQt
+</A></li>
+        <LI>Next message (by thread): <A HREF="010497.html">[osg-users] Integrate Qt into OSG - not OSG into Qt osgQt
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10495">[ date ]</a>
+              <a href="thread.html#10495">[ thread ]</a>
+              <a href="subject.html#10495">[ subject ]</a>
+              <a href="author.html#10495">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+
+On 02/10/2019 15:23, Trajce Nikolov NICK wrote:
+&gt;<i> Hi community,&#160;
+</I>&gt;<i>
+</I>&gt;<i> I am struggling with the design of such a task. And I am a bit
+</I>&gt;<i> familiar with Qt and other UI frameworks. The task is to embed the
+</I>&gt;<i> whole Qt framework into OSG - including the event processing and let
+</I>&gt;<i> OSG render ( through RTT ) the widgets content.
+</I>&gt;<i>
+</I>&gt;<i> Any clue, hints what direction I should take?
+</I>&gt;<i>
+</I>&gt;<i> Thanks a bunch as always!
+</I>&gt;<i> Nick
+</I>
+
+Ufff, you are in for quite a battle, I am afraid. I have done this few
+years ago when we were using Ogre and OSG for our virtual reality
+simulators at work and we needed a proper UI framework to display user
+interfaces inside the application.&#160;
+
+You have basically two options:
+
+a) Render the Qt widget/window into a texture/image, grab that and
+display it as an OSG texture. Input from OSG can be fed into Qt's event
+system by artificially creating and injecting events.
+
+This works and it is how we have done it. Qt widgets can render
+themselves into an image/texture directly, simply by calling their
+render() method with proper arguments. We were able to display most Qt
+widgets and render QML using OSG textures. Where things get very hairy
+is the state management between OSG and Qt (Qt uses its own OpenGL
+backend for rendering and assumes that it is in a certain state!) and
+then input. When you aren't rendering Qt the usual way by showing
+windows on screen but you only call render() and grab a texture, Qt will
+not initialize some internal state relating to issues such as cursor,
+keyboard focus, state of some widgets, etc.
+
+The result is that you will have problems with cursor disappearing,
+widgets not accepting keyboard input, keyboard shortcuts not working and
+myriads of other problems like this. It can be solved to some degree by
+digging into the Qt's source code, seeing which flags it is relying on
+where and then manually calling the necessary functions to ensure that
+they are set correctly. We have managed to get it to such shape that the
+UIs were usable but if you need a very complex UI you will likely run
+into problems. Also OSG's event system doesn't handle anywhere close to
+the gamut of input events that Qt does, so a lot of things will have to
+be emulated.
+
+b) Implement a new Qt backend running on top of OSG.&#160;
+
+Qt implements several of these backends, including a basic framebuffer
+and OpenGL already, that is how they port Qt to different platforms,
+such as phones or embedded hardware. This would be probably cleaner
+approach if you really need the entire Qt to work but also a lot more
+work than the above, because the API is fairly extensive, not super well
+documented (this are really the dirty guts of Qt you aren't supposed to
+normally see)&#160; and may not have a completely straightforward mapping to OSG.
+
+Good luck,
+
+Jan
+
+
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: signature.asc
+Type: application/pgp-signature
+Size: 195 bytes
+Desc: OpenPGP digital signature
+URL: &lt;<A HREF="../attachments/20191002/b9b5e1fd/attachment.sig">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191002/b9b5e1fd/attachment.sig</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010492.html">[osg-users] Integrate Qt into OSG - not OSG into Qt osgQt
+</A></li>
+	<LI>Next message (by thread): <A HREF="010497.html">[osg-users] Integrate Qt into OSG - not OSG into Qt osgQt
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10495">[ date ]</a>
+              <a href="thread.html#10495">[ thread ]</a>
+              <a href="subject.html#10495">[ subject ]</a>
+              <a href="author.html#10495">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

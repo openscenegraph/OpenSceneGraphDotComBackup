@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to avoid Javas Garbage Collection to free large data array elements ?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20avoid%20Javas%20Garbage%20Collection%20to%20free%20large%0A%20data%20array%20elements%20%3F&In-Reply-To=%3CCAM-RrinYOr_cRkT0jgcGO2pHOVeCODPEvx5LZjssAkZ3T4vsRQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277216.html">
+   <LINK REL="Next"  HREF="000995.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to avoid Javas Garbage Collection to free large data array elements ?</H1>
+<!--htdig_noindex-->
+    <B>Rafa Gaitan</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20avoid%20Javas%20Garbage%20Collection%20to%20free%20large%0A%20data%20array%20elements%20%3F&In-Reply-To=%3CCAM-RrinYOr_cRkT0jgcGO2pHOVeCODPEvx5LZjssAkZ3T4vsRQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to avoid Javas Garbage Collection to free large data array elements ?">rafa.gaitan at gmail.com
+       </A><BR>
+    <I>Thu Jul 30 12:33:41 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277216.html">[osg-users] How to avoid Javas Garbage Collection to free large	data array elements ?
+</A></li>
+        <LI>Next message: <A HREF="000995.html">[osg-users] How to avoid Javas Garbage Collection to free large	data array elements ?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#994">[ date ]</a>
+              <a href="thread.html#994">[ thread ]</a>
+              <a href="subject.html#994">[ subject ]</a>
+              <a href="author.html#994">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Christian,
+
+Dealing with the GC in Java is always a pain. Some time ago I worked doing
+some JNI libraries with OSG and we had problems with the GC don't freeing
+&quot;small&quot; objects in Java (wrappers for big C++ objects). In the end the more
+you can do in the native part the better if you need performance and an
+strict memory control.
+
+For the android I recommend you take a look to the osgjni sample:
+<A HREF="https://github.com/miragetech/osgAndroid/tree/master/org.openscenegraph.osgjni">https://github.com/miragetech/osgAndroid/tree/master/org.openscenegraph.osgjni</A>
+
+The purpose of this sample was making &quot;complex&quot;  things that were not
+supported in the JNI wrapper. As you can see in the Activity:
+
+Node node = ReadFile.readNodeFile(path);
+MatrixTransform m = new MatrixTransform();
+m.addChild(node);
+mView.setSceneData(OSGConfiguration.configureScene(m));
+
+The osgAndroid library is used for loading a node but then before setting
+the scene to the viewer I call to a &quot;OSGConfiguration&quot; class that is
+another JNI wrapper in the current project:
+<A HREF="https://github.com/miragetech/osgAndroid/blob/master/org.openscenegraph.osgjni/src/org/openscenegraph/osgjni/OSGConfiguration.java">https://github.com/miragetech/osgAndroid/blob/master/org.openscenegraph.osgjni/src/org/openscenegraph/osgjni/OSGConfiguration.java</A>
+<A HREF="https://github.com/miragetech/osgAndroid/blob/master/org.openscenegraph.osgjni/jni/JNIOSGConfiguration.cpp">https://github.com/miragetech/osgAndroid/blob/master/org.openscenegraph.osgjni/jni/JNIOSGConfiguration.cpp</A>
+
+This creates a simple animation with OSG in the native part, I think a
+similar approach could be used for you, avoiding all the GC thing. You can
+also create new wrappers of your own classes following the same schema used
+in osgAndroid if you think it could be useful :).
+
+I hope it helps!
+
+Regards,
+Rafa
+
+El jue., 30 jul. 2015 a las 20:35, Christian Kehl (&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian-kehl at web.de</A>&gt;)
+escribi&#243;:
+
+&gt;<i> Hi to everyone,
+</I>&gt;<i>
+</I>&gt;<i> I currently extend the osgAndroid project (attempt) to do Texture
+</I>&gt;<i> Projection and Mapping with mobile images. I already extended the codebase
+</I>&gt;<i> so to get access to the geometry, Vector Arrays etc. of a loaded geometry.
+</I>&gt;<i> Now, the geometry loading function looks as follows:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> private void _load_geometry()
+</I>&gt;<i> {
+</I>&gt;<i>   Node mesh_node = ReadFile.readNodeFile(pointcloud_path);
+</I>&gt;<i>   mesh = new Group(mesh_node.getNativePtr());
+</I>&gt;<i>   Geode mesh_geode = new Geode(mesh.getLastChild().getNativePtr());
+</I>&gt;<i>   _drawable = new Geometry(mesh_geode.getLastDrawable().getNativePtr());
+</I>&gt;<i>   vertex_array = _drawable.getVertexArray();
+</I>&gt;<i>   Log.i(&quot;TEXTUREMAPPING&quot;, &quot;Vertex array loaded&quot;);
+</I>&gt;<i>   geometry = new ArrayList&lt;Point3&gt;();
+</I>&gt;<i>   Log.i(&quot;TEXTUREMAPPING&quot;, &quot;Geometry allocated&quot;);
+</I>&gt;<i>   for(int i = 0; i &lt; vertex_array.size(); i++)
+</I>&gt;<i>   {
+</I>&gt;<i>     geometry.add(new Point3(vertex_array.get(i).x(),
+</I>&gt;<i> vertex_array.get(i).y(), vertex_array.get(i).z()));
+</I>&gt;<i>   }
+</I>&gt;<i>   Log.i(&quot;TEXTUREMAPPING&quot;, &quot;Geometry set.&quot;);
+</I>&gt;<i>   geometry_as_matrix = new MatOfPoint3f();
+</I>&gt;<i>   Log.i(&quot;TEXTUREMAPPING&quot;, &quot;Number of 3D points: &quot; +
+</I>&gt;<i> Integer.toString(geometry.size()));
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> &quot;geometry&quot; is here an ArrayList of OpenCV's Point3. As you can see, In the
+</I>&gt;<i> for-loop I touch every element in the Vec3Array. The Vec3Array itself is a
+</I>&gt;<i> wrapped version of the original C++ class, accessed with its object
+</I>&gt;<i> pointer, as seen in this JNI wrapper code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> JNIEXPORT jlong JNICALL
+</I>&gt;<i> Java_org_openscenegraph_osg_core_Vec3Array_nativeCreateVec3Array(JNIEnv *,
+</I>&gt;<i> jclass)
+</I>&gt;<i> {
+</I>&gt;<i>   osg::Vec3Array *a = new osg::Vec3Array();
+</I>&gt;<i>   a-&gt;ref();
+</I>&gt;<i>   return reinterpret_cast&lt;jlong&gt;(a);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Now, the trouble: with a certain geometry (test:40k vertices), the test
+</I>&gt;<i> message of actually accessed elements [&quot;Number of 3D Points:&quot;
+</I>&gt;<i> geometry.size(), see above] prints ~11k vertices. In the java console logs
+</I>&gt;<i> (LogCat), I see that Java's GC &quot;cleared&quot; its memory two times during the
+</I>&gt;<i> upper function execution.
+</I>&gt;<i>
+</I>&gt;<i> My question: How can I avoid it ? How can/should I do the per-Vertex
+</I>&gt;<i> operations ? Has anybody encountered problems with Java's GC formerly,
+</I>&gt;<i> either in former Android wrappers or in old Java platform portations ?
+</I>&gt;<i>
+</I>&gt;<i> The internet with several blogs and lectures tells me there is (especially
+</I>&gt;<i> with Android) no way to actually &quot;control&quot; the GC, or protect certain
+</I>&gt;<i> objects from not being freed. The only option mentioned is to code the
+</I>&gt;<i> things in JNI (C++), as the Garbage Collector obviously doesn't operate on
+</I>&gt;<i> the C++ code.
+</I>&gt;<i>
+</I>&gt;<i> Opinions and suggestions are welcome.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Christian
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic7530.php?p=64536#64536">http://forum.openscenegraph.org/viewtopic.php?p=64536#64536</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150730/e9ac9c9d/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150730/e9ac9c9d/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277216.html">[osg-users] How to avoid Javas Garbage Collection to free large	data array elements ?
+</A></li>
+	<LI>Next message: <A HREF="000995.html">[osg-users] How to avoid Javas Garbage Collection to free large	data array elements ?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#994">[ date ]</a>
+              <a href="thread.html#994">[ thread ]</a>
+              <a href="subject.html#994">[ subject ]</a>
+              <a href="author.html#994">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

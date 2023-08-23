@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Draw two translucent geometries in specific order
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Draw%20two%20translucent%20geometries%20in%20specific%20order&In-Reply-To=%3CCAFN7Y%2BXp8rbDpvQhBBuFRQZXQJxSJbuk8sVJ7GPvbJNGuVunFw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008241.html">
+   <LINK REL="Next"  HREF="008252.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Draw two translucent geometries in specific order</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Draw%20two%20translucent%20geometries%20in%20specific%20order&In-Reply-To=%3CCAFN7Y%2BXp8rbDpvQhBBuFRQZXQJxSJbuk8sVJ7GPvbJNGuVunFw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Draw two translucent geometries in specific order">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon May 21 03:28:32 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008241.html">[osg-users] Draw two translucent geometries in specific order
+</A></li>
+        <LI>Next message (by thread): <A HREF="008252.html">[osg-users] Draw two translucent geometries in specific order
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8243">[ date ]</a>
+              <a href="thread.html#8243">[ thread ]</a>
+              <a href="subject.html#8243">[ subject ]</a>
+              <a href="author.html#8243">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Kirs,
+
+I'm afraid I'm too busy with other work right now to spend lots of
+time reading other various posts on topic, or provide long essays on
+here on the topic.
+
+In short:
+
+There is only one default RenderBin in the OSG, that's the main
+RenderStage (subclasses from RenderBin).
+
+The StateSet::setRenderBinDetails(BinNumber, &quot;RenderBinPrototypeName&quot;)
+sets the BinNumber and the &quot;RenderBinPrototypeName&quot; string hints to
+the cull traversal what type of bin to create for that BinNumber if
+one hasn't yet been created for it.  The strings match up to the list
+I posted earlier - this RenderBinProtypeList maps the string to a
+RenderBin that is cloned and stored in the rendering backend, and it's
+into this bin that the subgraph below that StateSet are dropped into.
+
+RenderBin's can be nested as many times as you want.  A RenderStage is
+a RenderBin subclass that is used for high level stages in rendering
+such as render to a texture or rendering to the main window, in this
+case you have control over the clearing of buffers and any operations
+that are done after the rendering.  The front end for controlling
+RenderStage is osg::Camera.
+
+Robert.
+
+On 21 May 2018 at 10:34, Kristofer Krus &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">kristofer.krus at liu.se</A>&gt; wrote:
+&gt;<i> Hi again robertosfield, I took a look at the code you posted at this thread (<A HREF="../../../../forum.openscenegraph.org/viewtopic87b2.php?t=17289">http://forum.openscenegraph.org/viewtopic.php?t=17289</A>), and it gave me some further questions.
+</I>&gt;<i>
+</I>&gt;<i> According to this code, there seems like there are six default rendering bins, and I don't see that any numbers are associated with them. However, the article (<A HREF="http://www.bricoworks.com/articles/stategraph/stategraph.html">http://www.bricoworks.com/articles/stategraph/stategraph.html</A>) I linked to claims there are two default rendering bins, numbered 0 and 10. Why does that article claim that, if the code seems to imply something very different? Also, why would it say that the numbers used for those bins are 0 and 10? That seems kind of arbitrary to me and doesn't make much sense.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> robertosfield wrote:
+</I>&gt;&gt;<i> subgraphA-&gt;getOrCrreateStateSet()-&gt;setRenderinBinDetails(&quot;RenderBin&quot;, 5); // or &quot;DepthSortedBin&quot; if you have mulitple transparent objects that need sorting
+</I>&gt;&gt;<i> subgraphB-&gt;getOrCrreateStateSet()-&gt;setRenderinBinDetails(&quot;RenderBin&quot;, 6);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> There is no method called setRenderinBinDetails, but there is a method called setRenderBinDetails. And the order of the arguments for this method is the reversed compared to what you write, i.e. setRenderBinDetails(5, &quot;RenderBin&quot;) and setRenderBinDetails(6, &quot;RenderBin&quot;).
+</I>&gt;<i>
+</I>&gt;<i> Also, what do the arguments do? When I use the code you suggested, A is now always rendered after B, i.e. in the wrong order, no matter if I use the numbers 5 and 6 or if I swap them so that I use the numbers 6 and 5. (This seems to be independent of the direction I view the scene from, which is a good thing, though.) I had the impression that render bins with higher numbers would always be rendered later, and that the number we provide as an argument to setRenderBinDetails is the number of the bin we want to put the subgraph in, but this doesn't seem to be the case.
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic4cbc.php?p=73687#73687">http://forum.openscenegraph.org/viewtopic.php?p=73687#73687</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008241.html">[osg-users] Draw two translucent geometries in specific order
+</A></li>
+	<LI>Next message (by thread): <A HREF="008252.html">[osg-users] Draw two translucent geometries in specific order
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8243">[ date ]</a>
+              <a href="thread.html#8243">[ thread ]</a>
+              <a href="subject.html#8243">[ subject ]</a>
+              <a href="author.html#8243">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

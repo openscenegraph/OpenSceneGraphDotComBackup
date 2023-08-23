@@ -1,0 +1,320 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20using%203Ds%20Model%20in%20osgFX%3A%3ABumpMapping%20and%0A%09the%20Texture%20UV%20Coords%20for%20diffuse%20are%20not%20loaded&In-Reply-To=%3C1447291265.m2f.65610%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001949.html">
+   <LINK REL="Next"  HREF="001968.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded</H1>
+<!--htdig_noindex-->
+    <B>Tobias Rick</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20using%203Ds%20Model%20in%20osgFX%3A%3ABumpMapping%20and%0A%09the%20Texture%20UV%20Coords%20for%20diffuse%20are%20not%20loaded&In-Reply-To=%3C1447291265.m2f.65610%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded">raveworld at freenet.de
+       </A><BR>
+    <I>Wed Nov 11 17:21:05 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001949.html">[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded
+</A></li>
+        <LI>Next message: <A HREF="001968.html">[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1951">[ date ]</a>
+              <a href="thread.html#1951">[ thread ]</a>
+              <a href="subject.html#1951">[ subject ]</a>
+              <a href="author.html#1951">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>For everyone who wants to use a bump map shader in osg you can find a working code in the lines below.
+
+The source file:
+
+&gt;<i> 
+</I>&gt;<i> #include &lt;osg/Group&gt;
+</I>&gt;<i> #include &lt;osg/Image&gt;
+</I>&gt;<i> #include &lt;osg/MatrixTransform&gt;
+</I>&gt;<i> #include &lt;osg/Node&gt;
+</I>&gt;<i> #include &lt;osg/StateSet&gt;
+</I>&gt;<i> #include &lt;osg/TexMat&gt;
+</I>&gt;<i> #include &lt;osg/Texture2D&gt;
+</I>&gt;<i> #include &lt;osgDB/ReadFile&gt;
+</I>&gt;<i> #include &lt;osgGA/TrackballManipulator&gt;
+</I>&gt;<i> #include &lt;osgViewer/Viewer&gt;
+</I>&gt;<i> 
+</I>&gt;<i> #include &lt;osg/Program&gt;
+</I>&gt;<i> #include &lt;osg/Shader&gt;
+</I>&gt;<i> #include &lt;osg/Uniform&gt;
+</I>&gt;<i> #include &lt;osgDB/FileUtils&gt;
+</I>&gt;<i> 
+</I>&gt;<i> int main(int argc, char **argv) {
+</I>&gt;<i> 
+</I>&gt;<i> 	// Root
+</I>&gt;<i> 	osg::Group* bumpRoot = new osg::Group();
+</I>&gt;<i> 
+</I>&gt;<i> 	// Model with bump mapping
+</I>&gt;<i> 	osg::Geometry* bumpModel = new osg::Geometry();
+</I>&gt;<i> 	bumpModel = (osg::Geometry*) osgDB::readNodeFile(&quot;Models/model_scifi_roadway_00straight.3ds&quot;);
+</I>&gt;<i> 
+</I>&gt;<i> 	// Model stateset to activate bump mapping shader
+</I>&gt;<i> 	osg::StateSet* bumpState = new osg::StateSet();
+</I>&gt;<i> 	bumpState = bumpModel-&gt;getOrCreateStateSet();
+</I>&gt;<i> 
+</I>&gt;<i> 	// Stateset shader program
+</I>&gt;<i> 	osg::Program* bumpMapProgramObject = new osg::Program;
+</I>&gt;<i> 
+</I>&gt;<i> 	// Set shader
+</I>&gt;<i> 	osg::Shader* bumpVertexObject = new osg::Shader(osg::Shader::VERTEX);
+</I>&gt;<i> 	osg::Shader* bumpFragmentObject = new osg::Shader(osg::Shader::FRAGMENT);
+</I>&gt;<i> 
+</I>&gt;<i> 	std::string bumpVertexFileName = osgDB::findDataFile(&quot;Shading/newbump.vert&quot;);
+</I>&gt;<i> 	bumpVertexObject-&gt;loadShaderSourceFromFile(bumpVertexFileName.c_str());
+</I>&gt;<i> 	std::string bumpFragmentFileName = osgDB::findDataFile(&quot;Shading/newbump.frag&quot;);
+</I>&gt;<i> 	bumpFragmentObject-&gt;loadShaderSourceFromFile(bumpFragmentFileName.c_str());
+</I>&gt;<i> 
+</I>&gt;<i> 	bumpMapProgramObject-&gt;addShader(bumpVertexObject);
+</I>&gt;<i> 	bumpMapProgramObject-&gt;addShader(bumpFragmentObject);
+</I>&gt;<i> 
+</I>&gt;<i> 	// Set textures
+</I>&gt;<i> 	osg::Texture2D *normal = new osg::Texture2D();
+</I>&gt;<i> 	osg::Texture2D *diffuse = new osg::Texture2D();
+</I>&gt;<i> 
+</I>&gt;<i> 	const char* normal_texture = &quot;Textures/Normal/texture_scifi_roadway_00normal.png&quot;;
+</I>&gt;<i> 	const char* diffuse_texture = &quot;Textures/texture_scifi_roadway_00.png&quot;;
+</I>&gt;<i> 
+</I>&gt;<i> 	osg::Image *normal_image = osgDB::readImageFile(normal_texture);
+</I>&gt;<i> 	osg::Image *diffuse_image = osgDB::readImageFile(diffuse_texture);
+</I>&gt;<i> 
+</I>&gt;<i> 	normal-&gt;setImage(normal_image);
+</I>&gt;<i> 	normal-&gt;setDataVariance(osg::Object::DYNAMIC);
+</I>&gt;<i> 	normal-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+</I>&gt;<i> 	normal-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+</I>&gt;<i> 	normal-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+</I>&gt;<i> 	normal-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+</I>&gt;<i> 	normal-&gt;setResizeNonPowerOfTwoHint(false);
+</I>&gt;<i> 	normal-&gt;setMaxAnisotropy(8.0f);
+</I>&gt;<i> 
+</I>&gt;<i> 	diffuse-&gt;setImage(diffuse_image);
+</I>&gt;<i> 	diffuse-&gt;setDataVariance(osg::Object::DYNAMIC);
+</I>&gt;<i> 	diffuse-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+</I>&gt;<i> 	diffuse-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+</I>&gt;<i> 	diffuse-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+</I>&gt;<i> 	diffuse-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+</I>&gt;<i> 	diffuse-&gt;setResizeNonPowerOfTwoHint(false);
+</I>&gt;<i> 	diffuse-&gt;setMaxAnisotropy(8.0f);
+</I>&gt;<i> 
+</I>&gt;<i> 	// Set texture matrix
+</I>&gt;<i> 	osg::TexMat* texMat = new osg::TexMat;
+</I>&gt;<i> 	osg::Vec3d texPosition(0.0, 0.0, 0.0);
+</I>&gt;<i> 	osg::Vec3d texAngles(0.0, 0.0, 0.0);
+</I>&gt;<i> 	osg::Vec3d texScale(2.0, 2.0, 2.0);
+</I>&gt;<i> 	osg::Matrixd texRot;
+</I>&gt;<i> 	texRot.makeRotate(
+</I>&gt;<i> 		osg::DegreesToRadians(texAngles.x()), osg::Vec3(1, 0, 0),
+</I>&gt;<i> 		osg::DegreesToRadians(texAngles.y()), osg::Vec3(0, 1, 0),
+</I>&gt;<i> 		osg::DegreesToRadians(texAngles.z()), osg::Vec3(0, 0, 1));
+</I>&gt;<i> 	texMat-&gt;setMatrix(osg::Matrix::scale(texScale)*texRot*osg::Matrix::translate(texPosition));
+</I>&gt;<i> 
+</I>&gt;<i> 	const int TEXTURE_UNIT_BUMP = 1;
+</I>&gt;<i> 	const int TEXTURE_UNIT_DIFFUSE = 0;
+</I>&gt;<i> 
+</I>&gt;<i> 	// Add bump map to model stateset
+</I>&gt;<i> 	// normalTexture in newbump.frag as uniform sampler2D normalTexture
+</I>&gt;<i> 	// diffuseTexture in newbump.frag as uniform sampler2D diffuseTexture
+</I>&gt;<i> 	bumpState-&gt;addUniform(new osg::Uniform(&quot;normalTexture&quot;, TEXTURE_UNIT_BUMP));
+</I>&gt;<i> 	bumpState-&gt;addUniform(new osg::Uniform(&quot;diffuseTexture&quot;, TEXTURE_UNIT_DIFFUSE));
+</I>&gt;<i> 	bumpState-&gt;setAttributeAndModes(bumpMapProgramObject, osg::StateAttribute::ON);
+</I>&gt;<i> 	// State set options
+</I>&gt;<i> 	bumpState-&gt;setTextureAttributeAndModes(TEXTURE_UNIT_DIFFUSE, diffuse, osg::StateAttribute::ON);
+</I>&gt;<i> 	bumpState-&gt;setTextureAttributeAndModes(TEXTURE_UNIT_DIFFUSE, texMat, osg::StateAttribute::ON);
+</I>&gt;<i> 	bumpState-&gt;setTextureAttributeAndModes(TEXTURE_UNIT_BUMP, normal, osg::StateAttribute::ON);
+</I>&gt;<i> 	bumpState-&gt;setTextureAttributeAndModes(TEXTURE_UNIT_BUMP, texMat, osg::StateAttribute::ON);
+</I>&gt;<i> 	//bumpState-&gt;setTextureMode(0, GL_TEXTURE_2D, osg::StateAttribute::ON);
+</I>&gt;<i> 	//bumpState-&gt;setTextureMode(1, GL_TEXTURE_2D, osg::StateAttribute::ON);
+</I>&gt;<i> 	//bumpState-&gt;setGlobalDefaults();
+</I>&gt;<i> 	//bumpState-&gt;setMode(GL_LIGHTING, osg::StateAttribute::ON);
+</I>&gt;<i> 	//bumpState-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+</I>&gt;<i> 	bumpState-&gt;setMode(GL_CULL_FACE, osg::StateAttribute::ON);
+</I>&gt;<i> 	//bumpState-&gt;setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+</I>&gt;<i> 
+</I>&gt;<i> 	// Add stateset to model
+</I>&gt;<i> 	bumpModel-&gt;setStateSet(bumpState);
+</I>&gt;<i> 
+</I>&gt;<i> 	// Set model matrix transform
+</I>&gt;<i> 	osg::MatrixTransform *MT = new osg::MatrixTransform();
+</I>&gt;<i> 	MT-&gt;setDataVariance(osg::Object::STATIC);
+</I>&gt;<i> 	MT-&gt;addChild(bumpModel);
+</I>&gt;<i> 	bumpRoot-&gt;addChild(MT);
+</I>&gt;<i> 
+</I>&gt;<i> 	// Set viewer
+</I>&gt;<i> 	osgViewer::Viewer bumpViewer;
+</I>&gt;<i> 	bumpViewer.setSceneData(bumpRoot);
+</I>&gt;<i> 	bumpViewer.setCameraManipulator(new osgGA::TrackballManipulator());
+</I>&gt;<i> 	bumpViewer.realize();
+</I>&gt;<i> 
+</I>&gt;<i> 	while (!bumpViewer.done()) {
+</I>&gt;<i> 		bumpViewer.frame();
+</I>&gt;<i> 	}
+</I>&gt;<i> 	return 0;
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>
+
+The modified newbump.frag
+
+&gt;<i> 
+</I>&gt;<i> uniform sampler2D diffuseTexture;
+</I>&gt;<i> uniform sampler2D normalTexture;
+</I>&gt;<i> 
+</I>&gt;<i> // New bumpmapping
+</I>&gt;<i> varying vec3 lightVec;
+</I>&gt;<i> varying vec3 halfVec;
+</I>&gt;<i> varying vec3 eyeVec;
+</I>&gt;<i> 
+</I>&gt;<i> void main() { 
+</I>&gt;<i> 
+</I>&gt;<i> 	// lookup normal from normal map, move from [0,1] to  [-1, 1] range, normalize
+</I>&gt;<i> 	vec3 normal = 2.0 * texture2D (normalTexture, gl_TexCoord[0].st).rgb - 1.0;
+</I>&gt;<i> 	normal = normalize (normal);
+</I>&gt;<i> 	
+</I>&gt;<i> 	// compute diffuse lighting
+</I>&gt;<i> 	float lamberFactor= max (dot (lightVec, normal), 0.0) ;
+</I>&gt;<i> 	vec4 diffuseMaterial = 0.0;
+</I>&gt;<i> 	vec4 diffuseLight  = 0.0;
+</I>&gt;<i> 	
+</I>&gt;<i> 	// compute specular lighting
+</I>&gt;<i> 	vec4 specularMaterial ;
+</I>&gt;<i> 	vec4 specularLight ;
+</I>&gt;<i> 	float shininess ;
+</I>&gt;<i>   
+</I>&gt;<i> 	// compute ambient
+</I>&gt;<i> 	vec4 ambientLight = gl_LightSource[0].ambient;	
+</I>&gt;<i> 	
+</I>&gt;<i> 	if (lamberFactor &gt; 0.0)
+</I>&gt;<i> 	{
+</I>&gt;<i> 		diffuseMaterial = texture2D (diffuseTexture, gl_TexCoord[0].st);
+</I>&gt;<i> 		diffuseLight  = gl_LightSource[0].diffuse;
+</I>&gt;<i> 		
+</I>&gt;<i> 		// In doom3, specular value comes from a texture 
+</I>&gt;<i> 		specularMaterial =  vec4(1.0)  ;
+</I>&gt;<i> 		specularLight = gl_LightSource[0].specular;
+</I>&gt;<i> 		shininess = 0.05;
+</I>&gt;<i> 		//shininess = pow (max (dot (halfVec, normal), 0.0), 2.0)  ;
+</I>&gt;<i> 		 
+</I>&gt;<i> 		gl_FragColor =	diffuseMaterial * diffuseLight * lamberFactor ;
+</I>&gt;<i> 		gl_FragColor +=	specularMaterial * specularLight * shininess ;				
+</I>&gt;<i> 	
+</I>&gt;<i> 	}
+</I>&gt;<i> 	
+</I>&gt;<i> 	gl_FragColor +=	ambientLight;
+</I>&gt;<i> 	
+</I>&gt;<i>   }		
+</I>&gt;<i> 
+</I>
+
+The modified newbump.vert
+
+&gt;<i> 
+</I>&gt;<i> attribute vec3 tangent;
+</I>&gt;<i> varying vec3 lightVec;
+</I>&gt;<i> varying vec3 halfVec;
+</I>&gt;<i> varying vec3 eyeVec;
+</I>&gt;<i> 
+</I>&gt;<i> void main() {
+</I>&gt;<i> 
+</I>&gt;<i> 	//gl_TexCoord[0] =  gl_MultiTexCoord0;
+</I>&gt;<i> 	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;
+</I>&gt;<i> 	gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;
+</I>&gt;<i> 	
+</I>&gt;<i> 	// Building the matrix Eye Space -&gt; Tangent Space
+</I>&gt;<i> 	vec3 n = normalize (gl_NormalMatrix * gl_Normal);
+</I>&gt;<i> 	vec3 t = normalize (gl_NormalMatrix * tangent);
+</I>&gt;<i> 	vec3 b = cross (n, t);
+</I>&gt;<i> 	
+</I>&gt;<i> 	vec3 vertexPosition = vec3(gl_ModelViewMatrix *  gl_Vertex);
+</I>&gt;<i> 	vec3 lightDir = normalize(gl_LightSource[0].position.xyz - vertexPosition);
+</I>&gt;<i> 		
+</I>&gt;<i> 		
+</I>&gt;<i> 	// transform light and half angle vectors by tangent basis
+</I>&gt;<i> 	vec3 v;
+</I>&gt;<i> 	v.x = dot (lightDir, t);
+</I>&gt;<i> 	v.y = dot (lightDir, b);
+</I>&gt;<i> 	v.z = dot (lightDir, n);
+</I>&gt;<i> 	lightVec = normalize (v);
+</I>&gt;<i> 	
+</I>&gt;<i> 	  
+</I>&gt;<i> 	v.x = dot (vertexPosition, t);
+</I>&gt;<i> 	v.y = dot (vertexPosition, b);
+</I>&gt;<i> 	v.z = dot (vertexPosition, n);
+</I>&gt;<i> 	eyeVec = normalize (v);
+</I>&gt;<i> 	
+</I>&gt;<i> 	
+</I>&gt;<i> 	vertexPosition = normalize(vertexPosition);
+</I>&gt;<i> 	
+</I>&gt;<i> 	/* Normalize the halfVector to pass it to the fragment shader */
+</I>&gt;<i> 
+</I>&gt;<i> 	// No need to divide by two, the result is normalized anyway.
+</I>&gt;<i> 	// vec3 halfVector = normalize((vertexPosition + lightDir) / 2.0); 
+</I>&gt;<i> 	vec3 halfVector = normalize(vertexPosition + lightDir);
+</I>&gt;<i> 	v.x = dot (halfVector, t);
+</I>&gt;<i> 	v.y = dot (halfVector, b);
+</I>&gt;<i> 	v.z = dot (halfVector, n);
+</I>&gt;<i> 
+</I>&gt;<i> 	// No need to normalize, t,b,n and halfVector are normal vectors.
+</I>&gt;<i> 	//normalize (v);
+</I>&gt;<i> 	halfVec = v ; 
+</I>&gt;<i> 	  
+</I>&gt;<i> 	  
+</I>&gt;<i> 	gl_Position = ftransform();
+</I>&gt;<i> 
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>
+
+I hope I can help osg programmer with the same problem.[/quote]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopica72f.php?p=65610#65610">http://forum.openscenegraph.org/viewtopic.php?p=65610#65610</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001949.html">[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded
+</A></li>
+	<LI>Next message: <A HREF="001968.html">[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1951">[ date ]</a>
+              <a href="thread.html#1951">[ thread ]</a>
+              <a href="subject.html#1951">[ subject ]</a>
+              <a href="author.html#1951">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

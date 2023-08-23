@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to prevent OSG linking against Desktop OpenGL
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20prevent%20OSG%20linking%20against%20Desktop%20OpenGL&In-Reply-To=%3C1473437053.m2f.68563%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004074.html">
+   <LINK REL="Next"  HREF="004076.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to prevent OSG linking against Desktop OpenGL</H1>
+<!--htdig_noindex-->
+    <B>Daniel Neos</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20prevent%20OSG%20linking%20against%20Desktop%20OpenGL&In-Reply-To=%3C1473437053.m2f.68563%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] How to prevent OSG linking against Desktop OpenGL">daniel.rd at hotmail.de
+       </A><BR>
+    <I>Fri Sep  9 09:04:13 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004074.html">[osg-users] PagedLOD with externals
+</A></li>
+        <LI>Next message: <A HREF="004076.html">[osg-users] How to prevent OSG linking against Desktop OpenGL
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280298">[ date ]</a>
+              <a href="thread.html#280298">[ thread ]</a>
+              <a href="subject.html#280298">[ subject ]</a>
+              <a href="author.html#280298">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+my Applcation mainly uses Qt(with QOpenGlWidget) and OpensceneGraph, thus it relies heavily on OpenGL.
+
+Since the Remote Desktop Protocol(RDP) poorly supports OpenGL, there is no trivial way to run
+my application over Windows Remote Desktop. Hence, I choose to use Softwarerendering as a fallback.
+
+I can tell Qt which opengl version to use programmatically with QCoreApplication::setAttribute(Qt::AA_UseDesktopOpenGL, true);
+or QCoreApplication::setAttribute(Qt::AA_UseSoftwareOpenGL, true);
+
+But osg seems to strictly link against opengl.dll from the desktop version, no matter if i am delay loading the osg*.dll i am using or not.
+
+When delay loading the osg*.dll , the desktop version will be loaded when the application makes it first contact with osg-related stuff, 
+in my case it is an objects which inherits from QOpenGLWidget integrating the openscenegraph view
+
+
+Code:
+
+OSGWidget::OSGWidget(QWidget* parent, Qt::WindowFlags f)
+    : QOpenGLWidget(parent, f)
+    , m_graphicsWindow(new osgViewer::GraphicsWindowEmbedded(x(),
+        y(),
+        width(),
+        height()))
+    , m_geometry(new osg::Geometry())
+    , m_isInitialized(false)
+    , m_compositeViewer(new osgViewer::CompositeViewer)
+    , m_camera(new osg::Camera)
+    , m_view(new OsgView)
+    , m_geometryNode(new osg::Geode)
+    , m_pickEventHandler(new PickEventHandler(static_cast&lt;OSGWidget&amp;&gt;(*this)))
+    , m_camManipulator(new OsgCameraManipulator)
+    , m_depthData(nullptr)
+    , m_markedPoint(QPoint(DepthDataSet::InvalidPixelCoordinateValue, DepthDataSet::InvalidPixelCoordinateValue))
+    , m_isMarkedPointVisible(false)
+    , m_isRendering(false)
+{
+}
+
+
+
+
+
+Everything works fine using the desktop version of openg. But If I am trying to link against the opengl32sw.dll(from Qt), 
+osg seems to ignore it and links the desktopOpenGL.
+
+The leads to the problem that the application crashes in the deep of osg.
+To be more specific, here is an excerpt of the callstack from top to bottom.
+
+-&gt;OSGWidget::paintGL()
+ -&gt;m_compositeViewer-&gt;renderingTraversals()
+  -&gt; ViewerBase::makeCurrent()
+   -&gt; osg::GraphicsContext::makeCurrent() 
+    -&gt; osg::State::initializeExtensionProcs()
+
+
+Here I need to say that my first step is trying to run the application with
+software rendering only, before switching to Remote Desktop.
+
+
+I suspect that the mixture of the opengl32.dll versions leads to crash the application or maybe
+even somethings is wrong with the opengl32sw.dll from Qt. But everything non-related to osg seems
+to be displayed fine. I am using osg 3.4.0 and Qt 5.7
+
+
+So how can I run osg Code based on Software rendering?
+
+
+
+
+
+Thank you!
+
+Cheers,
+Daniel[/b][/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2eed.php?p=68563#68563">http://forum.openscenegraph.org/viewtopic.php?p=68563#68563</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004074.html">[osg-users] PagedLOD with externals
+</A></li>
+	<LI>Next message: <A HREF="004076.html">[osg-users] How to prevent OSG linking against Desktop OpenGL
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280298">[ date ]</a>
+              <a href="thread.html#280298">[ thread ]</a>
+              <a href="subject.html#280298">[ subject ]</a>
+              <a href="author.html#280298">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

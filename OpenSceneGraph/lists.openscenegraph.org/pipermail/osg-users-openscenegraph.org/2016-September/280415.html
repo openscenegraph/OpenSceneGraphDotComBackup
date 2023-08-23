@@ -1,0 +1,107 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Lazy Disabling without VertexFuncsAvailable
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Lazy%20Disabling%20without%20VertexFuncsAvailable&In-Reply-To=%3C806CD6CF-C3C2-4062-89C7-75F8DAE12BB8%40gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004189.html">
+   <LINK REL="Next"  HREF="280435.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Lazy Disabling without VertexFuncsAvailable</H1>
+<!--htdig_noindex-->
+    <B>Fabian Wiesel</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Lazy%20Disabling%20without%20VertexFuncsAvailable&In-Reply-To=%3C806CD6CF-C3C2-4062-89C7-75F8DAE12BB8%40gmail.com%3E"
+       TITLE="[osg-users] Lazy Disabling without VertexFuncsAvailable">fabian.wiesel at gmail.com
+       </A><BR>
+    <I>Wed Sep 21 04:45:06 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004189.html">[osg-users] Scale-invarient lighting
+</A></li>
+        <LI>Next message: <A HREF="280435.html">[osg-users] Draw text on osg Sphere
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280415">[ date ]</a>
+              <a href="thread.html#280415">[ thread ]</a>
+              <a href="subject.html#280415">[ subject ]</a>
+              <a href="author.html#280415">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I have converted my fixed function OSG program to a shader pipeline 
+(using setVertexAttribArray and shaders instead of the setVertexPointer et al)
+and did run into some issues when disabling &quot;UseVertexAttributeAliasing&quot;, and OSG is compiled with OPENGL_PROFILE=GLCORE
+(So OSG_GL_VERTEX_FUNCS_AVAILABLE is unset). I tested the same code on a linux with OSG compiled for a FFP.
+And there, the code works as expected.
+
+A simple test program is here: <A HREF="https://github.com/fwiesel/vertexarrayfunctest">https://github.com/fwiesel/vertexarrayfunctest</A>
+
+An API trace of the failing case shows the following interesting part:
+...
+glEnableVertexAttribArray(0)
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL) # NULL is okay, the Array has been bound before
+glDisableVertexAttribArray(0)
+glDisableVertexAttribArray(1)
+glDisableVertexAttribArray(2)
+glDisableVertexAttribArray(11)
+glDisableVertexAttribArray(12)
+glDrawArrays(GL_POINTS, 0, 500)
+...
+
+No prior call to enable the array 1,2, 11, or 12 are issued.
+The glDisableVertexAttribArray calls are coming from osg::State::applyDisablingOfVertexAttributes()
+	<A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/master/src/osg/State.cpp#L1296-L1304">https://github.com/openscenegraph/OpenSceneGraph/blob/master/src/osg/State.cpp#L1296-L1304</A>
+ as _useVertexAttributeAliasing is false, and each &quot;&lt;array&gt;._lazy_disable&quot; is true.
+The state of &quot;&lt;array&gt;._enabled&quot; is never checked, as &quot;disable&lt;array&gt;Pointer&quot; is unconditionally mapped to the aliased &quot;disableVertexAttribArray&quot;
+
+I think, the bug lies in the assumption of the lazy disabling, that if we do not use the aliasing, that there is a fixed function pipeline.
+But if OSG_GL_VERTEX_FUNCS_AVAILABLE the functions are unconditionally mapped to aliased vertex attributes.
+
+I think, the whole lazy disabling of aliased attributes is superfluous in that context, as each vertex attribute tracks its own state already,
+and have proposed a patch accordingly: <A HREF="https://github.com/openscenegraph/OpenSceneGraph/pull/125">https://github.com/openscenegraph/OpenSceneGraph/pull/125</A>
+With the patch applied, the code runs as expected.
+
+Does anyone have a different explanation or a better proposal for solving the issue? It doesn't seem to be the acceptable solution.
+
+Cheers,
+  Fabian
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004189.html">[osg-users] Scale-invarient lighting
+</A></li>
+	<LI>Next message: <A HREF="280435.html">[osg-users] Draw text on osg Sphere
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280415">[ date ]</a>
+              <a href="thread.html#280415">[ thread ]</a>
+              <a href="subject.html#280415">[ subject ]</a>
+              <a href="author.html#280415">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

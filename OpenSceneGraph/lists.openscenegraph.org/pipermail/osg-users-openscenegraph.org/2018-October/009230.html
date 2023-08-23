@@ -1,0 +1,214 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] porting from osg-3.4.0 to osg-3.6.3
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20porting%20from%20osg-3.4.0%20to%20osg-3.6.3&In-Reply-To=%3C003b01d45e62%2429f70ed0%247de52c70%24%40ca%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009232.html">
+   <LINK REL="Next"  HREF="009234.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] porting from osg-3.4.0 to osg-3.6.3</H1>
+<!--htdig_noindex-->
+    <B>Herman Varma</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20porting%20from%20osg-3.4.0%20to%20osg-3.6.3&In-Reply-To=%3C003b01d45e62%2429f70ed0%247de52c70%24%40ca%3E"
+       TITLE="[osg-users] porting from osg-3.4.0 to osg-3.6.3">hermanvarma at eastlink.ca
+       </A><BR>
+    <I>Sun Oct  7 10:21:20 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009232.html">[osg-users] CPU load and performance drop when running 2 instances of OSG app on 2 GPUs
+</A></li>
+        <LI>Next message (by thread): <A HREF="009234.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9230">[ date ]</a>
+              <a href="thread.html#9230">[ thread ]</a>
+              <a href="subject.html#9230">[ subject ]</a>
+              <a href="author.html#9230">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert
+
+I followed your advice and used the Simple app in VTP with Debug statements.
+I compared the debug statements wit those osg-3.4.0.
+
+I was able to track it down to this section
+
+      while (!viewer-&gt;done())
+	{
+		vtGetScene()-&gt;DoUpdate();		// calls
+viewer::frame
+	}
+In 3.4.0 it executes and in 3.6.3 it bombs on
+
+vtGetScene()-&gt;DoUpdate();
+
+
+DoUpdate() is defined by vs2017 as void VTScene::DoUpdate() backward
+compatibility
+
+Also
+viewer-&gt;done() value has a bool value of 0 at the bomb instant.
+
+
+Full code below
+
+int main(int argc, char ** argv)
+{
+#if WIN32 &amp;&amp; defined(_MSC_VER) &amp;&amp; VTDEBUG
+	// sometimes, MSVC seems to need to be told to show unfreed memory
+on exit
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
+	// Log messages to make troubleshooting easier
+	VTSTARTLOG(&quot;debug.txt&quot;);
+	VTLOG(&quot;osgViewerSimple\n&quot;);
+
+	// Make a scene and a viewer:
+	vtGetScene()-&gt;Init(argc, argv);
+	osgViewer::Viewer *viewer = vtGetScene()-&gt;getViewer();
+
+	// Add a handler for GUI events.
+	osg::ref_ptr&lt;vtOSGEventHandler&gt; pHandler = new vtOSGEventHandler;
+	viewer-&gt;addEventHandler(pHandler);
+
+	// We must call realize to be certain that a display/context is set
+up.
+	viewer-&gt;realize();
+
+	// Tell our scene about OSG's context.
+	
+vtGetScene()-&gt;SetGraphicsContext(viewer-&gt;getCamera()-&gt;getGraphicsContext());
+
+	// Only then can we safely get window size.
+	vtGetScene()-&gt;GetWindowSizeFromOSG();
+
+	printf(&quot;Creating the terrain..\n&quot;);
+	CreateScene();
+
+	printf(&quot;Running..\n&quot;);
+
+	VTLOG(&quot;Getscene Loop %d\n&quot;, (int)viewer-&gt;done());
+
+	while (!viewer-&gt;done())
+	{
+		vtGetScene()-&gt;DoUpdate();		// calls
+viewer::frame
+	}
+	
+	VTLOG(&quot;Done Updatescene.\n&quot;);
+
+	g_terrscene-&gt;CleanupScene();
+	delete g_terrscene;
+
+	vtGetScene()-&gt;Shutdown();
+
+	return 0;
+}
+
+
+Thanks
+------------------------------
+
+Message: 2
+Date: Thu, 04 Oct 2018 15:31:14 +0200
+From: &quot;Herman Varma&quot; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hermanvarma at eastlink.ca</A>&gt;
+To: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+Subject: Re: [osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+Message-ID: &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">1538659874.m2f.75036 at forum.openscenegraph.org</A>&gt;
+Content-Type: text/plain; charset=UTF-8
+
+Hi,
+
+
+I have upgraded the vtp code to osg 3.6.3
+Everything compiled and linked properly. However I still have some execution
+problems.
+
+I just want to check if  the code below is coded properly
+
+FQuat TransformExtension::GetOrient() const
+{
+	const osg::Matrix &amp;xform = m_pTransform-&gt;getMatrix();
+	osg::Quat q;
+
+//	xform.get(q);   
+// Replacing xform.get(q) 
+// with
+	q = xform.getRotate();
+
+	return FQuat(q.x(), q.y(), q.z(), q.w());
+}
+
+... 
+
+Thank you!
+
+Cheers,
+Herman
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicde5d.php?p=75036#75036">http://forum.openscenegraph.org/viewtopic.php?p=75036#75036</A>
+
+
+
+
+
+
+
+------------------------------
+
+Subject: Digest Footer
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+
+
+------------------------------
+
+End of osg-users Digest, Vol 136, Issue 4
+*****************************************
+
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009232.html">[osg-users] CPU load and performance drop when running 2 instances of OSG app on 2 GPUs
+</A></li>
+	<LI>Next message (by thread): <A HREF="009234.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9230">[ date ]</a>
+              <a href="thread.html#9230">[ thread ]</a>
+              <a href="subject.html#9230">[ subject ]</a>
+              <a href="author.html#9230">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

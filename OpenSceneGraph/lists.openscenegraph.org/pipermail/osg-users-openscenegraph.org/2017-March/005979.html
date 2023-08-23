@@ -1,0 +1,173 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Significant drop in frame rate when updating from OSG 3.2.1 to 3.4.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Significant%20drop%20in%20frame%20rate%20when%20updating%20from%0A%20OSG%203.2.1%20to%203.4.0&In-Reply-To=%3C437b6203-4163-bb26-ecce-3dba77312321%40texion.eu%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005978.html">
+   <LINK REL="Next"  HREF="005980.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Significant drop in frame rate when updating from OSG 3.2.1 to 3.4.0</H1>
+<!--htdig_noindex-->
+    <B>Werner Modenbach</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Significant%20drop%20in%20frame%20rate%20when%20updating%20from%0A%20OSG%203.2.1%20to%203.4.0&In-Reply-To=%3C437b6203-4163-bb26-ecce-3dba77312321%40texion.eu%3E"
+       TITLE="[osg-users] Significant drop in frame rate when updating from OSG 3.2.1 to 3.4.0">Werner.Modenbach at texion.eu
+       </A><BR>
+    <I>Fri Mar 31 06:39:56 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005978.html">[osg-users] Significant drop in frame rate when updating from OSG 3.2.1 to 3.4.0
+</A></li>
+        <LI>Next message: <A HREF="005980.html">[osg-users] Significant drop in frame rate when updating from OSG 3.2.1 to 3.4.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5979">[ date ]</a>
+              <a href="thread.html#5979">[ thread ]</a>
+              <a href="subject.html#5979">[ subject ]</a>
+              <a href="author.html#5979">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+final analysis:
+
+In our software we did the following patch to make it run with high fps 
+in master of 3.4 branch:
+
+osgNormals=newosg::Vec3Array;
+
++osgNormals-&gt;setBinding(osg::Array::BIND_PER_VERTEX);
+
+geometry-&gt;setNormalArray(osgNormals.get());
+
+geometry-&gt;setNormalBinding(osg::Geometry::BIND_PER_VERTEX);
+
+Obviously we have to set the binding in the array itself and the 
+setNormalBinding works but has poor performance.
+
+Now we are happy again :-)
+
+- Werner -
+
+Am 31.03.2017 um 13:11 schrieb Werner Modenbach:
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> the 3.4.0 tagged version is OK with the frame rate.
+</I>&gt;<i> We discovered your commit in the 3.4 branch causing the problem:
+</I>&gt;<i>
+</I>&gt;<i> From1f1c21772ae0dd10a93cd31ab81bf563802b7b2dMonSep1700:00:002001
+</I>&gt;<i> From:RobertOsfield&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert at openscenegraph.com</A>&gt;
+</I>&gt;<i> Date:Thu,3Nov201611:31:07+0000
+</I>&gt;<i> Subject:Addedcheckagainstbindingtypeofarraytodecidewhetherit's
+</I>&gt;<i> appropriatetoassignarraytoVBO.
+</I>&gt;<i> diff--gita/src/osg/Geometry.cppb/src/osg/Geometry.cpp
+</I>&gt;<i> index779e8cd..244bf25100644
+</I>&gt;<i> ---a/src/osg/Geometry.cpp
+</I>&gt;<i> +++b/src/osg/Geometry.cpp
+</I>&gt;<i> @@-445,7+445,7@@boolGeometry::getDrawElementsList(DrawElementsList&amp;drawElementsList)const
+</I>&gt;<i> voidGeometry::addVertexBufferObjectIfRequired(osg::Array*array)
+</I>&gt;<i> {
+</I>&gt;<i> -if(_useVertexBufferObjects)
+</I>&gt;<i> +if(_useVertexBufferObjects&amp;&amp;array-&gt;getBinding()==Array::BIND_PER_VERTEX)
+</I>&gt;<i> {
+</I>&gt;<i> if(!array-&gt;getVertexBufferObject())
+</I>&gt;<i> {
+</I>&gt;<i>
+</I>&gt;<i> The question is: Why is the viewer frame rate OK, even it is built 
+</I>&gt;<i> with the same version we are using?
+</I>&gt;<i> What are we doing different to the viewer?
+</I>&gt;<i>
+</I>&gt;<i> Thanks so much for your excellent work!
+</I>&gt;<i>
+</I>&gt;<i> - Werner -
+</I>&gt;<i>
+</I>&gt;<i> Am 28.03.2017 um 18:22 schrieb Robert Osfield:
+</I>&gt;&gt;<i> Hi Wener,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 28 March 2017 at 16:24, Werner Modenbach 
+</I>&gt;&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Werner.Modenbach at texion.eu</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Werner.Modenbach at texion.eu</A>&gt;&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     I know it is actually not your duty giving help here but you are very
+</I>&gt;&gt;<i>     familiar with the driver calls and it would help a lot if you can
+</I>&gt;&gt;<i>     provide
+</I>&gt;&gt;<i>     an idea what kind of setting might cause this issue.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm a very occasional Windows user so really don't have much 
+</I>&gt;&gt;<i> experience with Windows drivers to be able help with driver settings.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> It's a long shot, but have your tried the OSG-3.4 branch or OSG 
+</I>&gt;&gt;<i> master as these both contain a range of bug fixes/OSG improvements, 
+</I>&gt;&gt;<i> there is chance that something has changed that might fix things.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Whatever the cause is it seems to be some small OpenGL state 
+</I>&gt;&gt;<i> difference between OSG-3.2 and OSG-3.4.0, I'm afraid I don't know 
+</I>&gt;&gt;<i> what this might be.  Perhaps using a 3rd party OpenGL debugging tool 
+</I>&gt;&gt;<i> might help here - capture all the GL calls for 3.2.x and 3.4.x and 
+</I>&gt;&gt;<i> see what the differences are.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i> -- 
+</I>&gt;<i> *TEXION Software Solutions, Rotter Bruch 26a, D-52068 Aachen*
+</I>&gt;<i> Phone: +49 241 475757-0
+</I>&gt;<i> Fax: +49 241 475757-29
+</I>&gt;<i> Web: <A HREF="http://texion.eu/">http://texion.eu</A>
+</I>&gt;<i> eMail: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">info at texion.eu</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-- 
+*TEXION Software Solutions, Rotter Bruch 26a, D-52068 Aachen*
+Phone: +49 241 475757-0
+Fax: +49 241 475757-29
+Web: <A HREF="http://texion.eu/">http://texion.eu</A>
+eMail: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">info at texion.eu</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170331/6da65c17/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170331/6da65c17/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005978.html">[osg-users] Significant drop in frame rate when updating from OSG 3.2.1 to 3.4.0
+</A></li>
+	<LI>Next message: <A HREF="005980.html">[osg-users] Significant drop in frame rate when updating from OSG 3.2.1 to 3.4.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5979">[ date ]</a>
+              <a href="thread.html#5979">[ thread ]</a>
+              <a href="subject.html#5979">[ subject ]</a>
+              <a href="author.html#5979">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

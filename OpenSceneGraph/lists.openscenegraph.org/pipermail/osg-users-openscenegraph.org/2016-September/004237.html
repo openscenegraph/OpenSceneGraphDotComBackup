@@ -1,0 +1,160 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] SingleThreaded leading to whole application just	running on one core
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%09running%20on%20one%20core&In-Reply-To=%3C18423C2B-18CC-486F-8BE5-5DB082A1676F%40gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004225.html">
+   <LINK REL="Next"  HREF="004240.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] SingleThreaded leading to whole application just	running on one core</H1>
+<!--htdig_noindex-->
+    <B>Fabian Wiesel</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%09running%20on%20one%20core&In-Reply-To=%3C18423C2B-18CC-486F-8BE5-5DB082A1676F%40gmail.com%3E"
+       TITLE="[osg-users] SingleThreaded leading to whole application just	running on one core">fabian.wiesel at gmail.com
+       </A><BR>
+    <I>Sat Sep 24 16:42:19 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004225.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+        <LI>Next message: <A HREF="004240.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4237">[ date ]</a>
+              <a href="thread.html#4237">[ thread ]</a>
+              <a href="subject.html#4237">[ subject ]</a>
+              <a href="author.html#4237">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+&gt;<i>  OSG is setting the affinity for some of its own threads, which is totally legitimate.
+</I>
+Currently, I was not able to confirm it on my Mac. But I think, I observed such a behaviour in my application on Linux.
+But take it with a grain of salt, as it can be the result of some other side effects.
+I will try to test it the following days with a simple test program, unless you can point out a mistake, and save me the trouble.
+
+The following scenario sounds plausible to me:
+
+If you are setting the osgViewer::Viewer::setThreadingMode(SingleThreaded), and then calling Viewer::realize(),
+it will in turn call ViewerBase::setUpThreading() -&gt; OpenThreads::SetProcessorAffinityOfCurrentThread(0); -&gt; pthread_setaffinity_np(...)
+
+&quot;pthread_setaffinity_np&quot; will be called on the main thread, which is debatable, if it is its &quot;OSGs own thread&quot;.
+
+The side effect is arising on Linux from the following (man page):
+&gt;<i> A new thread created by pthread_create(3) inherits a copy of its  creator's CPU affinity mask.
+</I>
+So, all threads created either from the view or after the Viewer::realize() will only run on the main CPU.
+
+Given the following (pseudo-)program, I would expect the threads to run parallel on all processors, but likely they aren't on Linux.
+
+  int main(int argc, char **argv) {
+    std::vector&lt;int&gt; myvector(1024);
+    osgViewer::Viewer viewer;
+    viewer.setSceneData( node );
+    viewer.setThreadingModel(SingleThreaded);
+    viewer.realize(); // calling ViewerBase::setUpThreading() -&gt; OpenThreads::SetProcessorAffinityOfCurrentThread(0); -&gt; pthread_setaffinity_np(...)
+
+    // Create Threads
+    for (int i = 0; i &lt; 100; ++i) pthread_create(...)
+   
+    viewer.run()
+    pthread_join(...);
+  }
+
+Cheers,
+  Fabian
+
+
+
+
+&gt;<i> On 24 Sep 2016, at 10:33, Sebastian Messerschmidt &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A>&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i> Hi,
+</I>&gt;<i> 
+</I>&gt;<i> Wow, before this escalates: OSG is setting the affinity for some of its own threads, which is totally legitimate.And I totally agree, that it would be nice to have an interface to control the core/wether affinity is used in single-threaded mode except from having to subclass the viewer.  
+</I>&gt;<i> 
+</I>&gt;<i> If all other threads are forced to one core (as reported), by setting the affinity of the osg-threads, it is clearly a bug and needs further inspection . I've been working with OSG in a multi-threading environment for several years and didn't experience problems so far however.
+</I>&gt;<i> So creating a minimal example might help to find the problem, if there is one.
+</I>&gt;<i> 
+</I>&gt;<i> Cheers
+</I>&gt;<i> Sebastian 
+</I>&gt;&gt;&gt;<i> Affinity is set by default because the it will provide the best
+</I>&gt;&gt;&gt;<i> performance for majority of OSG applications. This might be a
+</I>&gt;&gt;&gt;<i> &quot;terrible&quot; reason for you, but the OSG development is motivated not by
+</I>&gt;&gt;&gt;<i> just focusing on one class of users needs or preferences, default
+</I>&gt;&gt;&gt;<i> settings we try to do the best for most OSG applications.
+</I>&gt;&gt;&gt;<i> 
+</I>&gt;&gt;<i> I have no particular desire to repeat the last discussion, but i'll say it again.
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> Hardcoding CPU affinity is:
+</I>&gt;&gt;<i> a) unexpected
+</I>&gt;&gt;<i> b) a premature optimisation 
+</I>&gt;&gt;<i> c) not consistent across platforms
+</I>&gt;&gt;<i> d) not easily reversible
+</I>&gt;&gt;<i> e) a performance killer outside of one specific application model.
+</I>&gt;&gt;<i> f) conflicting with other libraries that expect to set CPU affinity linked in the application
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> It is a terrible idea, and doing it in the context of a library is just plain wrong. 
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> PS. Reason f) doesn't really exist because other libraries don't do this, for reasons a,b,c,d and e.
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> ------------------
+</I>&gt;&gt;<i> Read this topic online here:
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicab8b.php?p=68716#68716">http://forum.openscenegraph.org/viewtopic.php?p=68716#68716</A>
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> 
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004225.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+	<LI>Next message: <A HREF="004240.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4237">[ date ]</a>
+              <a href="thread.html#4237">[ thread ]</a>
+              <a href="subject.html#4237">[ subject ]</a>
+              <a href="author.html#4237">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

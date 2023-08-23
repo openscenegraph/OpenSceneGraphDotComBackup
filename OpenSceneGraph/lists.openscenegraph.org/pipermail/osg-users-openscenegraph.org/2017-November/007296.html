@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Slow optimization and OpenFlight
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Slow%20optimization%20and%20OpenFlight&In-Reply-To=%3C1f14d453-fd8e-6a0b-1c70-0a18642e946a%40remograph.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007295.html">
+   <LINK REL="Next"  HREF="007299.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Slow optimization and OpenFlight</H1>
+<!--htdig_noindex-->
+    <B>Andreas Ekstrand</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Slow%20optimization%20and%20OpenFlight&In-Reply-To=%3C1f14d453-fd8e-6a0b-1c70-0a18642e946a%40remograph.com%3E"
+       TITLE="[osg-users] Slow optimization and OpenFlight">andreas.ekstrand at remograph.com
+       </A><BR>
+    <I>Mon Nov 27 08:43:24 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007295.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+        <LI>Next message (by thread): <A HREF="007299.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7296">[ date ]</a>
+              <a href="thread.html#7296">[ thread ]</a>
+              <a href="subject.html#7296">[ subject ]</a>
+              <a href="author.html#7296">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks Robert! Works fine here as well, and I think the line of least 
+resistance was the right way this time.
+
+Any plans on a 3.5.9 release soon? I'm now facing the problem of either 
+waiting until the next release, or basing my software on 3.5.8 with this 
+modification and thus implicitly recommending users to use 3.5.8 to be 
+compatible but with the implication that their OpenFlight models might 
+be load slowly...
+
+/Andreas
+
+
+On 2017-11-27 17:25, Robert Osfield wrote:
+&gt;<i> Hi Andreas,
+</I>&gt;<i>
+</I>&gt;<i> I have checked in a refactor of MergeGeometry visitor that makes it
+</I>&gt;<i> work properly with groups containing any type of nodes, and avoids the
+</I>&gt;<i> O(N^2) removChild() usage.  In the end I took the line of least
+</I>&gt;<i> resistance and just used the approach of removing all children and
+</I>&gt;<i> adding back the ndoes.
+</I>&gt;<i>
+</I>&gt;<i> On 27 November 2017 at 15:56, Andreas Ekstrand
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andreas.ekstrand at remograph.com</A>&gt;  wrote:
+</I>&gt;&gt;<i> Yes, you can argue that the dataset is awful, but it's actually just storing
+</I>&gt;&gt;<i> 150k triangles on one graph level, as separate OpenFlight face records,
+</I>&gt;&gt;<i> which is what the OpenFlight file format offers if you don't use its
+</I>&gt;&gt;<i> specific mesh nodes that aren't supported by all tools and don't offer full
+</I>&gt;&gt;<i> control of each triangle. OpenFlight is a modeling file format which is
+</I>&gt;&gt;<i> surely not visualization-friendly. I think the OpenFlight plugin simply uses
+</I>&gt;&gt;<i> the Optimizer to convert this to a dataset for effective visualization
+</I>&gt;&gt;<i> instead of converting to a more optimal scene graph to start with - a choice
+</I>&gt;&gt;<i> that I can't really say if it's good or bad, but the Optimizer should of
+</I>&gt;&gt;<i> course handle bad data in the best way possible.
+</I>&gt;<i> No need to argue whether it's awful or not, there isn't any debate
+</I>&gt;<i> when it comes to real-time performance : this particular database is
+</I>&gt;<i> stored in the worst possible way for memory utilization and
+</I>&gt;<i> performance
+</I>&gt;<i>
+</I>&gt;<i> Use of the osgUtil::Optimizer is a very crude fix for bad databases.
+</I>&gt;<i> It's far better to just create a scene graph in an efficient form
+</I>&gt;<i> right from the start.  Optimizing bad databases at best leads to
+</I>&gt;<i> fragment memory, it really is just papering over cracks and is
+</I>&gt;<i> unlikely to ever produce optimal databases.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;&gt;<i> The main issue for me though, is that OSG handles this dataset in a much
+</I>&gt;&gt;<i> slower way than before, hence my re-introduction of the previous
+</I>&gt;&gt;<i> optimization. But you're completely right, and I realize now, that other
+</I>&gt;&gt;<i> nodes than drawables aren't handle correctly. I haven't gotten used to
+</I>&gt;&gt;<i> drawables being nodes yet...
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> So the fact that the OpenFlight plugin creates a non-optimal scene graph and
+</I>&gt;&gt;<i> then uses the Optimizer itself to fix this is probably a separate and larger
+</I>&gt;&gt;<i> problem - if it indeed is a problem.
+</I>&gt;<i> Yep, big topic.  I'm familiar with the problems that the OpenFlight
+</I>&gt;<i> loader generates, but less so with Creator or other tools that
+</I>&gt;<i> generate the content.  I'd much rather the OpenFlight loader builds
+</I>&gt;<i> more efficient database to start with rather than rely upon the
+</I>&gt;<i> Optimizer to fix problems once the data is loaded.
+</I>&gt;<i>
+</I>&gt;&gt;<i> But I believe it's necessary to at
+</I>&gt;&gt;<i> least get MergeGeometryVisitor to behave as fast as before, either by
+</I>&gt;&gt;<i> modifying my fixes or by rewriting parts of it. I hope you will find the
+</I>&gt;&gt;<i> time to decide on this soon, and please let me know if I can help!
+</I>&gt;<i> The fix I have checked in master:
+</I>&gt;<i>
+</I>&gt;<i>      <A HREF="https://github.com/openscenegraph/OpenSceneGraph/commit/bc4a9d9dd0158e1e99d0ca1d1d95ef204220a560">https://github.com/openscenegraph/OpenSceneGraph/commit/bc4a9d9dd0158e1e99d0ca1d1d95ef204220a560</A>
+</I>&gt;<i>
+</I>&gt;<i> With performance testing of just the merge geometry on your house
+</I>&gt;<i> dataset I saw a 70sec merge geometry before, and 0.1 sec merge after
+</I>&gt;<i> my changes.
+</I>&gt;<i>
+</I>&gt;<i> I've got plenty of other stuff to get on with so I'll assume this
+</I>&gt;<i> issue is now resolved.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20171127/60723b3c/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20171127/60723b3c/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007295.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+	<LI>Next message (by thread): <A HREF="007299.html">[osg-users] Slow optimization and OpenFlight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7296">[ date ]</a>
+              <a href="thread.html#7296">[ thread ]</a>
+              <a href="subject.html#7296">[ subject ]</a>
+              <a href="author.html#7296">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,231 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Pragmatic shader - a new #pragma directive proposition
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20-%20a%20new%20%23pragma%20directive%0A%20proposition&In-Reply-To=%3C569761EB.4000408%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271969.html">
+   <LINK REL="Next"  HREF="271972.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Pragmatic shader - a new #pragma directive proposition</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20-%20a%20new%20%23pragma%20directive%0A%20proposition&In-Reply-To=%3C569761EB.4000408%40gmx.de%3E"
+       TITLE="[osg-users] Pragmatic shader - a new #pragma directive proposition">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Thu Jan 14 00:52:59 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271969.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+        <LI>Next message: <A HREF="271972.html">[osg-users] Pragmatic shader - a new #pragma directive	proposition
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271971">[ date ]</a>
+              <a href="thread.html#271971">[ thread ]</a>
+              <a href="subject.html#271971">[ subject ]</a>
+              <a href="author.html#271971">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+This seems more complicated than needed.
+Why not pass the number of lights as a compile time constant
+
+#pragma import_defines (NUM_LIGHTS)
+
+shader_state-&gt;setDefine(&quot;NUM_LIGHTS&quot;,12);
+
+and use uniform arrays:
+
+uniform vec4 u_LightColor[NUM_LIGHTS];
+
+for (int i = 0; i &lt; NUM_LIGHTS;++i)
+{
+     light+=calcLight(u_LightColor[i], ...):
+}
+
+I feel your approach will bloat the preprocessor code path and will 
+complicate the use.
+
+
+
+&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> With the pragmatic shader one could implement multiple lights and 
+</I>&gt;<i> other repetitive constructs like this:
+</I>&gt;<i>
+</I>&gt;<i> -- start of shader code --
+</I>&gt;<i> #pragma import_defines ( LIGHTING, LIGHT0, LIGHT1 )
+</I>&gt;<i>
+</I>&gt;<i> #ifdef LIGHTING
+</I>&gt;<i>   #ifdef LIGHT0
+</I>&gt;<i> uniform vec4 u_LightColor0;
+</I>&gt;<i>   #endif
+</I>&gt;<i>   #ifdef LIGHT1
+</I>&gt;<i> uniform vec4 u_LightColor1;
+</I>&gt;<i>   #endif
+</I>&gt;<i>
+</I>&gt;<i> varying vec4 basecolor;
+</I>&gt;<i>
+</I>&gt;<i> void light( in vec4 lightColor, inout vec4 color );
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i> void main(void)
+</I>&gt;<i> {
+</I>&gt;<i>     basecolor = gl_Color;
+</I>&gt;<i>
+</I>&gt;<i> #ifdef LIGHTING
+</I>&gt;<i>   #ifdef LIGHT0
+</I>&gt;<i>     light( u_LightColor0, basecolor);
+</I>&gt;<i>   #endif
+</I>&gt;<i>   #ifdef LIGHT1
+</I>&gt;<i>     light( u_LightColor1, basecolor);
+</I>&gt;<i>   #endif
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i>     gl_Position   = gl_ModelViewProjectionMatrix * gl_Vertex;
+</I>&gt;<i> }
+</I>&gt;<i> -- end of shader code --
+</I>&gt;<i>
+</I>&gt;<i> ... and to enable both lights:
+</I>&gt;<i>
+</I>&gt;<i> stateset-&gt;setDefine(&quot;LIGHTING&quot;);
+</I>&gt;<i> stateset-&gt;setDefine(&quot;LIGHT0&quot;);
+</I>&gt;<i> stateset-&gt;setDefine(&quot;LIGHT1&quot;);
+</I>&gt;<i>
+</I>&gt;<i> The problem with this approach is that nobody really knows in advance 
+</I>&gt;<i> how many more lights will be needed. Moreover, the shader can get 
+</I>&gt;<i> heavily bloated when more and more lights are added. As a solution I 
+</I>&gt;<i> would like to propose a new #pragma construct:
+</I>&gt;<i>
+</I>&gt;<i> #pragma repeat_begin( DEFINE_IDENTIFIER${SubstitutionParameter} )
+</I>&gt;<i> (shader code block)
+</I>&gt;<i> #pragma repeat_end()
+</I>&gt;<i>
+</I>&gt;<i> ... and the shader code supporting arbitrary number of lights would 
+</I>&gt;<i> then look like this:
+</I>&gt;<i>
+</I>&gt;<i> -- start of shader code --
+</I>&gt;<i> #pragma import_defines ( LIGHTING, LIGHT${Member} )
+</I>&gt;<i>
+</I>&gt;<i> #ifdef LIGHTING
+</I>&gt;<i> #pragma repeat_begin( LIGHT${Member} )
+</I>&gt;<i> uniform vec4 u_LightColor${Member};
+</I>&gt;<i> #pragma repeat_end()
+</I>&gt;<i>
+</I>&gt;<i> varying vec4 basecolor;
+</I>&gt;<i>
+</I>&gt;<i> void light( in vec4 lightColor, inout vec4 color );
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i> void main(void)
+</I>&gt;<i> {
+</I>&gt;<i>     basecolor = gl_Color;
+</I>&gt;<i>
+</I>&gt;<i> #ifdef LIGHTING
+</I>&gt;<i> #pragma repeat_begin( LIGHT${Member} )
+</I>&gt;<i>     light( u_LightColor${Member}, basecolor);
+</I>&gt;<i> #pragma repeat_end()
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i>     gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+</I>&gt;<i> }
+</I>&gt;<i> -- end of shader code --
+</I>&gt;<i>
+</I>&gt;<i> ... where ${Member} is a substitution parameter and LIGHT is define 
+</I>&gt;<i> identifier. Then with:
+</I>&gt;<i>
+</I>&gt;<i> stateset-&gt;setDefine(&quot;LIGHTING&quot;);
+</I>&gt;<i> stateset-&gt;setDefine(&quot;LIGHT${0}&quot;);
+</I>&gt;<i> stateset-&gt;setDefine(&quot;LIGHT${1}&quot;);
+</I>&gt;<i> stateset-&gt;setDefine(&quot;LIGHT${5}&quot;);
+</I>&gt;<i>
+</I>&gt;<i> ... where ${0}, ${1}, ${5} are substitution values, osg would produce 
+</I>&gt;<i> following shader code:
+</I>&gt;<i>
+</I>&gt;<i> -- start of shader code --
+</I>&gt;<i> #define LIGHTING
+</I>&gt;<i> #define LIGHT0
+</I>&gt;<i> #define LIGHT1
+</I>&gt;<i> #define LIGHT5
+</I>&gt;<i>
+</I>&gt;<i> #ifdef LIGHTING
+</I>&gt;<i> uniform vec4 u_LightColor0;
+</I>&gt;<i> uniform vec4 u_LightColor1;
+</I>&gt;<i> uniform vec4 u_LightColor5;
+</I>&gt;<i>
+</I>&gt;<i> varying vec4 basecolor;
+</I>&gt;<i>
+</I>&gt;<i> void light( in vec4 lightColor, inout vec4 color );
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i> void main(void)
+</I>&gt;<i> {
+</I>&gt;<i>     basecolor = gl_Color;
+</I>&gt;<i>
+</I>&gt;<i> #ifdef LIGHTING
+</I>&gt;<i>     light( u_LightColor0, basecolor);
+</I>&gt;<i>     light( u_LightColor1, basecolor);
+</I>&gt;<i>     light( u_LightColor5, basecolor);
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i>     gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+</I>&gt;<i> }
+</I>&gt;<i> -- end of shader code --
+</I>&gt;<i>
+</I>&gt;<i> Before I do any coding I'd like to know if proposed solution would be 
+</I>&gt;<i> of any use to the osg community? Or maybe there is a better way? I'm 
+</I>&gt;<i> currently solving these kinds of problems with uniform arrays, but 
+</I>&gt;<i> unfortunately, the uniform array has its own max number of elements 
+</I>&gt;<i> and the management code of such approach tend to be complicated...
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Robert Milharcic
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271969.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+	<LI>Next message: <A HREF="271972.html">[osg-users] Pragmatic shader - a new #pragma directive	proposition
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271971">[ date ]</a>
+              <a href="thread.html#271971">[ thread ]</a>
+              <a href="subject.html#271971">[ subject ]</a>
+              <a href="author.html#271971">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

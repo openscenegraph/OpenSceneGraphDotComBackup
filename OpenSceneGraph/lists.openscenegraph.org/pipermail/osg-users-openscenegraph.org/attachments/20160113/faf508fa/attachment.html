@@ -1,0 +1,151 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Hi&nbsp;Robert,&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Thanks&nbsp;for&nbsp;the&nbsp;reply,&nbsp;modifying&nbsp;the&nbsp;Font*::getKerning()&nbsp;seems&nbsp;to&nbsp;be&nbsp;the&nbsp;best&nbsp;solution.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;I&nbsp;will&nbsp;cherry-pick&nbsp;your&nbsp;commit&nbsp;until&nbsp;we&nbsp;can&nbsp;upgrade&nbsp;to&nbsp;the&nbsp;lastest&nbsp;version.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Regards,&lt;/div&gt;&lt;div&gt;Romain&nbsp;Ouabdelkader.&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;2016-01-12&nbsp;18:36&nbsp;GMT+01:00&nbsp;Robert&nbsp;Osfield&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;Romain,&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thanks&nbsp;for&nbsp;investigating&nbsp;and&nbsp;characterising&nbsp;this&nbsp;bug. &nbsp;With&nbsp;your&lt;br&gt;<br>
+results&nbsp;in&nbsp;mind&nbsp;I&#39;ve&nbsp;just&nbsp;done&nbsp;a&nbsp;code&nbsp;review&nbsp;of&nbsp;FreeTypeFont.cpp&nbsp;and&lt;br&gt;<br>
+Font.cpp&nbsp;and&nbsp;see&nbsp;that&nbsp;design/implementation&nbsp;both&nbsp;assume&nbsp;that&nbsp;kerning&lt;br&gt;<br>
+is&nbsp;invariant&nbsp;of&nbsp;font&nbsp;resolution,&nbsp;which&nbsp;you&nbsp;have&nbsp;found&nbsp;it&nbsp;isn&#39;t,&nbsp;so&lt;br&gt;<br>
+this&nbsp;is&nbsp;most&nbsp;definitely&nbsp;a&nbsp;flaw.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&gt;From&nbsp;my&nbsp;current&nbsp;review&nbsp;the&nbsp;correct&nbsp;way&nbsp;to&nbsp;solve&nbsp;this&nbsp;would&nbsp;seem&nbsp;to&nbsp;be&lt;br&gt;<br>
+modify&nbsp;the&nbsp;Font::getKerning(..)&nbsp;and&lt;br&gt;<br>
+FontImplementation/FreeTypeFont::getKerning(..)&nbsp;methods&nbsp;to&nbsp;take&nbsp;a&lt;br&gt;<br>
+FontResolulution&nbsp;parameter&nbsp;in&nbsp;the&nbsp;same&nbsp;way&nbsp;that&nbsp;the&nbsp;getGlyph(..)&lt;br&gt;<br>
+method&nbsp;does,&nbsp;this&nbsp;would&nbsp;allow&nbsp;the&nbsp;kerning&nbsp;implementation&nbsp;to&nbsp;reset&nbsp;the&lt;br&gt;<br>
+font&nbsp;resolution&nbsp;if&nbsp;required&nbsp;as&nbsp;it&nbsp;does&nbsp;during&nbsp;the&nbsp;getGlyph().&lt;br&gt;<br>
+&lt;br&gt;<br>
+Unfortunately&nbsp;such&nbsp;a&nbsp;change&nbsp;would&nbsp;break&nbsp;the&nbsp;API&nbsp;so&nbsp;isn&#39;t&nbsp;something&nbsp;we&lt;br&gt;<br>
+can&nbsp;back&nbsp;port&nbsp;to&nbsp;OSG-3.2&nbsp;or&nbsp;OSG-3.4,&nbsp;but&nbsp;is&nbsp;something&nbsp;we&nbsp;could&nbsp;merge&lt;br&gt;<br>
+with&nbsp;OSG-master/OSG-3.5.x&nbsp;dev&nbsp;series.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thoughts?&lt;br&gt;<br>
+Robert.&lt;br&gt;<br>
+&lt;br&gt;<br>
+On&nbsp;12&nbsp;January&nbsp;2016&nbsp;at&nbsp;16:44,&nbsp;Romain&nbsp;Ouabdelkader&lt;br&gt;<br>
+&lt;div&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:romain.ouabdelkader@gmail.com&quot;&gt;romain.ouabdelkader@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&nbsp;Hi,&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;I&nbsp;have&nbsp;tracked&nbsp;down&nbsp;the&nbsp;issue,&nbsp;the&nbsp;difference&nbsp;in&nbsp;size&nbsp;come&nbsp;from&nbsp;the&nbsp;kerning&lt;br&gt;<br>
+&gt;&nbsp;being&nbsp;calculated&nbsp;in&nbsp;different&nbsp;font&nbsp;resolutions.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;If&nbsp;we&nbsp;trace&nbsp;the&nbsp;execution:&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; osg::ref_ptr&lt;osgText::Text&gt;&nbsp;text0&nbsp;=&nbsp;new&nbsp;osgText::Text;&lt;br&gt;<br>
+&gt; &nbsp; text0-&gt;setFont(font_path);&lt;br&gt;<br>
+&gt; &nbsp; text0-&gt;setFontResolution(128,&nbsp;128);&lt;br&gt;<br>
+&gt; &nbsp; text0-&gt;setText(&quot;V&quot;);&lt;br&gt;<br>
+&gt; &nbsp; text0-&gt;setText(&quot;a&quot;);&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Here&nbsp;we&nbsp;generate&nbsp;the&nbsp;glyph&nbsp;for&nbsp;char&nbsp;&#39;V&#39;&nbsp;and&nbsp;&#39;a&#39;&nbsp;with&nbsp;the&nbsp;resolution&nbsp;(128,&lt;br&gt;<br>
+&gt;&nbsp;128).&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; osg::ref_ptr&lt;osgText::Text&gt;&nbsp;text1&nbsp;=&nbsp;new&nbsp;osgText::Text;&lt;br&gt;<br>
+&gt; &nbsp; text1-&gt;setFont(font_path);&lt;br&gt;<br>
+&gt; &nbsp; text1-&gt;setText(&quot;p&quot;);&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;We&nbsp;generate&nbsp;a&nbsp;dummy&nbsp;glyph&nbsp;that&nbsp;set&nbsp;FreeType&nbsp;face&nbsp;resolution&nbsp;to&nbsp;(32,&nbsp;32)&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; text0-&gt;setText(&quot;Va&quot;);&lt;br&gt;<br>
+&gt; &nbsp; float&nbsp;first_call&nbsp;=&nbsp;text0-&gt;getBoundingBox().xMax();&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;(1)&nbsp;Since&nbsp;the&nbsp;glyph&nbsp;for&nbsp;char&nbsp;&#39;V&#39;&nbsp;and&nbsp;&#39;a&#39;&nbsp;are&nbsp;already&nbsp;generated&nbsp;for&lt;br&gt;<br>
+&gt;&nbsp;resolution&nbsp;(128,&nbsp;128),&nbsp;we&nbsp;use&nbsp;the&nbsp;glyph&nbsp;in&nbsp;the&nbsp;cache&nbsp;(see&nbsp;Font::GetGlyph)&lt;br&gt;<br>
+&gt;&nbsp;*without&nbsp;modifying&nbsp;FreeType&nbsp;face&nbsp;resolution*.&lt;br&gt;<br>
+&gt;&nbsp;We&nbsp;also&nbsp;get&nbsp;kerning&nbsp;from&nbsp;FreeType&nbsp;but&nbsp;we&nbsp;*don&#39;t*&nbsp;change&nbsp;the&nbsp;face&nbsp;resolution,&lt;br&gt;<br>
+&gt;&nbsp;thus&nbsp;the&nbsp;kerning&nbsp;is&nbsp;calculated&nbsp;in&nbsp;(32,&nbsp;32)&nbsp;resolution.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; text0-&gt;setText(&quot;c&quot;);&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;We&nbsp;generate&nbsp;a&nbsp;dummy&nbsp;glyph&nbsp;(that&nbsp;isn&#39;t&nbsp;in&nbsp;the&nbsp;cache)&nbsp;that&nbsp;set&nbsp;FreeType&nbsp;face&lt;br&gt;<br>
+&gt;&nbsp;resolution&nbsp;to&nbsp;(128,&nbsp;128).&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; text0-&gt;setText(&quot;Va&quot;);&lt;br&gt;<br>
+&gt; &nbsp; float&nbsp;second_call&nbsp;=&nbsp;text0-&gt;getBoundingBox().xMax();&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Same&nbsp;as&nbsp;(1)&nbsp;but&nbsp;FreeType&nbsp;face&nbsp;resolution&nbsp;is&nbsp;(128,&nbsp;128)&nbsp;while&nbsp;calculating&nbsp;the&lt;br&gt;<br>
+&gt;&nbsp;kerning.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;This&nbsp;isn&#39;t&nbsp;a&nbsp;big&nbsp;issue,&nbsp;but&nbsp;it&nbsp;breaks&nbsp;our&nbsp;tests&nbsp;depending&nbsp;of&nbsp;the&nbsp;order&nbsp;of&lt;br&gt;<br>
+&gt;&nbsp;execution...&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;The&nbsp;issue&nbsp;can&nbsp;be&nbsp;resolved&nbsp;if&nbsp;Font::getKerning&nbsp;ask&nbsp;for&nbsp;font&nbsp;resolution,&nbsp;or&nbsp;if&lt;br&gt;<br>
+&gt;&nbsp;we&nbsp;set&nbsp;font&nbsp;resolution&nbsp;at&nbsp;the&nbsp;start&nbsp;of&nbsp;Text::computeGlyphRepresentation&nbsp;(not&lt;br&gt;<br>
+&gt;&nbsp;exposed&nbsp;in&nbsp;Font).&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;What&nbsp;do&nbsp;you&nbsp;think&nbsp;?&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;Regards,&lt;br&gt;<br>
+&gt;&nbsp;Romain&nbsp;Ouabdelkader.&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;2016-01-06&nbsp;19:16&nbsp;GMT+01:00&nbsp;Romain&nbsp;Ouabdelkader&lt;br&gt;<br>
+&gt;&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:romain.ouabdelkader@gmail.com&quot;&gt;romain.ouabdelkader@gmail.com&lt;/a&gt;&gt;:&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;Hi,&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;I&nbsp;have&nbsp;discovered&nbsp;an&nbsp;issue&nbsp;with&nbsp;osgText:&nbsp;under&nbsp;certain&nbsp;conditions,&lt;br&gt;<br>
+&gt;&gt;&nbsp;Text::getBoundingBox()&nbsp;returns&nbsp;different&nbsp;values&nbsp;with&nbsp;the&nbsp;same&nbsp;text,&nbsp;font,&lt;br&gt;<br>
+&gt;&gt;&nbsp;font&nbsp;resolution,&nbsp;etc.&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;You&nbsp;can&nbsp;reproduce&nbsp;the&nbsp;issue&nbsp;with&nbsp;this&nbsp;example:&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;int&nbsp;main()&nbsp;{&lt;br&gt;<br>
+&gt;&gt; &nbsp; const&nbsp;char&nbsp;*font_path&nbsp;=&nbsp;&quot;museo500.ttf&quot;;&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt; &nbsp; osg::ref_ptr&lt;osgText::Text&gt;&nbsp;text0&nbsp;=&nbsp;new&nbsp;osgText::Text;&lt;br&gt;<br>
+&gt;&gt; &nbsp; text0-&gt;setFont(font_path);&lt;br&gt;<br>
+&gt;&gt; &nbsp; text0-&gt;setFontResolution(128,&nbsp;128);&lt;br&gt;<br>
+&gt;&gt; &nbsp; text0-&gt;setText(&quot;V&quot;);&lt;br&gt;<br>
+&gt;&gt; &nbsp; text0-&gt;setText(&quot;a&quot;);&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt; &nbsp; osg::ref_ptr&lt;osgText::Text&gt;&nbsp;text1&nbsp;=&nbsp;new&nbsp;osgText::Text;&lt;br&gt;<br>
+&gt;&gt; &nbsp; text1-&gt;setFont(font_path);&lt;br&gt;<br>
+&gt;&gt; &nbsp; text1-&gt;setText(&quot;p&quot;);&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt; &nbsp; text0-&gt;setText(&quot;Va&quot;);&lt;br&gt;<br>
+&gt;&gt; &nbsp; float&nbsp;first_call&nbsp;=&nbsp;text0-&gt;getBoundingBox().xMax();&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt; &nbsp; text0-&gt;setText(&quot;c&quot;);&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt; &nbsp; text0-&gt;setText(&quot;Va&quot;);&lt;br&gt;<br>
+&gt;&gt; &nbsp; float&nbsp;second_call&nbsp;=&nbsp;text0-&gt;getBoundingBox().xMax();&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt; &nbsp; std::cout&nbsp;&lt;&lt;&nbsp;first_call&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&gt;&gt; &nbsp; std::cout&nbsp;&lt;&lt;&nbsp;second_call&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&gt;&gt; &nbsp; if&nbsp;(first_call&nbsp;!=&nbsp;second_call)&nbsp;{&lt;br&gt;<br>
+&gt;&gt; &nbsp; &nbsp; std::cout&nbsp;&lt;&lt;&nbsp;&quot;Error!&quot;&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&gt;&gt; &nbsp; &nbsp; return&nbsp;1;&lt;br&gt;<br>
+&gt;&gt; &nbsp; }&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt; &nbsp; return&nbsp;0;&lt;br&gt;<br>
+&gt;&gt;&nbsp;}&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;Output:&lt;br&gt;<br>
+&gt;&gt;&nbsp;36.4961&lt;br&gt;<br>
+&gt;&gt;&nbsp;35.9961&lt;br&gt;<br>
+&gt;&gt;&nbsp;Error!&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;The&nbsp;issue&nbsp;seems&nbsp;to&nbsp;be&nbsp;very&nbsp;specific,&nbsp;if&nbsp;I&nbsp;remove&nbsp;any&nbsp;of&nbsp;these&nbsp;lines&nbsp;the&lt;br&gt;<br>
+&gt;&gt;&nbsp;issue&nbsp;doesn&#39;t&nbsp;appear.&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;I&#39;ve&nbsp;attached&nbsp;the&nbsp;font&nbsp;if&nbsp;you&nbsp;want&nbsp;to&nbsp;reproduce&nbsp;it.&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;Regards,&lt;br&gt;<br>
+&gt;&gt;&nbsp;Romain&nbsp;Ouabdelkader.&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&gt;&nbsp;_______________________________________________&lt;br&gt;<br>
+&gt;&nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

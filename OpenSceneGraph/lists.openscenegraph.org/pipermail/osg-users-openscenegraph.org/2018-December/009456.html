@@ -1,0 +1,195 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Dynamic VBO Performance Drop
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dynamic%20VBO%20Performance%20Drop&In-Reply-To=%3CCAGYwD3DhO4R5JbiSo6WNrp6-3Pnfrh9zC3OmbyFk_YC%2BOaUe%2Bg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009455.html">
+   <LINK REL="Next"  HREF="009453.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Dynamic VBO Performance Drop</H1>
+<!--htdig_noindex-->
+    <B>Ravi Mathur</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dynamic%20VBO%20Performance%20Drop&In-Reply-To=%3CCAGYwD3DhO4R5JbiSo6WNrp6-3Pnfrh9zC3OmbyFk_YC%2BOaUe%2Bg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Dynamic VBO Performance Drop">ravidavi at utexas.edu
+       </A><BR>
+    <I>Tue Dec 11 22:47:19 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009455.html">[osg-users] Dynamic VBO Performance Drop
+</A></li>
+        <LI>Next message (by thread): <A HREF="009453.html">[osg-users] OSG GLTF loader plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9456">[ date ]</a>
+              <a href="thread.html#9456">[ thread ]</a>
+              <a href="subject.html#9456">[ subject ]</a>
+              <a href="author.html#9456">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thank you so much for the detailed response Wojtek! I had incorrectly
+assumed that getOrCreateVertexBufferObject() &quot;assigns&quot; the new VBO to the
+Geometry, similarly to what happens with getOrCreateStateSet() for a Node.
+But after reading your response, digging into the OSG code, and reading up
+more on VBOs, I understand why I was mistaken. A VBO is naturally
+associated with an array so only gets created when the first array is added
+to the Geometry.
+
+After moving the setUsage code after array assignment as you suggested, I
+did see a slight increase in framerate for the batched version, but not up
+to par with the preallocated version. I'm using an Nvidia GTX 980 on
+Windows 10. However, it does seem to be a driver issue since memory usage
+settles down a bit if I leave the application running for a while after all
+points have been added.
+
+The real lesson I learned here is not to abuse OSG's automatic VBO
+management by increasing the buffer in small increments at every frame. In
+my actual application I run the update callback at a fixed rate and
+increase the arrays by larger chunks by using resize() instead of repeated
+push_back's. This seems to have fully addressed the issue.
+
+Thanks again!
+Ravi
+
+On Mon, Dec 10, 2018 at 8:35 AM Wojciech Lewandowski &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">w.p.lewandowski at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi Ravi,
+</I>&gt;<i>
+</I>&gt;<i> We usually do not make such extensive checks but we were debuging other
+</I>&gt;<i> interesting VBO problem so we also checked yours. Few observations.:
+</I>&gt;<i>
+</I>&gt;<i> 0. I noticed you used multithreaded configuration and switched to
+</I>&gt;<i> SingleThreaded. Multithreaded config creates 2 instances of GL resources
+</I>&gt;<i> and I thought it may affect your measurments so we continued with
+</I>&gt;<i> SingleThreaded later.
+</I>&gt;<i>
+</I>&gt;<i> 1. Code line where you set DYNAMIC_DRAW is followed by setVertexArray and
+</I>&gt;<i> setVertexArray resets this to STATIC_DRAW. You will get better results when
+</I>&gt;<i> you setUsage after all arrays were defined (like this, note I made
+</I>&gt;<i> numPoints and batchSize global) :
+</I>&gt;<i>
+</I>&gt;<i> [...]
+</I>&gt;<i>   geom-&gt;setColorArray(lineColors, osg::Array::BIND_OVERALL);
+</I>&gt;<i>   geom-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,
+</I>&gt;<i> 0, 0));
+</I>&gt;<i>
+</I>&gt;<i>   if ( numPoints &gt; batchSize )
+</I>&gt;<i>     geom-&gt;getOrCreateVertexBufferObject()-&gt;setUsage(GL_DYNAMIC_DRAW);
+</I>&gt;<i>   else
+</I>&gt;<i>     geom-&gt;getOrCreateVertexBufferObject()-&gt;setUsage(GL_STATIC_DRAW);
+</I>&gt;<i> [...]
+</I>&gt;<i>
+</I>&gt;<i> 2. Once we set GL_DYNAMIC_DRAW we see similar performance (on Nvidia GTX
+</I>&gt;<i> 1080 Windows 10) in both versions.
+</I>&gt;<i>
+</I>&gt;<i> 3. So in your code the VBO was always refreshed with GL_STATIC_DRAW. We
+</I>&gt;<i> suspect that problem is actually related to OpenGL driver memory
+</I>&gt;<i> management. My friend Marcin Hajder  checked the underlying OpenGL calls
+</I>&gt;<i> with CodeXL and both versions made exactly the same calls per frame after
+</I>&gt;<i> updates stopped. And buffer and array sizes were the same too. So we
+</I>&gt;<i> concluded that it must be some memory fragmentation/thrashing issue in
+</I>&gt;<i> OpenGL driver. This suspicion was somewhat confirmed when we checked the
+</I>&gt;<i> memory use. When updates stabilized the dynamic version was still taking 10
+</I>&gt;<i> MB more GPU/RAM than static version. See attached screenshots from
+</I>&gt;<i> ProcessExplorer. Picture with larger mem use is dynamic, smaller mem use
+</I>&gt;<i> picter is static version. Note MB usage drop in dynamic version after
+</I>&gt;<i> minute or so from the moment updates stopped. I suspect driver compacted
+</I>&gt;<i> the memory when it noticed the resources are no longer updated.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Hope this helps,
+</I>&gt;<i> Wojtek Lewandowski &amp; Marcin Hajder
+</I>&gt;<i>
+</I>&gt;<i> czw., 6 gru 2018 o 21:36 Ravi Mathur &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ravidavi at utexas.edu</A>&gt; napisa&#322;(a):
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hello all,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm running into a strange performance drop issue when using dynamic VBOs
+</I>&gt;&gt;<i> that change frequently. I am measuring performance using framerate with
+</I>&gt;&gt;<i> vsync turned off. I know that framerate isn't always the best performance
+</I>&gt;&gt;<i> measurement, but my example is simple enough and the performance drop is
+</I>&gt;&gt;<i> significant and repeatable, so I feel comfortable using framerate.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The issue: Suppose I have a Geometry that will hold lots of points (e.g.
+</I>&gt;&gt;<i> 100k or more). If I choose to pre-define all points in its vertex array,
+</I>&gt;&gt;<i> then a certain framerate is achieved. However, if I choose to add a batch
+</I>&gt;&gt;<i> of points during each update traversal, up to the same total number of
+</I>&gt;&gt;<i> points, then after all points have been added the framerate is much lower
+</I>&gt;&gt;<i> than in the pre-defined model. Note that &quot;much lower&quot; means over 30% lower.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Note that in both cases, the same number of points are being drawn, and
+</I>&gt;&gt;<i> the Geometry and its vertex array are created once and modified (I'm not
+</I>&gt;&gt;<i> creating new Geometry objects at every update). All that changes is whether
+</I>&gt;&gt;<i> I added the points all at once before rendering or a few at a time while
+</I>&gt;&gt;<i> rendering.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I wrote a small standalone osg example (attached). Compile, run, and show
+</I>&gt;&gt;<i> stats using:
+</I>&gt;&gt;<i> &gt; .\osgdynamicvbotest.exe --numPoints 100000 --batchSize 100000
+</I>&gt;&gt;<i>    * If batchSize = 100000 (same as numPoints) then you'll see the case
+</I>&gt;&gt;<i> where all points are pre-defined.
+</I>&gt;&gt;<i>    * As you reduce batchSize (e.g. 100), it will take longer to add the
+</I>&gt;&gt;<i> total number of points, but after all points have been added and the
+</I>&gt;&gt;<i> framerate stabilizes, you'll see it is much lower than the pre-defined case
+</I>&gt;&gt;<i> above.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> My question is, why is this happening? Is it related to intermediate VBOs
+</I>&gt;&gt;<i> being kept in memory and slowing down the GPU? All the other forum posts I
+</I>&gt;&gt;<i> see on the topic are either about VBOs not displaying properly (not the
+</I>&gt;&gt;<i> case here) or about memory usage (not the case here).
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Any thoughts on what's going on here would be very much appreciated.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thank you!
+</I>&gt;&gt;<i> Ravi
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20181212/c49e18a2/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20181212/c49e18a2/attachment.html</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009455.html">[osg-users] Dynamic VBO Performance Drop
+</A></li>
+	<LI>Next message (by thread): <A HREF="009453.html">[osg-users] OSG GLTF loader plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9456">[ date ]</a>
+              <a href="thread.html#9456">[ thread ]</a>
+              <a href="subject.html#9456">[ subject ]</a>
+              <a href="author.html#9456">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

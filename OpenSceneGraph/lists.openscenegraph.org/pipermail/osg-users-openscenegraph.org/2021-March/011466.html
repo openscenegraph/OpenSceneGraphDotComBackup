@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Depth and Color buffer attachemnts do not play along together
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Depth%20and%20Color%20buffer%20attachemnts%20do%20not%20play%20along%0A%20together&In-Reply-To=%3CCAO-%2BzinLTwJppWDbAVy1r9ovjOgZgX0gj0ufrdqBMr%3DRwQqPpw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011461.html">
+   <LINK REL="Next"  HREF="011467.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Depth and Color buffer attachemnts do not play along together</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Depth%20and%20Color%20buffer%20attachemnts%20do%20not%20play%20along%0A%20together&In-Reply-To=%3CCAO-%2BzinLTwJppWDbAVy1r9ovjOgZgX0gj0ufrdqBMr%3DRwQqPpw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Depth and Color buffer attachemnts do not play along together">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Sun Mar 28 11:49:43 PST 2021</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011461.html">[osg-users] Graphics system interface version
+</A></li>
+        <LI>Next message (by thread): <A HREF="011467.html">[osg-users] Depth and Color buffer attachemnts do not play along together
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11466">[ date ]</a>
+              <a href="thread.html#11466">[ thread ]</a>
+              <a href="subject.html#11466">[ subject ]</a>
+              <a href="author.html#11466">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Community,
+
+I am attaching to the main camera DepthBuffer and ColorBuffer as Texture2D
+- attached is the setup. I also have shader to check the depth buffer - so
+it is ok as on the image. And I am displaying it on a quad. The depth
+buffer is still getting me zeros when the colorbuffer is attached,
+otherwise when it is not, then it works as it should.
+
+Any hints?
+
+mOsgExternalDepth = new osg::Texture2D;
+mOsgExternalDepth-&gt;setSourceFormat(GL_DEPTH_COMPONENT);
+mOsgExternalDepth-&gt;setSourceType(GL_FLOAT);
+mOsgExternalDepth-&gt;setInternalFormat(GL_DEPTH_COMPONENT32F);
+mOsgExternalDepth-&gt;setTextureWidth(screenWidth);
+mOsgExternalDepth-&gt;setTextureHeight(screenHeight);
+mOsgExternalDepth-&gt;setResizeNonPowerOfTwoHint(false);\
+
+mOsgExternalColor = new osg::Texture2D;
+mOsgExternalColor-&gt;setInternalFormat(GL_RGBA16F_ARB);
+mOsgExternalColor-&gt;setSourceFormat(GL_RGBA);
+mOsgExternalColor-&gt;setSourceType(GL_FLOAT);
+mOsgExternalColor-&gt;setTextureWidth(screenWidth);
+mOsgExternalColor-&gt;setTextureHeight(screenHeight);
+mOsgExternalColor-&gt;setResizeNonPowerOfTwoHint(false);
+
+mainCamera-&gt;attach(osg::Camera::COLOR_BUFFER,
+(osg::Texture*)mOsgExternalColor);
+mainCamera-&gt;attach(osg::Camera::DEPTH_BUFFER,
+(osg::Texture*)mOsgExternalDepth);
+
+osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+camera-&gt;setProjectionMatrix(osg::Matrixd::ortho2D(0, screenWidth, 0,
+screenHeight));
+camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+camera-&gt;setViewMatrix(osg::Matrixd::identity());
+camera-&gt;setClearMask(0);
+camera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+camera-&gt;setAllowEventFocus(false);
+
+context.getImageGenerator()-&gt;getViewer()-&gt;getView(0)-&gt;getSceneData()-&gt;asGroup()-&gt;addChild(camera);
+
+osg::ref_ptr&lt;osg::Geometry&gt; quad =
+osg::createTexturedQuadGeometry(osg::Vec3(0, 0, 0),
+osg::Vec3(screenWidth/2, 0, 0), osg::Vec3(0, screenHeight/2, 0));
+quad-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+quad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,
+mOsgExternalDepth);
+
+const std::string vertShader = &quot;&quot;\
+&quot;void main() &quot;\
+&quot;{ &quot;\
+&quot; gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex; &quot;\
+&quot; gl_TexCoord[0] = gl_TextureMatrix[0] *gl_MultiTexCoord0;&quot;\
+&quot;}&quot;;
+
+const std::string fragShader = &quot;&quot;\
+&quot;uniform sampler2D texture0; &quot;\
+&quot;void main() &quot;\
+&quot;{ &quot;\
+&quot; float d = texture2D( texture0, gl_TexCoord[0].xy ).x; &quot;\
+&quot; gl_FragColor = vec4(d, d, d, 1); &quot;\
+&quot;}&quot;;
+
+osg::ref_ptr&lt;osg::Shader&gt; vert = new osg::Shader(osg::Shader::VERTEX,
+vertShader);
+osg::ref_ptr&lt;osg::Shader&gt; frag = new osg::Shader(osg::Shader::FRAGMENT,
+fragShader);
+
+osg::ref_ptr&lt;osg::Program&gt; program = new osg::Program;
+program-&gt;addShader(vert);
+program-&gt;addShader(frag);
+
+quad-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(program);
+quad-&gt;getOrCreateStateSet()-&gt;addUniform(new
+osg::Uniform(osg::Uniform::SAMPLER_2D, &quot;texture0&quot;, 0));
+osg::ref_ptr&lt;osg::Geometry&gt; quadColor =
+osg::createTexturedQuadGeometry(osg::Vec3(screenWidth / 2, 0, 0),
+osg::Vec3(screenWidth/2 , 0, 0), osg::Vec3(0, screenHeight/2, 0));
+quadColor-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING,
+osg::StateAttribute::OFF);
+quadColor-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,
+mOsgExternalColor);
+
+camera-&gt;addChild(quadColor);
+camera-&gt;addChild(quad);
+
+-- 
+trajce nikolov nick
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/CAO-+zinLTwJppWDbAVy1r9ovjOgZgX0gj0ufrdqBMr%3DRwQqPpw%40mail.gmail.com.">https://groups.google.com/d/msgid/osg-users/CAO-%2BzinLTwJppWDbAVy1r9ovjOgZgX0gj0ufrdqBMr%3DRwQqPpw%40mail.gmail.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20210328/6c349ebe/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20210328/6c349ebe/attachment-0001.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: Both Attached.jpg
+Type: image/jpeg
+Size: 70040 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20210328/6c349ebe/attachment-0002.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20210328/6c349ebe/attachment-0002.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: Only Depth Attached.jpg
+Type: image/jpeg
+Size: 23459 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20210328/6c349ebe/attachment-0003.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20210328/6c349ebe/attachment-0003.jpg</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011461.html">[osg-users] Graphics system interface version
+</A></li>
+	<LI>Next message (by thread): <A HREF="011467.html">[osg-users] Depth and Color buffer attachemnts do not play along together
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11466">[ date ]</a>
+              <a href="thread.html#11466">[ thread ]</a>
+              <a href="subject.html#11466">[ subject ]</a>
+              <a href="author.html#11466">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

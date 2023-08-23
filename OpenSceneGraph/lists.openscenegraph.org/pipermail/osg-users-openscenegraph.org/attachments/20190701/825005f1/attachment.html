@@ -1,0 +1,90 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;Hi&nbsp;Chris,&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;I&nbsp;have&nbsp;spent&nbsp;the&nbsp;day&nbsp;merging&nbsp;submissions,&nbsp;I&nbsp;have&nbsp;a&nbsp;bit&nbsp;more&nbsp;to&nbsp;do,&nbsp;then&nbsp;I&#39;ll&nbsp;see&nbsp;if&nbsp;I&nbsp;can&nbsp;recreate&nbsp;the&nbsp;bug&nbsp;with&nbsp;your&nbsp;latest&nbsp;test&nbsp;program,&nbsp;if&nbsp;I&nbsp;don&#39;t&nbsp;get&nbsp;to&nbsp;it&nbsp;today,&nbsp;I&#39;ll&nbsp;have&nbsp;a&nbsp;bash&nbsp;tomorrow&nbsp;before&nbsp;I&nbsp;head&nbsp;away&nbsp;for&nbsp;a&nbsp;family&nbsp;break. &nbsp;What&nbsp;versions&nbsp;of&nbsp;the&nbsp;OSG&nbsp;have&nbsp;you&nbsp;tested&nbsp;with&nbsp;this&nbsp;test&nbsp;program? &nbsp;What&nbsp;versions&nbsp;of&nbsp;the&nbsp;OSG&nbsp;should&nbsp;I&nbsp;expect&nbsp;to&nbsp;see&nbsp;problems?&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Cheers,&lt;br&gt;&lt;/div&gt;&lt;div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Mon,&nbsp;1&nbsp;Jul&nbsp;2019&nbsp;at&nbsp;03:02,&nbsp;Chris&nbsp;Djali&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:krizdjali@gmail.com&quot;&gt;krizdjali@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+Hopefully&nbsp;this&nbsp;example&nbsp;illustrates&nbsp;the&nbsp;underlying&nbsp;problem&nbsp;with&nbsp;osgText::Text::releaseGLObjects&nbsp;without&nbsp;the&nbsp;multiple&nbsp;viewer&nbsp;schenanigans&nbsp;in&nbsp;my&nbsp;previous&nbsp;example:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+#include&nbsp;&lt;osg/AutoTransform&gt;&lt;br&gt;<br>
+#include&nbsp;&lt;osgGA/TrackballManipulator&gt;&lt;br&gt;<br>
+#include&nbsp;&lt;osgText/Text&gt;&lt;br&gt;<br>
+#include&nbsp;&lt;osgViewer/Viewer&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+int&nbsp;main()&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;osgViewer::Viewer&nbsp;viewer;&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Single-threaded&nbsp;mode&nbsp;so&nbsp;we&nbsp;don&#39;t&nbsp;need&nbsp;to&nbsp;worry&nbsp;about&nbsp;things&nbsp;still&nbsp;being&nbsp;used&nbsp;by&nbsp;the&nbsp;draw&nbsp;traversal&lt;br&gt;<br>
+ &nbsp; &nbsp;viewer.setThreadingModel(osgViewer::ViewerBase::SingleThreaded);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Use&nbsp;an&nbsp;auto&nbsp;transform&nbsp;so&nbsp;the&nbsp;text&nbsp;actually&nbsp;faces&nbsp;the&nbsp;screen&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osg::AutoTransform&gt;&nbsp;scene&nbsp;=&nbsp;new&nbsp;osg::AutoTransform();&lt;br&gt;<br>
+ &nbsp; &nbsp;scene-&gt;setAutoRotateMode(osg::AutoTransform::ROTATE_TO_SCREEN);&lt;br&gt;<br>
+ &nbsp; &nbsp;viewer.setSceneData(scene);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Add&nbsp;two&nbsp;text&nbsp;nodes&nbsp;sharing&nbsp;the&nbsp;same&nbsp;font&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osgText::Font&gt;&nbsp;font&nbsp;=&nbsp;osgText::readRefFontFile(&quot;trebuc.ttf&quot;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osgText::Text&gt;&nbsp;text1&nbsp;=&nbsp;new&nbsp;osgText::Text();&lt;br&gt;<br>
+ &nbsp; &nbsp;text1-&gt;setFont(font);&lt;br&gt;<br>
+ &nbsp; &nbsp;text1-&gt;setText(&quot;text1&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp;scene-&gt;addChild(text1);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osgText::Text&gt;&nbsp;text2&nbsp;=&nbsp;new&nbsp;osgText::Text();&lt;br&gt;<br>
+ &nbsp; &nbsp;text2-&gt;setFont(font);&lt;br&gt;<br>
+ &nbsp; &nbsp;text2-&gt;setText(&quot;text2&quot;);&lt;br&gt;<br>
+ &nbsp; &nbsp;scene-&gt;addChild(text2);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Display&nbsp;one&nbsp;or&nbsp;more&nbsp;frames&lt;br&gt;<br>
+ &nbsp; &nbsp;viewer.setCameraManipulator(new&nbsp;osgGA::TrackballManipulator());&lt;br&gt;<br>
+ &nbsp; &nbsp;for&nbsp;(int&nbsp;i&nbsp;=&nbsp;0;&nbsp;i&nbsp;&lt;&nbsp;100;&nbsp;++i)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;viewer.frame();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Remove&nbsp;a&nbsp;text&nbsp;node&lt;br&gt;<br>
+ &nbsp; &nbsp;scene-&gt;removeChild(text1);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;//&nbsp;Pick&nbsp;which&nbsp;path&nbsp;depending&nbsp;on&nbsp;whether&nbsp;we&nbsp;prefer&nbsp;leaks&nbsp;or&nbsp;rebuilding&nbsp;things&nbsp;we&#39;re&nbsp;still&nbsp;using&nbsp;and&nbsp;potential&nbsp;errors&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(true)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;text1-&gt;releaseGLObjects();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;text2&nbsp;must&nbsp;now&nbsp;compile&nbsp;its&nbsp;program&nbsp;again&nbsp;-&nbsp;osg::Program::compileGLObjects&nbsp;is&nbsp;called&nbsp;the&nbsp;next&nbsp;frame.&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;Also,&nbsp;the&nbsp;glyph&nbsp;texture&nbsp;(which&nbsp;text2&nbsp;still&nbsp;needs)&nbsp;is&nbsp;added&nbsp;to&nbsp;the&nbsp;pending&nbsp;orphaned&nbsp;texture&nbsp;list.&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;I&#39;m&nbsp;not&nbsp;sure&nbsp;how&nbsp;OSG&nbsp;would&nbsp;normally&nbsp;delete&nbsp;orphaned&nbsp;textures,&nbsp;so&nbsp;I&nbsp;can&#39;t&nbsp;trigger&nbsp;that,&nbsp;but&nbsp;I&nbsp;imagine&nbsp;OSG&nbsp;doesn&#39;t&nbsp;keep&nbsp;them&nbsp;all&nbsp;around&nbsp;forever.&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;else&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;text2&nbsp;can&nbsp;still&nbsp;use&nbsp;its&nbsp;program&nbsp;and&nbsp;the&nbsp;glyph&nbsp;texture,&nbsp;but&nbsp;text1&#39;s&nbsp;objects&nbsp;leak.&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;text1&nbsp;=&nbsp;nullptr;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;return&nbsp;viewer.run();&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+All&nbsp;that&nbsp;happens&nbsp;here&nbsp;is&nbsp;we&nbsp;create&nbsp;a&nbsp;viewer,&nbsp;add&nbsp;two&nbsp;text&nbsp;nodes&nbsp;with&nbsp;the&nbsp;same&nbsp;font,&nbsp;and&nbsp;100&nbsp;frames&nbsp;later,&nbsp;remove&nbsp;one&nbsp;of&nbsp;them&nbsp;again.&nbsp;The&nbsp;text&nbsp;node&nbsp;that&nbsp;remains&nbsp;has&nbsp;to&nbsp;recompile&nbsp;its&nbsp;shader&nbsp;program&nbsp;(a&nbsp;very&nbsp;minor&nbsp;but&nbsp;unnecessary&nbsp;performance&nbsp;hit)&nbsp;and&nbsp;its&nbsp;glyph&nbsp;texture&nbsp;ends&nbsp;up&nbsp;in&nbsp;the&nbsp;orphaned&nbsp;texture&nbsp;list&nbsp;(which&nbsp;I&#39;m&nbsp;pretty&nbsp;sure&nbsp;means&nbsp;it&nbsp;could&nbsp;be&nbsp;deleted&nbsp;at&nbsp;any&nbsp;time).&lt;br&gt;<br>
+&lt;br&gt;<br>
+If&nbsp;I&nbsp;knew&nbsp;how&nbsp;OSG&nbsp;typically&nbsp;cleans&nbsp;up&nbsp;orphaned&nbsp;textures,&nbsp;I&nbsp;could&nbsp;add&nbsp;extra&nbsp;steps&nbsp;to&nbsp;this&nbsp;and&nbsp;make&nbsp;it&nbsp;actually&nbsp;produce&nbsp;OpenGL&nbsp;errors&nbsp;when&nbsp;the&nbsp;texture&nbsp;is&nbsp;deleted,&nbsp;but&nbsp;as-is&nbsp;it&nbsp;just&nbsp;hangs&nbsp;around&nbsp;in&nbsp;the&nbsp;orphaned&nbsp;list&nbsp;indefinitely.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Chris&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=76345#76345&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=76345#76345&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;<br>
+
+</tt>

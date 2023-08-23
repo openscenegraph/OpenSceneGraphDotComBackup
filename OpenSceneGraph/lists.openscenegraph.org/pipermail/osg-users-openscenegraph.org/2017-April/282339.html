@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Support for Windows Universal Platform
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Support%20for%20Windows%20Universal%20Platform&In-Reply-To=%3C1492816087.m2f.70800%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006123.html">
+   <LINK REL="Next"  HREF="006117.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Support for Windows Universal Platform</H1>
+<!--htdig_noindex-->
+    <B>Thomas Hogarth</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Support%20for%20Windows%20Universal%20Platform&In-Reply-To=%3C1492816087.m2f.70800%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Support for Windows Universal Platform">thomas.hogarth at gmail.com
+       </A><BR>
+    <I>Fri Apr 21 16:08:07 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006123.html">[osg-users] iOS build guide locked/checked out on osg website
+</A></li>
+        <LI>Next message: <A HREF="006117.html">[osg-users] Support for Windows Universal Platform
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282339">[ date ]</a>
+              <a href="thread.html#282339">[ thread ]</a>
+              <a href="subject.html#282339">[ subject ]</a>
+              <a href="author.html#282339">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi
+
+So I've been tasked to add UWP/Angle support to OSG working with Chris Hanson. I have it pretty much working, it's rendering a cube, and just wanted a little guidance on a few issues before I submit any changes.
+
+So firstly to the main CMakeLists.txt file I've added a OSG_BUILD_PLATFORM_UWP flag, this only does one thing on the CMake side. It adds a preprocessor define to all targets 'OSG_UWP' this is used in the code to hash def out a few unsupported features.
+
+Also in the osgViewer CMake I have added support to Win32 path to set the Window System type, it defaults to Win32 which will behave as usual and any other value just doesn't add the Win32 graphics window implementation files. Maybe later we could add an EGL implementation but for now we just don't want the Win32 version and then we use setupViewerAsEmbedded.
+
+I've hash defed out the plugin loading code on Win32 for now and have built osg as static as it uses a few functions not available on UWP, however later we could get that working I think as I've got GLExtensions code to work with a different function for loading the dll module.
+
+OpenThreads had a few functions not available but none of them are show stoppers. The micoSleep function used some stuff not available so I made it fall back on standard sleep just as older windows versions do. You can't set process affinity on UWP so that function call does nothing, and you can't force terminate a thread, but you can cancel them so the fail safe terminate is just excluded.
+
+The real issue at the moment is the use of getenv. That's used in a lot of places and is a handy bit of code for config type stuff so I didn't really want to add hash defs all over the place where ever it's used. So for now I made a dummy implementation that just returns 0, but the only place I could find to put it that is included globally was in the Notify header which is far from ideal. Does anyone have any thoughts or feedback on where I could place a dummy function like that that kind of needs to be used anywhere without people having to add a new include?
+
+Here's an example CMake command that will generate a UWP visual studio project
+
+&quot;C:/Program Files/CMake/bin/cmake.exe&quot; ./ -G &quot;Visual Studio 14 2015 Win64&quot; -DCMAKE_SYSTEM_NAME:STRING=&quot;WindowsStore&quot; -DCMAKE_SYSTEM_VERSION:STRING=&quot;10.0&quot; ^
+-DOSG_BUILD_PLATFORM_UWP:BOOL=ON ^
+-DOPENGL_PROFILE:STRING=GLES2 ^
+-DOSG_WINDOWING_SYSTEM:STRING=NONE ^
+-DOSG_USE_UTF8_FILENAME:BOOL=ON ^
+-DDYNAMIC_OPENSCENEGRAPH:BOOL=OFF ^
+-DDYNAMIC_OPENTHREADS:BOOL=OFF ^
+-DBUILD_OSG_APPLICATIONS:BOOL=OFF ^
+-DBUILD_OSG_EXAMPLES:BOOL=OFF ^
+-DOPENGL_INCLUDE_DIR:PATH=&quot;C:/Work/AlphaPixel/osgUWP-Port/angle/include&quot; ^
+-DOPENGL_HEADER1:STRING=&quot;#include &lt;GLES2/gl2.h&gt;&quot; ^
+-DOPENGL_gl_LIBRARY:STRING=&quot;C:/Work/AlphaPixel/osgUWP-Port/angle/winrt/10/src/Release_x64/lib/libGLESv2.lib&quot; ^
+-DEGL_INCLUDE_DIR:PATH=&quot;C:/Work/AlphaPixel/osgUWP-Port/angle/include&quot; ^
+-DEGL_LIBRARY:STRING=&quot;C:/Work/AlphaPixel/osgUWP-Port/angle/winrt/10/src/Release_x64/lib/libEGL.lib&quot;
+
+
+Once I have a solution to this getenv thing and done some more testing I'll look at doing a pull request.
+
+Thanks
+Tom
+
+PS
+It's currently in a private repo
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic3d84.php?p=70800#70800">http://forum.openscenegraph.org/viewtopic.php?p=70800#70800</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006123.html">[osg-users] iOS build guide locked/checked out on osg website
+</A></li>
+	<LI>Next message: <A HREF="006117.html">[osg-users] Support for Windows Universal Platform
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282339">[ date ]</a>
+              <a href="thread.html#282339">[ thread ]</a>
+              <a href="subject.html#282339">[ subject ]</a>
+              <a href="author.html#282339">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

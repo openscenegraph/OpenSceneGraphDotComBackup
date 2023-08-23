@@ -1,0 +1,258 @@
+/* OpenSceneGraph example, osgtext.
+*
+*  Permission is hereby granted, free of charge, to any person obtaining a copy
+*  of this software and associated documentation files (the "Software"), to deal
+*  in the Software without restriction, including without limitation the rights
+*  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*  copies of the Software, and to permit persons to whom the Software is
+*  furnished to do so, subject to the following conditions:
+*
+*  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*  THE SOFTWARE.
+*/
+
+#include <sstream>
+#include <iomanip>
+
+#include <osgDB/WriteFile>
+
+#include <osgGA/StateSetManipulator>
+#include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
+
+#include <osg/Geode>
+#include <osg/Camera>
+
+#include <osgText/Font>
+#include <osgText/Text>
+
+////////////////////////////////////////////////////////////////////
+
+std::string printRightText(double angle)
+{
+    std::stringstream ss;
+    ss << "Press 2 to change the font between\n"
+        << "arial and times.\n"
+        << std::fixed << std::setprecision(1) << angle << "\n";
+    return ss.str();
+}
+
+struct UpdateColumnPosition : public osg::Callback
+{
+    UpdateColumnPosition(osgText::Text* leftText, osgText::Text* rightText)
+      : angleValue(0.0),
+        left(leftText),
+        right(rightText)
+    {
+    }
+
+    virtual bool run(osg::Object* object, osg::Object* data)
+    {
+        angleValue = fmod(angleValue + 1.7, 360.0);
+        right->setText(printRightText(angleValue));
+
+        // Position the text appropriately
+        left->setPosition(osg::Vec3f(10.0, 10.0, 0.0));
+        osg::BoundingBox bb = left->getBoundingBox();
+        const float width = bb.xMax() - bb.xMin();
+        right->setPosition(osg::Vec3f(10.0 + width + 30.0, 10.0, 0.0));
+
+        return traverse(object, data);
+    }
+
+    double angleValue;
+    osg::ref_ptr<osgText::Text> left;
+    osg::ref_ptr<osgText::Text> right;
+};
+
+struct ToggleLeftRightTextSettings : public osgGA::GUIEventHandler
+{
+    ToggleLeftRightTextSettings(osgText::Text* leftText, osgText::Text* rightText)
+      : left(leftText),
+        right(rightText),
+        useShadow(true),
+        useArial(true)
+    {
+    }
+
+    virtual bool handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, osg::Object*, osg::NodeVisitor*)
+    {
+        if (ea.getEventType() == ea.KEYDOWN)
+        {
+            if (ea.getKey() == '1')
+            {
+                useShadow = !useShadow;
+                left->setBackdropType(useShadow ? osgText::Text::DROP_SHADOW_BOTTOM_RIGHT : osgText::Text::NONE);
+                right->setBackdropType(left->getBackdropType());
+                return true;
+            }
+            else if (ea.getKey() == '2')
+            {
+                useArial = !useArial;
+                left->setFont(useArial ? "fonts/arial.ttf" : "fonts/times.ttf");
+                right->setFont(left->getFont());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    osg::ref_ptr<osgText::Text> left;
+    osg::ref_ptr<osgText::Text> right;
+    bool useShadow;
+    bool useArial;
+};
+
+osg::Group* sampleHud(int width, int height)
+{
+    osg::Camera* hud = new osg::Camera;
+    hud->setRenderOrder(osg::Camera::POST_RENDER, 1000);
+    hud->setProjectionMatrix(osg::Matrix::ortho2D(0, width - 1, 0, height - 1));
+    hud->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    hud->setViewMatrix(osg::Matrix::identity());
+    hud->setClearMask(GL_DEPTH_BUFFER_BIT);
+    hud->setAllowEventFocus(true);
+    hud->getOrCreateStateSet()->setRenderBinDetails(0, "TraversalOrderBin");
+    hud->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::OFF);
+
+    static const float TEXT_SIZE = 16.0;
+    static const osgText::Text::BackdropType BACKDROP_TYPE = osgText::Text::DROP_SHADOW_BOTTOM_RIGHT;
+    static const std::string FONT_NAME = "fonts/arial.ttf";
+
+    osgText::Text* leftText = new osgText::Text;
+    leftText->setFont(FONT_NAME);
+    leftText->setColor(osg::Vec4f(0.0f, 1.0f, 1.0f, 1.0f));
+    leftText->setPosition(osg::Vec3f(10.0f, 10.0f, 0.0f));
+    leftText->setCharacterSize(TEXT_SIZE);
+    leftText->setAlignment(osgText::TextBase::LEFT_BOTTOM_BASE_LINE);
+    leftText->setBackdropType(BACKDROP_TYPE);
+    leftText->setDataVariance(osg::Object::DYNAMIC);
+    //leftText->setText("Time:\nTime Step:\nDistance:\nAzim:\nElev:\nCentered:");
+    leftText->setText("Press 1\nTo Toggle\nShadow");
+    hud->addChild(leftText);
+
+    osgText::Text* rightText = new osgText::Text;
+    rightText->setFont(FONT_NAME);
+    rightText->setColor(osg::Vec4f(0.0f, 1.0f, 1.0f, 1.0f));
+    rightText->setPosition(osg::Vec3f(180.0f, 10.0f, 0.0f));
+    rightText->setCharacterSize(TEXT_SIZE);
+    rightText->setAlignment(osgText::TextBase::LEFT_BOTTOM_BASE_LINE);
+    rightText->setBackdropType(BACKDROP_TYPE);
+    rightText->setDataVariance(osg::Object::DYNAMIC);
+    rightText->setText(printRightText(0.0));
+    hud->addChild(rightText);
+
+    hud->addUpdateCallback(new UpdateColumnPosition(leftText, rightText));
+    hud->addEventCallback(new ToggleLeftRightTextSettings(leftText, rightText));
+
+    return hud;
+}
+
+struct UpdateTextCallback : public osg::Callback
+{
+    UpdateTextCallback() : value(100) {}
+    virtual bool run(osg::Object* object, osg::Object* data)
+    {
+        osgText::Text* text5 = dynamic_cast<osgText::Text*>(object);
+        value = (value + 7) % 360;
+
+        std::stringstream ss;
+        ss << "Long text string\n" << value << ".0";
+        text5->setText(ss.str());
+        text5->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+        text5->setDataVariance(osg::Object::DYNAMIC);
+
+        osg::BoundingBox bb = text5->getBoundingBox();
+        std::cout << "xDelta: " << bb.xMax() - bb.xMin()
+            << "  yDelta: " << bb.yMax() - bb.yMin()
+            << "  zDelta: " << bb.zMax() - bb.zMin()
+            << "\n";
+        return traverse(object, data);
+    }
+    int value;
+};
+
+
+// create text which sits in 3D space such as would be inserted into a normal model
+osg::Group* create3DText(const osg::Vec3& center,float radius)
+{
+
+    osg::Geode* geode  = new osg::Geode;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Examples of how to set up axis/orientation alignments
+//
+
+    osg::Vec3 pos(center.x()-radius*.5f,center.y()-radius*.5f,center.z()-radius*.5f);
+    osg::Vec4 characterSizeModeColor(1.0f,0.0f,0.5f,1.0f);
+
+    osgText::Text* text5 = new osgText::Text;
+    text5->setColor(characterSizeModeColor);
+    //text5->setFont("fonts/times.ttf");
+    text5->setFont("fonts/arial.ttf");
+    text5->setCharacterSize(32.0f); // medium
+    text5->setPosition(center - osg::Vec3(0.0, 0.0, 0.2));
+    text5->setAxisAlignment(osgText::Text::SCREEN);
+    text5->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+    text5->setDrawMode(osgText::Text::TEXT | osgText::Text::BOUNDINGBOX);
+    text5->setText("CharacterSizeMode SCREEN_COORDS(size 32.0)");
+    geode->addDrawable(text5);
+    text5->addUpdateCallback(new UpdateTextCallback);
+
+    osg::Group* rootNode = new osg::Group;
+    rootNode->addChild(geode);
+
+    return rootNode;
+}
+
+int main(int argc, char** argv)
+{
+    osg::ArgumentParser arguments(&argc, argv);
+
+    // construct the viewer.
+    osgViewer::Viewer viewer(arguments);
+
+    // prepare scene.
+    osg::Vec3 center(0.0f, 0.0f, 0.0f);
+    float radius = 1.0f;
+
+    // make sure the root node is group so we can add extra nodes to it.
+    osg::Group* group = new osg::Group;
+
+    if (true)
+    {
+        group->addChild(create3DText(center, radius));
+    }
+
+    if (true)
+    {
+        // Determine the screen width and height; realize viewer to get reasonable viewport easily for demo
+        viewer.realize();
+        const osg::Viewport* vp = viewer.getCamera()->getViewport();
+        group->addChild(sampleHud(vp->width(), vp->height()));
+    }
+
+    // set the scene to render
+    viewer.setSceneData(group);
+
+    std::string filename;
+    if (arguments.read("-o",filename))
+    {
+        osgDB::writeNodeFile(*viewer.getSceneData(),filename);
+        return 0;
+    }
+
+    viewer.addEventHandler( new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()) );
+    viewer.addEventHandler(new osgViewer::StatsHandler());
+
+    viewer.run();
+
+    return 0;
+}
+

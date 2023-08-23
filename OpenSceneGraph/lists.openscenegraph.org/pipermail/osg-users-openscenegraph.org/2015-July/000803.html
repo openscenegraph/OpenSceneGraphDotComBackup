@@ -1,0 +1,186 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Possible bug in pragmatic shader composition and optimizers
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Possible%20bug%20in%20pragmatic%20shader%20composition%20and%0A%20optimizers&In-Reply-To=%3C55A4C4E3.7000601%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277025.html">
+   <LINK REL="Next"  HREF="000804.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Possible bug in pragmatic shader composition and optimizers</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Possible%20bug%20in%20pragmatic%20shader%20composition%20and%0A%20optimizers&In-Reply-To=%3C55A4C4E3.7000601%40gmx.de%3E"
+       TITLE="[osg-users] Possible bug in pragmatic shader composition and optimizers">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Tue Jul 14 01:14:27 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277025.html">[osg-users] Possible bug in pragmatic shader composition and	optimizers
+</A></li>
+        <LI>Next message: <A HREF="000804.html">[osg-users] Possible bug in pragmatic shader composition and	optimizers
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#803">[ date ]</a>
+              <a href="thread.html#803">[ thread ]</a>
+              <a href="subject.html#803">[ subject ]</a>
+              <a href="author.html#803">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Me again,
+
+I've attached a minimal example which illustrates the problem.
+It seems the combination
+osgUtil::Optimizer::SHARE_DUPLICATE_STATE | 
+osgUtil::Optimizer::STATIC_OBJECT_DETECTION
+
+causes the both geometries to be rendered as if the define was not set.
+If the optimizer is not run the geometries are rendered as expected.
+
+Cheers
+Sebastian
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I've got some code, where I set up a define inside for an 
+</I>&gt;<i> osg::Geometry via
+</I>&gt;<i>
+</I>&gt;<i> geometry.getOrCreateStateSet()-&gt;setDefine(&quot;MY_DEFINE&quot;)
+</I>&gt;<i>
+</I>&gt;<i> The geometry is a sibling to another geometry not setting the define.
+</I>&gt;<i> It works well if I don't run an osg::Optimizer, but running it 
+</I>&gt;<i> effectively removes the define.
+</I>&gt;<i> Since I don't have the source code at hand, I cannot inspect this 
+</I>&gt;<i> issue right now.
+</I>&gt;<i>
+</I>&gt;<i> The optimizer is set up to use the SHARE_DUPLICATE_STATE, so I suspect 
+</I>&gt;<i> the problem to be inside the logic which determines if two statesets 
+</I>&gt;<i> are equal.
+</I>&gt;<i> I'm using OSG 3.3.9 on Windows 7 64bit
+</I>&gt;<i>
+</I>&gt;<i> cheers
+</I>&gt;<i> Sebastian
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-------------- next part --------------
+#include &quot;osgViewer/Viewer&quot;
+#include &lt;osg/PositionAttitudeTransform&gt;
+
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgUtil/Optimizer&gt;
+
+
+std::string vert_source = 
+	&quot;void main()\n \
+	{\n\
+	gl_Position = ftransform();\n\
+	}\n\
+	&quot;;
+
+std::string frag_source = 
+	&quot;void main()\n \
+	{\n\
+	#pragma import_defines ( TEST_DEFINE )\n\
+	#ifdef TEST_DEFINE\n\
+	  gl_FragColor = vec4(1,0,0,1);\n\
+	#else\n\
+	  gl_FragColor = vec4(0,1,0,1);\n\
+	#endif\n\
+	}\n\
+	&quot;;
+
+
+void applyShader(const std::string&amp; vert_source, const std::string&amp; frag_source, osg::StateSet* ss)
+{
+	osg::Program* program = new osg::Program;
+	osg::Shader* vertex_shader = new osg::Shader(osg::Shader::VERTEX);
+	vertex_shader-&gt;setShaderSource(vert_source);
+	osg::Shader* fragment_shader = new osg::Shader(osg::Shader::FRAGMENT);
+	fragment_shader-&gt;setShaderSource(frag_source);
+	program-&gt;addShader(vertex_shader);
+	program-&gt;addShader(fragment_shader);
+
+	ss-&gt;setAttributeAndModes(program, osg::StateAttribute::ON);
+}
+
+
+int main(int argc, char** argv)
+{
+
+
+	osg::ref_ptr&lt;osg::Group&gt; scene_root = new osg::Group;
+	
+	osgViewer::Viewer viewer;
+	viewer.getCamera()-&gt;setDefaults();
+
+	osg::Node* axes = osgDB::readNodeFile(&quot;axes.osgt&quot;);
+	if (!axes)
+	{
+		std::cout &lt;&lt; &quot;Didn't find axes.osgb&quot; &lt;&lt; std::endl;
+		exit(1);
+	}
+	osg::PositionAttitudeTransform* pat_1 = new osg::PositionAttitudeTransform;
+	osg::PositionAttitudeTransform* pat_2 = new osg::PositionAttitudeTransform;
+	pat_1-&gt;setPosition(osg::Vec3(-5,0,0));
+	pat_2-&gt;setPosition(osg::Vec3(5,0,0));
+	pat_1-&gt;addChild(axes);
+	pat_2-&gt;addChild(axes);
+
+	scene_root-&gt;addChild(pat_2);
+	scene_root-&gt;addChild(pat_1);
+
+	applyShader(vert_source, frag_source, pat_1-&gt;getOrCreateStateSet());
+	applyShader(vert_source, frag_source, pat_2-&gt;getOrCreateStateSet());
+
+	pat_2-&gt;getOrCreateStateSet()-&gt;setDefine(&quot;TEST_DEFINE&quot;);
+
+	osgUtil::Optimizer opt;
+	opt.optimize(scene_root, 
+		osgUtil::Optimizer::SHARE_DUPLICATE_STATE | osgUtil::Optimizer::STATIC_OBJECT_DETECTION
+		);
+	//opt.optimize(scene_root);
+	viewer.setSceneData(scene_root);
+
+	viewer.setUpViewInWindow(10,10,255,255,0);
+	viewer.run();
+
+}
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277025.html">[osg-users] Possible bug in pragmatic shader composition and	optimizers
+</A></li>
+	<LI>Next message: <A HREF="000804.html">[osg-users] Possible bug in pragmatic shader composition and	optimizers
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#803">[ date ]</a>
+              <a href="thread.html#803">[ thread ]</a>
+              <a href="subject.html#803">[ subject ]</a>
+              <a href="author.html#803">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

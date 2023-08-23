@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Vertex Buffer Object used inside display list
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vertex%20Buffer%20Object%20used%20inside%20display%20list&In-Reply-To=%3CCAFN7Y%2BUoV5PgVjHqwWp3jP4yRV2DGqd2AHb0%2BENKT3JKxesuSg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005591.html">
+   <LINK REL="Next"  HREF="281823.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Vertex Buffer Object used inside display list</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vertex%20Buffer%20Object%20used%20inside%20display%20list&In-Reply-To=%3CCAFN7Y%2BUoV5PgVjHqwWp3jP4yRV2DGqd2AHb0%2BENKT3JKxesuSg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Vertex Buffer Object used inside display list">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Feb 17 01:20:08 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005591.html">[osg-users] Vertex Buffer Object used inside display list
+</A></li>
+        <LI>Next message: <A HREF="281823.html">[osg-users] [ A Stack Overflow for OSG? ]
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5595">[ date ]</a>
+              <a href="thread.html#5595">[ thread ]</a>
+              <a href="subject.html#5595">[ subject ]</a>
+              <a href="author.html#5595">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Jannik,
+
+I had to change the code to always assign a VertexBufferObject as I
+couldn't find a way of implementing VAO without forcing changes to
+client code, in order to make sure the OSG works on GLcore profile
+implementations that require VAO all arrays have to have a
+VertexBufferObject.
+
+The observation that display lists are being used the VBO side shows a
+bug, display lists and VBO shouldn't be invoked though, we'll need to
+review osg::Geometry to make sure VBO's aren't used when display lists
+are being generated..
+
+Robert.
+
+On 16 February 2017 at 21:14, Jannik Heller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">scrawl at baseoftrash.de</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I've noticed some odd API usage in the OSG that seems to have started with the VAO support changes in OSG 3.5. Vertex buffer objects are being used inside a display list. This happens on a standard Geometry with default settings. Example:
+</I>&gt;<i>
+</I>&gt;<i> glNewList(6, GL_COMPILE)
+</I>&gt;<i> glGenBuffers(1, [5])
+</I>&gt;<i> glBindBuffer(GL_ARRAY_BUFFER, 5)
+</I>&gt;<i> glBufferData(...)
+</I>&gt;<i> glBufferSubData(...) x4
+</I>&gt;<i> glVertexPointer(3, GL_FLOAT, 0, NULL)
+</I>&gt;<i> glNormalPointer(GL_FLOAT, 0, 0x90)
+</I>&gt;<i> glColorPointer(4, GL_FLOAT, 0x180)
+</I>&gt;<i> glTexCoordPointer(2, GL_FLOAT, 0, 0x120)
+</I>&gt;<i> glDrawElements(...)
+</I>&gt;<i> glBindBuffer(GL_ARRAY_BUFFER, 0)
+</I>&gt;<i> glEndList()
+</I>&gt;<i>
+</I>&gt;<i> The source of this change in behavior is here: <A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/master/src/osg/Geometry.cpp#L187">https://github.com/openscenegraph/OpenSceneGraph/blob/master/src/osg/Geometry.cpp#L187</A> OSG will now always assign VBOs, even if they weren't requested.
+</I>&gt;<i>
+</I>&gt;<i> First off all I find this usage very odd. The GL standard doesn't actually specify what is supposed to happen to VBOs in a display list - is the VBO simply ignored or could that cause a new VBO to be created with every call to the display list? Even if this works, the calls are completely redundant and could be removed.
+</I>&gt;<i>
+</I>&gt;<i> More importantly, though, and the reason I'm bringing it up, is that this usage seems to be causing a crash with some versions of Mesa drivers, and the crash goes away when I disable display lists.
+</I>&gt;<i>
+</I>&gt;<i> Ubuntu 14.04 - Nvidia: works
+</I>&gt;<i> Ubuntu 14.04 - Intel HD: broken
+</I>&gt;<i> Ubuntu 16.04 - Intel HD: broken
+</I>&gt;<i>
+</I>&gt;<i> I've attached a minimal-ish apitrace you can use to see if your driver is affected - run it with 'apitrace replay &lt;file&gt;' , if you get 'caught signal 11' that means the driver has crashed.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Jannik
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic4015.php?p=70219#70219">http://forum.openscenegraph.org/viewtopic.php?p=70219#70219</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005591.html">[osg-users] Vertex Buffer Object used inside display list
+</A></li>
+	<LI>Next message: <A HREF="281823.html">[osg-users] [ A Stack Overflow for OSG? ]
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5595">[ date ]</a>
+              <a href="thread.html#5595">[ thread ]</a>
+              <a href="subject.html#5595">[ subject ]</a>
+              <a href="author.html#5595">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

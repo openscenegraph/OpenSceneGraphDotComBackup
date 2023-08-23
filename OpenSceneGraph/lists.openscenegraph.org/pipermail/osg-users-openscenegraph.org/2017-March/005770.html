@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Equivalent of glTexSubImage2D ?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Equivalent%20of%20glTexSubImage2D%20%3F&In-Reply-To=%3C1488571242.m2f.70405%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005757.html">
+   <LINK REL="Next"  HREF="281957.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Equivalent of glTexSubImage2D ?</H1>
+<!--htdig_noindex-->
+    <B>Johny Canes</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Equivalent%20of%20glTexSubImage2D%20%3F&In-Reply-To=%3C1488571242.m2f.70405%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Equivalent of glTexSubImage2D ?">psijsma at gmail.com
+       </A><BR>
+    <I>Fri Mar  3 12:00:42 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005757.html">[osg-users] Equivalent of glTexSubImage2D ?
+</A></li>
+        <LI>Next message: <A HREF="281957.html">[osg-users] Merge Shader::Program from differents node kits.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5770">[ date ]</a>
+              <a href="thread.html#5770">[ thread ]</a>
+              <a href="subject.html#5770">[ subject ]</a>
+              <a href="author.html#5770">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+For the lurker coming here for Awesomium, use the following code. The key is to use the unpack alignment settings.
+
+Very non optimized and copied from <A HREF="https://github.com/assertfail/bezel-webkit/blob/master/Source/wkSurface.cpp">https://github.com/assertfail/bezel-webkit/blob/master/Source/wkSurface.cpp</A>
+
+Code:
+void nr::awe::Drawer::operator() (const osg::Camera&amp; cam) const {
+
+	OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(mutex);
+
+	if (paints.size()&lt;1)
+		return;
+
+	//if ( ! gGc-&gt;getState() )
+		//return;
+
+	auto cid = gGc-&gt;getState()-&gt;getContextID();
+
+	if ( NULL == awe::texture-&gt;getTextureObject( cid ) )
+		return;
+
+	auto obj = awe::texture-&gt;getTextureObject( cid );
+	obj-&gt;bind();
+
+	int bpp = 4;
+	int stride = nr::width * 4;
+
+	for ( auto p : paints )
+	{
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, stride/bpp); 
+		glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, p.dest_rect.height);
+    
+		glPixelStorei(GL_UNPACK_SKIP_PIXELS,  p.dest_rect.x);
+		glPixelStorei(GL_UNPACK_SKIP_ROWS,    p.dest_rect.y);
+
+		glTexSubImage2D(
+			GL_TEXTURE_2D,
+			0,
+			p.dest_rect.x,
+			p.dest_rect.y,
+			p.dest_rect.width,
+			p.dest_rect.height,
+			GL_BGRA,
+			GL_UNSIGNED_BYTE,
+			p.src_buffer);
+
+		//unsigned char* a = &amp;p.src_buffer[0];
+
+		//glTexSubImage2D(GL_TEXTURE_2D, 0, p.dest_rect.x, p.dest_rect.y, p.dest_rect.width, p.dest_rect.height, GL_BGRA_EXT, GL_UNSIGNED_BYTE, a);
+
+		glPixelStorei(GL_UNPACK_ROW_LENGTH,   0);
+		glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0);
+		glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+		glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+
+		delete p.src_buffer;
+	}
+
+	paints.clear();
+
+}
+
+void nr::awe::Zurface::Paint(unsigned char* buffer, int ss, const Awesomium::Rect&amp; sr, const Awesomium::Rect&amp; dr) {
+
+	int row;
+	int bpp = 4;
+	int stride = nr::width * 4;
+
+	unsigned char* store = (unsigned char*) malloc(nr::height * stride);
+
+    memset(store, 0, height * stride);
+
+	// copy the region to our store
+    for (row = 0 ; row &lt; dr.height ; ++row)
+        memcpy(store+(row+dr.y)*stride+(dr.x*bpp),
+               buffer+(row+sr.y)*ss+(sr.x*4),
+               dr.width*bpp);
+
+	//memcpy(copy, src_buffer, src_row_span * src_rect.height);
+
+	OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(mutex);
+
+	paints.push_back( {store, ss, sr, dr} );
+
+};
+
+
+
+Thank you!
+
+Cheers,
+Johny
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic519a.php?p=70405#70405">http://forum.openscenegraph.org/viewtopic.php?p=70405#70405</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005757.html">[osg-users] Equivalent of glTexSubImage2D ?
+</A></li>
+	<LI>Next message: <A HREF="281957.html">[osg-users] Merge Shader::Program from differents node kits.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5770">[ date ]</a>
+              <a href="thread.html#5770">[ thread ]</a>
+              <a href="subject.html#5770">[ subject ]</a>
+              <a href="author.html#5770">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

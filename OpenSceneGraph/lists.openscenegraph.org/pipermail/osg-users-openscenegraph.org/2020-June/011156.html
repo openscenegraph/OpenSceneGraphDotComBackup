@@ -1,0 +1,247 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Why does the computeshaderblur program not display properly?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20does%20the%20computeshaderblur%20program%20not%20display%0A%20properly%3F&In-Reply-To=%3Cmailman.1594.1592914406.1728.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011143.html">
+   <LINK REL="Next"  HREF="011161.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Why does the computeshaderblur program not display properly?</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20does%20the%20computeshaderblur%20program%20not%20display%0A%20properly%3F&In-Reply-To=%3Cmailman.1594.1592914406.1728.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Why does the computeshaderblur program not display properly?">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Tue Jun 23 05:13:23 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011143.html">[osg-users] Why does the computeshaderblur program not display properly?
+</A></li>
+        <LI>Next message (by thread): <A HREF="011161.html">[osg-users] Why does the computeshaderblur program not display properly?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11156">[ date ]</a>
+              <a href="thread.html#11156">[ thread ]</a>
+              <a href="subject.html#11156">[ subject ]</a>
+              <a href="author.html#11156">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>sorry.My environment is win10 osg3.6.4 GTX1660Ti.
+I tried to write a Gaussian blur computeshader,but I don't know why display 
+error.
+
+[image: QQ&#22270;&#29255;20200623183156.png]
+
+The following code can be run directly.
+
+#include &lt;osg/Texture2D&gt;
+#include &lt;osg/BindImageTexture&gt;
+#include &lt;osg/DispatchCompute&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgGA/StateSetManipulator&gt;
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+static const char* computeSrc = {
+&quot;#version 430\n&quot;
+&quot;precision highp  float;\n&quot;
+&quot;precision highp  int;\n&quot;
+&quot;uniform int      radius;\n&quot;
+&quot;uniform float    width;\n&quot;
+&quot;uniform float    height;\n&quot;
+&quot;const float pi  = 3.1415926;\n&quot;
+&quot;float sigma     = float(radius) * 0.25;\n&quot;
+&quot;float s         = 2 * sigma * sigma;\n&quot;
+&quot;layout (rgba32f, binding =0) highp uniform image2D uImageIn;\n&quot;
+&quot;layout (rgba32f, binding =1) highp uniform image2D uImageOut;\n&quot;
+&quot;layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;\n&quot;
+&quot;void main() {\n&quot;
+&quot; ivec2 id   = ivec2(gl_GlobalInvocationID.xy);        \n&quot;
+&quot; ivec2 size = imageSize(uImageOut); \n&quot;
+&quot; if (id.x &gt;= size.x || id.y &gt;= size.y) { \n&quot;
+&quot; return; \n&quot;
+&quot; } \n&quot;
+&quot;   vec2 scale = vec2(1.0) / vec2(width,height);                            
+                \n&quot;
+&quot;   vec4  pixel         = vec4(0.0);                                        
+                \n&quot;
+&quot; float weightSum     = 0.0;             \n&quot;
+&quot; float weight        = 0; \n&quot;
+&quot; vec2  offset        = vec2(0.0); \n&quot;
+&quot;   for (int i = -radius / 2; i &lt; radius / 2; i++)                          
+                \n&quot;
+&quot;   { \n&quot;
+&quot;    for (int j = -radius / 2; j &lt; radius / 2; j++) \n&quot;
+&quot;    { \n&quot;
+&quot;    offset = vec2(i, j); \n&quot;
+&quot;    weight = exp(-(offset.x * offset.x + offset.y * offset.y) / s) / (pi * 
+s); \n&quot;
+&quot;    pixel += imageLoad(uImageIn, ivec2(x, y) + scale * offset) * weight; 
+\n&quot;
+&quot;    weightSum += weight; \n&quot;
+&quot;    } \n&quot;
+&quot;   } \n&quot;
+&quot;   pixel /= weightSum; \n&quot;
+&quot;   imageStore(uImageOut, id, pixel); \n&quot;
+&quot; \n&quot;
+&quot;}\n&quot;
+};
+
+int main(int argc, char** argv)
+{
+osg::ArgumentParser arguments(&amp;argc, argv);
+
+// Create the texture as both the output of compute shader and the input of 
+a normal quad
+osg::ref_ptr&lt;osg::Texture2D&gt; tex2D = new osg::Texture2D;
+osg::Image* pImage = osgDB::readImageFile(&quot;Images/man.jpg&quot;);
+pImage-&gt;setDataVariance(osg::Object::DYNAMIC);
+tex2D-&gt;setImage(pImage);
+tex2D-&gt;setTextureSize(512, 512);
+tex2D-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+tex2D-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+tex2D-&gt;setInternalFormat(GL_RGB32F_ARB);
+tex2D-&gt;setSourceFormat(GL_RGB);
+tex2D-&gt;setSourceType(GL_FLOAT);
+// So we can use 'image2D' in the compute shader
+osg::ref_ptr&lt;osg::BindImageTexture&gt; imagbinding = new 
+osg::BindImageTexture(0, tex2D.get(), osg::BindImageTexture::READ_WRITE, 
+GL_RGB32F_ARB);
+
+
+osg::ref_ptr&lt;osg::Texture2D&gt; tex2D2 = new osg::Texture2D;
+tex2D2-&gt;setTextureSize(512, 512);
+tex2D2-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+tex2D2-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+tex2D2-&gt;setInternalFormat(GL_RGB32F_ARB);
+tex2D2-&gt;setSourceFormat(GL_RGB);
+tex2D2-&gt;setSourceType(GL_FLOAT);
+// So we can use 'image2D' in the compute shader
+osg::ref_ptr&lt;osg::BindImageTexture&gt; imagbinding2 = new 
+osg::BindImageTexture(0, tex2D2.get(), osg::BindImageTexture::READ_WRITE, 
+GL_RGB32F_ARB);
+
+// The compute shader can't work with other kinds of shaders
+// It also requires the work group numbers. Setting them to 0 will disable 
+the compute shader
+osg::ref_ptr&lt;osg::Program&gt; computeProg = new osg::Program;
+computeProg-&gt;addShader(new osg::Shader(osg::Shader::COMPUTE, computeSrc));
+
+// Create a node for outputting to the texture.
+// It is OK to have just an empty node here, but seems inbuilt uniforms 
+like osg_FrameTime won't work then.
+// TODO: maybe we can have a custom drawable which also will implement 
+glMemoryBarrier?
+osg::ref_ptr&lt;osg::Node&gt; sourceNode = new osg::DispatchCompute(512 / 16, 512 
+/ 16, 1);
+sourceNode-&gt;setDataVariance(osg::Object::DYNAMIC);
+sourceNode-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(computeProg.get());
+sourceNode-&gt;getOrCreateStateSet()-&gt;addUniform(new osg::Uniform(&quot;uImageIn&quot;, 
+(int)0));
+sourceNode-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, 
+tex2D.get());
+//
+osg::Uniform* radius0 = new osg::Uniform(&quot;radius&quot;, 15);
+sourceNode-&gt;getOrCreateStateSet()-&gt;addUniform(radius0);
+
+osg::Uniform* width0 = new osg::Uniform(&quot;width&quot;, (float)pImage-&gt;s());
+sourceNode-&gt;getOrCreateStateSet()-&gt;addUniform(width0);
+
+osg::Uniform* height0 = new osg::Uniform(&quot;height&quot;, (float)pImage-&gt;t());
+sourceNode-&gt;getOrCreateStateSet()-&gt;addUniform(height0);
+//
+sourceNode-&gt;getOrCreateStateSet()-&gt;addUniform(new osg::Uniform(&quot;uImageOut&quot;, 
+(int)1));
+sourceNode-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(1, 
+tex2D2.get());
+
+// Display the texture on a quad. We will also be able to operate on the 
+data if reading back to CPU side
+osg::Geometry* geom = osg::createTexturedQuadGeometry(
+osg::Vec3(), osg::Vec3(1.0f, 0.0f, 0.0f), osg::Vec3(0.0f, 0.0f, 1.0f));
+osg::ref_ptr&lt;osg::Geode&gt; quad = new osg::Geode;
+quad-&gt;addDrawable(geom);
+quad-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+quad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, tex2D2.get());
+quad-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(imagbinding2.get());
+// Create the scene graph and start the viewer
+osg::ref_ptr&lt;osg::Group&gt; scene = new osg::Group;
+scene-&gt;addChild(sourceNode);
+scene-&gt;addChild(quad.get());
+
+osgViewer::Viewer viewer;
+viewer.addEventHandler(new 
+osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()));
+viewer.addEventHandler(new osgViewer::StatsHandler);
+viewer.addEventHandler(new osgViewer::WindowSizeHandler);
+viewer.setSceneData(scene.get());
+return viewer.run();
+}
+
+
+
+
+&#22312; 2020&#24180;6&#26376;19&#26085;&#26143;&#26399;&#20116; UTC+8&#19979;&#21320;11:05:18&#65292;Robert Osfield&#20889;&#36947;&#65306;
+&gt;<i>
+</I>&gt;<i> When you write
+</I>&gt;<i>
+</I>&gt;<i>     &quot;Why does the computeshaderblur program not display properly?&quot;
+</I>&gt;<i>
+</I>&gt;<i> What about this third party example is not displaying properly?
+</I>&gt;<i>
+</I>&gt;<i> What hardware and drivers are you using?  What OSG version are you using?  
+</I>&gt;<i> What do you see on screen?
+</I>&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/eb91b72b-1f75-4724-ab14-cb8350b3317ao%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/eb91b72b-1f75-4724-ab14-cb8350b3317ao%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200623/df892729/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200623/df892729/attachment-0001.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: QQ??20200623183156.png
+Type: image/png
+Size: 38656 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200623/df892729/attachment-0001.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200623/df892729/attachment-0001.png</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011143.html">[osg-users] Why does the computeshaderblur program not display properly?
+</A></li>
+	<LI>Next message (by thread): <A HREF="011161.html">[osg-users] Why does the computeshaderblur program not display properly?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11156">[ date ]</a>
+              <a href="thread.html#11156">[ thread ]</a>
+              <a href="subject.html#11156">[ subject ]</a>
+              <a href="author.html#11156">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,178 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] RTT Camera does not render anything
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RTT%20Camera%20does%20not%20render%20anything&In-Reply-To=%3C1429017397.m2f.63381%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000129.html">
+   <LINK REL="Next"  HREF="000086.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] RTT Camera does not render anything</H1>
+<!--htdig_noindex-->
+    <B>Andreas Schreiber</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RTT%20Camera%20does%20not%20render%20anything&In-Reply-To=%3C1429017397.m2f.63381%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] RTT Camera does not render anything">ayss at online.de
+       </A><BR>
+    <I>Tue Apr 14 06:16:37 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000129.html">[osg-users] [3rdparty] Qt Form integration
+</A></li>
+        <LI>Next message: <A HREF="000086.html">[osg-users] RTT Camera does not render anything
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276308">[ date ]</a>
+              <a href="thread.html#276308">[ thread ]</a>
+              <a href="subject.html#276308">[ subject ]</a>
+              <a href="author.html#276308">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi
+
+
+I'm trying to generate a texture with a rtt-camera, so I can use this texture later in my main scene.
+To verify if the texture is correct I'm trying to put the texture on a quad in my main scene.
+
+I use the following method for the rtt-camera, the red clearColor I used to test what the camera renders, but it did not help me out.
+
+
+Code:
+osg::Camera *createRTTCamera(osg::Camera::BufferComponent buffer, osg::Texture *tex, bool isAbsolute)
+{
+    osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+	osg::Vec4f textureStartColor = osg::Vec4f(1.0, 0.0, 0.0, 0.0);
+    camera-&gt;setClearColor(textureStartColor);
+    camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+    camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+	
+    if (tex)
+    {
+        tex-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+        tex-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+        camera-&gt;setViewport(0, 0, tex-&gt;getTextureWidth(), tex-&gt;getTextureHeight());
+        camera-&gt;attach(buffer, tex);
+    }
+    if (isAbsolute)
+    {
+        camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+		camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0.0, 1.0, 0.0, 1.0));
+        camera-&gt;setViewMatrix(osg::Matrix::identity());
+		osg::Vec3 corner = osg::Vec3();
+        camera-&gt;addChild(createScreenQuad(1.0f, 1.0f, 1, corner));
+    }
+    return camera.release();
+}
+
+
+
+In the main part I do the following:
+
+1. I initialize the global texture2D variable with an image
+
+2. Create the rrt camera with color_buffer, the texture (which is global), and 1 for absolute
+
+3. load geometry
+
+4. 	Setup Light, here an example
+
+Code:
+osg::ref_ptr&lt;osg::LightSource&gt; sunLight = new osg::LightSource();
+	sunLight.get()-&gt;setLight(createLightSpot(osg::Vec4(0, 1, 0, 0), osg::Vec4(0, 1, 0, 1)));
+	sunLight.get()-&gt;setReferenceFrame(osg::LightSource::ABSOLUTE_RF);
+	sunLight.get()-&gt;setLocalStateSetModes(osg::StateAttribute::ON);
+
+
+
+5. Add the light and the geometry to the rtt camera
+6. Add the light and the geometry to the main scene
+
+Now there should be the scene on the quad geometry which I generated, but this is always rendered with the color of the light and nothing else on it.
+It isn't even a mix of the light color and the clear color of the rtt camera, its just the light color.
+
+Here is my quad generation as well:
+
+Code:
+	osg::ref_ptr&lt;osg::Geode&gt; planeRTT = new osg::Geode();
+	osg::ref_ptr&lt;osg::Geometry&gt; geometry = new osg::Geometry();
+	planeRTT-&gt;addDrawable(geometry);
+
+	osg::ref_ptr&lt;osg::Vec3Array&gt; vertexArray = new osg::Vec3Array();
+	vertexArray-&gt;push_back(osg::Vec3(1, -0.25, -1));
+	vertexArray-&gt;push_back(osg::Vec3(1, 0.75, -1));
+	vertexArray-&gt;push_back(osg::Vec3(1, 0.75, 1));
+	vertexArray-&gt;push_back(osg::Vec3(1, -0.25, 1));
+	geometry-&gt;setVertexArray(vertexArray);
+
+	osg::ref_ptr&lt;osg::Vec4Array&gt; colorArray = new osg::Vec4Array();
+	colorArray-&gt;push_back(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	geometry-&gt;setColorArray(colorArray);
+	geometry-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+
+	osg::ref_ptr&lt;osg::Vec2Array&gt; texCoordArray = new osg::Vec2Array();
+	texCoordArray-&gt;push_back(osg::Vec2(0.0f, 0.0f));
+	texCoordArray-&gt;push_back(osg::Vec2(1.0f, 0.0f));
+	texCoordArray-&gt;push_back(osg::Vec2(1.0f, 1.0f));
+	texCoordArray-&gt;push_back(osg::Vec2(0.0f, 1.0f));
+	geometry-&gt;setTexCoordArray(0, texCoordArray);
+
+	geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLE_FAN, 0, 4));
+	
+	planeRTT.get()-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, rttTexture.get(), osg::StateAttribute::ON);
+
+
+
+Did I miss something or did I mixed up some order?! 
+Would be grateful for any help!
+
+... 
+
+Thank you!
+
+Cheers,
+Andreas
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopica6cf-2.php?p=63381#63381">http://forum.openscenegraph.org/viewtopic.php?p=63381#63381</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000129.html">[osg-users] [3rdparty] Qt Form integration
+</A></li>
+	<LI>Next message: <A HREF="000086.html">[osg-users] RTT Camera does not render anything
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276308">[ date ]</a>
+              <a href="thread.html#276308">[ thread ]</a>
+              <a href="subject.html#276308">[ subject ]</a>
+              <a href="author.html#276308">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

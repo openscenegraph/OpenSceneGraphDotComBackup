@@ -1,0 +1,328 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Texture projection on terrain and	gl_TextureMatrix[0...7]
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20projection%20on%20terrain%20and%0A%09gl_TextureMatrix%5B0...7%5D&In-Reply-To=%3C1482498605.m2f.69752%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005139.html">
+   <LINK REL="Next"  HREF="005151.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Texture projection on terrain and	gl_TextureMatrix[0...7]</H1>
+<!--htdig_noindex-->
+    <B>Ekaterina Fokina</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20projection%20on%20terrain%20and%0A%09gl_TextureMatrix%5B0...7%5D&In-Reply-To=%3C1482498605.m2f.69752%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Texture projection on terrain and	gl_TextureMatrix[0...7]">ekaterina.fokina at tum.de
+       </A><BR>
+    <I>Fri Dec 23 05:10:05 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005139.html">[osg-users] Texture projection on terrain and	gl_TextureMatrix[0...7]
+</A></li>
+        <LI>Next message: <A HREF="005151.html">[osg-users] Texture projection on terrain and gl_TextureMatrix[0...7]
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5150">[ date ]</a>
+              <a href="thread.html#5150">[ thread ]</a>
+              <a href="subject.html#5150">[ subject ]</a>
+              <a href="author.html#5150">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+
+after checking more the forum, I have found another topic 
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc77a.php?t=9182&amp;highlight=jotschi">http://forum.openscenegraph.org/viewtopic.php?t=9182&amp;highlight=jotschi</A>
+
+with the following code, which I have slightly modified.
+
+I would be very grateful, if someone can explain to me why the basic model is black and how to avoid it?
+
+Or maybe, someone has a very simple example with any texture projection on the terrain.
+
+#include &lt;osg/Version&gt;
+#include &lt;osg/Camera&gt;
+#include &lt;osg/NodeVisitor&gt;
+#include &lt;osg/TexGenNode&gt;
+#include &lt;osg/TexMat&gt;
+
+#include &lt;osgSim/MultiSwitch&gt;
+
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgDB/FileUtils&gt;
+#include &lt;osgDB/FileNameUtils&gt;
+#include &lt;osgDB/DatabasePager&gt;
+
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+#include &lt;osgGA/TrackballManipulator&gt;
+#include &lt;osgGA/FlightManipulator&gt;
+#include &lt;osgGA/DriveManipulator&gt;
+#include &lt;osgGA/KeySwitchMatrixManipulator&gt;
+#include &lt;osgGA/StateSetManipulator&gt;
+#include &lt;osgGA/AnimationPathManipulator&gt;
+#include &lt;osgGA/TerrainManipulator&gt;
+#include &lt;osgGA/CameraManipulator&gt;
+
+
+#include &lt;iostream&gt;
+#include &lt;osg/Notify&gt;
+#include &lt;osg/MatrixTransform&gt;
+#include &lt;osg/ShapeDrawable&gt;
+#include &lt;osg/PositionAttitudeTransform&gt;
+#include &lt;osg/Geometry&gt;
+#include &lt;osgGA/TrackballManipulator&gt;
+
+#include &lt;osg/Texture2D&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osg/LightSource&gt;
+#include &lt;osg/TexGenNode&gt;
+#include &lt;osg/TexMat&gt;
+#include &lt;osgDB/WriteFile&gt;
+#include &lt;osgUtil/Optimizer&gt;
+
+#include &lt;osgDB/Registry&gt;
+#include &lt;osgDB/ReadFile&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/CompositeViewer&gt;
+
+using namespace std;
+
+osgViewer::View* viewA = new osgViewer::View;
+osg::TexMat* texMat = new osg::TexMat;
+osg::Uniform* ViewMatInv = new osg::Uniform(osg::Uniform::FLOAT_MAT4,
+	&quot;ViewMatInv&quot;);
+int spotTUnit = 3;
+
+
+
+const char* VertexShader = {
+	&quot;uniform mat4 ViewMatInv;\n&quot;
+	&quot;void main()\n&quot;
+	&quot;{\n&quot;
+	&quot;vec4 posEye = gl_ModelViewMatrix * gl_Vertex;\n&quot;
+	&quot;gl_TexCoord[3].s = dot( posEye, gl_EyePlaneS[3]);\n&quot;
+	&quot;gl_TexCoord[3].t = dot( posEye, gl_EyePlaneT[3]);\n&quot;
+	&quot;gl_TexCoord[3].p = dot( posEye, gl_EyePlaneR[3]);\n&quot;
+	&quot;gl_TexCoord[3].q = dot( posEye, gl_EyePlaneQ[3]);\n&quot;
+	&quot;gl_Position = gl_ProjectionMatrix * posEye;\n&quot;
+	&quot;}\n&quot;
+};
+
+const char* FragmentShader = {
+	&quot;uniform sampler2D projectionMap;\n&quot;
+	&quot;varying vec4 projCoord;\n&quot;
+    &quot;void main()\n&quot;
+	&quot;{\n&quot;
+	&quot;gl_FragColor = texture2DProj(projectionMap, gl_TexCoord[3]);\n&quot;
+	//&quot;#if TEST_FOR_REVERSE_PROJECTION\n&quot;
+	//&quot;if (gl_TexCoord[3].q &gt; 0.0)\n&quot;
+	//&quot;gl_FragColor = texture2DProj(projectionMap, gl_TexCoord[3]);\n&quot;
+	//&quot;else\n&quot;
+	//&quot;gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n&quot;
+ //   &quot;#endif\n&quot;
+	&quot;}\n&quot;
+};
+
+
+osg::ref_ptr&lt;osg::Program&gt; addShader()
+{
+	osg::ref_ptr&lt;osg::Program&gt; projProg = new osg::Program;
+	//osg::ref_ptr&lt;osg::Shader&gt; projvertexShader(osg::Shader::readShaderFile(
+	//	osg::Shader::VERTEX, &quot;surface.main.vert.glsl&quot;));
+	//osg::ref_ptr&lt;osg::Shader&gt; projfragShader(osg::Shader::readShaderFile(
+	//	osg::Shader::FRAGMENT, &quot;surface.main.frag.glsl&quot;));
+	//projProg-&gt;addShader(projvertexShader.get());
+	//projProg-&gt;addShader(projfragShader.get());
+
+	projProg-&gt;addShader(new osg::Shader(osg::Shader::VERTEX, VertexShader));
+	projProg-&gt;addShader(new osg::Shader(osg::Shader::FRAGMENT, FragmentShader));
+
+	return projProg;
+}
+
+void addProjectionInfoToState(osg::StateSet* stateset, string fn)
+{
+
+	osg::Vec4 centerColour(1.0f, 1.0f, 1.0f, 1.0f);
+	osg::Vec4 ambientColour(0.05f, 0.05f, 0.05f, 1.0f);
+
+	/* 1. Load the texture that will be projected */
+	osg::Texture2D* texture = new osg::Texture2D();
+	texture-&gt;setImage(osgDB::readImageFile(fn));//VTB::createSpotLightImage(centerColour, ambientColour, 64, 1.0));
+	texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_BORDER);
+	texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_BORDER);
+	texture-&gt;setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_BORDER);
+	stateset-&gt;setTextureAttributeAndModes((int)spotTUnit, texture, osg::StateAttribute::ON);
+
+
+	// set up tex gens
+	stateset-&gt;setTextureMode((int)spotTUnit, GL_TEXTURE_GEN_S, osg::StateAttribute::ON);
+	stateset-&gt;setTextureMode((int)spotTUnit, GL_TEXTURE_GEN_T, osg::StateAttribute::ON);
+	stateset-&gt;setTextureMode((int)spotTUnit, GL_TEXTURE_GEN_R, osg::StateAttribute::ON);
+	stateset-&gt;setTextureMode((int)spotTUnit, GL_TEXTURE_GEN_Q, osg::StateAttribute::ON);
+
+	/* 3. Handover the texture to the fragment shader via uniform */
+	osg::Uniform* texUniform = new osg::Uniform(osg::Uniform::SAMPLER_2D,
+		&quot;projectionMap&quot;);
+	texUniform-&gt;set((int)spotTUnit);
+	stateset-&gt;addUniform(texUniform);
+
+	/* 4. set Texture matrix*/
+
+	//If you want to create the texture matrix by yourself you can do this like this way:
+	//osg::Vec3 projectorPos = osg::Vec3(0.0f, 0.0f, 324.0f);
+	//osg::Vec3 projectorDirection = osg::Vec3(osg::inDegrees(dirX),osg::inDegrees(dirY), osg::inDegrees(dirZ));
+	//osg::Vec3 up(0.0f, 1.0f, 0.0f);
+	//osg::Vec3 target = osg::Vec3(0.0f, 0.0f,0.0f);
+	//float projectorAngle = 80.f; //FOV
+	//mat = osg::Matrixd::lookAt(projectorPos, projectorPos*target ,up) * osg::Matrixd::perspective(projectorAngle, 1.0, 1.0, 10);
+
+	osg::Matrix mat = viewA-&gt;getCamera()-&gt;getViewMatrix()
+		* viewA-&gt;getCamera()-&gt;getProjectionMatrix();
+
+	texMat-&gt;setMatrix(mat);
+	stateset-&gt;setTextureAttributeAndModes((int)spotTUnit, texMat, osg::StateAttribute::ON);
+
+
+	stateset-&gt;addUniform(ViewMatInv);
+}
+
+osg::StateSet* createProjectorState()
+{
+	osg::StateSet* stateset = new osg::StateSet;
+
+	osg::ref_ptr&lt;osg::Program&gt; prog = addShader();
+
+	addProjectionInfoToState(stateset, &quot;clockface.JPG&quot;);
+
+	stateset-&gt;setAttribute(prog.get());
+
+	return stateset;
+}
+
+/**
+* Load some model, scale it and apply the shader
+*/
+osg::Node* createModel()
+{
+	osg::Group* root = new osg::Group;
+
+	/* Load the terrain which will be the receiver of out projection */
+	osg::Node* terr = osgDB::readNodeFile(&quot;cessna.osg&quot;);
+
+	root-&gt;addChild(terr);
+
+	/* Enable projective texturing for all objects of this node */
+	root-&gt;setStateSet(createProjectorState());
+	return root;
+}
+
+int main(int argc, char* argv[])
+{
+	// Set the output level
+	osg::setNotifyLevel(osg::WARN);
+
+	osg::ArgumentParser arguments(&amp;argc, argv);
+
+	osg::ref_ptr&lt;osg::Group&gt; sceneA = new osg::Group;
+	osg::ref_ptr&lt;osg::Group&gt; sceneB = new osg::Group;
+	osg::ref_ptr&lt;osg::Group&gt; sceneC = new osg::Group;
+	sceneA-&gt;addChild(createModel());
+
+	osgViewer::CompositeViewer viewer(arguments);
+
+	viewer.addView(viewA);
+	viewA-&gt;setUpViewInWindow(10, 10, 640, 480);
+	viewA-&gt;setSceneData(sceneA.get());
+
+	//Add this to move the projector by mouse - you need to disable the set
+	//of the viewmatrix in the while loop below.
+	osgGA::TrackballManipulator* aManipulator = new osgGA::TrackballManipulator;
+	viewA-&gt;setCameraManipulator(aManipulator);
+
+	// Create a TexGenNode to automatically update the
+	// planes.
+	osg::TexGenNode* texgenNode = new osg::TexGenNode;
+	texgenNode-&gt;setTextureUnit((int)spotTUnit);
+
+	osg::TexGen* texgen = texgenNode-&gt;getTexGen();
+	texgen-&gt;setMode(osg::TexGen::EYE_LINEAR);
+
+	osg::MatrixTransform* posTexGen = new osg::MatrixTransform;
+	posTexGen-&gt;addChild(texgenNode);
+
+	osg::Vec3 position(0.0f, 0.0f, 0.0f);
+	osg::Vec3 direction(0.0f, 1.0f, 0.0f);
+	osg::Vec3 up(0.0f, 0.0f, 1.0f);
+	up = (direction ^ up) ^ direction;
+	up.normalize();
+
+	texgen-&gt;setPlanesFromMatrix(osg::Matrixd::lookAt(position, position + direction, up)*
+		viewA-&gt;getCamera()-&gt;getProjectionMatrix());
+	// osg::Matrixd::perspective(45.f,1.0,0.1,100));
+
+	sceneA-&gt;addChild(posTexGen);
+
+
+	while (!viewer.done())
+	{
+		osg::Matrixd viewMatInv(viewA-&gt;getCamera()-&gt;getInverseViewMatrix());
+		ViewMatInv-&gt;set(viewMatInv);
+
+		// Position the TexGenNode in the world with the camera;
+		posTexGen-&gt;setMatrix(aManipulator-&gt;getInverseMatrix());
+
+		viewer.frame();
+	}
+	return 0;
+}
+
+Thank you!
+
+Cheers,
+Ekaterina
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicb4d0.php?p=69752#69752">http://forum.openscenegraph.org/viewtopic.php?p=69752#69752</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005139.html">[osg-users] Texture projection on terrain and	gl_TextureMatrix[0...7]
+</A></li>
+	<LI>Next message: <A HREF="005151.html">[osg-users] Texture projection on terrain and gl_TextureMatrix[0...7]
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5150">[ date ]</a>
+              <a href="thread.html#5150">[ thread ]</a>
+              <a href="subject.html#5150">[ subject ]</a>
+              <a href="author.html#5150">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

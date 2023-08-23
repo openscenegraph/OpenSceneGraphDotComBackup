@@ -1,0 +1,276 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Get Animation current time
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Get%20Animation%20current%20time&In-Reply-To=%3CCAFN7Y%2BVOUaqi_HgzaOOYT1JnR0-dyT5beTQJqCfp4x7ZYL1xLw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009554.html">
+   <LINK REL="Next"  HREF="009580.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Get Animation current time</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Get%20Animation%20current%20time&In-Reply-To=%3CCAFN7Y%2BVOUaqi_HgzaOOYT1JnR0-dyT5beTQJqCfp4x7ZYL1xLw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Get Animation current time">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Jan  8 00:17:17 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009554.html">[osg-users] Get Animation current time
+</A></li>
+        <LI>Next message (by thread): <A HREF="009580.html">[osg-users] Get Animation current time
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9570">[ date ]</a>
+              <a href="thread.html#9570">[ thread ]</a>
+              <a href="subject.html#9570">[ subject ]</a>
+              <a href="author.html#9570">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Diego,
+
+I can point you in the right direction but I can't sit beside you and
+walk through your code in a debugger.  When figuring out a crash this
+is what is needed.
+
+The only thing I can add is that using raw C pointer is generally a
+red flag and one should be very cautious about doing so.  The OSG uses
+a combination of ref_ptr&lt;&gt; that using ref counting to retain ownership
+and observer_ptr&lt;&gt; to hold a pointer where no ownership is intended
+(it's a form of weak_ptr&lt;&gt;,)   For you app it might be that either
+might be appropriate, it's your application I can't make these
+judgements for you.
+
+Robert.
+
+On Mon, 7 Jan 2019 at 19:30, Diego Mancilla &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dmancillac at gmail.com</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hello Robert,
+</I>&gt;<i>
+</I>&gt;<i> Thank you very much for you complete response.
+</I>&gt;<i>
+</I>&gt;<i>  I'm trying to do what you suggest and have my on AnimationPath/AnimationPathCallback classes that handle my data. But I stumble into a problem.
+</I>&gt;<i>
+</I>&gt;<i>  When I subclass AnimationPath and AnimationPathCallback I have no problems. But when I wrote my own classes, from scratch my application crashes.
+</I>&gt;<i>
+</I>&gt;<i>  In order to achieve what I want, I pass a pointer to a custom data container class to my AnimationPath class (I called it MobilesAnimationPath) from my main application. I tried to keep most part of the architecture of AnimationPath, but I eliminate the TimeControlPointMap container. So, now my class generates the control points from the data pointed from custom data pointer class.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> So, for instance, my custom Path class looks like this:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> #include &quot;MobileObject.h&quot;
+</I>&gt;<i> #include &lt;osg/AnimationPath&gt;
+</I>&gt;<i> #include &lt;osg/Object&gt;
+</I>&gt;<i>
+</I>&gt;<i> using namespace osg;
+</I>&gt;<i>
+</I>&gt;<i> class MobilesAnimationPath: public virtual osg::Object
+</I>&gt;<i> {
+</I>&gt;<i> public:
+</I>&gt;<i>         MobilesAnimationPath();
+</I>&gt;<i>         MobilesAnimationPath(const MobilesAnimationPath &amp;, const osg::CopyOp &amp; copyop = osg::CopyOp::SHALLOW_COPY);
+</I>&gt;<i>         MobilesAnimationPath(MobileObject &amp; mobile);
+</I>&gt;<i>
+</I>&gt;<i>         META_Object(osg, MobilesAnimationPath); //Visual Studio complains about this line, but compiles... : &quot;function definition for META_Object not found&quot;
+</I>&gt;<i>
+</I>&gt;<i>         enum LoopMode
+</I>&gt;<i>         {
+</I>&gt;<i>                 SWING,
+</I>&gt;<i>                 LOOP,
+</I>&gt;<i>                 NO_LOOPING
+</I>&gt;<i>         };
+</I>&gt;<i>
+</I>&gt;<i>         void setLoopMode(LoopMode loopMode);
+</I>&gt;<i>         LoopMode getLoopMode() const;
+</I>&gt;<i>
+</I>&gt;<i>         virtual bool getInterpolatedControlPoint(double time, osg::AnimationPath::ControlPoint &amp; cp) const;
+</I>&gt;<i>
+</I>&gt;<i>         double getFirstTime() const;
+</I>&gt;<i>         double getLastTime() const;
+</I>&gt;<i>         double getPeriod() const;
+</I>&gt;<i>
+</I>&gt;<i> protected:
+</I>&gt;<i>         ~MobilesAnimationPath(){};
+</I>&gt;<i>
+</I>&gt;<i> private:
+</I>&gt;<i>         MobileObject * _mobile;
+</I>&gt;<i>         LoopMode _loopMode;
+</I>&gt;<i>
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> And the implementation.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> #include &quot;MobilesAnimationPath.h&quot;
+</I>&gt;<i>
+</I>&gt;<i> MobilesAnimationPath::MobilesAnimationPath()
+</I>&gt;<i>         :_loopMode(NO_LOOPING)
+</I>&gt;<i>         ,_mobile(nullptr)
+</I>&gt;<i> {
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> MobilesAnimationPath::MobilesAnimationPath(const MobilesAnimationPath&amp; ap, const osg::CopyOp&amp; copyop)
+</I>&gt;<i>         :osg::Object(ap, copyop)
+</I>&gt;<i>         ,_loopMode(ap._loopMode)
+</I>&gt;<i>         ,_mobile(ap._mobile)
+</I>&gt;<i> {
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> MobilesAnimationPath::MobilesAnimationPath(MobileObject &amp; mobile)
+</I>&gt;<i>         :_loopMode(NO_LOOPING)
+</I>&gt;<i> {
+</I>&gt;<i>         _mobile = &mobile;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void MobilesAnimationPath::setLoopMode(LoopMode loopMode)
+</I>&gt;<i> {
+</I>&gt;<i>         _loopMode = loopMode;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> MobilesAnimationPath::LoopMode MobilesAnimationPath::getLoopMode() const
+</I>&gt;<i> {
+</I>&gt;<i>         return _loopMode;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> double MobilesAnimationPath::getFirstTime() const
+</I>&gt;<i> {
+</I>&gt;<i>         if (_mobile != nullptr)
+</I>&gt;<i>         {
+</I>&gt;<i>                 if (_mobile-&gt;dataLoaded())
+</I>&gt;<i>                 {
+</I>&gt;<i>                         return _mobile-&gt;getFirstTime();
+</I>&gt;<i>                 }
+</I>&gt;<i>         }
+</I>&gt;<i>         return 0.0;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> double MobilesAnimationPath::getLastTime() const
+</I>&gt;<i> {
+</I>&gt;<i>         if (_mobile != nullptr)
+</I>&gt;<i>         {
+</I>&gt;<i>                 if (_mobile-&gt;dataLoaded())
+</I>&gt;<i>                 {
+</I>&gt;<i>                         return _mobile-&gt;getLastTime();
+</I>&gt;<i>                 }
+</I>&gt;<i>         }
+</I>&gt;<i>         return 0.0;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> double MobilesAnimationPath::getPeriod() const
+</I>&gt;<i> {
+</I>&gt;<i>         if (_mobile != nullptr)
+</I>&gt;<i>         {
+</I>&gt;<i>                 if (_mobile-&gt;dataLoaded())
+</I>&gt;<i>                 {
+</I>&gt;<i>                         return _mobile-&gt;getFirstTime() - _mobile-&gt;getLastTime();
+</I>&gt;<i>                 }
+</I>&gt;<i>         }
+</I>&gt;<i>         return 0.0;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> bool MobilesAnimationPath::getInterpolatedControlPoint(double time, osg::AnimationPath::ControlPoint &amp; cp) const
+</I>&gt;<i> {
+</I>&gt;<i>         if (_mobile == nullptr) return false;
+</I>&gt;<i>         if (!_mobile-&gt;dataLoaded()) return false;
+</I>&gt;<i>
+</I>&gt;<i>         // at this point _mobile points something thats not nullptr but returns garbage...
+</I>&gt;<i>
+</I>&gt;<i>         switch (_loopMode)
+</I>&gt;<i>         {
+</I>&gt;<i>         case(SWING):
+</I>&gt;<i>         {
+</I>&gt;<i>                 double modulated_time = (time - getFirstTime()) / (getPeriod()*2.0);
+</I>&gt;<i>                 double fraction_part = modulated_time - floor(modulated_time);
+</I>&gt;<i>                 if (fraction_part &gt; 0.5) fraction_part = 1.0 - fraction_part;
+</I>&gt;<i>
+</I>&gt;<i>                 time = getFirstTime() + (fraction_part*2.0) * getPeriod();
+</I>&gt;<i>                 break;
+</I>&gt;<i>         }
+</I>&gt;<i>         case(LOOP):
+</I>&gt;<i>         {
+</I>&gt;<i>                 double modulated_time = (time - getFirstTime()) / getPeriod();
+</I>&gt;<i>                 double fraction_part = modulated_time - floor(modulated_time);
+</I>&gt;<i>                 time = getFirstTime() + fraction_part * getPeriod();
+</I>&gt;<i>                 break;
+</I>&gt;<i>         }
+</I>&gt;<i>         case(NO_LOOPING):
+</I>&gt;<i>                 // no need to modulate the time.
+</I>&gt;<i>                 break;
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         //... here I fill the control point through the data on _mobile.
+</I>&gt;<i>
+</I>&gt;<i>         return true;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> but at the first call to &quot;getInterpolatedControlPoint&quot; the application crashes. Moreover, the _mobile pointer is &quot;corrupted&quot;, i.e., when I try to access its data it returns garbage (but it not nullptr). Also the &quot;time&quot; value passed is random (sometimes huge, sometimes negative, etc...)
+</I>&gt;<i>
+</I>&gt;<i> As I pointed on the code snippet, MSVS complains about my META_Object call, but the code compiles.
+</I>&gt;<i>
+</I>&gt;<i> Am I missing something?
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic6a79.php?p=75403#75403">http://forum.openscenegraph.org/viewtopic.php?p=75403#75403</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009554.html">[osg-users] Get Animation current time
+</A></li>
+	<LI>Next message (by thread): <A HREF="009580.html">[osg-users] Get Animation current time
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9570">[ date ]</a>
+              <a href="thread.html#9570">[ thread ]</a>
+              <a href="subject.html#9570">[ subject ]</a>
+              <a href="author.html#9570">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

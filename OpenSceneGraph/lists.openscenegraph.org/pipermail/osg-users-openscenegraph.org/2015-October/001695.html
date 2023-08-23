@@ -1,0 +1,180 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] event callback after viewer is done
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20event%20callback%20after%20viewer%20is%20done&In-Reply-To=%3CCAFN7Y%2BVqGtvjiM%2BJQEgqs4Jsecu%2BV5PS0ge%2Be%2BNm9Ou3a1XfhA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001694.html">
+   <LINK REL="Next"  HREF="001702.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] event callback after viewer is done</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20event%20callback%20after%20viewer%20is%20done&In-Reply-To=%3CCAFN7Y%2BVqGtvjiM%2BJQEgqs4Jsecu%2BV5PS0ge%2Be%2BNm9Ou3a1XfhA%40mail.gmail.com%3E"
+       TITLE="[osg-users] event callback after viewer is done">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Oct  7 01:17:00 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001694.html">[osg-users] event callback after viewer is done
+</A></li>
+        <LI>Next message: <A HREF="001702.html">[osg-users] event callback after viewer is done
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1695">[ date ]</a>
+              <a href="thread.html#1695">[ thread ]</a>
+              <a href="subject.html#1695">[ subject ]</a>
+              <a href="author.html#1695">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Ricky,
+
+I don't have any suggestion for an alternate design as I still really know
+enough about ImGui.  My suggestion would be to look closely at the crash
+and why it's happening.
+
+Requiring different calls to be be done in a particular order is not
+unusual but having things crash when one traversal isn't followed by
+another suggests a problem somewhere in the design/implementation.
+
+Robert.
+
+On 7 October 2015 at 08:50, Riccardo Corsi &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">riccardo.corsi at kairos3d.it</A>&gt;
+wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> what I'm trying to do is integrating the ImGui framework and render it
+</I>&gt;<i> natively through osg primitives.
+</I>&gt;<i> This gui works in immediate mode, meaning you have to call the code to
+</I>&gt;<i> create your widgets every frame,
+</I>&gt;<i> which is what I do in the custom code in the frame loop (as this changes
+</I>&gt;<i> for every application).
+</I>&gt;<i> All the rest is handled in custom callbacks attached to some nodes.
+</I>&gt;<i>
+</I>&gt;<i> Basically, ImGui needs these things to happen in order at every frame
+</I>&gt;<i> 1. getting inputs (done in the event callback )
+</I>&gt;<i> 2. call to NewFrame() (called on the &quot;FRAME&quot; event, which is the last one
+</I>&gt;<i> received in the event callback)
+</I>&gt;<i> 3. code to create widgets (explicit in the main loop)
+</I>&gt;<i> 4. call to Render() which produces geometries to be rendered by osg (this
+</I>&gt;<i> is done in the update callback)
+</I>&gt;<i>
+</I>&gt;<i> Now, a call to the code that creates widgets (3.) without a proper
+</I>&gt;<i> NewFrame() (2.) causes a crash.
+</I>&gt;<i> When osgViewer is done, I don't get the event callback, and the code which
+</I>&gt;<i> creates the gui crashes.
+</I>&gt;<i>
+</I>&gt;<i> Any suggestion for an alternative design?
+</I>&gt;<i>
+</I>&gt;<i> Thank you,
+</I>&gt;<i> Ricky
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Tue, Oct 6, 2015 at 8:56 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi Ricky,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I don't know what is in your event callback but for exit to cause a crash
+</I>&gt;&gt;<i> it sounds like something is probably not being managed robustly.  As I know
+</I>&gt;&gt;<i> so little I can't provide any specific advice.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> One possibility might be to call viewer.eventTravseral() after the main
+</I>&gt;&gt;<i> rendering loop.  I can't help be feel there is something amiss in the way
+</I>&gt;&gt;<i> your are managing your event callback and it's associated faculties, and
+</I>&gt;&gt;<i> suspect a small redesign could probably resolve the issue.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 6 October 2015 at 18:03, Riccardo Corsi &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">riccardo.corsi at kairos3d.it</A>&gt;
+</I>&gt;&gt;<i> wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Hi all,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I have an event callback which needed to be called before some custom
+</I>&gt;&gt;&gt;<i> code I call in the main application loop, something like:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> while()
+</I>&gt;&gt;&gt;<i> {
+</I>&gt;&gt;&gt;<i> viewer.eventTraversal();  // &lt;&lt; needed callback here
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // custom code
+</I>&gt;&gt;&gt;<i> // prepare stuff to be drawn during next frames
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> viewer.updateTraversal();
+</I>&gt;&gt;&gt;<i> // ...
+</I>&gt;&gt;&gt;<i> }
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> When the viewer is about to exit, the event callbacks are not called.
+</I>&gt;&gt;&gt;<i> In my case the callback is needed instead,
+</I>&gt;&gt;&gt;<i> not to cause a segfault to the custom code between osg calls.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> The obvious solution is to place the callback directly in the main loop,
+</I>&gt;&gt;&gt;<i> but I'd like to avoid that
+</I>&gt;&gt;&gt;<i> (to keep it more &quot;transparent&quot;, as it's a kind of framework to be used
+</I>&gt;&gt;&gt;<i> in several applications).
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Have you got any suggestion?
+</I>&gt;&gt;&gt;<i> Thank you!
+</I>&gt;&gt;&gt;<i> Ricky
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151007/120f6c44/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151007/120f6c44/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001694.html">[osg-users] event callback after viewer is done
+</A></li>
+	<LI>Next message: <A HREF="001702.html">[osg-users] event callback after viewer is done
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1695">[ date ]</a>
+              <a href="thread.html#1695">[ thread ]</a>
+              <a href="subject.html#1695">[ subject ]</a>
+              <a href="author.html#1695">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

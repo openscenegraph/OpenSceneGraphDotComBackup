@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG 3.5.0 (130) GLES2 Shaders Example
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%203.5.0%20%28130%29%20GLES2%20Shaders%20Example&In-Reply-To=%3C1437438618.m2f.64385%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277080.html">
+   <LINK REL="Next"  HREF="277081.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG 3.5.0 (130) GLES2 Shaders Example</H1>
+<!--htdig_noindex-->
+    <B>Alex Cham</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%203.5.0%20%28130%29%20GLES2%20Shaders%20Example&In-Reply-To=%3C1437438618.m2f.64385%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] OSG 3.5.0 (130) GLES2 Shaders Example">cau.mbox at gmail.com
+       </A><BR>
+    <I>Mon Jul 20 17:30:18 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277080.html">[osg-users] OSG 3.5.0 (130) GLES2 Shaders Example
+</A></li>
+        <LI>Next message: <A HREF="277081.html">[osg-users] my own camera manipulator, moving forward, and stuffs.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#859">[ date ]</a>
+              <a href="thread.html#859">[ thread ]</a>
+              <a href="subject.html#859">[ subject ]</a>
+              <a href="author.html#859">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Just OSG 3.5.0 (130) GLES2 Shaders Example V2
+
+/* -*-c++-*- OpenSceneGraph - Copyright (C) 1998-2015 Alex Cham
+ *
+ * This example is open source and may be redistributed and/or modified under
+ * the terms of the OpenSceneGraph Public License (OSGPL) version 0.0 or
+ * (at your option) any later version.  The full license is in LICENSE file
+ * included with this distribution, and on the openscenegraph.org website.
+ *
+ * This example is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * OpenSceneGraph Public License for more details.
+
+#define OPENSCENEGRAPH_MAJOR_VERSION    3
+#define OPENSCENEGRAPH_MINOR_VERSION    5
+#define OPENSCENEGRAPH_PATCH_VERSION    0
+#define OPENSCENEGRAPH_SOVERSION        130
+
+$ git log -1
+commit bc3a77cb1561ed2e47e88ab507180bcf15309f31
+Author: Robert OSFIELD &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+Date:   Fri Jul 17 18:31:22 2015 +0000
+*/
+#include &lt;osgViewer/Viewer&gt;
+
+#include &lt;osg/ShapeDrawable&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osg/Vec3&gt;
+
+#include &lt;osg/Program&gt;
+#include &lt;osg/Shader&gt;
+#include &lt;osg/Uniform&gt;
+
+using namespace osg;
+
+
+static const char *vertexShaderSource = {
+		&quot;#version 100\n&quot;
+//		&quot;uniform mat4 mvp_matrix;// model-view-projection matrix\n&quot;
+		&quot;uniform mat3 normal_matrix;// normal matrix\n&quot;
+		&quot;uniform vec3 ec_light_dir;// light direction in eye coords\n&quot;
+		&quot;attribute vec4 a_vertex;// vertex position\n&quot;
+		&quot;attribute vec3 a_normal;// vertex normal\n&quot;
+//		&quot;attribute vec2 a_texcoord;// texture coordinates\n&quot;
+//		&quot;varying float v_diffuse;\n&quot;
+//		&quot;varying vec2 v_texcoord;\n&quot;
+		&quot;void main(void)\n&quot;
+		&quot;{\n&quot;
+		&quot;// put vertex normal into eye coords\n&quot;
+		&quot;vec3 ec_normal = normalize(normal_matrix * a_normal);\n&quot;
+//		&quot;// emit diffuse scale factor, texcoord, and position\n&quot;
+//		&quot;v_diffuse = max(dot(ec_light_dir, ec_normal), 0.0);\n&quot;
+//		&quot;v_texcoord= a_texcoord;\n&quot;
+		&quot;gl_Position = gl_ModelViewProjectionMatrix * a_vertex;\n&quot;
+		&quot;}\n&quot;};
+
+static const char *fragmentShaderSource = {
+		&quot;#version 100\n&quot;
+		&quot;precision mediump float;\n&quot;
+		&quot;void main()\n&quot;
+		&quot;{\n&quot;
+		&quot;gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n&quot;
+		&quot;}\n&quot;};
+
+
+int main(int, char **)
+{
+	osg::setNotifyLevel(osg::INFO);
+
+
+    // construct the viewer.
+    osgViewer::Viewer viewer;
+
+    // use a geode with a Box ShapeDrawable
+    osg::Geode* geode = new osg::Geode();
+    geode-&gt;addDrawable(new osg::ShapeDrawable(new osg::Box(osg::Vec3(0.0f,0.0f,0.0f),1.0f)));
+
+    osg::StateSet *ss = geode-&gt;getOrCreateStateSet();
+    osg::Program* program = new osg::Program;
+
+	program-&gt;addShader( new osg::Shader( osg::Shader::VERTEX, vertexShaderSource ) );
+	program-&gt;addShader( new osg::Shader( osg::Shader::FRAGMENT, fragmentShaderSource ) );
+	ss-&gt;setAttributeAndModes(program, osg::StateAttribute::ON);
+
+    viewer.setSceneData(geode);
+    return viewer.run();
+}
+/*
+
+mkdir ./GLES2ContextBuild
+cd ./GLES2ContextBuild
+
+cmake \
+-DCMAKE_C_COMPILER=&quot;/usr/bin/clang&quot; \
+-DCMAKE_CXX_COMPILER=&quot;/usr/bin/clang++&quot; \
+-DCMAKE_CXX_FLAGS=&quot;-std=c++11 -v -Wall&quot; \
+-DBUILD_OSG_EXAMPLES=1 \
+-DOSG_GL1_AVAILABLE=OFF \
+-DOSG_GL2_AVAILABLE=OFF \
+-DOSG_GL3_AVAILABLE=OFF \
+-DOSG_GLES1_AVAILABLE=OFF \
+-DOSG_GLES2_AVAILABLE=ON \
+-DOPENGL_INCLUDE_DIR=/usr/include/ \
+-DOPENGL_LIBRARY=/usr/lib/x86_64-linux-gnu/libGLESv2.so \
+-DOPENGL_egl_LIBRARY=/usr/lib/x86_64-linux-gnu/libEGL.so \
+-DOSG_GL_DISPLAYLISTS_AVAILABLE=OFF \
+-DSG_GL_MATRICES_AVAILABLE=OFF \
+-DOSG_GL_VERTEX_FUNCS_AVAILABLE=OFF \
+-DOSG_GL_VERTEX_ARRAY_FUNCS_AVAILABLE=OFF \
+-DOSG_GL_FIXED_FUNCTION_AVAILABLE=OFF \
+-DOSG_CPP_EXCEPTIONS_AVAILABLE=OFF \
+../GLES2ContextSource
+
+<A HREF="../../../../trac.openscenegraph.org/projects/osg/wiki/Community/OpenGL-ES-2">http://trac.openscenegraph.org/projects/osg/wiki/Community/OpenGL-ES</A>
+
+
+
+Based on OSG osgsimpleshaders.cpp
+<A HREF="../../../../svn.openscenegraph.org/osg/OpenSceneGraph/trunk/examples/osgsimpleshaders/osgsimpleshaders.cpp">http://svn.openscenegraph.org/osg/OpenSceneGraph/trunk/examples/osgsimpleshaders/osgsimpleshaders.cpp</A>
+
+See Also Hello Triangle: An OpenGL ES 2.0 Example
+<A HREF="https://www.khronos.org/assets/uploads/books/openglr_es_20_programming_guide_sample.pdf">https://www.khronos.org/assets/uploads/books/openglr_es_20_programming_guide_sample.pdf</A>
+
+OpenGL ES 2.0 API &amp; OpenGL ES Shading Language 1.0 Quick Reference Card
+<A HREF="https://www.khronos.org/files/opengles20-reference-card.pdf">https://www.khronos.org/files/opengles20-reference-card.pdf</A>
+
+OpenGL ES Shading Language Version 1.00
+<A HREF="https://www.khronos.org/files/opengles_shading_language.pdf">https://www.khronos.org/files/opengles_shading_language.pdf</A>
+ */
+
+
+Thank you!
+
+Cheers,
+Alex
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4819.php?p=64385#64385">http://forum.openscenegraph.org/viewtopic.php?p=64385#64385</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277080.html">[osg-users] OSG 3.5.0 (130) GLES2 Shaders Example
+</A></li>
+	<LI>Next message: <A HREF="277081.html">[osg-users] my own camera manipulator, moving forward, and stuffs.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#859">[ date ]</a>
+              <a href="thread.html#859">[ thread ]</a>
+              <a href="subject.html#859">[ subject ]</a>
+              <a href="author.html#859">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,147 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Viewer slaves and RTTs
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Viewer%20slaves%20and%20RTTs&In-Reply-To=%3CCAFN7Y%2BVYw1_HO9KEHKLzTOk-Z07YBGJUskKcT%3DOKV%2BgHfgtPdg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005607.html">
+   <LINK REL="Next"  HREF="005612.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Viewer slaves and RTTs</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Viewer%20slaves%20and%20RTTs&In-Reply-To=%3CCAFN7Y%2BVYw1_HO9KEHKLzTOk-Z07YBGJUskKcT%3DOKV%2BgHfgtPdg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Viewer slaves and RTTs">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Feb 17 13:28:54 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005607.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+        <LI>Next message: <A HREF="005612.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5609">[ date ]</a>
+              <a href="thread.html#5609">[ thread ]</a>
+              <a href="subject.html#5609">[ subject ]</a>
+              <a href="author.html#5609">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Johny,
+
+The  View(er) master Camera has default StateSet assigned to that
+initialises OpenGL into an appropriate state for doing typical 3D
+rendering via StateSet::setGlobalDefaults().  By replacing the default
+Camera my guess is that you aren't assigning your own osg::StateSet
+with the appropriate state set to it, so you are just getting OpenGL
+defaults which doesn't set up the depth buffer.
+
+Robert
+
+
+On 17 February 2017 at 19:46, Johny Canes &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">petrussijsma at gmail.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> Sorry for one chunky looking post, but it's actually quite coherent. Can I have your short attention it's very appreciated.
+</I>&gt;<i>
+</I>&gt;<i> I am trying to use viewer slaves with a chain of render-to-textures. I understand this is best done using several cameras.
+</I>&gt;<i>
+</I>&gt;<i> I've looked at plenty of resources online as well as all the examples.
+</I>&gt;<i>
+</I>&gt;<i> I am aiming for a postprocessing setup using a main camera and an orthographic camera that renders a quad to the screen.
+</I>&gt;<i>
+</I>&gt;<i> I have a main camera that renders the scene, attached as
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> viewer.addSlave( main, osg::Matrix(), osg::Matrix() );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> It is supposed to render the 'scene data' as set by setSceneData. This kind of works... but not without peculiar problems.
+</I>&gt;<i>
+</I>&gt;<i> And my orthographic camera, with a quad as its child, attached as
+</I>&gt;<i> Code:
+</I>&gt;<i> viewer.addSlave(ortho, osg::Matrix(), osg::Matrix(), false);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> One problem is that osgViewer has a default camera, and when I override it with mine using
+</I>&gt;<i> Code:
+</I>&gt;<i> viewer.setCamera( main )
+</I>&gt;<i>
+</I>&gt;<i> , the z-ordering goes nuts.
+</I>&gt;<i>
+</I>&gt;<i> The orthographic is rendering its quad properly though, which has its texture set to the color attachment of the main camera, because my main camera has
+</I>&gt;<i> Code:
+</I>&gt;<i> camera-&gt;attach( osg::Camera::COLOR_BUFFER, texture, 0, 0, false, 0, 0 );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> However, problems remain. I have been outcommenting lines of my code to get nearer to the problem, and random things and unexpected discrepancies are happening as I go.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> viewer.addSlave( camera, osg::Matrix(), osg::Matrix() );
+</I>&gt;<i> viewer.setCamera( camera ); // unnecessary / messes up z-ordering ...
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> These two lines of code for example. If I switch these lines, the camera will not render (my texture will be black instead of the scene).
+</I>&gt;<i>
+</I>&gt;<i> Another odd things, is that whilst I've set the color attachment of main, it is still writing to the screen. Sadly, when I tell it to use an FBO, it goes black completely (apparently neither rendering to my color attachment nor the screen).
+</I>&gt;<i>
+</I>&gt;<i> So I have things working and not working, but currently I am battling some odd behavior that I cannot best.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Johny
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic1df0.php?p=70235#70235">http://forum.openscenegraph.org/viewtopic.php?p=70235#70235</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005607.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+	<LI>Next message: <A HREF="005612.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5609">[ date ]</a>
+              <a href="thread.html#5609">[ thread ]</a>
+              <a href="subject.html#5609">[ subject ]</a>
+              <a href="author.html#5609">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

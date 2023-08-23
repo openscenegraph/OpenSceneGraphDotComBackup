@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] nVidia HW: Lens Matched Shading, Single Pass Stereo - exposed in OpenGL?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20nVidia%20HW%3A%20Lens%20Matched%20Shading%2C%0A%20Single%20Pass%20Stereo%20-%20exposed%20in%20OpenGL%3F&In-Reply-To=%3C0623c27d-121e-c7a6-52e7-698b133e7e73%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003326.html">
+   <LINK REL="Next"  HREF="279539.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] nVidia HW: Lens Matched Shading, Single Pass Stereo - exposed in OpenGL?</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20nVidia%20HW%3A%20Lens%20Matched%20Shading%2C%0A%20Single%20Pass%20Stereo%20-%20exposed%20in%20OpenGL%3F&In-Reply-To=%3C0623c27d-121e-c7a6-52e7-698b133e7e73%40gmx.de%3E"
+       TITLE="[osg-users] nVidia HW: Lens Matched Shading, Single Pass Stereo - exposed in OpenGL?">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Thu Jun  9 06:34:59 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003326.html">[osg-users] nVidia HW: Lens Matched Shading, Single Pass Stereo - exposed in OpenGL?
+</A></li>
+        <LI>Next message: <A HREF="279539.html">[osg-users] [osg-submissions] GL3 Mac OS X needs	VertexArrayObject
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3330">[ date ]</a>
+              <a href="thread.html#3330">[ thread ]</a>
+              <a href="subject.html#3330">[ subject ]</a>
+              <a href="author.html#3330">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+&gt;<i> Hi Christian,
+</I>&gt;<i> I have the Single Pass Stereo working with ARB_viewport_array and and 
+</I>&gt;<i> a shader (attached). The required support for GL_ARB_viewport_array is 
+</I>&gt;<i> on the osg-submissions list. I have not done any work on the culling 
+</I>&gt;<i> yet, as the eyes are sufficiently close together to get a decent 
+</I>&gt;<i> impression of performance. bringing in light render passes would 
+</I>&gt;<i> probably require a smart adaptation of the cull frustum.
+</I>&gt;<i> The nvidia stereo_view_rendering seems to be to limiting for my 
+</I>&gt;<i> purposes, as I think it requires the display to be aligned with the 
+</I>&gt;<i> eyes, and we are working with head-tracked systems where the user is 
+</I>&gt;<i> able to rotate their head.
+</I>The big deal about this extension is that the vertex and geometry shader 
+isn't invoked twice. This might quite save a bit if you are limited at 
+the those stages. But thank you for the example.
+
+Cheers
+Sebastian
+&gt;<i>
+</I>&gt;<i> Regards, Laurens.
+</I>&gt;<i> in the vertex shader do:
+</I>&gt;<i> gl_Position = gl_ModelViewMatrix * gl_Vertex;
+</I>&gt;<i> instead of
+</I>&gt;<i> gl_Position   = gl_ModelViewProjectionMatrix * gl_Vertex;
+</I>&gt;<i> For the rest of the shaders I rely on the osg shadergenerator with 
+</I>&gt;<i> base shaders from osg-data.
+</I>&gt;<i> new osg::Shader(osg::Shader::GEOMETRY, &quot;#version 450\n&quot; &quot;#extension 
+</I>&gt;<i> GL_ARB_gpu_shader5 : enable\n&quot; &quot;layout (triangles, invocations = 2) 
+</I>&gt;<i> in;&quot; &quot;layout (triangle_strip, max_vertices = 3) out;&quot; &quot;uniform mat4 
+</I>&gt;<i> transform_block[2];&quot; &quot;in vec4 vbasecolor[];&quot; &quot;in vec2 vtexcoord[];&quot; 
+</I>&gt;<i> &quot;out vec4 basecolor;&quot; &quot;out vec2 texcoord;&quot; &quot;out int gl_Layer;&quot; &quot;void 
+</I>&gt;<i> main(void) {&quot; &quot; for (int i = 0; i &lt; gl_in.length(); i++)&quot; &quot; {&quot; &quot; 
+</I>&gt;<i> basecolor = vec4(1,1,1,1);&quot; &quot; texcoord = vtexcoord[i];&quot; &quot; gl_Position 
+</I>&gt;<i> = transform_block[gl_InvocationID] * gl_in[i].gl_Position;&quot; &quot; 
+</I>&gt;<i> gl_ViewportIndex = gl_InvocationID;&quot; &quot; EmitVertex();&quot; &quot; }&quot; &quot; 
+</I>&gt;<i> EndPrimitive();&quot; &quot;}&quot; );
+</I>&gt;<i>
+</I>&gt;<i> On Thu, Jun 9, 2016 at 1:24 PM, Sebastian Messerschmidt 
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A> 
+</I>&gt;<i> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A>&gt;&gt; wrote:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     Hi Christian
+</I>&gt;<i>
+</I>&gt;<i>         Hi all,
+</I>&gt;<i>
+</I>&gt;<i>         has anybody looked at these new features of nVidia hardware?
+</I>&gt;<i>
+</I>&gt;<i>         Lens Matched Shading and Single Pass Stereo are using new
+</I>&gt;<i>         hardware and driver features that allow the GPU to perform
+</I>&gt;<i>         single pass transform+shading of up to 16 independent view
+</I>&gt;<i>         matrices.
+</I>&gt;<i>
+</I>&gt;<i>     Isn't the change-set of single pass stereo
+</I>&gt;<i>     (<A HREF="https://www.opengl.org/registry/specs/NV/stereo_view_rendering.txt">https://www.opengl.org/registry/specs/NV/stereo_view_rendering.txt</A>)
+</I>&gt;<i>     shader only?
+</I>&gt;<i>     So basically we need the NV_viewport_array2 support on the
+</I>&gt;<i>     osg-side to implement it.
+</I>&gt;<i>     Btw.: How is the relationship between viewports and bound FBOs for
+</I>&gt;<i>     instance? Suppose I need to render to different MRTs for each
+</I>&gt;<i>     viewport? Can anyone point to a good example here?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>         This could accelerate OSG's stereo rendering, provided that
+</I>&gt;<i>         the features are exposed thorugh documented OpenGL extensions.
+</I>&gt;<i>
+</I>&gt;<i>         Also rendering of cubemaps for reflections and shadows could
+</I>&gt;<i>         be greatly accelerated (six views in one pass).
+</I>&gt;<i>
+</I>&gt;<i>     That would require some deeper changes in the culling/camera-setup
+</I>&gt;<i>     I suppose, as multiple frusta have to be taken into account per
+</I>&gt;<i>     draw-invocation.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>         Christian
+</I>&gt;<i>
+</I>&gt;<i>     Cheers
+</I>&gt;<i>     Sebstian
+</I>&gt;<i>     _______________________________________________
+</I>&gt;<i>     osg-users mailing list
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160609/fadc4105/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160609/fadc4105/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003326.html">[osg-users] nVidia HW: Lens Matched Shading, Single Pass Stereo - exposed in OpenGL?
+</A></li>
+	<LI>Next message: <A HREF="279539.html">[osg-users] [osg-submissions] GL3 Mac OS X needs	VertexArrayObject
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3330">[ date ]</a>
+              <a href="thread.html#3330">[ thread ]</a>
+              <a href="subject.html#3330">[ subject ]</a>
+              <a href="author.html#3330">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

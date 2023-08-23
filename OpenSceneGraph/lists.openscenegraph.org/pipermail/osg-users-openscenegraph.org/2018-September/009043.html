@@ -1,0 +1,332 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] GL profiles issues on Windows
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GL%20profiles%20issues%20on%20Windows&In-Reply-To=%3CCAHhSftgHGmjHVwuqThE7fZ6Yk31vWQ8QiDjdoVH2eBFCEfqmGg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009032.html">
+   <LINK REL="Next"  HREF="009045.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] GL profiles issues on Windows</H1>
+<!--htdig_noindex-->
+    <B>Riccardo Corsi</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20GL%20profiles%20issues%20on%20Windows&In-Reply-To=%3CCAHhSftgHGmjHVwuqThE7fZ6Yk31vWQ8QiDjdoVH2eBFCEfqmGg%40mail.gmail.com%3E"
+       TITLE="[osg-users] GL profiles issues on Windows">riccardo.corsi at kairos3d.it
+       </A><BR>
+    <I>Thu Sep  6 02:48:36 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009032.html">[osg-users] GL profiles issues on Windows
+</A></li>
+        <LI>Next message (by thread): <A HREF="009045.html">[osg-users] GL profiles issues on Windows
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9043">[ date ]</a>
+              <a href="thread.html#9043">[ thread ]</a>
+              <a href="subject.html#9043">[ subject ]</a>
+              <a href="author.html#9043">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+good guess! I've enabled the aliasing and my shaders works now with osg
+default build!
+With this configuration there is still a side effect though: something is
+wrong with alpha settings for HUD cameras.
+See attached screenshot that shows the issue: it's a modified osgsimplegl3
+example with stats handler enabled, but I have alpha issues with other HUDs
+as well.
+I've counter checked in my examples that the 2 aliasing/uniform calls are
+the culprit: if I comment them out the shaders don't work anymore but the
+stats are displayed correctly.
+
+Riccardo
+
+
+On Wed, Sep 5, 2018 at 5:24 PM Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Riccardo,
+</I>&gt;<i>
+</I>&gt;<i> On Wed, 5 Sep 2018 at 15:56, Riccardo Corsi &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">riccardo.corsi at kairos3d.it</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i> &gt; I've rebuilt osg as suggested by Robert and still getting no GL errors
+</I>&gt;<i> but nothing shows up.
+</I>&gt;<i> &gt; To sum it up, running a test app which only uses libA (which addresses
+</I>&gt;<i> only GL3 functions and shaders version 150)
+</I>&gt;<i> &gt; under windows:
+</I>&gt;<i> &gt; - if I link my code to OSG built with  GLCORE profile everything works
+</I>&gt;<i> &gt; - if I link the same code to OSG build with defaults, nothing shows up
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; As further check, I tried the same with osgsimplegl3 example which works
+</I>&gt;<i> in both OSG builds.
+</I>&gt;<i> &gt; Any idea on what could be the culprit of my code not working in the same
+</I>&gt;<i> way?
+</I>&gt;<i>
+</I>&gt;<i> My best guess is that the GLCORE build of the OSG is setting up the
+</I>&gt;<i> osg::State vertex and uniform aliasing that you shaders are relying
+</I>&gt;<i> upon, but in the default build of the OSG these are set by default so
+</I>&gt;<i> you have to manually set them.
+</I>&gt;<i>
+</I>&gt;<i> The osgsimplegl3 example illustrates and explains this:
+</I>&gt;<i>
+</I>&gt;<i>     // for non GL3/GL4 and non GLES2 platforms we need enable the osg_
+</I>&gt;<i> uniforms that the shaders will use,
+</I>&gt;<i>     // you don't need thse two lines on GL3/GL4 and GLES2 specific
+</I>&gt;<i> builds as these will be enable by default.
+</I>&gt;<i>     gc-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true);
+</I>&gt;<i>     gc-&gt;getState()-&gt;setUseVertexAttributeAliasing(true);
+</I>&gt;<i>
+</I>&gt;<i> These two settings are done by default for GLCORE build, but are off
+</I>&gt;<i> by default so have to be set explicitly for non GLCORE builds.
+</I>&gt;<i>
+</I>&gt;<i> The osgvertexattributes and osgtessellationshaders examples have a
+</I>&gt;<i> more general purpose approach:
+</I>&gt;<i>
+</I>&gt;<i>     osgViewer::Viewer::Windows windows;
+</I>&gt;<i>     viewer.getWindows(windows);
+</I>&gt;<i>     for(osgViewer::Viewer::Windows::iterator itr = windows.begin();
+</I>&gt;<i>         itr != windows.end();
+</I>&gt;<i>         ++itr)
+</I>&gt;<i>     {
+</I>&gt;<i>         osg::State *s=(*itr)-&gt;getState();
+</I>&gt;<i>         s-&gt;setUseModelViewAndProjectionUniforms(true);
+</I>&gt;<i>         s-&gt;setUseVertexAttributeAliasing(true);
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i> Probably the most general way to wrap this up would be to have a
+</I>&gt;<i> custom RealizeOperation do this, the osgvolume example has an example
+</I>&gt;<i> of this, although not for the State::setUse*Aliasing(true);
+</I>&gt;<i>
+</I>&gt;<i> Hope this helps,
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180906/84a51088/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180906/84a51088/attachment-0001.html</A>&gt;
+-------------- next part --------------
+// This is public domain software and comes with
+// absolutely no warranty. Use of public domain software
+// may vary between counties, but in general you are free
+// to use and distribute this software for any purpose.
+
+
+// Example: OSG using an OpenGL 3.1 context.
+// The comment block at the end of the source describes building OSG
+// for use with OpenGL 3.x.
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osg/GraphicsContext&gt;
+#include &lt;osg/Camera&gt;
+#include &lt;osg/Viewport&gt;
+#include &lt;osg/StateSet&gt;
+#include &lt;osg/Program&gt;
+#include &lt;osg/Shader&gt;
+#include &lt;osgUtil/Optimizer&gt;
+
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+
+void configureShaders( osg::StateSet* stateSet )
+{
+    const std::string vertexSource =
+        &quot;#version 140 \n&quot;
+        &quot; \n&quot;
+        &quot;uniform mat4 osg_ModelViewProjectionMatrix; \n&quot;
+        &quot;uniform mat3 osg_NormalMatrix; \n&quot;
+        &quot;uniform vec3 ecLightDir; \n&quot;
+        &quot; \n&quot;
+        &quot;in vec4 osg_Vertex; \n&quot;
+        &quot;in vec3 osg_Normal; \n&quot;
+        &quot;out vec4 color; \n&quot;
+        &quot; \n&quot;
+        &quot;void main() \n&quot;
+        &quot;{ \n&quot;
+        &quot;    vec3 ecNormal = normalize( osg_NormalMatrix * osg_Normal ); \n&quot;
+        &quot;    float diffuse = max( dot( ecLightDir, ecNormal ), 0. ); \n&quot;
+        &quot;    color = vec4( vec3( diffuse ), 1. ); \n&quot;
+        &quot; \n&quot;
+        &quot;    gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex; \n&quot;
+        &quot;} \n&quot;;
+    osg::Shader* vShader = new osg::Shader( osg::Shader::VERTEX, vertexSource );
+
+    const std::string fragmentSource =
+        &quot;#version 140 \n&quot;
+        &quot; \n&quot;
+        &quot;in vec4 color; \n&quot;
+        &quot;out vec4 fragData; \n&quot;
+        &quot; \n&quot;
+        &quot;void main() \n&quot;
+        &quot;{ \n&quot;
+        &quot;    fragData = color; \n&quot;
+        &quot;} \n&quot;;
+    osg::Shader* fShader = new osg::Shader( osg::Shader::FRAGMENT, fragmentSource );
+
+    osg::Program* program = new osg::Program;
+    program-&gt;addShader( vShader );
+    program-&gt;addShader( fShader );
+    stateSet-&gt;setAttribute( program );
+
+    osg::Vec3f lightDir( 0., 0.5, 1. );
+    lightDir.normalize();
+    stateSet-&gt;addUniform( new osg::Uniform( &quot;ecLightDir&quot;, lightDir ) );
+}
+
+int main( int argc, char** argv )
+{
+    osg::ArgumentParser arguments( &amp;argc, argv );
+
+    osg::ref_ptr&lt;osg::Node&gt; root = osgDB::readRefNodeFiles( arguments );
+    if( root == NULL )
+    {
+        osg::notify( osg::FATAL ) &lt;&lt; &quot;Unable to load model from command line.&quot; &lt;&lt; std::endl;
+        return( 1 );
+    }
+
+    osgUtil::Optimizer optimizer;
+    optimizer.optimize(root.get(), osgUtil::Optimizer::ALL_OPTIMIZATIONS  | osgUtil::Optimizer::TESSELLATE_GEOMETRY);
+
+    configureShaders( root-&gt;getOrCreateStateSet() );
+
+    const int width( 800 ), height( 450 );
+    const std::string version( &quot;3.1&quot; );
+    osg::ref_ptr&lt; osg::GraphicsContext::Traits &gt; traits = new osg::GraphicsContext::Traits();
+    traits-&gt;x = 20; traits-&gt;y = 30;
+    traits-&gt;width = width; traits-&gt;height = height;
+    traits-&gt;windowDecoration = true;
+    traits-&gt;doubleBuffer = true;
+    traits-&gt;glContextVersion = version;
+    osg::ref_ptr&lt; osg::GraphicsContext &gt; gc = osg::GraphicsContext::createGraphicsContext( traits.get() );
+    if( !gc.valid() )
+    {
+        osg::notify( osg::FATAL ) &lt;&lt; &quot;Unable to create OpenGL v&quot; &lt;&lt; version &lt;&lt; &quot; context.&quot; &lt;&lt; std::endl;
+        return( 1 );
+    }
+
+    osgViewer::Viewer viewer;
+
+    // Create a Camera that uses the above OpenGL context.
+    osg::Camera* cam = viewer.getCamera();
+    cam-&gt;setGraphicsContext( gc.get() );
+    // Must set perspective projection for fovy and aspect.
+    cam-&gt;setProjectionMatrix( osg::Matrix::perspective( 30., (double)width/(double)height, 1., 100. ) );
+    // Unlike OpenGL, OSG viewport does *not* default to window dimensions.
+    cam-&gt;setViewport( new osg::Viewport( 0, 0, width, height ) );
+
+    viewer.setSceneData( root );
+
+    // for non GL3/GL4 and non GLES2 platforms we need enable the osg_ uniforms that the shaders will use,
+    // you don't need thse two lines on GL3/GL4 and GLES2 specific builds as these will be enable by default.
+    gc-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true);
+    gc-&gt;getState()-&gt;setUseVertexAttributeAliasing(true);
+
+	// add the stats handler
+	viewer.addEventHandler(new osgViewer::StatsHandler);
+
+    return( viewer.run() );
+}
+
+/*
+
+Building OSG for OpenGL 3.x
+
+OSG currently support OpenGL 3.x on Windows. This comment block describes the
+necessary configuration steps.
+
+Get the draft gl3.h header file from OpenGL.org and put it in a folder called
+&#8220;GL3&#8221; somewhere on your hard drive. OSG includes this header as &lt;GL3/gl3.h&gt;. Get
+gl3.h from here:
+<A HREF="http://www.opengl.org/registry/">http://www.opengl.org/registry/</A>
+
+Open the cmake-gui and load OSG's top-level CmakeLists.txt. You'll need to make
+several changes.
+
+ * Add the path to &lt;GL3/gl3.h&gt; to the CMake compiler flags, CMAKE_CXX_FLAGS and
+   CMAKE_CXX_FLAGS_DEBUG (for release and debug builds; others if you use other
+   build configurations). The text to add should look something like this:
+     /I &#8220;C:\GLHeader&#8221;
+   The folder GLHeader should contain a subfolder GL3, which in turn contains
+   gl3.h.
+
+ * Enable the following CMake variable:
+     OSG_GL3_AVAILABLE
+
+ * Disable the following CMake variables:
+     OSG_GL1_AVAILABLE
+     OSG_GL2_AVAILABLE
+     OSG_GLES1_AVAILABLE
+     OSG_GLES2_AVAILABLE
+     OSG_GL_DISPLAYLISTS_AVAILABLE
+     OSG_GL_FIXED_FUNCTION_AVAILABLE
+     OSG_GL_MATRICES_AVAILABLE
+     OSG_GL_VERTEX_ARRAY_FUNCS_AVAILABLE
+     OSG_GL_VERTEX_FUNCS_AVAILABLE
+
+Create your project files in cmake-gui as usual, and build OSG as usual.
+
+If you have an external project that will depend on OSG built for OpenGL 3.x,
+you'll need to ensure your external project also uses the compiler include
+directives to find &lt;GL3/gl3.h&gt;.
+
+To berify your application is using a pure OpenGL 3.x context, set
+OSG_NOTIFY_LEVEL=INFO in the environment and check the console output. Context
+creation displays output such as the following:
+    GL3: Attempting to create OpenGL3 context.
+    GL3: version: 3.1
+    GL3: context flags: 0
+    GL3: profile: 0
+    GL3: context created successfully.
+
+When your app begins rendering, it displays information about the actual context
+it is using:
+    glVersion=3.1, isGlslSupported=YES, glslLanguageVersion=1.4
+
+*/
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osgsimplegl3-stats.png
+Type: image/png
+Size: 101708 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180906/84a51088/attachment-0001.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180906/84a51088/attachment-0001.png</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009032.html">[osg-users] GL profiles issues on Windows
+</A></li>
+	<LI>Next message (by thread): <A HREF="009045.html">[osg-users] GL profiles issues on Windows
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9043">[ date ]</a>
+              <a href="thread.html#9043">[ thread ]</a>
+              <a href="subject.html#9043">[ subject ]</a>
+              <a href="author.html#9043">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to use osgVolume::applyTransferFunction?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20use%20osgVolume%3A%3AapplyTransferFunction%3F&In-Reply-To=%3CCAHKmQh_e8Lhjzrp-r9XJOVJOWmVZsQJm5vWXMHSxmSawb8T3Yw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271902.html">
+   <LINK REL="Next"  HREF="271905.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to use osgVolume::applyTransferFunction?</H1>
+<!--htdig_noindex-->
+    <B>Alex Taylor</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20use%20osgVolume%3A%3AapplyTransferFunction%3F&In-Reply-To=%3CCAHKmQh_e8Lhjzrp-r9XJOVJOWmVZsQJm5vWXMHSxmSawb8T3Yw%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to use osgVolume::applyTransferFunction?">alextaylor at gmail.com
+       </A><BR>
+    <I>Mon Dec 21 11:35:53 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271902.html">[osg-users] Framerate changes with different zoom
+</A></li>
+        <LI>Next message: <A HREF="271905.html">[osg-users] Testing osgUI library
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271903">[ date ]</a>
+              <a href="thread.html#271903">[ thread ]</a>
+              <a href="subject.html#271903">[ subject ]</a>
+              <a href="author.html#271903">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I'm still trying to get my head around using osgVolume. I'm trying to read
+in uint8 intensity data normalized to the range [0 255] and then apply a
+transfer function to my data to map it to color and opacity.
+
+First, I start with the following function to construct my osg::Image
+object. I specify GL_LUMINANCE when using setImage to construct my image,
+and I provide a uint8_T * pointer to an existing memory allocation.
+
+*    osg::Image* createTexture3D(const mxArray* src, const uint8_T*
+xfer_table) {*
+
+*        if (src == NULL || mxGetNumberOfDimensions(src) != 3 ||
+mxGetClassID(src) != mxUINT8_CLASS) {*
+*            return NULL;*
+*        }*
+
+*        size_t num_s = mxGetDimensions(src)[0];*
+*        size_t num_t = mxGetDimensions(src)[1];*
+*        size_t num_r = mxGetDimensions(src)[2];*
+
+*        // now allocate the 3d texture;*
+*        osg::ref_ptr&lt;osg::Image&gt; image_3d = new osg::Image;*
+
+*        image_3d-&gt;setImage(num_s, num_t, num_r, *
+*                GL_LUMINANCE, GL_LUMINANCE, GL_UNSIGNED_BYTE,*
+*                static_cast&lt;uint8_T *&gt;(mxGetData(src)),*
+*                osg::Image::NO_DELETE);*
+
+*        return image_3d.release();*
+*    }*
+
+If I pass this data into a layer in osgVolume and use
+FixedFunctionTechnique, I see a grayscale visualization in which it appears
+both the gray level and opacity are determine by the scalar intensity
+value. Good so far.
+
+Next, I attempt to specify a given transfer function. My transfer function
+is float in the range [0 1], and I'm sure that the values in my transfer
+function are correct, I've looked.
+
+I attempt to use osgVolume::applyTransferFunction to apply a transfer
+function to my existing osg::Image to obtain a new osg::Image that RGBA.
+When I do this, nothing renders, blank screen. What am I doing wrong?
+
+ *           osg::TransferFunction1D::ColorMap colorMap;*
+*            for (size_t r = 0; r &lt; 256; ++r){*
+*                size_t rowOffset = r*4;*
+*                float red =
+static_cast&lt;float&gt;(xfer_table[rowOffset])/255.0;*
+*                float green =
+static_cast&lt;float&gt;(xfer_table[rowOffset+1])/255.0;*
+*                float blue =
+static_cast&lt;float&gt;(xfer_table[rowOffset+2])/255.0;*
+*                float alpha =
+static_cast&lt;float&gt;(xfer_table[rowOffset+3])/255.0;*
+
+*                std::cout &lt;&lt; &quot;red: &quot; &lt;&lt; red &lt;&lt; &quot;green: &quot; &lt;&lt; green &lt;&lt;
+&quot;blue: &quot; &lt;&lt; blue &lt;&lt; &quot;alpha: &quot; &lt;&lt; alpha &lt;&lt; std::endl;*
+
+*                colorMap[r] = osg::Vec4(red,green,blue,alpha);*
+*            }*
+*            osg::ref_ptr&lt;osg::TransferFunction1D&gt; transferFunction = new
+osg::TransferFunction1D;*
+*            transferFunction-&gt;assign(colorMap);*
+
+*            osg::ref_ptr&lt;osgVolume::VolumeTile&gt; tile = new
+osgVolume::VolumeTile;*
+*            volume-&gt;addChild(tile.get());*
+
+*            osg::ref_ptr&lt;osg::Image&gt; image_3d =
+createTexture3D(data,xfer_table);*
+
+*            osg::ref_ptr&lt;osg::Image&gt; image_3d_mapped =
+osgVolume::applyTransferFunction(image_3d.get(),transferFunction.get());*
+
+Looking at the shipping example: osgvolume.cpp, I'm using the
+applyTransferFunction the same way, and it appears that the expected
+normalization for entries in the LUT is [0,1.0] float, which I'm doing. I'm
+clearly doing something wrong with applyTransferFunction, because when I
+remove the use of applyTransferFunction and pass image_3d into the Layer
+instead of image_3d_mapped, I do get a &quot;correctly&quot; rendered grayscale with
+the opacity determined by the scalar intensity.
+
+Is there anything that jumps out at anyone? I can provide a more complete
+code listing if that would help, I thought it best to try to make the code
+as stripped down as possible.
+
+Thanks,
+
+Alex
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151221/c97dabf6/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151221/c97dabf6/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271902.html">[osg-users] Framerate changes with different zoom
+</A></li>
+	<LI>Next message: <A HREF="271905.html">[osg-users] Testing osgUI library
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271903">[ date ]</a>
+              <a href="thread.html#271903">[ thread ]</a>
+              <a href="subject.html#271903">[ subject ]</a>
+              <a href="author.html#271903">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

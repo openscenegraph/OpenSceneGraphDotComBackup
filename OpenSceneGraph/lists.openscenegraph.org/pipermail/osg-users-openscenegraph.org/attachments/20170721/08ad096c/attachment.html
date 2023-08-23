@@ -1,0 +1,42 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Gianni,&lt;br&gt;&lt;br&gt;&lt;/div&gt;As&nbsp;Lionel&nbsp;explains&nbsp;if&nbsp;you&nbsp;have&nbsp;display&nbsp;lists&nbsp;enabled&nbsp;(they&nbsp;are&nbsp;by&nbsp;default)&nbsp;then&nbsp;rebuilding&nbsp;the&nbsp;display&nbsp;list&nbsp;will&nbsp;create&nbsp;a&nbsp;big&nbsp;cost. &nbsp;Not&nbsp;using&nbsp;display&nbsp;lists&nbsp;will&nbsp;avoid&nbsp;this&nbsp;one&nbsp;off&nbsp;cost,&nbsp;but&nbsp;it&nbsp;will&nbsp;increase&nbsp;the&nbsp;cost&nbsp;of&nbsp;rendering&nbsp;on&nbsp;some&nbsp;drivers.&lt;br&gt;&lt;br&gt;&lt;/div&gt;However,&nbsp;I&nbsp;would&nbsp;recommend&nbsp;you&nbsp;take&nbsp;a&nbsp;step&nbsp;back&nbsp;and&nbsp;learn&nbsp;a&nbsp;bit&nbsp;more&nbsp;what&nbsp;you&nbsp;are&nbsp;expecting&nbsp;your&nbsp;computer&nbsp;to&nbsp;do&nbsp;with&nbsp;your&nbsp;dataset&nbsp;and&nbsp;how&nbsp;the&nbsp;drivers/hardware&nbsp;will&nbsp;be&nbsp;handle&nbsp;the&nbsp;type&nbsp;of&nbsp;dataset&nbsp;you&nbsp;are&nbsp;working&nbsp;with. &nbsp;From&nbsp;what&nbsp;you&nbsp;describe&nbsp;of&nbsp;your&nbsp;data&nbsp;and&nbsp;how&nbsp;you&nbsp;are&nbsp;doing&nbsp;things&nbsp;you&nbsp;should&nbsp;absolutely&nbsp;expect&nbsp;things&nbsp;to&nbsp;crawl&nbsp;along. &nbsp;When&nbsp;you&nbsp;are&nbsp;dealling&nbsp;with&nbsp;big&nbsp;data&nbsp;you&nbsp;need&nbsp;to&nbsp;be&nbsp;smarter&nbsp;how&nbsp;you&nbsp;deal&nbsp;with&nbsp;your&nbsp;data.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Your&nbsp;dataset&nbsp;is&nbsp;very&nbsp;heavy&nbsp;on&nbsp;vertices&nbsp;and&nbsp;triangles.&nbsp;The&nbsp;3:1&nbsp;ratio&nbsp;between&nbsp;vertices&nbsp;and&nbsp;triangles&nbsp;suggest&nbsp;that&nbsp;no&nbsp;vertices&nbsp;are&nbsp;shared. &nbsp;This&nbsp;itself&nbsp;suggests&nbsp;that&nbsp;the&nbsp;dataset&nbsp;may&nbsp;well&nbsp;be&nbsp;poorly&nbsp;optimized&nbsp;as&nbsp;well&nbsp;-&nbsp;with&nbsp;this&nbsp;size&nbsp;of&nbsp;dataset&nbsp;you&nbsp;should&nbsp;be&nbsp;doing&nbsp;everything&nbsp;you&nbsp;can&nbsp;to&nbsp;remove&nbsp;duplicates&nbsp;vertices.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;The&nbsp;second&nbsp;observation&nbsp;I&#39;d&nbsp;make&nbsp;is&nbsp;that&nbsp;with&nbsp;huge&nbsp;datasets&nbsp;modern&nbsp;hardware/drivers&nbsp;perform&nbsp;far&nbsp;better&nbsp;when&nbsp;you&nbsp;break&nbsp;them&nbsp;down&nbsp;into&nbsp;small&nbsp;chunks,&nbsp;so&nbsp;rather&nbsp;than&nbsp;a&nbsp;very&nbsp;small&nbsp;number&nbsp;of&nbsp;very&nbsp;large&nbsp;osg::Geometry,&nbsp;you&nbsp;have&nbsp;a&nbsp;moderate&nbsp;number&nbsp;of&nbsp;moderately&nbsp;size&nbsp;osg::Geometry. &nbsp;This&nbsp;will&nbsp;help&nbsp;the&nbsp;OSG&nbsp;with&nbsp;culling&nbsp;and&nbsp;will&nbsp;help&nbsp;the&nbsp;graphics&nbsp;hardware&nbsp;handle&nbsp;this&nbsp;amount&nbsp;of&nbsp;data&nbsp;far&nbsp;better. &nbsp;Using&nbsp;VBO&#39;s&nbsp;instead&nbsp;of&nbsp;Display&nbsp;Lists&nbsp;will&nbsp;also&nbsp;provide&nbsp;a&nbsp;big&nbsp;improvement.&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;21&nbsp;July&nbsp;2017&nbsp;at&nbsp;10:11,&nbsp;Gianni&nbsp;Ambrosio&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:g.ambrosio+osg@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;g.ambrosio+osg@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;All,&lt;br&gt;<br>
+I&nbsp;build&nbsp;a&nbsp;huge&nbsp;geometry&nbsp;(27&nbsp;milion&nbsp;vertices,&nbsp;9&nbsp;milion&nbsp;triangles)&nbsp;as&nbsp;follows:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::Geometry*&nbsp;geometry&nbsp;=&nbsp;new&nbsp;osg::Geometry;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;setDataVariance(osg:&lt;wbr&gt;:Object::DYNAMIC);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;setVertexArray(&lt;wbr&gt;buildVertices(count));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;setColorArray(&lt;wbr&gt;buildColors(count),&nbsp;osg::Array::BIND_PER_VERTEX);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;addPrimitiveSet(&lt;wbr&gt;buildElements(count));&lt;br&gt;<br>
+&lt;br&gt;<br>
+On&nbsp;mouse&nbsp;event,&nbsp;after&nbsp;getting&nbsp;an&nbsp;intersection&nbsp;with&nbsp;the&nbsp;graphics,&nbsp;I&nbsp;do:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::Geometry*&nbsp;geom&nbsp;=&nbsp;dynamic_cast&lt;osg::Geometry*&gt;(&lt;wbr&gt;intersection.drawable.get());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::Vec4Array&amp;&nbsp;color&nbsp;=&nbsp;dynamic_cast&lt;osg::Vec4Array&amp;&gt;(&lt;wbr&gt;*geom-&gt;getColorArray());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;color[intersection.indexList[&lt;wbr&gt;0]]&nbsp;=&nbsp;selectedColor;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;color[intersection.indexList[&lt;wbr&gt;1]]&nbsp;=&nbsp;selectedColor;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;color[intersection.indexList[&lt;wbr&gt;2]]&nbsp;=&nbsp;selectedColor;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geom-&gt;dirtyDisplayList();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;color.dirty();&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;problem&nbsp;is&nbsp;that&nbsp;after&nbsp;these&nbsp;lines&nbsp;there&nbsp;is&nbsp;a&nbsp;delay&nbsp;of&nbsp;at&nbsp;least&nbsp;one&nbsp;second&nbsp;before&nbsp;seeing&nbsp;the&nbsp;triangle&nbsp;with&nbsp;the&nbsp;updated&nbsp;color&nbsp;on&nbsp;my&nbsp;3D&nbsp;viewer.&lt;br&gt;<br>
+Debugging&nbsp;OSG&nbsp;code&nbsp;I&nbsp;found&nbsp;that&nbsp;&quot;ViewerBase::frame()&quot;&nbsp;is&nbsp;called&nbsp;twice&nbsp;before&nbsp;seeing&nbsp;the&nbsp;new&nbsp;color.&nbsp;Moreover&nbsp;the&nbsp;first&nbsp;time&nbsp;&quot;frame()&quot;&nbsp;is&nbsp;called&nbsp;&quot;renderingTraversals()&quot;&nbsp;takes&nbsp;a&nbsp;lot.&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;will&nbsp;debug&nbsp;the&nbsp;OSG&nbsp;code&nbsp;deeper&nbsp;but&nbsp;is&nbsp;there&nbsp;a&nbsp;way&nbsp;to&nbsp;prevent&nbsp;the&nbsp;delay&nbsp;I&nbsp;see&nbsp;in&nbsp;my&nbsp;application?&lt;br&gt;<br>
+You&nbsp;can&nbsp;find&nbsp;the&nbsp;full&nbsp;example&nbsp;in&nbsp;attachment.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thanks&nbsp;for&nbsp;your&nbsp;help,&lt;br&gt;<br>
+Gianni&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=71295#71295&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.&lt;wbr&gt;org/viewtopic.php?p=71295#&lt;wbr&gt;71295&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

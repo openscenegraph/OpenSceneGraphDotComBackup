@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] obj plugin does not support diffuse and specular texture maps
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20obj%20plugin%20does%20not%20support%20diffuse%20and%20specular%0A%20texture%20maps&In-Reply-To=%3CCAFN7Y%2BXz1NLxs8rwz7ZnPtMhwT%3DNKbUpN6ZbbqNNWtYWdmyR1g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007045.html">
+   <LINK REL="Next"  HREF="007052.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] obj plugin does not support diffuse and specular texture maps</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20obj%20plugin%20does%20not%20support%20diffuse%20and%20specular%0A%20texture%20maps&In-Reply-To=%3CCAFN7Y%2BXz1NLxs8rwz7ZnPtMhwT%3DNKbUpN6ZbbqNNWtYWdmyR1g%40mail.gmail.com%3E"
+       TITLE="[osg-users] obj plugin does not support diffuse and specular texture maps">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Oct 17 09:06:21 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007045.html">[osg-users] obj plugin does not support diffuse and specular texture maps
+</A></li>
+        <LI>Next message (by thread): <A HREF="007052.html">[osg-users] [MDI branch] AZDO SandBox
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7046">[ date ]</a>
+              <a href="thread.html#7046">[ thread ]</a>
+              <a href="subject.html#7046">[ subject ]</a>
+              <a href="author.html#7046">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Ralf,
+
+On 17 October 2017 at 13:58, Ralf Habacker &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ralf.habacker at freenet.de</A>&gt; wrote:
+
+&gt;<i> &gt; The shader_pipeline branch already has the abilty to toggle features
+</I>&gt;<i> on/off this way.
+</I>&gt;<i> that means for example switching light on and off will effect the
+</I>&gt;<i> related shaders immediatly or is a recompile required ?
+</I>&gt;<i>
+</I>
+It has immediate effect, if the particular combination of modes/defines has
+never been compiled into a gl program before then a new one is compiled and
+linked, but this is all done automatically for you. Once all the required
+gl programs are created the toggle is little more than the OSG backend
+selecting the appropriate gl program to use.  This particular feature
+mimics what the fixed function pipeline does in the GL driver, internally
+it maps the modes you've selected to a gl program.
+
+
+
+&gt;<i> I will give it a try - is there any abstract available for this feature
+</I>&gt;<i> branch ?
+</I>&gt;<i>
+</I>
+The only docs are my discussions of the work here on the mailing
+list/forum, just search for shader_pipeline references.
+
+
+&gt;<i> &gt; For the .obj plugin I think one would want to make sure loads the obj
+</I>&gt;<i> &gt; data properly and makes it possible post processing to enable shader
+</I>&gt;<i> &gt; functionality that maps what the data suggest is appropriate.
+</I>&gt;<i> I assume you are refering to adding a node call back in the obj plugin,
+</I>&gt;<i> which does the real work after loading ? It needs to get the texture
+</I>&gt;<i> type to unit index mapping (either automatically assigned or by obj
+</I>&gt;<i> plugin options)
+</I>&gt;<i>
+</I>
+Having a callback mechanism in a plugin is really awkward, it forces you to
+push the interface to the callback into osgDB, assign this to an
+osgDB::Options that you pass into the readNodeFile() call and then having
+the plugin check for this and call it.  Given the OSG has a large number of
+plugins if you start doing using this approach you open the door to an ever
+messy API and implementation.
+
+The plugins are decoupled from the core OSG to keep things extensible.
+
+The right way to handle things to load the data and post process if
+required.  If you want you don't want to explicitly invoke the post
+processing then you can use a osgDB::ReadFileCallback to catch all attempts
+to read files and then post process them as you wish.
+
+
+
+&gt;<i>
+</I>&gt;<i> &gt; I don't think it would be appropriate to push shader functionality into
+</I>&gt;<i> the obj
+</I>&gt;<i> &gt; plugin to handle this,
+</I>&gt;<i> any hint where to add such stuff into the shader pipeline branch of the
+</I>&gt;<i> osg framework?
+</I>&gt;<i>
+</I>&gt;<i> or for the ShaderGen itself to be worked on when
+</I>&gt;<i> &gt; it's not far away from being replaced.
+</I>&gt;<i> make sense
+</I>&gt;<i>
+</I>
+As a short term solution I would suggest just writing a shader yourself for
+these problem .obj files, this would be the quickest way to get things
+working at your end.  You could leverage #pragma(tic) shader composition to
+help toggle on/on off features, but you'll need an even handler that
+toggles the StateSet::setDefine()'s rather than leverage the
+StateSet::setMode(..) functionality.
+
+With the shader_pipeline work one would need to have a top level shader
+that is able to handle the diffuse and specular texture maps in an
+appropriate way.  The current top level shader I've worked on so far is
+OpenSceneGraph-Data/shaders/shaderpipeline.vert and shaderpipeline.frag,
+this is just early days though, but might give you an idea where this
+functionality is going and how one might add support for different
+texturing and lighting approaches.
+
+With ShaderGen it's there as stop gap to generate some shaders for a subset
+of the fixed function pipeline that is common in a subset of the OSG
+loaders. It is just a means of getting &quot;something&quot; on the screen on
+platforms like GL core profile and GLESL 2+, it's not an all purpose fully
+functioning solution.
+
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20171017/0bf396d0/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20171017/0bf396d0/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007045.html">[osg-users] obj plugin does not support diffuse and specular texture maps
+</A></li>
+	<LI>Next message (by thread): <A HREF="007052.html">[osg-users] [MDI branch] AZDO SandBox
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7046">[ date ]</a>
+              <a href="thread.html#7046">[ thread ]</a>
+              <a href="subject.html#7046">[ subject ]</a>
+              <a href="author.html#7046">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

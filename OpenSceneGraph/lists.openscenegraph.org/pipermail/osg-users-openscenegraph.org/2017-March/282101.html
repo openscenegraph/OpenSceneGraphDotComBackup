@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Bug in 3.4.0 when exporting .osgx file?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Bug%20in%203.4.0%20when%20exporting%20.osgx%20file%3F&In-Reply-To=%3Ceb78630b-7dfc-0eac-d358-3dae3d1882b3%40texion.eu%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="282100.html">
+   <LINK REL="Next"  HREF="005879.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Bug in 3.4.0 when exporting .osgx file?</H1>
+<!--htdig_noindex-->
+    <B>Werner Modenbach</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Bug%20in%203.4.0%20when%20exporting%20.osgx%20file%3F&In-Reply-To=%3Ceb78630b-7dfc-0eac-d358-3dae3d1882b3%40texion.eu%3E"
+       TITLE="[osg-users] Bug in 3.4.0 when exporting .osgx file?">Werner.Modenbach at texion.eu
+       </A><BR>
+    <I>Tue Mar 21 06:15:28 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="282100.html">[osg-users] [vpb] Roads
+</A></li>
+        <LI>Next message: <A HREF="005879.html">[osg-users] Bug in 3.4.0 when exporting .osgx file?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282101">[ date ]</a>
+              <a href="thread.html#282101">[ thread ]</a>
+              <a href="subject.html#282101">[ subject ]</a>
+              <a href="author.html#282101">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+I think I catched another problem in version 3.4.0.
+I try exporting my scene as .osgx file.
+But except the xml header nothing is written.
+I debuged it and found the following sequence of calls:
+
+
+osg::ref_ptr&lt;osgDB::ReaderWriter&gt;rw=osgDB::Registry::instance()-&gt;getReaderWriterForExtension( 
+
+
+osgDB::getLowerCaseFileExtension(_filename.toStdString()));
+
+if(!rw.valid())
+
+returnfalse;
+
+osgDB::ReaderWriter::WriteResultresult=rw-&gt;writeNode(_node,_filename.toStdString());
+
+-&gt; ReaderWriterOSG2::writeNode(...)
+result=writeNode(node,fout,local_opt.get());
+
+-&gt; ReaderWriterOSG2::writeNode(...) os.writeObject(&amp;node);CATCH_EXCEPTION(os);
+
+-&gt;OutputStream::writeObject(...)
+
+if(newID)
+{
+writeObjectFields(obj);
+}
+
+-&gt;OutputStream::writeObjectFields(...)
+
+ObjectWrapper*wrapper=Registry::instance()-&gt;getObjectWrapperManager()-&gt;findWrapper(name);
+if(!wrapper)
+{
+OSG_WARN&lt;&lt;&quot;OutputStream::writeObject():Unsupportedwrapperclass&quot;
+&lt;&lt;name&lt;&lt;std::endl;
+return;
+}
+
+-&gt;OutputStream::writeObjectFields(...)
+
+ObjectWrapper*wrapper=Registry::instance()-&gt;getObjectWrapperManager()-&gt;findWrapper(name);
+if(!wrapper)
+{
+OSG_WARN&lt;&lt;&quot;OutputStream::writeObject():Unsupportedwrapperclass&quot;
+&lt;&lt;name&lt;&lt;std::endl;
+return;
+}
+-&gt;ObjectWrapperManager::findWrapper(...)
+
+pluginLib=osgDB::Registry::instance()-&gt;createLibraryNameForExtension(libName);
+if(osgDB::Registry::instance()-&gt;loadLibrary(pluginLib)==osgDB::Registry::LOADED)
+returnfindWrapper(name);
+}
+returnNULL;
+
+The loadLibrary(...) method returns &quot;PREVIOUSLY_LOADED&quot; and so NULL is returned and nothing gets written.
+
+I think that should be different. Am I right?
+
+- Werner -
+
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170321/03f32cf6/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170321/03f32cf6/attachment-0001.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="282100.html">[osg-users] [vpb] Roads
+</A></li>
+	<LI>Next message: <A HREF="005879.html">[osg-users] Bug in 3.4.0 when exporting .osgx file?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282101">[ date ]</a>
+              <a href="thread.html#282101">[ thread ]</a>
+              <a href="subject.html#282101">[ subject ]</a>
+              <a href="author.html#282101">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Heap corruption
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Heap%20corruption&In-Reply-To=%3CCAFN7Y%2BUnHiaHTLXuNNS3KNQkVgrLveHToLom3v0%3D-YY-CjoKaQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277647.html">
+   <LINK REL="Next"  HREF="001427.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Heap corruption</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Heap%20corruption&In-Reply-To=%3CCAFN7Y%2BUnHiaHTLXuNNS3KNQkVgrLveHToLom3v0%3D-YY-CjoKaQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Heap corruption">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Sep  3 06:03:04 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277647.html">[osg-users] Heap corruption
+</A></li>
+        <LI>Next message: <A HREF="001427.html">[osg-users] Heap corruption
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1426">[ date ]</a>
+              <a href="thread.html#1426">[ thread ]</a>
+              <a href="subject.html#1426">[ subject ]</a>
+              <a href="author.html#1426">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Julie,
+
+I'm not why you are using a separate thread here as the syncronization will
+likely just serialize the operations anyway, it'll be more efficient to do
+all the work in the update callback directly as you won't thash the cache.
+
+As for the cause of the crash, if you running the viewer multi-threaded
+(which is the default) then the static objects left in draw traversal will
+run in a parallel with the next frame.  Now if the state+drawables being
+dispatches in by the draw thread aren't actually static but are being
+modified by the update traversal from the main thread (or other thread)
+you'll get a conflict.
+
+The way to avoid this conflict is to set the DataVariance on the StateSet
+and Drawable objects that you are modifying to DYNAMIC.  The draw traversal
+holds back the next frame till all the DYNMAIC StateSet and Drawable are
+dispatched to OpenGL thus avoid thread conflict.  An alternative to this
+would be to run the viewer SingleThreaded or CullDrawThreadPerContext by
+setting the threading model using
+viewer.setThreadingModel(osgViewer::Viewer::SingleThreaded);
+
+Robert.
+
+
+On 3 September 2015 at 13:06, Julie Green &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">laroux92 at mail.ru</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I'm trying to draw a quadric surface, which is modifying each frame, and
+</I>&gt;<i> I'm getting a heap corruption error. I guess the problem is in calculating
+</I>&gt;<i> function, or in update callback, but can't find it in the debugger.
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void SurfaceCalculationThread::reCalculateSurface()
+</I>&gt;<i> {
+</I>&gt;<i>         mutex.lock();
+</I>&gt;<i>         float x, y, z;
+</I>&gt;<i>         int i = 0;
+</I>&gt;<i>         float t=time-&gt;elapsedTime();
+</I>&gt;<i>         for (x = -polygonLength; x &lt;= polygonLength; x += 1.0f)
+</I>&gt;<i>         {
+</I>&gt;<i>                 for (y = -polygonLength; y &lt;= polygonLength; y += 1.0f)
+</I>&gt;<i>                 {
+</I>&gt;<i>                         (*oldVertexArray)[i].set((*newVertexArray)[i]);
+</I>&gt;<i>                         z = computeZ(x, y, t);
+</I>&gt;<i>                         (*newVertexArray)[i].set(osg::Vec3f(x, y, z));
+</I>&gt;<i>                         i++;
+</I>&gt;<i>                 }
+</I>&gt;<i>         }
+</I>&gt;<i>         geometry-&gt;setVertexArray(oldVertexArray);
+</I>&gt;<i>         geometry-&gt;setUpdateCallback(new
+</I>&gt;<i> UpdateSurfaceCallback(conditionVariable));
+</I>&gt;<i>
+</I>&gt;<i>         osgUtil::SmoothingVisitor *smoothingVisitor = new
+</I>&gt;<i> osgUtil::SmoothingVisitor();
+</I>&gt;<i>         smoothingVisitor-&gt;smooth(*geometry);
+</I>&gt;<i>         smoothingVisitor-&gt;setName(&quot;normal&quot;);
+</I>&gt;<i>
+</I>&gt;<i>         conditionVariable-&gt;wait(&amp;mutex);
+</I>&gt;<i>         mutex.unlock();
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void UpdateSurfaceCallback::operator()(osg::Node *node, osg::NodeVisitor
+</I>&gt;<i> *nv)
+</I>&gt;<i> {
+</I>&gt;<i>         traverse(node, nv);
+</I>&gt;<i>         conditionVariable-&gt;wakeAll();
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thanks for your help!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Julie
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicea73.php?p=65007#65007">http://forum.openscenegraph.org/viewtopic.php?p=65007#65007</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150903/72335af3/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150903/72335af3/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277647.html">[osg-users] Heap corruption
+</A></li>
+	<LI>Next message: <A HREF="001427.html">[osg-users] Heap corruption
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1426">[ date ]</a>
+              <a href="thread.html#1426">[ thread ]</a>
+              <a href="subject.html#1426">[ subject ]</a>
+              <a href="author.html#1426">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

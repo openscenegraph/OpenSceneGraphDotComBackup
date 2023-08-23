@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Enabling Vsync gives dramatic increase in latency
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Enabling%20Vsync%20gives%20dramatic%20increase%20in%20latency&In-Reply-To=%3CCALFd4CcovgPeKNyj84cXKejXXuZ9j%3DRpCS4CB%2BdO4oFoG4C%2B3w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000146.html">
+   <LINK REL="Next"  HREF="000147.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Enabling Vsync gives dramatic increase in latency</H1>
+<!--htdig_noindex-->
+    <B>Jan Ciger</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Enabling%20Vsync%20gives%20dramatic%20increase%20in%20latency&In-Reply-To=%3CCALFd4CcovgPeKNyj84cXKejXXuZ9j%3DRpCS4CB%2BdO4oFoG4C%2B3w%40mail.gmail.com%3E"
+       TITLE="[osg-users] Enabling Vsync gives dramatic increase in latency">jan.ciger at gmail.com
+       </A><BR>
+    <I>Fri Apr 17 08:05:10 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000146.html">[osg-users] Enabling Vsync gives dramatic increase in latency
+</A></li>
+        <LI>Next message: <A HREF="000147.html">[osg-users] Enabling Vsync gives dramatic increase in latency
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#154">[ date ]</a>
+              <a href="thread.html#154">[ thread ]</a>
+              <a href="subject.html#154">[ subject ]</a>
+              <a href="author.html#154">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>On Fri, Apr 17, 2015 at 1:57 PM, Bj&#246;rn Blissing &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">bjorn.blissing at vti.se</A>&gt;
+wrote:
+
+&gt;<i> Looking at this plot it seems like the latency times are varying according
+</I>&gt;<i> to a pattern. My guess is that the screen runs asynchronously with the GPU.
+</I>
+
+That it certainly does. Modern LCDs are not tied to the VSYNC/HSYNC and
+pixel clock signals anymore as the old CRTs were, because there is always
+an image processing logic inbetween. If for nothing else then for scaling
+the image to the full resolution of the LCD panel. With packet oriented
+digital connections like DisplayPort it gets decoupled even further
+(DVI/HDMI is still essentially emulating the old VGA which in turns
+emulates the old TV conventions for video, even though the way the signals
+are encoded electrically is very different). Oh and it gets better - in
+fact, some monitors completely ignore VSYNC/HSYNC signals when connected by
+a digital connection (HDMI/DisplayPort), because they know how many pixels
+they need to draw, so they simply count the incoming bytes, something that
+was not possible with the purely analog VGA signals and analog monitors.
+
+There are basically 4 completely asynchronous systems here:
+
+- your code
+- the GPU
+- the monitor processor
+- the LCD panel itself
+
+The first two can be synchronized using VSYNC and/or fences, the second two
+using the HDMI/DVI/VGA electrical signals, the monitor processor is
+synchronized with the LCD panel, but there is no mutual synchronisation
+between these pairs, there are, in fact, buffers between them to account
+for the differing processing speeds. And you can typically only observe the
+first and the last one ...
+
+So the screen polls the GPU at 60Hz and sometimes the GPU just happens to
+&gt;<i> have a frame ready when the screen starts a scanout.
+</I>
+The lower limit is just the pure scanout time of the display. But this is
+&gt;<i> just my theory right now. I do not have the detailed knowledge of the inner
+</I>&gt;<i> workings of a LCD display.
+</I>
+
+The way it works is the opposite - the GPU generates the data at whatever
+resolution and refresh rate the screen declares that it supports
+(determined via EDID, unless manually overriden in the driver settings) and
+sends these to the processor in the display. The display then does any
+processing it needs and only actually flips the pixels on the panel when
+ready, independently from the GPU. Which is always delayed a bit -
+depending on how much processing the display does. There is no polling, the
+video connection is essentially one way only (not counting service data
+like EDID).
+
+In comparison, the old CRTs had low latency, because the analog signal from
+the GPU was driving the deflection coils steering the electron beam
+practically directly, with no buffering or processing. When the GPU started
+a new frame by sending VSYNC, the monitor really made the beam jump to the
+upper left corner at that moment. That also explains why you could generate
+&quot;weird&quot;, unsupported resolutions out of an analog CRT screen and why you
+could potentially fry it with resolution or refresh too high for it to
+handle - the deflection coild electronics would typically overheat, drawing
+too much current.
+
+I think the problem you are seeing with the &quot;jitter&quot; that sometimes you
+have very low latency and sometimes it is over a frame comes from a
+different source - namely your program and the VSYNC handling by the GPU.
+The GPU will always generate the output signal the same way, VSYNC or no
+VSYNC, otherwise the monitor may not be able to handle it and sync to it.
+What happens is that sometimes your program &quot;gets lucky&quot; and tells the GPU
+to swap buffers &quot;just in time&quot; before the start of the next frame - then
+you have very little latency, because the change gets visible almost
+immediately (modulo the input latency of the monitor above). On the other
+hand, sometimes you get unlucky, you swap buffers right after the scanout
+of the framebuffer has started and then the GPU will hold your image until
+the next frame cycle - poof, one frame of latency extra ... And you can
+have everything in between these two extreme cases.
+
+When VSYNC is on, it gets even more complicated, because then you are
+telling the GPU to synchronize the userspace code with the frame scanout
+start (not the start of the physical frame on the monitor when your sensor
+reacts - remember, the GPU has no control at all over the image processor
+in the monitor!). This is typically an extremely inefficient thing to do
+from the driver's point of view because you are stalling the GPU until the
+new frame is due, so the drivers often &quot;play games&quot; here - like not really
+blocking your program waiting for the frame start but return right away and
+buffer your frame internally. The frame then gets sent out later when
+convenient (i.e. on the next scanout cycle). They can even hold several
+frames back like that and block only when this frame queue runs out of
+space (you were really rendering too fast). Especially Nvidia is known for
+these VSYNC &quot;shenanigans&quot; in their driver. This is what Robert was talking
+about with the fences - that is a relatively recent feature that allows you
+to force the driver to wait until a certain event occurs - e.g. a new frame
+start or sync event from an external source (e.g. genlock). The regular
+VSYNC ON/OFF will not guarantee this anymore on today's hardware, it only
+guarantees that you will not change the framebuffer in the middle of it
+being drawn (tearing).
+
+This has a lot of consequences for &quot;pro&quot; applications requiring active
+stereo or synchronization to external sources (CAVE, TV studios, etc.).
+However, an average desktop application (e.g. a 3D game) benefits, because
+it is typically going to be able to run faster and smoother when not having
+to block on VSYNC.
+
+This blog explains the issue quite well:
+<A HREF="http://joostdevblog.blogspot.fr/2011/10/what-no-one-told-you-about-videocard.html">http://joostdevblog.blogspot.fr/2011/10/what-no-one-told-you-about-videocard.html</A>
+
+Regards,
+
+Jan
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150417/0c59968f/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150417/0c59968f/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000146.html">[osg-users] Enabling Vsync gives dramatic increase in latency
+</A></li>
+	<LI>Next message: <A HREF="000147.html">[osg-users] Enabling Vsync gives dramatic increase in latency
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#154">[ date ]</a>
+              <a href="thread.html#154">[ thread ]</a>
+              <a href="subject.html#154">[ subject ]</a>
+              <a href="author.html#154">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

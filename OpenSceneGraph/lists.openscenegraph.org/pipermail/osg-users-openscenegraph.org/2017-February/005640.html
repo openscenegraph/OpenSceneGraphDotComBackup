@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [Toward DrawElementBaseVertex as drawcall]
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BToward%20DrawElementBaseVertex%20as%20drawcall%5D&In-Reply-To=%3C1487451337.m2f.70270%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005563.html">
+   <LINK REL="Next"  HREF="281711.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [Toward DrawElementBaseVertex as drawcall]</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BToward%20DrawElementBaseVertex%20as%20drawcall%5D&In-Reply-To=%3C1487451337.m2f.70270%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [Toward DrawElementBaseVertex as drawcall]">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Sat Feb 18 12:55:37 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005563.html">[osg-users] [Toward DrawElementBaseVertex as drawcall]
+</A></li>
+        <LI>Next message: <A HREF="281711.html">[osg-users] VR headset integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5640">[ date ]</a>
+              <a href="thread.html#5640">[ thread ]</a>
+              <a href="subject.html#5640">[ subject ]</a>
+              <a href="author.html#5640">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>up 
+(in order my post edits appear on the ML)
+
+
+mp3butcher wrote:
+&gt;<i> Hello Robert,
+</I>&gt;<i> I achieve a basevertex example and debug with nvidia gl debugger.
+</I>&gt;<i> <A HREF="https://github.com/mp3butcher/OpenSceneGraph/tree/master/examples/osgSharedVAO">https://github.com/mp3butcher/OpenSceneGraph/tree/master/examples/osgSharedVAO</A>
+</I>&gt;<i> It appears that glBindVertexArrayObject seams to have a cost 500ns !? when  big bufferobjects are involved in the vas
+</I>&gt;<i> Sure bos are remapped at each call...
+</I>&gt;<i> 
+</I>&gt;<i> I added a check not to call glBindVertexArrayObject when currentvaobound doesn't change and achieve the same perf as my rejected submission (a near 0 draw submission overhead ) 
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> void VertexArrayState::bindVertexArrayObject() const {
+</I>&gt;<i>     if(_state-&gt;getCurrentBoundVAO()!=_vertexArrayObject){
+</I>&gt;<i>         _state-&gt;setCurrentBoundVAO(_vertexArrayObject);
+</I>&gt;<i>         _ext-&gt;glBindVertexArray (_vertexArrayObject);
+</I>&gt;<i>     }
+</I>&gt;<i>  }
+</I>&gt;<i> 
+</I>&gt;<i> void VertexArrayState::unbindVertexArrayObject() const {
+</I>&gt;<i>     no overhead here if(_state-&gt;getCurrentBoundVAO()!=0){
+</I>&gt;<i>          _state-&gt;setCurrentBoundVAO(0);
+</I>&gt;<i>          _ext-&gt;glBindVertexArray (0);
+</I>&gt;<i>     }
+</I>&gt;<i>  }
+</I>&gt;<i> ////and inlined mutable property get/setBoundVAO in osg/State
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> It's not very elegant but it do the job.
+</I>&gt;<i> 
+</I>&gt;<i> Bench with a DrawArrays low res sparse buildings scene:
+</I>&gt;<i> (on a  NVGTX660OC)
+</I>&gt;<i> 1VAO/Geom: DrawCost 4
+</I>&gt;<i> shared VAOs: DrawCost 2 
+</I>&gt;<i> 
+</I>&gt;<i> Bench with a DrawElementShort BigCity scene:
+</I>&gt;<i> <A HREF="https://drive.google.com/file/d/0BxIH-jcsgYDdTG5ha21HZE1jX1E/view">https://drive.google.com/file/d/0BxIH-jcsgYDdTG5ha21HZE1jX1E/view</A>
+</I>&gt;<i> 1VAO/Geom: DrawCost 9
+</I>&gt;<i> shared VAOs: DrawCost 4 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Any toughts about it?
+</I>&gt;<i> 
+</I>&gt;<i> Cheers
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> robertosfield wrote:
+</I>&gt;<i> &gt; Hi Julien,
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; On 6 February 2017 at 10:33, Julien Valentin &lt;&gt; wrote:
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; &gt; I remember your rejection, but it's not what I asked.
+</I>&gt;<i> &gt; &gt; I would like your sentiment about what the book extract says about efficient draw submission and basevertex based drawcall....
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Personally I have plenty of more pressing things to work on the OSG
+</I>&gt;<i> &gt; than chase after a possible small benefit.  For OSG-3.6 my focus will
+</I>&gt;<i> &gt; be completing my work on fixed function -&gt; shader pipeline and fixing
+</I>&gt;<i> &gt; bugs.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Please remember these potential gains are in the wider context of real
+</I>&gt;<i> &gt; application with a wider range of different potential bottlenecks,
+</I>&gt;<i> &gt; typically the CPU and GPU bottlenecks be such that you may not see
+</I>&gt;<i> &gt; expected benefits.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; The right way to optimize graphics applications is benchmark test
+</I>&gt;<i> &gt; cases that most closely follow the needs that your
+</I>&gt;<i> &gt; application/OS/hardware with require when dealing with real datasets.
+</I>&gt;<i> &gt; Narrow benchmarks won't typically reveal what bottlenecks the full
+</I>&gt;<i> &gt; application and full data will see so you have to be very careful
+</I>&gt;<i> &gt; about extrapolating possible bottlenecks.  With the full application
+</I>&gt;<i> &gt; and data tests you get a real picture of the what are the biggest
+</I>&gt;<i> &gt; bottlenecks and these are ones that you will see the most benefit from
+</I>&gt;<i> &gt; optimizing.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Given this context I would be sceptical about how much value will see
+</I>&gt;<i> &gt; in sharing VAO and using base vertex.  With anything that adds
+</I>&gt;<i> &gt; complexity to the API and implementation you need to make sure there
+</I>&gt;<i> &gt; is real value in added them to justify this complexity.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Robert.
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt;  ------------------
+</I>&gt;<i> &gt; Post generated by Mail2Forum
+</I>&gt;<i> 
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic8502.php?p=70270#70270">http://forum.openscenegraph.org/viewtopic.php?p=70270#70270</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005563.html">[osg-users] [Toward DrawElementBaseVertex as drawcall]
+</A></li>
+	<LI>Next message: <A HREF="281711.html">[osg-users] VR headset integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5640">[ date ]</a>
+              <a href="thread.html#5640">[ thread ]</a>
+              <a href="subject.html#5640">[ subject ]</a>
+              <a href="author.html#5640">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

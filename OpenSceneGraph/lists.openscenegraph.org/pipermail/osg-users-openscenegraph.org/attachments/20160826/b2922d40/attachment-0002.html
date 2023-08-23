@@ -1,0 +1,50 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Robert&lt;br&gt;&lt;br&gt;&lt;/div&gt;Thanks&nbsp;for&nbsp;this&nbsp;great&nbsp;hint!&nbsp;Really&nbsp;good&nbsp;one!&lt;br&gt;&lt;br&gt;&lt;/div&gt;Cheers!&lt;br&gt;&lt;/div&gt;Nick&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;Fri,&nbsp;Aug&nbsp;26,&nbsp;2016&nbsp;at&nbsp;6:27&nbsp;PM,&nbsp;Robert&nbsp;Osfield&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;On&nbsp;26&nbsp;August&nbsp;2016&nbsp;at&nbsp;17:13,&nbsp;Trajce&nbsp;Nikolov&nbsp;NICK&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:trajce.nikolov.nick@gmail.com&quot;&gt;trajce.nikolov.nick@gmail.com&lt;/a&gt;&lt;wbr&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&nbsp;Ok&nbsp;:-)&nbsp;..&nbsp;I&nbsp;will&nbsp;answer&nbsp;it&nbsp;too&nbsp;.....&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;I&nbsp;am&nbsp;working&nbsp;with&nbsp;older&nbsp;version&nbsp;of&nbsp;osg&nbsp;where&nbsp;the&nbsp;Geometry&nbsp;was&nbsp;still&nbsp;not&lt;br&gt;<br>
+&gt;&nbsp;inherited&nbsp;from&nbsp;Node&nbsp;so&nbsp;I&nbsp;had&nbsp;to&nbsp;apply&nbsp;a&nbsp;special&nbsp;case&nbsp;for&nbsp;Geodes&nbsp;...&nbsp;Sorry&lt;br&gt;<br>
+&gt;&nbsp;for&nbsp;the&nbsp;noise&nbsp;;-)&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt;Glad&nbsp;to&nbsp;hear&nbsp;you&nbsp;spotted&nbsp;the&nbsp;problem.&lt;br&gt;<br>
+&lt;br&gt;<br>
+One&nbsp;thing&nbsp;that&nbsp;jumped&nbsp;out&nbsp;at&nbsp;me&nbsp;when&nbsp;I&nbsp;read&nbsp;the&nbsp;code&nbsp;was&nbsp;that&nbsp;you&nbsp;call&lt;br&gt;<br>
+getOrCreateStateSet(),&nbsp;this&nbsp;might&nbsp;simplify&nbsp;the&nbsp;code&nbsp;but&nbsp;is&nbsp;terribly&lt;br&gt;<br>
+inefficient&nbsp;for&nbsp;both&nbsp;this&nbsp;traversal&nbsp;and&nbsp;any&nbsp;subsequent&nbsp;use&nbsp;of&nbsp;the&lt;br&gt;<br>
+scene&nbsp;graph&nbsp;as&nbsp;it&nbsp;will&nbsp;force&nbsp;the&nbsp;creation&nbsp;of&nbsp;StateSet&#39;s&nbsp;for&nbsp;all&nbsp;nodes&lt;br&gt;<br>
+in&nbsp;the&nbsp;scene&nbsp;graph. &nbsp;Most&nbsp;nodes&nbsp;in&nbsp;a&nbsp;scene&nbsp;graph&nbsp;should&nbsp;never&nbsp;need&nbsp;a&lt;br&gt;<br>
+StateSet&nbsp;so&nbsp;you&nbsp;certainly&nbsp;don&#39;t&nbsp;want&nbsp;to&nbsp;go&nbsp;around&nbsp;assigning&nbsp;empty&lt;br&gt;<br>
+ones.&lt;br&gt;<br>
+&lt;br&gt;<br>
+What&nbsp;a&nbsp;better&nbsp;check&nbsp;would&nbsp;be:&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;apply(osg::Node&amp;&nbsp;node)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp;if&nbsp;(node.getStateSet())&nbsp;apply(*node.getStateSet())l&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;apply(osg::StateSet&amp;&nbsp;stateset)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::StateAttribute*&nbsp;attr&nbsp;=&lt;br&gt;<br>
+stateset&gt;getAttribute(osg::&lt;wbr&gt;StateAttribute::MATERIAL);&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(attr)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;ATTRIBUTE:&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;attr-&gt;getName()&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Material*&nbsp;material&nbsp;=&nbsp;dynamic_cast&lt;osg::Material*&gt;(&lt;wbr&gt;attr);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(material&nbsp;&amp;&amp;&nbsp;(material-&gt;getName()&nbsp;!=&nbsp;&quot;@RootMaterial@&quot;))&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;std::cout&nbsp;&lt;&lt;&nbsp;&quot;MATERIAL:&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;material-&gt;getName()&nbsp;&lt;&lt;&lt;br&gt;<br>
+std::endl;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;/span&gt;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;br&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_signature&quot;&nbsp;data-smartmail=&quot;gmail_signature&quot;&gt;trajce&nbsp;nikolov&nbsp;nick&lt;br&gt;&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+
+</tt>

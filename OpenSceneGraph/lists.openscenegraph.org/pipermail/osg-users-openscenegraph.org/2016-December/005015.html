@@ -1,0 +1,161 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] replace tile with my own Node in VPB generated	QuadTree
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20replace%20tile%20with%20my%20own%20Node%20in%20VPB%20generated%0A%09QuadTree&In-Reply-To=%3CCAO-%2BzikL9mwf%3DKZ5zwB2m14nFs2PQpFYgjAPw1LBR0kxywFjPQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005012.html">
+   <LINK REL="Next"  HREF="281236.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] replace tile with my own Node in VPB generated	QuadTree</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20replace%20tile%20with%20my%20own%20Node%20in%20VPB%20generated%0A%09QuadTree&In-Reply-To=%3CCAO-%2BzikL9mwf%3DKZ5zwB2m14nFs2PQpFYgjAPw1LBR0kxywFjPQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] replace tile with my own Node in VPB generated	QuadTree">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Sat Dec  3 17:15:18 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005012.html">[osg-users] replace tile with my own Node in VPB generated QuadTree
+</A></li>
+        <LI>Next message: <A HREF="281236.html">[osg-users]  PolytopeIntersector with AutoTransform
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5015">[ date ]</a>
+              <a href="thread.html#5015">[ thread ]</a>
+              <a href="subject.html#5015">[ subject ]</a>
+              <a href="author.html#5015">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks Sebastion, Robert,
+
+I did indeed dump the part of the scene into osgt and here is the hierarchy
+(GeometryTechnique used):
+PagedLOD-&gt;Group-&gt;TerrainTile (4x these)-&gt;MatrixTransform-&gt;Geode
+
+After some experiments I am successful now in injecting my own node (simply
+replaced the Geode with my own Geometry). I am after replacing the
+TerrainTile with Group or MatrixTransform. Havn't looked into TerrainTile
+but probably this contains some transformation (which one, the local to
+ECEF??) since simply replacing it by Group is not working
+
+Also, In my replacement of the original VPB Geode, I am using Geometry
+where I am generating normals with osgUtil::SmoothingVisitor, and these are
+wrong in the final output as well. Any clue?
+
+Thanks a bunch for so far
+
+Nick
+
+On Sat, Dec 3, 2016 at 5:04 PM, Sebastian Messerschmidt &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sebastian.messerschmidt at gmx.de</A>&gt; wrote:
+
+&gt;<i> Hi Nick,
+</I>&gt;<i>
+</I>&gt;<i> Hi Robert, Community,
+</I>&gt;<i>
+</I>&gt;<i> I am hacking the VPB process again :-).
+</I>&gt;<i>
+</I>&gt;<i> The story is this: I transform tiles back from ECEF to local, do something
+</I>&gt;<i> with the Geometry and I want to replace the tile with my own Node. Spent
+</I>&gt;<i> already hours reading and trying to understand the SceneGraph with all this
+</I>&gt;<i> transforms, and I am failing.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Any words of how these tiles in the QuadTree are represented? I mean the
+</I>&gt;<i> tree and the transforms, I know the facts that they are coming from
+</I>&gt;<i> TerrainTiles with proper Locators, but after when the GeometryTechnique is
+</I>&gt;<i> applied.
+</I>&gt;<i>
+</I>&gt;<i> I worked it out some years ago, where I needed to capture the
+</I>&gt;<i> transformations for a query-representation. Basically you will have a
+</I>&gt;<i> height field-layer inside the terrain-tile, which describes itself via a
+</I>&gt;<i> Locator and the height-values in a normalized coordinate frame. IIRC the
+</I>&gt;<i> complete ECEF-Transform is captured inside the locator. It simply assumes
+</I>&gt;<i> the height-field as being centered around the geographic position when
+</I>&gt;<i> creating the world-geometry.
+</I>&gt;<i> Some snippet to retrieve the world-coordinates of the terrain-tile's
+</I>&gt;<i> center:
+</I>&gt;<i> &lt;code&gt;
+</I>&gt;<i>         osgTerrain::TerrainTile&amp; terrain_tile = dynamic_cast&lt;osgTerrain::
+</I>&gt;<i> TerrainTile&amp;&gt;(node);
+</I>&gt;<i>         osgTerrain::HeightFieldLayer* hf_layer= dynamic_cast&lt;osgTerrain::
+</I>&gt;<i> HeightFieldLayer*&gt;(terrain_tile.getElevationLayer());
+</I>&gt;<i>         osgTerrain::Locator* locator = terrain_tile.getLocator();
+</I>&gt;<i>         osg::EllipsoidModel* es = locator-&gt;getEllipsoidModel();
+</I>&gt;<i>
+</I>&gt;<i>         //compute center transform
+</I>&gt;<i>         osg::Vec3d center_model;
+</I>&gt;<i>         tile -&gt;convertLocalToModel(osg::Vec3d(0.5,0.5,0.0), center_model);
+</I>&gt;<i>
+</I>&gt;<i> &lt;/code&gt;
+</I>&gt;<i> I'm not quite sure which coordinate frame is used in the quadtree itself,
+</I>&gt;<i> but it should be easy enough to put some subgraph to an osgt to inspect.
+</I>&gt;<i>
+</I>&gt;<i> Cheers
+</I>&gt;<i> Sebastian
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thanks so much for any word on this. It is the last bump in my current dev
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Nick
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> trajce nikolov nick
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">listosg-users at lists.openscenegraph.orghttp</A>://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161204/b405ea1f/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161204/b405ea1f/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005012.html">[osg-users] replace tile with my own Node in VPB generated QuadTree
+</A></li>
+	<LI>Next message: <A HREF="281236.html">[osg-users]  PolytopeIntersector with AutoTransform
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5015">[ date ]</a>
+              <a href="thread.html#5015">[ thread ]</a>
+              <a href="subject.html#5015">[ subject ]</a>
+              <a href="author.html#5015">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

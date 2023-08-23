@@ -1,0 +1,154 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Shader Program stops working after Changing Viewer GraphcsContext or Viewer
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Shader%20Program%20stops%20working%20after%20Changing%20Viewer%0A%20GraphcsContext%20or%20Viewer&In-Reply-To=%3C1526915409.m2f.73696%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008242.html">
+   <LINK REL="Next"  HREF="008262.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Shader Program stops working after Changing Viewer GraphcsContext or Viewer</H1>
+<!--htdig_noindex-->
+    <B>Eran Cohen</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Shader%20Program%20stops%20working%20after%20Changing%20Viewer%0A%20GraphcsContext%20or%20Viewer&In-Reply-To=%3C1526915409.m2f.73696%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Shader Program stops working after Changing Viewer GraphcsContext or Viewer">ceranco at gmail.com
+       </A><BR>
+    <I>Mon May 21 08:10:09 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008242.html">[osg-users] List render bins
+</A></li>
+        <LI>Next message (by thread): <A HREF="008262.html">[osg-users] OpenSceneGraph-3.6.1 release candidate 6 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8250">[ date ]</a>
+              <a href="thread.html#8250">[ thread ]</a>
+              <a href="subject.html#8250">[ subject ]</a>
+              <a href="author.html#8250">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I implemented a 'PausableViewer', to enable dynamically 'hiding' and 'showing' the window. I did it in the following way:
+On pause, I set done to true, create a new GraphicsContext with the same traits of the previous GraphicsContext, stop the viewer threading and switch them - 
+
+Code:
+pause()
+{
+	auto traits = new GraphicsContext::Traits(*getCamera()-&gt;getGraphicsContext()-&gt;getTraits());
+	auto gc = GraphicsContext::create(traits);
+	
+	stopThreading();
+	getCamera()-&gt;setGraphicsContext(gc);
+	setDone(true);
+}
+
+
+
+On resume, I resume the threading and set done to false - 
+
+Code:
+resume()
+{
+	setDone(false);
+	startThreading();
+}
+
+
+
+
+This works well, but when using with osgEarth's SkyNode as the scene data of the viewer, after the second context switch and onward, I get these errors in a loop:
+
+glValidateProgram  FAILED  &quot;&quot;  id=4  contextID=0
+glValidateProgram  FAILED  &quot;SimpleSky Atmosphere&quot;  id=7  contextID=0
+Warning: detected OpenGL error 'invalid operation' at RenderBin::draw(..)
+
+
+I can also recreate the error using a regular Viewer, by closing a Viewer but saving the scene data and giving it to a new Viewer:
+
+
+Code:
+ref_ptr&lt;Group&gt; root = new Group;
+auto mapNode = new MapNode;
+auto skyNode = SkyNode::create(mapNode);
+
+skyNode-&gt;addChild(mapNode);
+root-&gt;addChild(skyNode);
+
+while (true)
+{
+	Viewer viewer;
+	viewer.setCameraManipulator(new EarthManipulator);
+	viewer.setSceneData(root);
+	viewer.run();
+}
+
+
+
+I know that this problem might stem from the osgEarth side of things, and I've asked there, but I'm wondering if anyone might have a clue to why this happens.
+
+Cheers,
+Eran
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopica5ca.php?p=73696#73696">http://forum.openscenegraph.org/viewtopic.php?p=73696#73696</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008242.html">[osg-users] List render bins
+</A></li>
+	<LI>Next message (by thread): <A HREF="008262.html">[osg-users] OpenSceneGraph-3.6.1 release candidate 6 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8250">[ date ]</a>
+              <a href="thread.html#8250">[ thread ]</a>
+              <a href="subject.html#8250">[ subject ]</a>
+              <a href="author.html#8250">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

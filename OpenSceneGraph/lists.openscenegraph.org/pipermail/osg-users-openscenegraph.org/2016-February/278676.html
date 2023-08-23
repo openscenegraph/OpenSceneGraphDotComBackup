@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Depth texture display
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Depth%20texture%20display&In-Reply-To=%3C1456490104.m2f.66440%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002452.html">
+   <LINK REL="Next"  HREF="002455.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Depth texture display</H1>
+<!--htdig_noindex-->
+    <B>Nicolas Baillard</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Depth%20texture%20display&In-Reply-To=%3C1456490104.m2f.66440%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Depth texture display">nicolas.baillard at gmail.com
+       </A><BR>
+    <I>Fri Feb 26 04:35:04 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002452.html">[osg-users] handling of #pragma line in	Shader::_computeShaderDefines()
+</A></li>
+        <LI>Next message: <A HREF="002455.html">[osg-users] Depth texture display
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278676">[ date ]</a>
+              <a href="thread.html#278676">[ thread ]</a>
+              <a href="subject.html#278676">[ subject ]</a>
+              <a href="author.html#278676">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello everyone.
+
+I'm trying to save my depth buffer into a texture and then render it on a quad using a fragment shader.
+
+First I create a texture and attach it to a camera
+
+Code:
+_depth = new osg::Texture2D();
+_depth-&gt;setTextureSize(_w, _h);
+_depth-&gt;setInternalFormat(GL_DEPTH_COMPONENT);
+_depth-&gt;setSourceFormat(GL_DEPTH_COMPONENT);
+_depth-&gt;setSourceType(GL_FLOAT);
+_depth-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::NEAREST);
+_depth-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::NEAREST);
+
+_camera = new osg::Camera();
+_camera-&gt;setViewport(0., 0., _w, _h);
+_camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+_camera-&gt;setClearColor(Color(0., 0., 0., 1.));
+_camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+_camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+_camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+_camera-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+_camera-&gt;attach(osg::Camera::DEPTH_BUFFER, _depth);
+_camera-&gt;setGraphicsContext(_view-&gt;getCamera()-&gt;getGraphicsContext());
+_view-&gt;addSlave(_camera, true);
+
+
+
+
+Then I bind my depth texture to a uniform and try to display it with the following shader.
+
+Code:
+uniform sampler2D depth;
+
+float linearize(vec2 uv)
+{
+   float n = 1000.;   // Near
+   float f = 100000.; // Far
+   float z = texture2D(depth, uv).r;
+   return (2. * n) / (f + n - z * (f - n));
+}
+
+void main()
+{
+   float d = linearize(gl_TexCoord[0].st);
+   gl_FragColor = vec4(d, d, d, 1.);
+}
+
+
+
+
+It doesn't work, all I see is black, as if my depth texture was cleared.
+If I do the same thing with the color buffer (with an RBGA texture) it works as expected, so I know my camera is working and looking at the scene as it should. But I can't make it work with a depth texture. What did I do wrong ?
+
+Thanks,
+Nicolas
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopice128.php?p=66440#66440">http://forum.openscenegraph.org/viewtopic.php?p=66440#66440</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002452.html">[osg-users] handling of #pragma line in	Shader::_computeShaderDefines()
+</A></li>
+	<LI>Next message: <A HREF="002455.html">[osg-users] Depth texture display
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278676">[ date ]</a>
+              <a href="thread.html#278676">[ thread ]</a>
+              <a href="subject.html#278676">[ subject ]</a>
+              <a href="author.html#278676">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

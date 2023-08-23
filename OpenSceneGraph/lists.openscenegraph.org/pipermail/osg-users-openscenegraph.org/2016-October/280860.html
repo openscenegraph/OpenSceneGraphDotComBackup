@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [osgOcean] osgOcean and osgSim::LOS segmentation fault.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BosgOcean%5D%20osgOcean%20and%20osgSim%3A%3ALOS%20segmentation%20fault.&In-Reply-To=%3C1477671643.m2f.69182%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280853.html">
+   <LINK REL="Next"  HREF="280862.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [osgOcean] osgOcean and osgSim::LOS segmentation fault.</H1>
+<!--htdig_noindex-->
+    <B>Dario Minieri</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BosgOcean%5D%20osgOcean%20and%20osgSim%3A%3ALOS%20segmentation%20fault.&In-Reply-To=%3C1477671643.m2f.69182%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [osgOcean] osgOcean and osgSim::LOS segmentation fault.">paradox at cheapnet.it
+       </A><BR>
+    <I>Fri Oct 28 09:20:43 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280853.html">[osg-users] LOS Intersection and osgOcean segmentation fault	issue.
+</A></li>
+        <LI>Next message: <A HREF="280862.html">[osg-users] Embed in SFML window, rendering problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280860">[ date ]</a>
+              <a href="thread.html#280860">[ thread ]</a>
+              <a href="subject.html#280860">[ subject ]</a>
+              <a href="author.html#280860">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, 
+
+I'm experiencing some problem using LOS with osgOcean. To understand the problem, I have modified the OceanExample inserting a thread which call a series of LOS. There are some strange segmentation fault that speak about LOS intersection visitor and osgOcean main traverse. Is something like that: 
+
+[code]
+0x00007ffff7748f12 in osg::Geometry::accept(osg::PrimitiveFunctor&amp;) const () from /usr/local/lib/libosg.so.100
+(gdb) bt
+#0  0x00007ffff7748f12 in osg::Geometry::accept(osg::PrimitiveFunctor&amp;) const () from /usr/local/lib/libosg.so.100
+#1  0x00007ffff630a1e1 in osgUtil::LineSegmentIntersector::intersect(osgUtil::IntersectionVisitor&amp;, osg::Drawable*) ()
+   from /usr/local/lib/libosgUtil.so.100
+#2  0x00007ffff62f1b13 in osgUtil::IntersectorGroup::intersect(osgUtil::IntersectionVisitor&amp;, osg::Drawable*) () from /usr/local/lib/libosgUtil.so.100
+#3  0x00007ffff62f19ca in osgUtil::IntersectionVisitor::apply(osg::Geode&amp;) () from /usr/local/lib/libosgUtil.so.100
+#4  0x0000000000417d42 in osg::Geode::accept(osg::NodeVisitor&amp;) ()
+#5  0x00007ffff7773623 in osg::Group::traverse(osg::NodeVisitor&amp;) () from /usr/local/lib/libosg.so.100
+#6  0x00007ffff62f4e30 in osgUtil::IntersectionVisitor::apply(osg::Transform&amp;) () from /usr/local/lib/libosgUtil.so.100
+#7  0x00007ffff77e0425 in osg::MatrixTransform::accept(osg::NodeVisitor&amp;) () from /usr/local/lib/libosg.so.100
+#8  0x00007ffff7773623 in osg::Group::traverse(osg::NodeVisitor&amp;) () from /usr/local/lib/libosg.so.100
+#9  0x00007ffff7b97440 in osgOcean::OceanScene::traverse(osg::NodeVisitor&amp;) () from /usr/local/lib/libosgOcean.so
+#10 0x00007ffff62f20b4 in osgUtil::IntersectionVisitor::apply(osg::Group&amp;) () from /usr/local/lib/libosgUtil.so.100
+#11 0x00007ffff7b98672 in osg::Group::accept(osg::NodeVisitor&amp;) () from /usr/local/lib/libosgOcean.so
+#12 0x00007ffff665827d in osgSim::LineOfSight::computeIntersections(osg::Node*, unsigned int) () from /usr/local/lib/libosgSim.so.100
+#13 0x00007ffff6659139 in osgSim::LineOfSight::computeIntersections(osg::Node*, osg::Vec3d const&amp;, osg::Vec3d const&amp;, unsigned int) ()
+   from /usr/local/lib/libosgSim.so.100
+#14 0x000000000040fd39 in MyThread::run() ()
+#15 0x00007ffff6032862 in OpenThreads::ThreadPrivateActions::StartThread(void*) () from /usr/local/lib/libOpenThreads.so.20
+#16 0x00007ffff433b184 in start_thread (arg=0x7fffed67a700) at pthread_create.c:312
+#17 0x00007ffff554337d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:111
+[code]
+
+Is sufficient to move a little the camera to raise up the problem. Seems to be some side-effect interaction among visitors when ocean make an init() because surface become dirty. Masking the Ocean Surface to the LOS doesn't help. Right now I'm not able to fix the problem. Can you addressing me? Maybe a wrong &quot;style&quot; to make that? Example is attached.
+
+Thank you! 
+
+Cheers, 
+Dario
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4f8d.php?p=69182#69182">http://forum.openscenegraph.org/viewtopic.php?p=69182#69182</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osgOceanEXAMPLE_WITH_LOS.zip
+Type: application/zip
+Size: 22186 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20161028/bffde7db/attachment-0002.zip">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161028/bffde7db/attachment-0002.zip</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280853.html">[osg-users] LOS Intersection and osgOcean segmentation fault	issue.
+</A></li>
+	<LI>Next message: <A HREF="280862.html">[osg-users] Embed in SFML window, rendering problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280860">[ date ]</a>
+              <a href="thread.html#280860">[ thread ]</a>
+              <a href="subject.html#280860">[ subject ]</a>
+              <a href="author.html#280860">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

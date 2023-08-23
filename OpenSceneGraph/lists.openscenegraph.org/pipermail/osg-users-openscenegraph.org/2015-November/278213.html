@@ -1,0 +1,199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to create a background image?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20create%20a%20background%20image%3F&In-Reply-To=%3C1447451790.m2f.65639%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001989.html">
+   <LINK REL="Next"  HREF="001995.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to create a background image?</H1>
+<!--htdig_noindex-->
+    <B>Vite Falcon</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20create%20a%20background%20image%3F&In-Reply-To=%3C1447451790.m2f.65639%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] How to create a background image?">vitefalcon at gmail.com
+       </A><BR>
+    <I>Fri Nov 13 13:56:30 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001989.html">[osg-users] Fast cycling of textured rectangles
+</A></li>
+        <LI>Next message: <A HREF="001995.html">[osg-users] How to create a background image?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278213">[ date ]</a>
+              <a href="thread.html#278213">[ thread ]</a>
+              <a href="subject.html#278213">[ subject ]</a>
+              <a href="author.html#278213">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Everyone,
+
+This might be a very n00b question to ask here, but alas, I'm stuck! I'm trying to create a background image for a prototype and so far I've been unsuccessful. I tried to search for an answer and none of them have been helpful so far. Here's the end result of what I have:
+
+
+Code:
+
+// create a camera to set up the projection and model view matrices, and the subgraph to draw in the HUD
+osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera();
+
+// set the projection matrix
+camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0, 1280, 0, 1024));
+
+// set the view matrix
+camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+camera-&gt;setViewMatrix(osg::Matrix::identity());
+
+// only clear the depth buffer
+//camera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+// draw subgraph after main camera view.
+camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+
+// we don't want the camera to grab event focus from the viewers main camera(s).
+camera-&gt;setAllowEventFocus(false);
+
+osg::StateSet* cameraStateSet = camera-&gt;getOrCreateStateSet();
+cameraStateSet-&gt;setRenderBinDetails(1, &quot;RenderBin&quot;);
+cameraStateSet-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+
+// add to this camera a subgraph to render
+{
+
+    osg::Geode* geode = new osg::Geode();
+    // turn lighting off for the text and disable depth test to ensure it's always ontop.
+    osg::StateSet* stateset = geode-&gt;getOrCreateStateSet();
+    stateset-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    {
+        osg::BoundingBox bb;
+        for (unsigned int i = 0; i &lt; geode-&gt;getNumDrawables(); ++i)
+        {
+            bb.expandBy(geode-&gt;getDrawable(i)-&gt;getBound());
+        }
+
+        osg::Geometry* geom = new osg::Geometry();
+
+        osg::Vec3Array* vertices = new osg::Vec3Array;
+        float depth = bb.zMin() - 0.1;
+        vertices-&gt;push_back(osg::Vec3(bb.xMin(), bb.yMax(), depth));
+        vertices-&gt;push_back(osg::Vec3(bb.xMin(), bb.yMin(), depth));
+        vertices-&gt;push_back(osg::Vec3(bb.xMax(), bb.yMin(), depth));
+        vertices-&gt;push_back(osg::Vec3(bb.xMax(), bb.yMax(), depth));
+        geom-&gt;setVertexArray(vertices);
+
+        osg::Vec3Array* normals = new osg::Vec3Array;
+        normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+        geom-&gt;setNormalArray(normals, osg::Array::BIND_OVERALL);
+
+        osg::Vec4Array* colors = new osg::Vec4Array;
+        colors-&gt;push_back(osg::Vec4(1.0f, 1.0, 0.8f, 0.2f));
+        geom-&gt;setColorArray(colors, osg::Array::BIND_OVERALL);
+
+        geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4));
+
+        osg::Vec2Array* uvCoords = new osg::Vec2Array();
+        uvCoords-&gt;push_back(osg::Vec2(0.0f, 1.0f));
+        uvCoords-&gt;push_back(osg::Vec2(0.0f, 0.0f));
+        uvCoords-&gt;push_back(osg::Vec2(1.0f, 0.0f));
+        uvCoords-&gt;push_back(osg::Vec2(1.0f, 1.0f));
+        geom-&gt;setTexCoordArray(0, uvCoords);
+
+        osg::StateSet* stateset = geom-&gt;getOrCreateStateSet();
+        stateset-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+        //stateset-&gt;setAttribute(new osg::PolygonOffset(1.0f,1.0f),osg::StateAttribute::ON);
+        stateset-&gt;setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
+        auto backgroundImage = osgDB::readImageFile(&quot;data/images/bg_image_01.bmp&quot;);
+        auto texture = new osg::Texture2D(backgroundImage);
+        stateset-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+
+        geode-&gt;addDrawable(geom);
+    }
+
+    camera-&gt;addChild(geode);
+}
+osgViewer::Viewer::Windows windows;
+viewer.getWindows(windows);
+
+if (windows.empty())
+{
+    return;
+}
+
+// set up cameras to render on the first window available.
+auto window = windows[0];
+camera-&gt;setGraphicsContext(window);
+auto windowTraits = window-&gt;getTraits();
+camera-&gt;setViewport(0, 0, windowTraits-&gt;width, windowTraits-&gt;height);
+
+if (viewer.addSlave(camera.get(), false))
+{
+    osg::notify(osg::NotifySeverity::INFO) &lt;&lt; &quot;Successfully added camera as slave!&quot; &lt;&lt; std::endl;
+}
+else
+{
+    osg::notify(osg::NotifySeverity::WARN) &lt;&lt; &quot;Failed to add camera as slave!&quot; &lt;&lt; std::endl;
+}
+
+
+
+
+The image gets loaded fine (due to the message I see in the console) and I see that the camera was added as a slave to the viewer. I based my code on the viewer example and on HUD examples.
+
+Any help to get this resolved will be much appreciated!
+
+Many thanks!
+
+Cheers,
+Vite Falcon
+Code:
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic975c.php?p=65639#65639">http://forum.openscenegraph.org/viewtopic.php?p=65639#65639</A>
+
+
+
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151113/be28f04c/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151113/be28f04c/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001989.html">[osg-users] Fast cycling of textured rectangles
+</A></li>
+	<LI>Next message: <A HREF="001995.html">[osg-users] How to create a background image?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278213">[ date ]</a>
+              <a href="thread.html#278213">[ thread ]</a>
+              <a href="subject.html#278213">[ subject ]</a>
+              <a href="author.html#278213">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

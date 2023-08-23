@@ -1,0 +1,59 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Sorry,&nbsp;the&nbsp;issue&nbsp;has&nbsp;been&nbsp;that&nbsp;the&nbsp;camera&nbsp;automatically&nbsp;adjusted&nbsp;the&nbsp;near&nbsp;and&nbsp;far&nbsp;plane&nbsp;when&nbsp;rendering&nbsp;the&nbsp;individual&nbsp;parts.&lt;div&gt;Problem&nbsp;solved.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Grettings,&lt;/div&gt;&lt;div&gt;Phil&lt;br&gt;&lt;br&gt;Am&nbsp;Dienstag,&nbsp;10.&nbsp;Dezember&nbsp;2019&nbsp;16:42:23&nbsp;UTC+1&nbsp;schrieb&nbsp;Philipp&nbsp;Wagner:&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:&nbsp;0;margin-left:&nbsp;0.8ex;border-left:&nbsp;1px&nbsp;#ccc&nbsp;solid;padding-left:&nbsp;1ex;&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Hi,&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;I&nbsp;want&nbsp;to&nbsp;perform&nbsp;an&nbsp;offscreen&nbsp;rendering&nbsp;of&nbsp;a&nbsp;scene&nbsp;that&nbsp;is&nbsp;too<br>
+&nbsp;&nbsp;&nbsp;&nbsp;large&nbsp;to&nbsp;fit&nbsp;into&nbsp;the&nbsp;GPU&nbsp;memory&nbsp;at&nbsp;once&nbsp;(lots&nbsp;of&nbsp;big&nbsp;textures).&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;My&nbsp;idea&nbsp;was&nbsp;to&nbsp;render&nbsp;parts&nbsp;of&nbsp;the&nbsp;scene&nbsp;each&nbsp;in&nbsp;its&nbsp;own&nbsp;frame,&nbsp;and<br>
+&nbsp;&nbsp;&nbsp;&nbsp;disable&nbsp;the&nbsp;clearing&nbsp;of&nbsp;the&nbsp;depth&nbsp;and&nbsp;color&nbsp;buffer.&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;This&nbsp;does&nbsp;work&nbsp;for&nbsp;the&nbsp;color&nbsp;buffer,&nbsp;but&nbsp;the&nbsp;depth&nbsp;buffer&nbsp;seems&nbsp;to<br>
+&nbsp;&nbsp;&nbsp;&nbsp;be&nbsp;cleared&nbsp;after&nbsp;each&nbsp;frame,&nbsp;which&nbsp;leads&nbsp;to&nbsp;incorrect&nbsp;results&nbsp;(The<br>
+&nbsp;&nbsp;&nbsp;&nbsp;later&nbsp;parts&nbsp;are&nbsp;drawn&nbsp;over&nbsp;the&nbsp;previous&nbsp;ones,&nbsp;even&nbsp;though&nbsp;they&nbsp;are<br>
+&nbsp;&nbsp;&nbsp;&nbsp;behind&nbsp;the&nbsp;other&nbsp;parts).&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;The&nbsp;algorithm:&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1.&nbsp;Create&nbsp;camera/context/...&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2.&nbsp;Clear&nbsp;the&nbsp;buffers&nbsp;(i.e.&nbsp;Render&nbsp;an&nbsp;empty&nbsp;scene&nbsp;with&nbsp;a&nbsp;clear&nbsp;mask<br>
+&nbsp;&nbsp;&nbsp;&nbsp;of&nbsp;(GL_DEPTH_BUFFER_BIT&nbsp;|&nbsp;GL_COLOR_BUFFER_BIT)&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3.&nbsp;Disable&nbsp;buffer&nbsp;clearing&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;4.&nbsp;Render&nbsp;each&nbsp;part&nbsp;in&nbsp;its&nbsp;own&nbsp;frame&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp; a.&nbsp;Add&nbsp;part&nbsp;to&nbsp;the&nbsp;scene&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp; b.&nbsp;Render&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp; c.&nbsp;Remove&nbsp;part&nbsp;from&nbsp;the&nbsp;scene&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;5.&nbsp;Read&nbsp;back&nbsp;color&nbsp;buffer&lt;br&gt;&lt;br&gt;&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;osg::ref_ptr&lt;::osg::Camera&gt;&nbsp;camera&nbsp;=&nbsp;new&nbsp;osg::Camera();&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;//Here&nbsp;we&nbsp;set&nbsp;the&nbsp;camera&nbsp;orientation/projection&nbsp;matrix&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;setClearColor(...);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;setGraphicsContext(&lt;wbr&gt;context);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;osg::ref_ptr&lt;osg::Image&gt;&nbsp;img&nbsp;=&nbsp;new&nbsp;osg::Image;&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;img-&gt;allocateImage(&lt;wbr&gt;textureWidth,&nbsp;textureHeight,&nbsp;1,&nbsp;GL_RGBA,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;GL_UNSIGNED_BYTE);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;attach(osg::Camera::&lt;wbr&gt;COLOR_BUFFER0,&nbsp;img,&nbsp;numSamples);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;attach(osg::Camera::&lt;wbr&gt;DEPTH_BUFFER,&nbsp;GL_DEPTH_COMPONENT32);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;setRenderOrder(osg::&lt;wbr&gt;Camera::PRE_RENDER);&lt;br&gt;<br>
+camera-&gt;&lt;wbr&gt;setRenderTargetImplementation(&lt;wbr&gt;osg::Camera::&lt;wbr&gt;RenderTargetImplementation::&lt;wbr&gt;FRAME_BUFFER_OBJECT);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;setReferenceFrame(osg:&lt;wbr&gt;:Camera::ABSOLUTE_RF);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;&lt;wbr&gt;setProjectionResizePolicy(osg:&lt;wbr&gt;:Camera::FIXED);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;setViewport(0,&nbsp;0,&nbsp;img-&gt;s(),&nbsp;img-&gt;t());&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;viewer-&gt;addSlave(camera);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;setClearMask(GL_DEPTH_&lt;wbr&gt;BUFFER_BIT&nbsp;|&nbsp;GL_COLOR_BUFFER_BIT);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;viewer-&gt;frame();&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;camera-&gt;setClearMask(0);&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;for&nbsp;(auto&amp;&nbsp;item&nbsp;:&nbsp;parts)&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;  &nbsp;//Here&nbsp;we&nbsp;create&nbsp;and&nbsp;add&nbsp;the&nbsp;item&nbsp;to&nbsp;the&nbsp;scene...&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;      &nbsp;viewer-&gt;frame();&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;  &nbsp;//Here&nbsp;we&nbsp;remove&nbsp;item&nbsp;from&nbsp;the&nbsp;scene&nbsp;and&nbsp;delete&nbsp;it&lt;br&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Thanks&nbsp;in&nbsp;advance&lt;/div&gt;&lt;div&gt;Phil&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;/div&gt;<br>
+<br>
+&lt;p&gt;&lt;/p&gt;<br>
+<br>
+--&nbsp;&lt;br&nbsp;/&gt;<br>
+You&nbsp;received&nbsp;this&nbsp;message&nbsp;because&nbsp;you&nbsp;are&nbsp;subscribed&nbsp;to&nbsp;the&nbsp;Google&nbsp;Groups&nbsp;&quot;OpenSceneGraph&nbsp;Users&quot;&nbsp;group.&lt;br&nbsp;/&gt;<br>
+To&nbsp;unsubscribe&nbsp;from&nbsp;this&nbsp;group&nbsp;and&nbsp;stop&nbsp;receiving&nbsp;emails&nbsp;from&nbsp;it,&nbsp;send&nbsp;an&nbsp;email&nbsp;to&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users+unsubscribe@googlegroups.com&quot;&gt;osg-users+unsubscribe@googlegroups.com&lt;/a&gt;.&lt;br&nbsp;/&gt;<br>
+To&nbsp;view&nbsp;this&nbsp;discussion&nbsp;on&nbsp;the&nbsp;web&nbsp;visit&nbsp;&lt;a&nbsp;href=&quot;https://groups.google.com/d/msgid/osg-users/f89b30b3-9f8b-44e5-86ba-fcd014073a42%40googlegroups.com?utm_medium=email&amp;utm_source=footer&quot;&gt;https://groups.google.com/d/msgid/osg-users/f89b30b3-9f8b-44e5-86ba-fcd014073a42%40googlegroups.com&lt;/a&gt;.&lt;br&nbsp;/&gt;<br>
+
+</tt>

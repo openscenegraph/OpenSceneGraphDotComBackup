@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAbout%20VertexArrayObject%20Branch%5D%20FeedBack%20and%0A%09Insight&In-Reply-To=%3C1471373753.m2f.68397%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003916.html">
+   <LINK REL="Next"  HREF="003918.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAbout%20VertexArrayObject%20Branch%5D%20FeedBack%20and%0A%09Insight&In-Reply-To=%3C1471373753.m2f.68397%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Tue Aug 16 11:55:53 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003916.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+        <LI>Next message: <A HREF="003918.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3917">[ date ]</a>
+              <a href="thread.html#3917">[ thread ]</a>
+              <a href="subject.html#3917">[ subject ]</a>
+              <a href="author.html#3917">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert 
+I would rather you to give the test scene for benchmark, mine is not-by-me-copyrighted
+An you're right in my VAO system I have to force reaffectation of bufferobjects when useVertexArrays is set (in order to be drawable without basevertex drawcall) to false and doing so i discard user bos, and this is a bad...
+however if I'd force the use of basevertex draw call in all cases It wouldn't be necessary
+
+
+&gt;<i>  adding an extra layer of complexity is something that most users would really struggle with.
+</I>&gt;<i> 
+</I>
+I don't understand what you refer to with this sentence...my only user interface is the usevertexArrayObject flag..?! user don't have to know about underlying stuff as the bo affectation pattern is the only fitting osg (no interleaved case) 
+
+
+
+robertosfield wrote:
+&gt;<i> Hi Julien,
+</I>&gt;<i> 
+</I>&gt;<i> On 16 August 2016 at 18:37, Julien Valentin &lt;&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i> &gt; Hello all
+</I>&gt;<i> &gt; @scraw : geometries doesn't have to share vertex arrays but bufferobjects..this is not the same:
+</I>&gt;<i> &gt; The pattern that maximize vao reutilization is the followed
+</I>&gt;<i> &gt; Geom1
+</I>&gt;<i> &gt; G1VertAttrib1-&gt;BO1 G1VertAttrib2-&gt;BO2...and a Unique IndexArray-&gt;BON
+</I>&gt;<i> &gt; Geom2
+</I>&gt;<i> &gt; G2VertAttrib1-&gt;BO1 G2VertAttrib2-&gt;BO2...and a Unique IndexArray-&gt;BON
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; With this pattern and vao sharing I have not only draw stage drop but also a huge gpu charge decrease
+</I>&gt;<i> &gt; The only problem is that you should use glDrawXXBaseVertex or offsetIndices of your IndexArray
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; My bench in release this time
+</I>&gt;<i> &gt; .............................................................. Cull       Draw        GPU          FPS
+</I>&gt;<i> &gt; Pattern on all geometries with 1VAO/Geom   2            4            1.37            160
+</I>&gt;<i> &gt; Pattern on all geometries with shared VAOs   2            2            0.47            200
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; So I think there's interest in sharing vaos
+</I>&gt;<i> &gt; 
+</I>&gt;<i> 
+</I>&gt;<i> If you have a usage case please create an example that we can share
+</I>&gt;<i> and use when benchmarking.
+</I>&gt;<i> 
+</I>&gt;<i> FYI, The VertexArrayState class that wraps up vertex array dispatch
+</I>&gt;<i> and vertex array objects when enabled is capable of enabling sharing
+</I>&gt;<i> between osg::Drawable.  In fact it's possible to share a single
+</I>&gt;<i> VertexArrayState between the whole scene graph just relying upon the
+</I>&gt;<i> VertexArrayState object in osg::State.  When VAO is not enabled
+</I>&gt;<i> osg::State maintains a single VertexArrayState object that handles all
+</I>&gt;<i> the vertex array dispatch.
+</I>&gt;<i> 
+</I>&gt;<i> Currently I haven't exposed the local osg::Drawable VertexArrayState
+</I>&gt;<i> object as publicly accessing able in osg::Drawable but this could be
+</I>&gt;<i> done easily.  I'm not yet convinced that this is good idea and don't
+</I>&gt;<i> yet know of the consequence that might unfold.
+</I>&gt;<i> 
+</I>&gt;<i> Please remember the VAO system has to work well with the non VAO
+</I>&gt;<i> usage, performance overheads have to be kept to a minimum and the
+</I>&gt;<i> usage for end users has to be kept simple, adding an extra layer of
+</I>&gt;<i> complexity is something that most users would really struggle with.
+</I>&gt;<i> 
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> 
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I>&gt;<i>  ------------------
+</I>&gt;<i> Post generated by Mail2Forum
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc373.php?p=68397#68397">http://forum.openscenegraph.org/viewtopic.php?p=68397#68397</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003916.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+	<LI>Next message: <A HREF="003918.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3917">[ date ]</a>
+              <a href="thread.html#3917">[ thread ]</a>
+              <a href="subject.html#3917">[ subject ]</a>
+              <a href="author.html#3917">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

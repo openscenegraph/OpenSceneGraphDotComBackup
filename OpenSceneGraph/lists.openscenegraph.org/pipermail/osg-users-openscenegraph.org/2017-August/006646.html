@@ -1,0 +1,184 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] QtQuickFrameBufferObject and GraphicsContexts
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20QtQuickFrameBufferObject%20and%20GraphicsContexts&In-Reply-To=%3C386571503429647%40web51j.yandex.ru%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006644.html">
+   <LINK REL="Next"  HREF="006650.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] QtQuickFrameBufferObject and GraphicsContexts</H1>
+<!--htdig_noindex-->
+    <B>Konstantin Podsvirov</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20QtQuickFrameBufferObject%20and%20GraphicsContexts&In-Reply-To=%3C386571503429647%40web51j.yandex.ru%3E"
+       TITLE="[osg-users] QtQuickFrameBufferObject and GraphicsContexts">konstantin at podsvirov.pro
+       </A><BR>
+    <I>Tue Aug 22 12:20:47 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006644.html">[osg-users] QtQuickFrameBufferObject and GraphicsContexts
+</A></li>
+        <LI>Next message: <A HREF="006650.html">[osg-users] QtQuickFrameBufferObject and GraphicsContexts
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6646">[ date ]</a>
+              <a href="thread.html#6646">[ thread ]</a>
+              <a href="subject.html#6646">[ subject ]</a>
+              <a href="author.html#6646">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello Antoine!
+
+22.08.2017, 19:51, &quot;Antoine Rennuit&quot; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">antoinerennuit at hotmail.com</A>&gt;:
+&gt;<i> Hi all
+</I>&gt;<i>
+</I>&gt;<i> I have integrated OSG within QQuick 2 via QtQuickFramebufferObject, it is working great with complex scenes and within a complex application behind the hood, except for 1 point: I sometimes observe flickering of the whole window (it is not only the 3d view that flickers but the whole application window - check the video here (<A HREF="https://youtu.be/NlAxvTAVpl0">https://youtu.be/NlAxvTAVpl0</A>)). It is not periodic, only every now and then, it can get crazy for a few seconds and then calms down.
+</I>&gt;<i>
+</I>&gt;<i> In QtQuick the windowing system is actually rendered in OpenGL (hence the complexity). QtQuickFramebufferObject provides you with the tools to design a custom 3d item, and is thus the preferred way to implement a 3d view.
+</I>&gt;<i>
+</I>&gt;<i> QtQuickFramebufferObject has you define a renderer and create a Qt compatible GL framebuffer in a function called by the QtQuick framework
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> QOpenGLFramebufferObject* OsgRenderer::createFramebufferObject(const QSize &amp;size)
+</I>&gt;<i> {
+</I>&gt;<i> &#160;&#160;&#160;&#160;QOpenGLFramebufferObjectFormat format;
+</I>&gt;<i> &#160;&#160;&#160;&#160;format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+</I>&gt;<i> &#160;&#160;&#160;&#160;return new QOpenGLFramebufferObject(size, format);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> it then has you write a render function also called by the QtQuick 2 framework, this is where I call my OSG rendering
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void OsgRenderer::render()
+</I>&gt;<i> {
+</I>&gt;<i> &#160;&#160;&#160;&#160;assert(m_osgItem);
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160;&#160;&#160;if ( !m_osgItem-&gt;getViewer() )
+</I>&gt;<i> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;return;
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160;&#160;&#160;// Without this line the model is not displayed in the second
+</I>&gt;<i> &#160;&#160;&#160;&#160;// and subsequent frames.
+</I>&gt;<i> &#160;&#160;&#160;&#160;QOpenGLContext::currentContext()-&gt;functions()-&gt;glUseProgram(0);
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160;&#160;&#160;// Ask OSG to render.
+</I>&gt;<i> &#160;&#160;&#160;&#160;m_osgItem-&gt;getViewer()-&gt;frame(); // WARNING: non-blocking (executed in a thread of its own - in a thread-safe way).
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160;&#160;&#160;// Reset OpenGl state for QtQuick.
+</I>&gt;<i> &#160;&#160;&#160;&#160;m_osgItem-&gt;window()-&gt;resetOpenGLState();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> The QtQuick framework then merges the framebuffer in which I rendered with its own rendering to display the final image.
+</I>&gt;<i>
+</I>&gt;<i> Now I suspect my flickering issue comes from a problem of GL context mix-up between QtQuick and OSG.
+</I>&gt;<i>
+</I>&gt;<i> So I have inherited osgViewer::GraphicsWindowEmbedded to use as custom GraphicsContext which binds and releases the framebuffer created above:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> bool OsgWindow::makeCurrentImplementation()
+</I>&gt;<i> {
+</I>&gt;<i> &#160;&#160;&#160;&#160;if (!m_renderer)
+</I>&gt;<i> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;return false;
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160;&#160;&#160;if (!m_renderer-&gt;framebufferObject())
+</I>&gt;<i> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;return false;
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160;&#160;&#160;return m_renderer-&gt;framebufferObject()-&gt;bind();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> bool OsgWindow::releaseContextImplementation()
+</I>&gt;<i> {
+</I>&gt;<i> &#160;&#160;&#160;&#160;if (!m_renderer)
+</I>&gt;<i> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;return false;
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160;&#160;&#160;if (!m_renderer-&gt;framebufferObject())
+</I>&gt;<i> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;return false;
+</I>&gt;<i>
+</I>&gt;<i> &#160;&#160;&#160;&#160;return m_renderer-&gt;framebufferObject()-&gt;release();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> Does that ensure me that the OSG rendering in frame() is written to this FBO?
+</I>&gt;<i>
+</I>&gt;<i> Also as far as I know, the GL context is kept in OsgWindow (it inherits osgViewer::GraphicsWindowEmbedded as stated above), but is it reapplied at each frame? i.e. the GL context is modified by QtQuick's own GL rendering but am I sure that it is put back in place for OSG's correct rendering when I call frame()? If not, is there a way for me to enforce OSG's GL context is not modified by QtQuick?
+</I>&gt;<i>
+</I>&gt;<i> Thanks a lot,
+</I>&gt;<i>
+</I>&gt;<i> Antoine
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic91b3.php?p=71500#71500">http://forum.openscenegraph.org/viewtopic.php?p=71500#71500</A>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+Please review source code of the other similar projects:
+
+a) osgQtQuick
+
+<A HREF="https://github.com/podsvirov/osgqtquick">https://github.com/podsvirov/osgqtquick</A>
+
+b) qmlosg
+
+<A HREF="https://github.com/rickyviking/qmlosg">https://github.com/rickyviking/qmlosg</A>
+
+c) QtQuick2OSGItem
+
+<A HREF="https://bitbucket.org/leon_manukyan/qtquick2osgitem">https://bitbucket.org/leon_manukyan/qtquick2osgitem</A>
+
+Perhaps you will find answers to your questions or help develop another project.
+
+--
+Regards,
+Konstantin Podsvirov - osgQtQuick author
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006644.html">[osg-users] QtQuickFrameBufferObject and GraphicsContexts
+</A></li>
+	<LI>Next message: <A HREF="006650.html">[osg-users] QtQuickFrameBufferObject and GraphicsContexts
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6646">[ date ]</a>
+              <a href="thread.html#6646">[ thread ]</a>
+              <a href="subject.html#6646">[ subject ]</a>
+              <a href="author.html#6646">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

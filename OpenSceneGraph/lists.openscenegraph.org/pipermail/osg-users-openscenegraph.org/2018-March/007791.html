@@ -1,0 +1,135 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Synchronizing with textures uploads.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Synchronizing%20with%20textures%20uploads.&In-Reply-To=%3C1520508071.m2f.73041%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007790.html">
+   <LINK REL="Next"  HREF="007792.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Synchronizing with textures uploads.</H1>
+<!--htdig_noindex-->
+    <B>Altin Gjata</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Synchronizing%20with%20textures%20uploads.&In-Reply-To=%3C1520508071.m2f.73041%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Synchronizing with textures uploads.">altingjataj at gmail.com
+       </A><BR>
+    <I>Thu Mar  8 03:21:11 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007790.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+        <LI>Next message (by thread): <A HREF="007792.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7791">[ date ]</a>
+              <a href="thread.html#7791">[ thread ]</a>
+              <a href="subject.html#7791">[ subject ]</a>
+              <a href="author.html#7791">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert. Thank you very much for your quick reply.
+
+I use Intel's Threading Building Blocks to create a flow::graph that processes video frames using the OpenCV library. On the final stage I have a frame object that contains both, the image to use as the background as well as the corresponding camera matrix.
+
+Initially, I called ImageStream::setImage() from whatever working thread they were processed (I imagined that if I call this method as soon as possible I'll give GPU time to upload it in the background, and it seemed safe because the ffmpeg plugin also calls it from its thread), and posted a message in a queue to be read by the thread OSG runs and update the camera matrix right before calling renderingTraversals(). But depending on the timing between the worker thread that called ImageStream::setImage and the OSG main thread that updated the matrix, they could or could not update in the same frame.
+
+Next, to not leave tings to chance, I decided to do both, call setImage &amp; update camera matrix from within the OSG thread, just before renderingTraversals:
+
+
+Code:
+    advance(simulationTime);
+
+    eventTraversal();
+    updateTraversal();
+    update_camera_and_image();
+    renderingTraversals();
+
+
+
+
+The transforming matrix takes effect that frame, but the updated texture takes effect on the next frame. (I must say that the images are full hd, and the computer doesn't have the best graphics hardware ever made. I even convert images from BGR to BGRA from my processing pipeline because that way they seem to load a bit faster) So 3d objects move one frame before their siblings from the real world.
+
+I have split these operations and have tried placing them in all sorts of combinations between the calls above, but nothing seems to work. It seems that I need to render a frame just to have the texture uploaded for the next.
+
+And this leads to what I currently do, a very ugly hack, which I'll describe just to show the kind of frustration this has caused me.
+
+
+Code:
+
+// begining of the rendering loop
+imageStream-&gt;setImage(frame);
+getSceneData()-&gt;setNodeMask(0); // avoid rendering 3D scene
+// signal GraphicsContext::SwapCallback to not swap the buffers
+renderingTraversals(); // render just the (old) background because this triggers the upload of the new video frame to GPU
+getSceneData()-&gt;setNodeMask(saved_value);// restore 3D scene
+update_camera_matrix();
+... rest of default OSG loop calls ... 
+eventTraversal();
+updateTraversal();
+// signal GraphicsContext::SwapCallback to allow sapping buffers
+renderingTraversals();
+
+
+
+
+So I call renderingTraversals() twice in a loop, the first time just to render the background which also triggers the upload of the new image for the next (normal) call to renderingTraversals() where I render the complete scene. And I have to disable / enable swapping buffers by using graphicsContext-&gt;setSwapCallback().
+
+For applying came matrix changes I've tried setting a NodeCallback to its transforming node too, but that seems to disable ON_DEMAND rendering which I prefer for the moment.
+
+You mentioned updating the texture, what method should I call and when? The examples I've seen that play video only call ImageStream::setImage()
+
+Thank you!
+
+Cheers,
+Altin
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic4869.php?p=73041#73041">http://forum.openscenegraph.org/viewtopic.php?p=73041#73041</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007790.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+	<LI>Next message (by thread): <A HREF="007792.html">[osg-users] Synchronizing with textures uploads.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7791">[ date ]</a>
+              <a href="thread.html#7791">[ thread ]</a>
+              <a href="subject.html#7791">[ subject ]</a>
+              <a href="author.html#7791">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

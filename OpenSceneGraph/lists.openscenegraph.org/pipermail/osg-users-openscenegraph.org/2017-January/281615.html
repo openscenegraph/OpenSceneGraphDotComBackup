@@ -1,0 +1,108 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] found memory leak in OSG 3.0.1
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20found%20memory%20leak%20in%20OSG%203.0.1&In-Reply-To=%3CCY4PR03MB2982E2E50BB2DDC111B72716937E0%40CY4PR03MB2982.namprd03.prod.outlook.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005389.html">
+   <LINK REL="Next"  HREF="005394.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] found memory leak in OSG 3.0.1</H1>
+<!--htdig_noindex-->
+    <B>Gianluca Natale</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20found%20memory%20leak%20in%20OSG%203.0.1&In-Reply-To=%3CCY4PR03MB2982E2E50BB2DDC111B72716937E0%40CY4PR03MB2982.namprd03.prod.outlook.com%3E"
+       TITLE="[osg-users] found memory leak in OSG 3.0.1">natale at europe.altair.com
+       </A><BR>
+    <I>Thu Jan 19 09:02:56 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005389.html">[osg-users] Multi thread Rendering
+</A></li>
+        <LI>Next message: <A HREF="005394.html">[osg-users] found memory leak in OSG 3.0.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281615">[ date ]</a>
+              <a href="thread.html#281615">[ thread ]</a>
+              <a href="subject.html#281615">[ subject ]</a>
+              <a href="author.html#281615">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+In my application I'm using OSG 3.0.1 (I do know it is old, but I do not have the time now to move to a newer version).
+I think I have a memory leak, and I don't know if it's my fault or a bug in OSG.
+Using the task manager (on Win 8.1 Pro), I see this.
+
+When I call:
+
+GraphicsContext* GraphicsContext::createGraphicsContext(Traits* traits);
+
+memory allocated in my application increases of about 2.5 MB.
+
+Then, when I call:
+
+GraphicsContext::close(bool callCloseImplementation); // I pass true to this function
+
+memory allocated in my application decreases of about 1.5 MB.
+So, there is always  about 1 MB that is not deallocated.
+
+I tried to investigate a bit, and noticed that the problem seems to happen inside this function:
+
+bool GraphicsWindowWin32::setWindow( HWND handle ).
+
+Specifically, there are 2 calls in that function where memory is allocated:
+
+
+1)      bool GraphicsWindowWin32::setPixelFormat(); // increases about 1 MB
+
+2)      HGLRC GraphicsWindowWin32::createContextImplementation(); // increases about 1.5 MB
+
+So, it looks like the memory allocated at point 1 is never released.
+Is there anything I have to call, when I want to destroy a graphic context, other than close()?
+Or, if you do know that it is a memory leak, has it been fixed in a newer version of OSG?
+
+Thanks,
+Gianluca Natale
+
+
+
+
+
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170119/7eccf4f3/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170119/7eccf4f3/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005389.html">[osg-users] Multi thread Rendering
+</A></li>
+	<LI>Next message: <A HREF="005394.html">[osg-users] found memory leak in OSG 3.0.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281615">[ date ]</a>
+              <a href="thread.html#281615">[ thread ]</a>
+              <a href="subject.html#281615">[ subject ]</a>
+              <a href="author.html#281615">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

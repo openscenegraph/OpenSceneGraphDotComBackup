@@ -1,0 +1,122 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Migration from OSG 3.1.5 to 3.4.0 / Qt 4 to Qt 5
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Migration%20from%20OSG%203.1.5%20to%203.4.0%20/%20Qt%204%20to%20Qt%205&In-Reply-To=%3CCAFN7Y%2BU76PSvNG8xX72iDaqzZDFMsCs1s4a1FA3V3vwSApKK0Q%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271918.html">
+   <LINK REL="Next"  HREF="271950.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Migration from OSG 3.1.5 to 3.4.0 / Qt 4 to Qt 5</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Migration%20from%20OSG%203.1.5%20to%203.4.0%20/%20Qt%204%20to%20Qt%205&In-Reply-To=%3CCAFN7Y%2BU76PSvNG8xX72iDaqzZDFMsCs1s4a1FA3V3vwSApKK0Q%40mail.gmail.com%3E"
+       TITLE="[osg-users] Migration from OSG 3.1.5 to 3.4.0 / Qt 4 to Qt 5">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Jan  5 02:03:04 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271918.html">[osg-users] Migration from OSG 3.1.5 to 3.4.0 / Qt 4 to Qt 5
+</A></li>
+        <LI>Next message: <A HREF="271950.html">[osg-users] Migration from OSG 3.1.5 to 3.4.0 / Qt 4 to Qt 5
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271921">[ date ]</a>
+              <a href="thread.html#271921">[ thread ]</a>
+              <a href="subject.html#271921">[ subject ]</a>
+              <a href="author.html#271921">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Andrew
+
+The issue revolves around the default osg::Camera constructing without
+a StateSet, in this default state it doesn't set any state when you
+attach it to a Viewer.  It leaves the responsibility up to you as the
+developer to set up the state which is appropriate for your viewer.
+Prior to OSG-3.2 a bug in osgUtil::SceneView overridded the state set
+by the viewer's Camera adding in it's own global settings - this meant
+you couldn't set your own which is the bug, but had a side affect of
+hiding the lack of set global state by adding in some defaults, so
+your application looked like it was fine even though it wasn't setting
+state that it should have been doing.
+
+The View(er) itself has osg::Camera and by default it sets up Camera
+StateSet with with some defaults appropriate for viewer by calling
+StateSet::setGlobalDefaults().  This means that by default the viewer
+actually enables depth test etc.  However, if you replace the View(er)
+Camera's without your own without the state set up in a similar way it
+breaks.
+
+The original Qt example replaced the Camera and didn't set up state so
+if you ported it to OSG-3.2 or later it.  In Qt and other examples in
+OSG-3.2 and later the View's Camera is used directly rather than
+assigned a new one.
+
+If you still want to assign your own Camera (something this is
+actually unnecessary) you should set up the global state that you
+want, sensible defaults for a 3d viewer are set up by:
+
+   view.getCamera()-&gt;getOrCreateStateSet()-&gt;setGlobalDefaults();
+
+If you don't do this then you application will be using OpenGL defaults.
+
+Robert.
+
+
+
+On 4 January 2016 at 22:57, Andrew Cunningham &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andrewC at mac.com</A>&gt; wrote:
+&gt;<i> [quote=&quot;robertosfield&quot;]Hi Andrew
+</I>&gt;<i> The reason why z buffer etc. Is off is the your setup hasn't set it up as there is no global stateset to the camera you are passing to the Viewer.
+</I>&gt;<i> I have discussed this topic quite a but since OSG-3.2. Please see the archives.
+</I>&gt;<i> Robert. [quote]
+</I>&gt;<i>
+</I>&gt;<i> OK thanks, but my forum searching did not turn up much on this topic. Wrong keywords I suppose.
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicd3fb-2.php?p=65940#65940">http://forum.openscenegraph.org/viewtopic.php?p=65940#65940</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271918.html">[osg-users] Migration from OSG 3.1.5 to 3.4.0 / Qt 4 to Qt 5
+</A></li>
+	<LI>Next message: <A HREF="271950.html">[osg-users] Migration from OSG 3.1.5 to 3.4.0 / Qt 4 to Qt 5
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271921">[ date ]</a>
+              <a href="thread.html#271921">[ thread ]</a>
+              <a href="subject.html#271921">[ subject ]</a>
+              <a href="author.html#271921">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

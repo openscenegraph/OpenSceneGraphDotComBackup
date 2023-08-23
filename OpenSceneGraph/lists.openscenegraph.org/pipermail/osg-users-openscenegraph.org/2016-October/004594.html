@@ -1,0 +1,147 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG with Qt on Android fails to render anything
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20with%20Qt%20on%20Android%20fails%20to%20render%20anything&In-Reply-To=%3C32fe1039-07e9-5ced-3010-27dd6c60841f%40xs4all.nl%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280816.html">
+   <LINK REL="Next"  HREF="004595.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG with Qt on Android fails to render anything</H1>
+<!--htdig_noindex-->
+    <B>Raymond de Vries</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG%20with%20Qt%20on%20Android%20fails%20to%20render%20anything&In-Reply-To=%3C32fe1039-07e9-5ced-3010-27dd6c60841f%40xs4all.nl%3E"
+       TITLE="[osg-users] OSG with Qt on Android fails to render anything">reedev at xs4all.nl
+       </A><BR>
+    <I>Mon Oct 24 02:18:36 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280816.html">[osg-users] OSG with Qt on Android fails to render anything
+</A></li>
+        <LI>Next message: <A HREF="004595.html">[osg-users] OSG with Qt on Android fails to render anything
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4594">[ date ]</a>
+              <a href="thread.html#4594">[ thread ]</a>
+              <a href="subject.html#4594">[ subject ]</a>
+              <a href="author.html#4594">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Andrea,
+
+One question/test: have you been able to run osgviewerQt on Windows for 
+instance? Usually, I need to patch src/osgQt/GraphicsWindowQt.cpp in 2 
+locations in order to prevent illegal values for scaled_width and/or 
+scaled_height:
+
+void GLWidget::resizeEvent( QResizeEvent* event )
+{
+     const QSize&amp; size = event-&gt;size();
+
+     int scaled_width = static_cast&lt;int&gt;(size.width()*_devicePixelRatio);
+     int scaled_height = static_cast&lt;int&gt;(size.height()*_devicePixelRatio);
+
+     if (scaled_width &lt;= 0 || scaled_height &lt;= 0)
+         return;
+
+     _gw-&gt;resized( x(), y(), scaled_width,  scaled_height);
+     _gw-&gt;getEventQueue()-&gt;windowResize( x(), y(), scaled_width, 
+scaled_height );
+     _gw-&gt;requestRedraw();
+}
+
+void GLWidget::moveEvent( QMoveEvent* event )
+{
+     const QPoint&amp; pos = event-&gt;pos();
+     int scaled_width = static_cast&lt;int&gt;(width()*_devicePixelRatio);
+     int scaled_height = static_cast&lt;int&gt;(height()*_devicePixelRatio);
+
+     if (scaled_width &lt;= 0 || scaled_height &lt;= 0)
+         return;
+
+     _gw-&gt;resized( pos.x(), pos.y(), scaled_width,  scaled_height );
+     _gw-&gt;getEventQueue()-&gt;windowResize( pos.x(), pos.y(), 
+scaled_width,  scaled_height );
+}
+
+Without these checks nothing is rendered. Maybe this is the case for 
+Android too?
+
+hth,
+Raymond
+
+
+
+On 10/24/2016 11:11 AM, Andrea Bracci wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I'm trying to run a simple application using OSG + Qt on Android.
+</I>&gt;<i>
+</I>&gt;<i> I have successfully built OSG Release 3.4.0 for Android (armeabi-v7a) and it successfully runs on Android as expected (I have run the example osgAndroidExampleGLES2 and it runs flawlessly). I have also successfully built osgQt for my Qt version 5.7.0, as well as the osgViewerQt example for Android armeabi-v7a.
+</I>&gt;<i>
+</I>&gt;<i> However if I run osgviewerQt on my Android device (version 5.0.2, API 21) it fails to render anything, in a way similar to what I found at the following link:
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="http://lists.qt-project.org/pipermail/interest/2015-July/017869.html">http://lists.qt-project.org/pipermail/interest/2015-July/017869.html</A>
+</I>&gt;<i>
+</I>&gt;<i> In order to simplify the application I allocate a single QWidget (instead of the four ones contained in the original osgviewerQt example) loading a single osg::Node* from a file cessna.osg. I have verified that the cessna.osg file is successfully loaded through a qDebug() logging message on the value of the loaded pointer. On my Android device I see the OSG-default blue screen without any object.
+</I>&gt;<i>
+</I>&gt;<i> As an additional information: I have successfully built and executed the Qt examples with OpenGLES on my Android device.
+</I>&gt;<i>
+</I>&gt;<i> I have done an extensive web search but I didn't find the solution to my problem, nor anyone that successfully ran OSG + Qt on Android.
+</I>&gt;<i>
+</I>&gt;<i> Can anyone tell me where am I wrong, or what steps shall I follow to make my OSG+Qt application to work on Android?
+</I>&gt;<i>
+</I>&gt;<i> Thank you in advance for your kind replies!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Andrea
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic8ac9.php?p=69134#69134">http://forum.openscenegraph.org/viewtopic.php?p=69134#69134</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280816.html">[osg-users] OSG with Qt on Android fails to render anything
+</A></li>
+	<LI>Next message: <A HREF="004595.html">[osg-users] OSG with Qt on Android fails to render anything
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4594">[ date ]</a>
+              <a href="thread.html#4594">[ thread ]</a>
+              <a href="subject.html#4594">[ subject ]</a>
+              <a href="author.html#4594">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

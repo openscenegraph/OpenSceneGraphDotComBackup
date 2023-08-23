@@ -1,0 +1,393 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Error when using osgShadow
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Error%20when%20using%20osgShadow&In-Reply-To=%3C1435578156.m2f.64208%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000744.html">
+   <LINK REL="Next"  HREF="000739.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Error when using osgShadow</H1>
+<!--htdig_noindex-->
+    <B>david boublil</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Error%20when%20using%20osgShadow&In-Reply-To=%3C1435578156.m2f.64208%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Error when using osgShadow">davboub at gmail.com
+       </A><BR>
+    <I>Mon Jun 29 04:42:36 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000744.html">[osg-users] Oldie, but goodie... Aero themes and OpenGL/MFC
+</A></li>
+        <LI>Next message: <A HREF="000739.html">[osg-users] Error when using osgShadow
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276961">[ date ]</a>
+              <a href="thread.html#276961">[ thread ]</a>
+              <a href="subject.html#276961">[ subject ]</a>
+              <a href="author.html#276961">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I am trying to run a simple code that I got from tutorial which is supposed to add shadows to the scene but I am getting a &quot;floating point exception&quot; error. I have no idea how I can solve it, I would really appreciated some help... 
+
+Here is the source code:
+
+using namespace osg;
+int main()
+{
+	
+	//Declaration of the objects that will form our scene
+	osgViewer::Viewer viewer;
+	ref_ptr&lt;Group&gt; scene (new Group);
+	ref_ptr&lt;Geode&gt; objectGeode (new Geode);
+	ref_ptr&lt;Geode&gt; terrainGeode (new Geode);
+	ref_ptr&lt;Geode&gt; lightMarkerGeode (new Geode);
+
+	//Shadow stuff!!
+
+	ref_ptr&lt;osgShadow::ShadowedScene&gt; shadowedScene = new osgShadow::ShadowedScene;
+	ref_ptr&lt;osgShadow::ShadowMap&gt; sm = new osgShadow::ShadowMap;
+        shadowedScene-&gt;setShadowTechnique(sm.get());
+//Main light source 
+	Vec3 lightPosition(0,0,3); 
+	LightSource* ls = new LightSource;
+  	ls-&gt;getLight()-&gt;setPosition(Vec4(lightPosition,1));
+	ls-&gt;getLight()-&gt;setAmbient(Vec4(0.2,0.2,0.2,1.0));
+        ls-&gt;getLight()-&gt;setDiffuse(Vec4(0.6,0.6,0.6,1.0));
+	
+	shadowedScene-&gt;addChild(scene.get());
+	shadowedScene-&gt;addChild(ls);
+	shadowedScene-&gt;addChild(lightMarkerGeode.get());
+
+	//Next we define the material property of our objects 
+	// material
+        ref_ptr&lt;Material&gt; matirial = new Material;
+        matirial-&gt;setColorMode(Material::DIFFUSE);
+        matirial-&gt;setAmbient(Material::FRONT_AND_BACK, Vec4(0, 0, 0, 1));
+        matirial-&gt;setSpecular(Material::FRONT_AND_BACK, Vec4(1, 1, 1, 1));
+        matirial-&gt;setShininess(Material::FRONT_AND_BACK, 64);
+scene-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(matirial.get(), StateAttribute::ON);
+
+
+	//Adding the terrain and object nodes to the root node
+	scene-&gt;addChild(objectGeode.get());
+	scene-&gt;addChild(terrainGeode.get());
+
+	//The terrain first, a flatten box
+	terrainGeode-&gt;addDrawable(new ShapeDrawable(new Box(Vec3f(),5,7,0.05f)));
+
+	//Now we can define our world made of several objects  	
+	//The capsule
+	objectGeode-&gt;addDrawable(new ShapeDrawable(new Capsule(Vec3(1,-1,1),0.3f,0.5f)));
+
+	//The box
+	objectGeode-&gt;addDrawable(new ShapeDrawable(new Box(Vec3(-1,1,1),1,1,1)));
+	
+	//The sphere
+	objectGeode-&gt;addDrawable(new ShapeDrawable(new Sphere(Vec3(1,2,1),0.5f)));
+	//objectGeode-&gt;addDrawable(new ShapeDrawable(new Sphere(Vec3(0,0,4.5f),0.1f)));
+
+	//And finally the light marker: a small sphere
+	lightMarkerGeode-&gt;addDrawable(new ShapeDrawable(new Sphere(lightPosition+osg::Vec3(0,0,0.5f),0.1f)));
+	viewer.setSceneData( shadowedScene.get() );
+
+	//Stats Event Handler s key
+	viewer.addEventHandler(new osgViewer::StatsHandler);
+
+	// add the state manipulator
+    	viewer.addEventHandler( new osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()) );
+
+	//Windows size handler
+	viewer.addEventHandler(new osgViewer::WindowSizeHandler);       
+
+       return(viewer .run());
+
+}
+
+I used the debug mode and got the following output:
+
+RegisterWindowingSystemInterfaceProxy()
+X11WindowingSystemInterface()
+GraphicsContext::setWindowingSystemInterface() 0x2030620	0x7fdb2a28a5f0
+CullSettings::readEnvironmentalVariables()
+DatabasePager::addDatabaseThread() HANDLE_NON_HTTP
+DatabasePager::addDatabaseThread() HANDLE_ONLY_HTTP
+CullSettings::readEnvironmentalVariables()
+CullSettings::readEnvironmentalVariables()
+CullSettings::readEnvironmentalVariables()
+CullSettings::readEnvironmentalVariables()
+CullSettings::readEnvironmentalVariables()
+itr='/opt/matlab/sys/openscenegraph/lib/glnxa64'
+FindFileInPath() : trying /opt/matlab/sys/openscenegraph/lib/glnxa64/osgPlugins-2.8.1/osgdb_jpeg.so ...
+itr='/opt/matlab/sys/os/glnxa64'
+FindFileInPath() : trying /opt/matlab/sys/os/glnxa64/osgPlugins-2.8.1/osgdb_jpeg.so ...
+itr='/opt/matlab/bin/glnxa64'
+FindFileInPath() : trying /opt/matlab/bin/glnxa64/osgPlugins-2.8.1/osgdb_jpeg.so ...
+itr='/opt/matlab/extern/lib/glnxa64'
+FindFileInPath() : trying /opt/matlab/extern/lib/glnxa64/osgPlugins-2.8.1/osgdb_jpeg.so ...
+itr='/opt/matlab/sys/java/jre/glnxa64/jre/lib/amd64/native_threads'
+FindFileInPath() : trying /opt/matlab/sys/java/jre/glnxa64/jre/lib/amd64/native_threads/osgPlugins-2.8.1/osgdb_jpeg.so ...
+itr='/opt/matlab/sys/java/jre/glnxa64/jre/lib/amd64/server'
+FindFileInPath() : trying /opt/matlab/sys/java/jre/glnxa64/jre/lib/amd64/server/osgPlugins-2.8.1/osgdb_jpeg.so ...
+itr='/homes/davidb/Downloads/local/Mesa-7.0.3/lib64/'
+FindFileInPath() : trying /homes/davidb/Downloads/local/Mesa-7.0.3/lib64/osgPlugins-2.8.1/osgdb_jpeg.so ...
+itr='/homes/davidb/Downloads/local/lib64/osgPlugins-2.8.1/'
+FindFileInPath() : trying /homes/davidb/Downloads/local/lib64/osgPlugins-2.8.1/osgPlugins-2.8.1/osgdb_jpeg.so ...
+itr='/homes/davidb/Downloads/local/lib64'
+FindFileInPath() : trying /homes/davidb/Downloads/local/lib64/osgPlugins-2.8.1/osgdb_jpeg.so ...
+FindFileInPath() : USING /homes/davidb/Downloads/local/lib64/osgPlugins-2.8.1/osgdb_jpeg.so
+Opened DynamicLibrary osgPlugins-2.8.1/osgdb_jpeg.so
+FindFileInPath(ground.jpg): returning ground.jpg
+
+try to read image
+can't read image with osgdb
+View::setSceneData() Reusing exisitng scene0x2031480
+CullSettings::readEnvironmentalVariables()
+CullSettings::readEnvironmentalVariables()
+CullSettings::readEnvironmentalVariables()
+CullSettings::readEnvironmentalVariables()
+CullSettings::readEnvironmentalVariables()
+Viewer::realize() - No valid contexts found, setting up view across all screens.
+GraphicsContext::getWindowingSystemInterface() 0x2030620	0x7fdb2a28a5f0
+GraphicsContext::registerGraphicsContext 0x204b140
+GraphicsContext::getWindowingSystemInterface() 0x2030620	0x7fdb2a28a5f0
+GraphicsContext::createNewContextID() creating contextID=0
+Updating the MaxNumberOfGraphicsContexts to 1
+  GraphicsWindow has been created successfully.
+Viewer::startThreading() - starting threading
+Viewer::startThreading() - contexts.size()=1
+Making scene thread safe
+Doing add
+Doing add
+Doing add
+  gc-&gt;getGraphicsThread()-&gt;startThread() 0x233c5e0
+Set up threading
+View::init()
+FocusOut/UnmapNotify event received
+FocusIn event received
+KeymapNotify event received
+CullSettings::readEnvironmentalVariables()
+Done DatabasePager::addLoadedDataToSceneGraph0.001ms,	0ms  objects0
+
+Doing run 0x233c5e0 isRunning()=1
+OpenGL extensions supported by installed OpenGL drivers are:
+    GL_APPLE_packed_pixels
+    GL_APPLE_vertex_array_object
+    GL_ARB_depth_texture
+    GL_ARB_draw_buffers
+    GL_ARB_fragment_program
+    GL_ARB_fragment_shader
+    GL_ARB_half_float_pixel
+    GL_ARB_imaging
+    GL_ARB_multisample
+    GL_ARB_multitexture
+    GL_ARB_occlusion_query
+    GL_ARB_pixel_buffer_object
+    GL_ARB_point_parameters
+    GL_ARB_point_sprite
+    GL_ARB_shader_objects
+    GL_ARB_shading_language_100
+    GL_ARB_shading_language_120
+    GL_ARB_shadow
+    GL_ARB_shadow_ambient
+    GL_ARB_texture_border_clamp
+    GL_ARB_texture_compression
+    GL_ARB_texture_cube_map
+    GL_ARB_texture_env_add
+    GL_ARB_texture_env_combine
+    GL_ARB_texture_env_crossbar
+    GL_ARB_texture_env_dot3
+    GL_ARB_texture_mirrored_repeat
+    GL_ARB_texture_non_power_of_two
+    GL_ARB_texture_rectangle
+    GL_ARB_transpose_matrix
+    GL_ARB_vertex_buffer_object
+    GL_ARB_vertex_program
+    GL_ARB_vertex_shader
+    GL_ARB_window_pos
+    GL_ATI_blend_equation_separate
+    GL_ATI_fragment_shader
+    GL_ATI_separate_stencil
+    GL_ATI_texture_env_combine3
+    GL_ATI_texture_mirror_once
+    GL_EXT_abgr
+    GL_EXT_bgra
+    GL_EXT_blend_color
+    GL_EXT_blend_equation_separate
+    GL_EXT_blend_func_separate
+    GL_EXT_blend_logic_op
+    GL_EXT_blend_minmax
+    GL_EXT_blend_subtract
+    GL_EXT_clip_volume_hint
+    GL_EXT_compiled_vertex_array
+    GL_EXT_convolution
+    GL_EXT_copy_texture
+    GL_EXT_depth_bounds_test
+    GL_EXT_draw_range_elements
+    GL_EXT_fog_coord
+    GL_EXT_framebuffer_blit
+    GL_EXT_framebuffer_object
+    GL_EXT_gpu_program_parameters
+    GL_EXT_histogram
+    GL_EXT_multi_draw_arrays
+    GL_EXT_packed_depth_stencil
+    GL_EXT_packed_pixels
+    GL_EXT_paletted_texture
+    GL_EXT_pixel_buffer_object
+    GL_EXT_point_parameters
+    GL_EXT_polygon_offset
+    GL_EXT_rescale_normal
+    GL_EXT_secondary_color
+    GL_EXT_separate_specular_color
+    GL_EXT_shadow_funcs
+    GL_EXT_shared_texture_palette
+    GL_EXT_stencil_wrap
+    GL_EXT_subtexture
+    GL_EXT_texture
+    GL_EXT_texture3D
+    GL_EXT_texture_edge_clamp
+    GL_EXT_texture_env_add
+    GL_EXT_texture_env_combine
+    GL_EXT_texture_env_dot3
+    GL_EXT_texture_lod_bias
+    GL_EXT_texture_mirror_clamp
+    GL_EXT_texture_object
+    GL_EXT_texture_rectangle
+    GL_EXT_texture_sRGB
+    GL_EXT_timer_query
+    GL_EXT_vertex_array
+    GL_IBM_multimode_draw_arrays
+    GL_IBM_rasterpos_clip
+    GL_IBM_texture_mirrored_repeat
+    GL_INGR_blend_func_separate
+    GL_MESA_pack_invert
+    GL_MESA_program_debug
+    GL_MESA_resize_buffers
+    GL_MESA_window_pos
+    GL_MESA_ycbcr_texture
+    GL_NV_blend_square
+    GL_NV_fragment_program
+    GL_NV_light_max_exponent
+    GL_NV_point_sprite
+    GL_NV_texgen_reflection
+    GL_NV_texture_rectangle
+    GL_NV_vertex_program
+    GL_NV_vertex_program1_1
+    GL_OES_read_format
+    GL_SGIS_generate_mipmap
+    GL_SGIS_texture_border_clamp
+    GL_SGIS_texture_edge_clamp
+    GL_SGIS_texture_lod
+    GL_SGIX_depth_texture
+    GL_SGIX_shadow
+    GL_SGIX_shadow_ambient
+    GL_SGI_color_matrix
+    GL_SGI_color_table
+    GL_SGI_texture_color_table
+    GL_SUN_multi_draw_arrays
+OpenGL extension 'GL_ARB_vertex_program' is supported.
+OpenGL extension 'GL_EXT_secondary_color' is supported.
+OpenGL extension 'GL_EXT_fog_coord' is supported.
+OpenGL extension 'GL_ARB_multitexture' is supported.
+OpenGL extension 'GL_NV_occlusion_query' is not supported.
+OpenGL extension 'GL_ARB_occlusion_query' is supported.
+OpenGL extension 'GL_EXT_timer_query' is supported.
+OpenGL extension '' is not supported.
+Done DatabasePager::addLoadedDataToSceneGraph0ms,	0.001ms  objects0
+
+OpenGL extension 'GL_ARB_pixel_buffer_object' is supported.
+OpenGL extension 'GL_ARB_fragment_program' is supported.
+OpenGL extension 'GL_EXT_framebuffer_object' is supported.
+OpenGL extension 'GL_EXT_framebuffer_blit' is supported.
+OpenGL extension 'GL_EXT_framebuffer_multisample' is not supported.
+OpenGL extension 'GL_NV_framebuffer_multisample_coverage' is not supported.
+OpenGL extension 'GL_EXT_packed_depth_stencil' is supported.
+OpenGL extension 'GL_ARB_shader_objects' is supported.
+OpenGL extension 'GL_ARB_vertex_shader' is supported.
+OpenGL extension 'GL_ARB_fragment_shader' is supported.
+OpenGL extension 'GL_ARB_shading_language_100' is supported.
+OpenGL extension 'GL_EXT_geometry_shader4' is not supported.
+OpenGL extension 'GL_EXT_gpu_shader4' is not supported.
+glVersion=2.1, isGlslSupported=YES, glslLanguageVersion=1.1
+OpenGL extension 'GL_ARB_vertex_program' is supported.
+Setting up osg::Camera::FRAME_BUFFER_OBJECT
+OpenGL extension 'GL_ARB_multitexture' is supported.
+OpenGL extension 'GL_EXT_texture_filter_anisotropic' is not supported.
+OpenGL extension 'GL_ARB_texture_compression' is supported.
+OpenGL extension 'GL_EXT_texture_compression_s3tc' is not supported.
+OpenGL extension 'GL_IBM_texture_mirrored_repeat' is supported.
+OpenGL extension 'GL_EXT_texture_edge_clamp' is supported.
+OpenGL extension 'GL_ARB_texture_border_clamp' is supported.
+OpenGL extension 'GL_SGIS_generate_mipmap' is supported.
+OpenGL extension 'GL_ARB_shadow' is supported.
+OpenGL extension 'GL_ARB_shadow_ambient' is supported.
+OpenGL extension 'GL_APPLE_client_storage' is not supported.
+OpenGL extension 'GL_ARB_texture_non_power_of_two' is supported.
+OpenGL extension 'GL_EXT_texture_integer' is not supported.
+Setting up osg::Camera::FRAME_BUFFER
+
+Compiling FRAGMENT source:
+uniform sampler2D osgShadow_baseTexture; 
+uniform sampler2DShadow osgShadow_shadowTexture; 
+uniform vec2 osgShadow_ambientBias; 
+
+void main(void) 
+{ 
+    vec4 color = gl_Color * texture2D( osgShadow_baseTexture, gl_TexCoord[0].xy ); 
+    gl_FragColor = color * (osgShadow_ambientBias.x + shadow2DProj( osgShadow_shadowTexture, gl_TexCoord[1] ) * osgShadow_ambientBias.y); 
+}
+
+Linking osg::Program &quot;&quot; id=1 contextID=0
+Floating point exception
+./a.out: Floating point exception
+ 
+Thank a lot!
+
+Cheers,
+David
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicee5a.php?p=64208#64208">http://forum.openscenegraph.org/viewtopic.php?p=64208#64208</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000744.html">[osg-users] Oldie, but goodie... Aero themes and OpenGL/MFC
+</A></li>
+	<LI>Next message: <A HREF="000739.html">[osg-users] Error when using osgShadow
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276961">[ date ]</a>
+              <a href="thread.html#276961">[ thread ]</a>
+              <a href="subject.html#276961">[ subject ]</a>
+              <a href="author.html#276961">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

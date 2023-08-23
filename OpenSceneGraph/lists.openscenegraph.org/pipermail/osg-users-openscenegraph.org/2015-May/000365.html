@@ -1,0 +1,122 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Forcing a scene to rebind textures
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Forcing%20a%20scene%20to%20rebind%20textures&In-Reply-To=%3C1431380404.m2f.63715%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000352.html">
+   <LINK REL="Next"  HREF="000366.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Forcing a scene to rebind textures</H1>
+<!--htdig_noindex-->
+    <B>Philippe Renon</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Forcing%20a%20scene%20to%20rebind%20textures&In-Reply-To=%3C1431380404.m2f.63715%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Forcing a scene to rebind textures">philippe_renon at yahoo.fr
+       </A><BR>
+    <I>Mon May 11 14:40:04 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000352.html">[osg-users] Forcing a scene to rebind textures
+</A></li>
+        <LI>Next message: <A HREF="000366.html">[osg-users] Forcing a scene to rebind textures
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#365">[ date ]</a>
+              <a href="thread.html#365">[ thread ]</a>
+              <a href="subject.html#365">[ subject ]</a>
+              <a href="author.html#365">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+robertosfield wrote:
+&gt;<i> Hi Philippe,
+</I>&gt;<i> Is there any chance your application is caching a subgraph that isn't
+</I>&gt;<i> attached to the view/contexts that are destroyed so are effectively
+</I>&gt;<i> hidden by the releaseGLObjects() operation?   If you re-attach such a
+</I>&gt;<i> subgraph to a new context it's handles to GL objects will all still be
+</I>&gt;<i> there but won't be valid.
+</I>&gt;<i> 
+</I>&gt;<i> If you do cache subgraphs in this way then you need to call
+</I>&gt;<i> rootnode-&gt;releaseGLObjects(); on it prior to deleting the context, or
+</I>&gt;<i> call releaseGLObjectse() afterwards then osg::discardAllGLObjects();
+</I>&gt;<i> 
+</I>
+
+Thank Robert, 
+I think you are pointing me in the right direction.
+
+By caching do you mean such a scenario:
+1- realize and render a scene
+2- detach a subgraph
+3- remove View / close the GraphicsContext
+4- create a new View with some scene and reattach the subgraph from step 2
+
+Note that in my scenario (i.e. creating/detroying the &quot;same&quot; view+scene multiple times) the CompositeViewer itself remains the same. Views get added and removed but there is only one View at any time in that viewer (so I probably should not use CompositeViewer but I don't think it is relevant and I might need it in the future).
+
+PS : Just tried to do the suggested cleanups after creating the view.
+Code looks like this
+
+
+Code:
+
+viewer-&gt;addView(view);
+
+// needed when adding a view a 2nd time (osg will not realize the viewer again...)
+if (!viewer-&gt;isRealized()) {
+    viewer-&gt;realize();
+}
+
+view-&gt;releaseGLObjects();
+
+unsigned int contextID = view-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getState()-&gt;getContextID();
+osg::discardAllGLObjects(contextID);
+
+
+
+
+But I still get the invalid enumerant error followed by a crash.
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic5366.php?p=63715#63715">http://forum.openscenegraph.org/viewtopic.php?p=63715#63715</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000352.html">[osg-users] Forcing a scene to rebind textures
+</A></li>
+	<LI>Next message: <A HREF="000366.html">[osg-users] Forcing a scene to rebind textures
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#365">[ date ]</a>
+              <a href="thread.html#365">[ thread ]</a>
+              <a href="subject.html#365">[ subject ]</a>
+              <a href="author.html#365">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

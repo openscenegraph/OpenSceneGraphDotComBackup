@@ -1,0 +1,147 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Dimension Mask in PolytopeIntersector still working?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dimension%20Mask%20in%20PolytopeIntersector%20still%20working%3F&In-Reply-To=%3CCAFN7Y%2BXFJD09tegz3ynJbgUB9EbqSBG8Rf%2BkExYYpZNd_SmbKw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006272.html">
+   <LINK REL="Next"  HREF="006276.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Dimension Mask in PolytopeIntersector still working?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dimension%20Mask%20in%20PolytopeIntersector%20still%20working%3F&In-Reply-To=%3CCAFN7Y%2BXFJD09tegz3ynJbgUB9EbqSBG8Rf%2BkExYYpZNd_SmbKw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Dimension Mask in PolytopeIntersector still working?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu May 25 00:51:55 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006272.html">[osg-users] Dimension Mask in PolytopeIntersector still working?
+</A></li>
+        <LI>Next message: <A HREF="006276.html">[osg-users] A problem with regard to std:istream on Android
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6275">[ date ]</a>
+              <a href="thread.html#6275">[ thread ]</a>
+              <a href="subject.html#6275">[ subject ]</a>
+              <a href="author.html#6275">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Jordi,
+
+Yesterday I checked in a couple of change, from the git log:
+
+
+$ git log
+commit 20ac472d1f7d85360714168d94e10729c1f9ce8d
+Author: Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert at openscenegraph.com</A>&gt;
+Date:   Wed May 24 19:40:08 2017 +0100
+
+    Moved OSG_USE_DEPRECATED_API from include/osg/Export to Cmake
+controlled include/osg/Config
+
+commit 8c54a4931975967022aba6ce92973ad27def8e97
+Author: Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert at openscenegraph.com</A>&gt;
+Date:   Wed May 24 19:39:36 2017 +0100
+
+    Replaced deprecated API usage
+
+commit a60aed70b58f2d1b95f5b8eecfd2a3a583906661
+Author: Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert at openscenegraph.com</A>&gt;
+Date:   Wed May 24 18:34:22 2017 +0100
+
+    Replaced DimensionMask naming with more appropriate PrimitiveMask nameing.
+
+commit a201b15648ce3bd5a34b96cb046c1e8a6431bb4e
+Author: Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert at openscenegraph.com</A>&gt;
+Date:   Wed May 24 16:02:29 2017 +0100
+
+    Added support for PolytopeIntersector::setDimensionsMask.
+
+
+The new API naming is:
+
+        /// dimension enum to specify primitive types to check.
+        enum {
+            POINT_PRIMITIVES = (1&lt;&lt;0),      /// check for points
+            LINE_PRIMITIVES = (1&lt;&lt;1),       /// check for lines
+            TRIANGLE_PRIMITIVES = (1&lt;&lt;2),   /// check for triangles
+and other primitives like quad, polygons that can be decomposed into
+triangles
+            ALL_PRIMITIVES = ( POINT_PRIMITIVES | LINE_PRIMITIVES |
+TRIANGLE_PRIMITIVES )
+        };
+
+        /** Set which Primitives should be tested for intersections.*/
+        void setPrimitiveMask(unsigned int mask) { _primitiveMask = mask; }
+
+        /** Get which Primitives should be tested for intersections.*/
+        unsigned int getPrimitiveMask() const { return _primitiveMask; }
+
+The old API is now deprecated:
+
+#ifdef OSG_USE_DEPRECATED_API
+
+        enum {
+            DimZero = POINT_PRIMITIVES,    /// deprecated, use POINT_PRIMITIVES
+            DimOne = LINE_PRIMITIVES,      /// deprecated, use POINT_PRIMITIVES
+            DimTwo = TRIANGLE_PRIMITIVES,  /// deprecated, use POINT_PRIMITIVES
+            AllDims =  ALL_PRIMITIVES      /// deprecated, use ALL_PRIMITIVES
+        };
+
+        /** deprecated, use setPrimtiveMask() */
+        inline void setDimensionMask(unsigned int mask) {
+setPrimitiveMask(mask); }
+
+        /** deprecated, use getPrimtiveMask() */
+        inline unsigned int getDimensionMask() const { return
+getPrimitiveMask(); }
+#endif
+
+I have also change the way that OSG_USE_DEPRECATED_API is controlled,
+it used to be hard-wired into include/osg/Export, I have moved it into
+the cmake generated include/osg/Config header.  To enable/disable the
+deprecated API you just now need to use ccmake to toggle the
+OSG_USE_DEPRECATED_API.
+
+I also modified the osgkeyboardmouse example to set the PrimitiveMask
+and in my testing it looks like things are working fine.  Could you
+test this and let me know how it all works out in your usage case.
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006272.html">[osg-users] Dimension Mask in PolytopeIntersector still working?
+</A></li>
+	<LI>Next message: <A HREF="006276.html">[osg-users] A problem with regard to std:istream on Android
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6275">[ date ]</a>
+              <a href="thread.html#6275">[ thread ]</a>
+              <a href="subject.html#6275">[ subject ]</a>
+              <a href="author.html#6275">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

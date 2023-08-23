@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Secondary Color not working?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Secondary%20Color%20not%20working%3F&In-Reply-To=%3C1487068652.m2f.70183%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005554.html">
+   <LINK REL="Next"  HREF="281779.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Secondary Color not working?</H1>
+<!--htdig_noindex-->
+    <B>umesh ramesh</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Secondary%20Color%20not%20working%3F&In-Reply-To=%3C1487068652.m2f.70183%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Secondary Color not working?">mailpm01 at yahoo.co.in
+       </A><BR>
+    <I>Tue Feb 14 02:37:32 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005554.html">[osg-users] Buffer object pool and setUnrefImageDataAfterApply()
+</A></li>
+        <LI>Next message: <A HREF="281779.html">[osg-users] Jittering/Flickering geometry problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281778">[ date ]</a>
+              <a href="thread.html#281778">[ thread ]</a>
+              <a href="subject.html#281778">[ subject ]</a>
+              <a href="author.html#281778">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+There seems to be a bug in OSG related to accessing secondary colors in vertex shader. I am using OSG 3.2.1. The same issue might also exist in OSG 3.4 too.
+Here&#8217;s how I found out the issue:
+I want to pass 8 attributes from my osg App to the shader. Then I need to retrieve those 8 attributes in vertex shader &amp; perform my operations on them.
+Note: In Italics are Pseudo code, not actual syntax.
+
+I use primary color as&#8230;
+
+geometry.setColorArray(colors); 
+geometry.setColorBinding(BIND_PER_VERTEX);
+
+&#8230;in my osg App to pass the first 4 parameters. 
+
+I use secondary color&#8230;
+
+geometry.setSecondaryColorArray(secondcolors);
+geometry.setSecondaryColorBinding(BIND_PER_VERTEX);
+
+&#8230; to pass rest 4 parameters to shader.
+
+In shader, I access&#8230;
+	texWeight[0] = gl_Color[0];
+	...
+	texWeight[4] = gl_SecondaryColor[0];
+	...
+&#8230;to do my operations. But all (or some) of the 4 secondary color values are not proper or invalid.
+So as a work around, I am using &#8230;
+
+geometry.setTexCoordArray(0, secondcolors);
+
+..and in shader
+&#8230;
+texWeight[8] = gl_MultiTexCoord0.s;   or    gl_TexCoord[0].
+
+The above is working fine.
+
+To cross verify, I wrote the exact code in OpenGL and used:
+
+glSecondaryColorPointer( 4, GL_FLOAT, 0, &amp;SecColorBuffer[0] );
+
+In shader&#8230;
+
+texWeight[4] = gl_SecondaryColor[0];.
+
+This worked perfectly. I am using Nvidia GPU.
+Thus, I concluded that there&#8217;s maybe a bug in using SecondaryColor method in OSG.
+
+
+Thank you!
+
+Cheers,
+umesh
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc724.php?p=70183#70183">http://forum.openscenegraph.org/viewtopic.php?p=70183#70183</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005554.html">[osg-users] Buffer object pool and setUnrefImageDataAfterApply()
+</A></li>
+	<LI>Next message: <A HREF="281779.html">[osg-users] Jittering/Flickering geometry problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281778">[ date ]</a>
+              <a href="thread.html#281778">[ thread ]</a>
+              <a href="subject.html#281778">[ subject ]</a>
+              <a href="author.html#281778">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

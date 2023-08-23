@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Potential bug in ref_ptr::assign
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Potential%20bug%20in%20ref_ptr%3A%3Aassign&In-Reply-To=%3CCAFN7Y%2BUWwm5%3DbL_X3DF3%2B4Fda8g7yBkTYgnokXgrtM%2BxxLwYUg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007088.html">
+   <LINK REL="Next"  HREF="007090.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Potential bug in ref_ptr::assign</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Potential%20bug%20in%20ref_ptr%3A%3Aassign&In-Reply-To=%3CCAFN7Y%2BUWwm5%3DbL_X3DF3%2B4Fda8g7yBkTYgnokXgrtM%2BxxLwYUg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Potential bug in ref_ptr::assign">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Oct 25 00:40:56 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007088.html">[osg-users] Potential bug in ref_ptr::assign
+</A></li>
+        <LI>Next message (by thread): <A HREF="007090.html">[osg-users] Potential bug in ref_ptr::assign
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7089">[ date ]</a>
+              <a href="thread.html#7089">[ thread ]</a>
+              <a href="subject.html#7089">[ subject ]</a>
+              <a href="author.html#7089">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Hartwig,
+
+As far as I can tell the code and comment is correct, the unref afterwards
+is to catch cases like:
+
+
+osg::Group* parent = new osg::Group;
+osg::Node* child = new osg::Geode;
+parent-&gt;addChild(child);
+
+osg::ref_ptr&lt;osg::Node&gt; ptr = parent; // takes a reference to pararent
+
+ptr = parent-&gt;getChild(0); // should take a references to child and then
+unref the parent deleting it
+
+
+Now think what would happen if you unref first... it would delete the
+parent and it's child, then you'd assign a dangling pointer.
+
+If the compiler's optimizer is breaking this then... it's a terrible
+compiler.  It does highlight how subtle ref counting can be, and how much
+optimizers can't just blindly do certain types of optimization like
+re-ordering.
+
+Robert.
+
+
+On 24 October 2017 at 23:34, Hartwig Wiesmann &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hartwig.wiesmann at skywind.eu</A>&gt;
+wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> in ref_ptr you find the following code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>         template&lt;class Other&gt; void assign(const ref_ptr&lt;Other&gt;&amp; rp)
+</I>&gt;<i>         {
+</I>&gt;<i>             if (_ptr==rp._ptr) return;
+</I>&gt;<i>             T* tmp_ptr = _ptr;
+</I>&gt;<i>             _ptr = rp._ptr;
+</I>&gt;<i>             if (_ptr) _ptr-&gt;ref();
+</I>&gt;<i>             // unref second to prevent any deletion of any object which
+</I>&gt;<i> might
+</I>&gt;<i>             // be referenced by the other object. i.e rp is child of the
+</I>&gt;<i>             // original _ptr.
+</I>&gt;<i>             if (tmp_ptr) tmp_ptr-&gt;unref();
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I was puzzled by the comment: actually, there is nothing that prevents an
+</I>&gt;<i> optimiser to re-write the code to
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>             if (tmp_ptr) tmp_ptr-&gt;unref();
+</I>&gt;<i>             if (_ptr) _ptr-&gt;ref();
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> or
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>            _ptr-&gt;unref();
+</I>&gt;<i>             _ptr = rp._ptr;
+</I>&gt;<i>             if (_ptr) _ptr-&gt;ref();
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> It seems to be that it has not happened, yet, respectively the scenario
+</I>&gt;<i> described in the comment did not occur, but this does not mean that it
+</I>&gt;<i> cannot happen, or?
+</I>&gt;<i> Actually, I do not see a solution for the described scenario, so probably
+</I>&gt;<i> the comment should be removed or changed? But in this case the code can be
+</I>&gt;<i> simplified, too.
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Hartwig[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic36ee.php?p=72242#72242">http://forum.openscenegraph.org/viewtopic.php?p=72242#72242</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20171025/fc964d58/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20171025/fc964d58/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007088.html">[osg-users] Potential bug in ref_ptr::assign
+</A></li>
+	<LI>Next message (by thread): <A HREF="007090.html">[osg-users] Potential bug in ref_ptr::assign
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7089">[ date ]</a>
+              <a href="thread.html#7089">[ thread ]</a>
+              <a href="subject.html#7089">[ subject ]</a>
+              <a href="author.html#7089">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

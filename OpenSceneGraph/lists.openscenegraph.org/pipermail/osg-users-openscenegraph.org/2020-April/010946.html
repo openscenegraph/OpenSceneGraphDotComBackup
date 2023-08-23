@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] LineSegmentIntersector
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LineSegmentIntersector&In-Reply-To=%3Cmailman.84341.1586933770.7167.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010945.html">
+   <LINK REL="Next"  HREF="010950.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] LineSegmentIntersector</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LineSegmentIntersector&In-Reply-To=%3Cmailman.84341.1586933770.7167.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] LineSegmentIntersector">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Tue Apr 14 23:55:55 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010945.html">[osg-users]  LineSegmentIntersector
+</A></li>
+        <LI>Next message (by thread): <A HREF="010950.html">[osg-users] LineSegmentIntersector
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10946">[ date ]</a>
+              <a href="thread.html#10946">[ thread ]</a>
+              <a href="subject.html#10946">[ subject ]</a>
+              <a href="author.html#10946">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Andrew,
+
+When you say you have a isometric view, to be clear, you mean you have an
+orthographic projection of the scene?  The OSG itself support orthographic
+projection via the osg::Camera's ProjectionMatrix, the intersection.  It
+can only account for this if the IntersectionVisitor knows about it's
+setting.
+
+Have you tried the osgViewer::View(er)::computeIntersections(..) method?
+
+This method knows about the View's Camera so can account for it's
+projection matrix.
+
+Robert.
+
+On Tue, 14 Apr 2020 at 23:35, OpenSceneGraph Users &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i> I am having a lot of problems with picking with LineSegmentIntersector in
+</I>&gt;<i> OSG 3.6.5.
+</I>&gt;<i>
+</I>&gt;<i> I have reduced the problem to a a simple cube, center 0.5,0.5,0.5 with a
+</I>&gt;<i> boundingSphere radius of 1.2142
+</I>&gt;<i>
+</I>&gt;<i> I create the intersection with ( x , y are screen coordinates)
+</I>&gt;<i>
+</I>&gt;<i> picker=new osgUtil::LineSegmentIntersector ( osgUtil::Intersector::WINDOW,
+</I>&gt;<i> x, y );
+</I>&gt;<i> osgUtil::IntersectionVisitor iv ( picker );
+</I>&gt;<i> getCamera()-&gt;accept ( iv );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> When I am &quot;close&quot; to the model geometry in an isometric view ( the cube
+</I>&gt;<i> fills,say, 50% of the screen), this works perfectly. I get the exact
+</I>&gt;<i> intersections coordinates I expect.
+</I>&gt;<i>
+</I>&gt;<i> When I &quot;pull the camera back&quot; from the geometry and the object is much
+</I>&gt;<i> smaller on the screen, the intersections fail.
+</I>&gt;<i>
+</I>&gt;<i> After much debugging, the problem is that the intersector fails the test
+</I>&gt;<i> of the intersection of the line with the bounding sphere of my model
+</I>&gt;<i> geometry
+</I>&gt;<i>
+</I>&gt;<i> Specifically I send up in
+</I>&gt;<i>
+</I>&gt;<i> bool LineSegmentIntersector::intersects(const osg::BoundingSphere&amp; bs)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The BoundingSphere is in &quot;model space&quot; , and correct, but the _start and
+</I>&gt;<i> _end points used in the calculation are incorrect to intersect the sphere
+</I>&gt;<i> in model space and so the intersection fails.
+</I>&gt;<i>
+</I>&gt;<i> _start {_v=0x000001ba7308d300 {13.227287349450325, -2.9785854231569449, -
+</I>&gt;<i> 5.5167534692525066} }
+</I>&gt;<i> _end {_v=0x000001ba7308d318 {11.072576448741074, -5.1332963238661939, -
+</I>&gt;<i> 7.6714332827528793} }
+</I>&gt;<i>
+</I>&gt;<i> Any ideas what is going on. It seems although the vector of start and end
+</I>&gt;<i> is the correct vector ( or the &quot;closer&quot; picking would not work), something
+</I>&gt;<i> is wrong in the transformation into model space.
+</I>&gt;<i>
+</I>&gt;<i> Thx
+</I>&gt;<i> Andrew
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> You received this message because you are subscribed to the Google Groups
+</I>&gt;<i> &quot;OpenSceneGraph Users&quot; group.
+</I>&gt;<i> To unsubscribe from this group and stop receiving emails from it, send an
+</I>&gt;<i> email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+</I>&gt;<i> To view this discussion on the web visit
+</I>&gt;<i> <A HREF="https://groups.google.com/d/msgid/osg-users/4fa21208-3ee7-45d7-a9cf-42a4b8a45d52%40googlegroups.com">https://groups.google.com/d/msgid/osg-users/4fa21208-3ee7-45d7-a9cf-42a4b8a45d52%40googlegroups.com</A>
+</I>&gt;<i> &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/4fa21208-3ee7-45d7-a9cf-42a4b8a45d52%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/4fa21208-3ee7-45d7-a9cf-42a4b8a45d52%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt;
+</I>&gt;<i> .
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200415/2b81205b/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200415/2b81205b/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010945.html">[osg-users]  LineSegmentIntersector
+</A></li>
+	<LI>Next message (by thread): <A HREF="010950.html">[osg-users] LineSegmentIntersector
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10946">[ date ]</a>
+              <a href="thread.html#10946">[ thread ]</a>
+              <a href="subject.html#10946">[ subject ]</a>
+              <a href="author.html#10946">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,190 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Seeking advice: Efficient method for large grid rendering (terrain) with unique state per grid square
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Seeking%20advice%3A%20Efficient%20method%20for%20large%20grid%0A%20rendering%20%28terrain%29%20with%20unique%20state%20per%20grid%20square&In-Reply-To=%3CCAFN7Y%2BXhecr8mEqTRe7fkUm7PpYhesTaNArGgT%3DHHpGued0HSg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001507.html">
+   <LINK REL="Next"  HREF="001515.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Seeking advice: Efficient method for large grid rendering (terrain) with unique state per grid square</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Seeking%20advice%3A%20Efficient%20method%20for%20large%20grid%0A%20rendering%20%28terrain%29%20with%20unique%20state%20per%20grid%20square&In-Reply-To=%3CCAFN7Y%2BXhecr8mEqTRe7fkUm7PpYhesTaNArGgT%3DHHpGued0HSg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Seeking advice: Efficient method for large grid rendering (terrain) with unique state per grid square">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Sep 10 11:24:14 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001507.html">[osg-users] Seeking advice: Efficient method for large grid	rendering (terrain) with unique state per grid square
+</A></li>
+        <LI>Next message: <A HREF="001515.html">[osg-users] Seeking advice: Efficient method for large grid rendering (terrain) with unique state per grid square
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1514">[ date ]</a>
+              <a href="thread.html#1514">[ thread ]</a>
+              <a href="subject.html#1514">[ subject ]</a>
+              <a href="author.html#1514">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi John,
+
+LOD (Level Of Detail) is all about providing multiple versions each with
+different resolution of geometry and/or texture data so that lower
+resolution versions are used at far distances and higher resolution
+versions are used at a nearer distance.  LOD's can also be used in
+conjunction with a quad tree hierarchy where the low resolution version
+covers the area of four geographically smaller tiles.  This quad tree
+hierarchy can be go as deep as you want, especially when used with
+PagedLOD's rather than LOD's.
+
+However, from your description you aren't talking about this
+multi-resoliution management, but simply a quad tree layout that has no
+actual need for LOD's.  This leaves me a mixture confused about your intent
+or unsure about your level of understanding of basic scene graph concepts.
+
+The way to do a quad tree to enable early culling is to create a hierarchy
+of osg::Group nodes that each have four children, nesting down the levels
+till you get to the leaf nodes containing the actual geometry and textures
+required.
+
+Using a quad tree without LOD's would be fine for an application that only
+ever views a relatively fixed number of tiles at one time such as map view
+from a fixed height.  For general 3D rendering such a quad tree hierachy of
+a big dataset would lead to performance problems as distant views or views
+looking out to the horizon would have so many tiles to render that the
+system would be overloaded.  In this situations LOD's are essential to load
+balance.  From really large dataset PageLOD's become essentially to allow
+you to scale to very large ranges and resolutions - the OSG is used with
+whole earth visualization systems that have data down to sub m resolution
+with ten's of terrabytes of data, all working at solid 60Hz.
+
+Robert.
+
+
+
+On 10 September 2015 at 18:17, John Peterson &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">halalkitty at gmail.com</A>&gt; wrote:
+
+&gt;<i> Thank you for your reply, Robert.
+</I>&gt;<i>
+</I>&gt;<i> You mentioned PagedLOD nodes. While I might not use the paged version of
+</I>&gt;<i> the LODs nodes just yet, I've been thinking a lot about whether LOD nodes
+</I>&gt;<i> are the way to go in order to get OSG to cull large portions of my terrain
+</I>&gt;<i> without having to traverse and render every single grid square in the
+</I>&gt;<i> world. I'd be interested to know if the following technique might succeed
+</I>&gt;<i> for my use case, which I could later extend to PagedLOD nodes as I increase
+</I>&gt;<i> the area of my terrain.
+</I>&gt;<i>
+</I>&gt;<i> For the purposes of this very simple example, imagine a 4x4 grid where
+</I>&gt;<i> each one of the 16 grid squares represents a 5000 m^2 area of terrain. I
+</I>&gt;<i> should have been clear in my original post and mentioned that the grid
+</I>&gt;<i> squares are literally that--four vertices to render a pair of triangles.
+</I>&gt;<i> (In other words, it's not a particular complicated terrain from a geometric
+</I>&gt;<i> standpoint.) I'm wondering if I could use LOD nodes hierarchically in order
+</I>&gt;<i> to partition the scene in such a way that OSG will simply discard entire
+</I>&gt;<i> quadrants that are too far away from the viewer. To illustrate more clearly
+</I>&gt;<i> the scene graph I envision (excuse the ASCII art):
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> root
+</I>&gt;<i>   LOD
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (0,0)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (1,0)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (0,1)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (1,1)
+</I>&gt;<i>   LOD
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (2,0)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (3,0)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (2,1)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (3,1)
+</I>&gt;<i>   LOD
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (0,2)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (1,2)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (0,3)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (1,3)
+</I>&gt;<i>   LOD
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (2,2)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (3,2)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (2,3)
+</I>&gt;<i>     LOD
+</I>&gt;<i>       geometry for square at (3,3)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Of course, I'd have to carefully choose the LOD min and max values to
+</I>&gt;<i> ensure that I'm neither discarding too much of the scene graph nor
+</I>&gt;<i> including more than I actually need.
+</I>&gt;<i>
+</I>&gt;<i> My question is, is this technique reasonable and scalable? Are there any
+</I>&gt;<i> pitfalls that I need to watch for, or any red flags that it raises?
+</I>&gt;<i>
+</I>&gt;<i> Best regards,
+</I>&gt;<i> John
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic6989.php?p=65101#65101">http://forum.openscenegraph.org/viewtopic.php?p=65101#65101</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150910/ef5fa263/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150910/ef5fa263/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001507.html">[osg-users] Seeking advice: Efficient method for large grid	rendering (terrain) with unique state per grid square
+</A></li>
+	<LI>Next message: <A HREF="001515.html">[osg-users] Seeking advice: Efficient method for large grid rendering (terrain) with unique state per grid square
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1514">[ date ]</a>
+              <a href="thread.html#1514">[ thread ]</a>
+              <a href="subject.html#1514">[ subject ]</a>
+              <a href="author.html#1514">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,304 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] First Person Camera disable inertial rotation
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20First%20Person%20Camera%20disable%20inertial%20rotation&In-Reply-To=%3C1553778102.m2f.75741%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009816.html">
+   <LINK REL="Next"  HREF="009831.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] First Person Camera disable inertial rotation</H1>
+<!--htdig_noindex-->
+    <B>Anatoly Dovzhik</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20First%20Person%20Camera%20disable%20inertial%20rotation&In-Reply-To=%3C1553778102.m2f.75741%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] First Person Camera disable inertial rotation">dovzhik.anatoly at gmail.com
+       </A><BR>
+    <I>Thu Mar 28 06:01:42 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009816.html">[osg-users] osgText::Text dissapears when reparent container window on qt
+</A></li>
+        <LI>Next message (by thread): <A HREF="009831.html">[osg-users] First Person Camera disable inertial rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9824">[ date ]</a>
+              <a href="thread.html#9824">[ thread ]</a>
+              <a href="subject.html#9824">[ subject ]</a>
+              <a href="author.html#9824">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Windows 10 x64
+
+Hi, i'm trying to make a FPS camera. I have found some examples from other sources and now i have camera, that can move by WASD and have its own default looking system. I press right mouse button and rotate camera. But i still have inertial rotating when i release the mouse button. How to disable this feature? 
+
+tell me if you need more information.
+Here is my FPS controller .cpp file:
+
+
+
+Code:
+#include &quot;FirstPersonController.h&quot;
+
+bool FirstPersonController::handle(const osgGA::GUIEventAdapter &amp;ea, osgGA::GUIActionAdapter &amp;aa)
+{
+
+    // Still use first person manipulator for camera movements (Inherited class function)
+    FirstPersonManipulator::handle(ea, aa);
+
+    if (!viewer_)
+    {
+        return false;
+    }
+
+    // Set the viewer's &quot;eye&quot; position, which is located at the center of the camera.
+    osg::Vec3d eyePos;
+    osg::Matrix matrix = viewer_-&gt;getCameraManipulator()-&gt;getMatrix();
+
+    eyePos = matrix.getTrans();
+
+    osg::Quat camRotation = matrix.getRotate();
+
+    switch(ea.getEventType()) {
+    case(osgGA::GUIEventAdapter::KEYDOWN):
+    {
+        // Movement of the camera correlates with W, A, S, D
+        switch(ea.getKey())
+        {
+        case 'w':
+            isWPressed = true;
+            break;
+        case 'a':
+            isAPressed = true;
+            break;
+        case 's':
+            isSPressed = true;
+            break;
+        case 'd':
+            isDPressed = true;
+            break;
+        default:
+            break;
+        }
+
+        break;
+    }
+
+    case(osgGA::GUIEventAdapter::KEYUP):
+    {
+        switch(ea.getKey())
+        {
+        case 'w':
+            isWPressed = false;
+            tempMov_.set(0, 0, 0);
+            break;
+        case 'a':
+            isAPressed = false;
+            tempMov_.set(0, 0, 0);
+            break;
+        case 's':
+            isSPressed = false;
+            tempMov_.set(0, 0, 0);
+            break;
+        case 'd':
+            isDPressed = false;
+            tempMov_.set(0, 0, 0);
+            break;
+        default:
+            break;
+        }
+        break;
+    }
+
+    }
+
+    doTranslate();
+    eyePos += camRotation * tempMov_;
+    matrix.setTrans(eyePos);
+
+    // Check [mainTimer.time % (time divisor) == 0]
+    if (mainTimer_.time_s() &gt;= maxTick_)
+    {
+        viewer_-&gt;getCameraManipulator()-&gt;setByMatrix(matrix);
+        maxTick_ += inputTimeInterval_;
+    }
+
+
+    return false;
+}
+
+bool FirstPersonController::performMovement()
+{
+    // return if less then two events have been added
+    if( _ga_t0.get() == NULL || _ga_t1.get() == NULL )
+    {
+        return false;
+    }
+
+    // get delta time, throw warning if error with delta time
+    double eventTimeDelta = _ga_t0-&gt;getTime() - _ga_t1-&gt;getTime();
+    if( eventTimeDelta &lt; 0. )
+    {
+        OSG_WARN &lt;&lt; &quot;Manipulator warning: eventTimeDelta = &quot; &lt;&lt; eventTimeDelta &lt;&lt; std::endl;
+        eventTimeDelta = 0.;
+    }
+
+    // get deltaX and deltaY
+    float dx = _ga_t0-&gt;getXnormalized() - _ga_t1-&gt;getXnormalized();
+    float dy = _ga_t0-&gt;getYnormalized() - _ga_t1-&gt;getYnormalized();
+
+    // return if there is no movement.
+    if( dx == 0.0 &amp;&amp; dy == 0.0 )
+    {
+        return false;
+    }
+
+    // call appropriate methods
+    unsigned int buttonMask = _ga_t1-&gt;getButtonMask();
+    if( buttonMask == osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON )
+    {
+
+//      return performMovementLeftMouseButton( eventTimeDelta, dx, dy );
+        osg::CoordinateFrame coordinateFrame = getCoordinateFrame( _eye );
+        osg::Vec3d localUp = getUpVector( coordinateFrame );
+        myRotateYawPitch( _rotation, dx, dy, localUp );
+//        rotateYawPitch( _rotation, dx, dy, localUp );
+
+        return true;
+    }
+    else if( buttonMask == osgGA::GUIEventAdapter::MIDDLE_MOUSE_BUTTON ||
+             buttonMask == (osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON | osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON) )
+    {
+        //return performMovementMiddleMouseButton( eventTimeDelta, dx, dy );
+    }
+    else if( buttonMask == osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON )
+    {
+        //return performMovementRightMouseButton( eventTimeDelta, dx, dy );
+    }
+
+    return false;
+}
+
+
+void FirstPersonController::doTranslate() {
+
+    if(isWPressed){
+        tempMov_.z() = -moveSpeed_;
+    }
+    if(isAPressed){
+        tempMov_.x() = -moveSpeed_;
+    }
+    if(isSPressed){
+        tempMov_.z() = moveSpeed_;
+    }
+    if(isDPressed){
+        tempMov_.x() = moveSpeed_;
+    }
+}
+
+
+
+void FirstPersonController::myRotateYawPitch( osg::Quat&amp; rotation, const double yaw, const double pitch, const osg::Vec3d&amp; localUp )
+{
+    bool verticalAxisFixed = (localUp != osg::Vec3d( 0.,0.,0. ));
+
+    // fix current rotation
+    if( verticalAxisFixed ){
+        fixVerticalAxis( rotation, localUp, true );
+    }
+
+    // rotations
+    osg::Quat rotateYaw( -yaw, verticalAxisFixed ? localUp : rotation * osg::Vec3d( 0.,1.,0. ) );
+    osg::Quat rotatePitch;
+    osg::Quat newRotation;
+    osg::Vec3d cameraRight( rotation * osg::Vec3d( 1.,0.,0. ) );
+
+    double my_dy = pitch;
+    int i = 0;
+
+    do {
+
+        // rotations
+        rotatePitch.makeRotate( my_dy, cameraRight );
+        newRotation = rotation * rotateYaw * rotatePitch;
+
+        my_dy = 0;
+
+
+        // update vertical axis
+        if( verticalAxisFixed ){
+            fixVerticalAxis( newRotation, localUp, false );
+        }
+
+        // check for viewer's up vector to be more than 90 degrees from &quot;up&quot; axis
+        osg::Vec3d newCameraUp = newRotation * osg::Vec3d( 0.,1.,0. );
+        if( newCameraUp * localUp &gt; 0. )
+        {
+            // apply new rotation
+            rotation = newRotation;
+            return;
+        }
+
+        my_dy /= 2.;
+        if( ++i == 20 )
+        {
+            rotation = rotation * rotateYaw;
+            return;
+        }
+
+    } while( true );
+}
+
+
+
+
+With hopes. 
+Anatoly[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic8258.php?p=75741#75741">http://forum.openscenegraph.org/viewtopic.php?p=75741#75741</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009816.html">[osg-users] osgText::Text dissapears when reparent container window on qt
+</A></li>
+	<LI>Next message (by thread): <A HREF="009831.html">[osg-users] First Person Camera disable inertial rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9824">[ date ]</a>
+              <a href="thread.html#9824">[ thread ]</a>
+              <a href="subject.html#9824">[ subject ]</a>
+              <a href="author.html#9824">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

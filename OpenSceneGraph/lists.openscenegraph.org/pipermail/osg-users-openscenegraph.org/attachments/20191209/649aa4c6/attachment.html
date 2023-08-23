@@ -1,0 +1,235 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Robert,&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Thanks&nbsp;for&nbsp;the&nbsp;information. &nbsp;I&nbsp;cleaned&nbsp;up&nbsp;the&nbsp;references&nbsp;to&nbsp;allow&nbsp;smart&nbsp;pointers&nbsp;to&nbsp;work&nbsp;for&nbsp;the&nbsp;model&nbsp;and&nbsp;viewer&nbsp;as&nbsp;intended. &nbsp;The&nbsp;explicit&nbsp;deletion&nbsp;and&nbsp;cleanup&nbsp;code&nbsp;was&nbsp;added&nbsp;years&nbsp;ago&nbsp;in&nbsp;an&nbsp;attempt&nbsp;to&nbsp;address&nbsp;a&nbsp;memory&nbsp;leak&nbsp;issue. &nbsp;Unfortunately&nbsp;osgDB::readRefFile()&nbsp;wasn&#39;t&nbsp;available&nbsp;when&nbsp;the&nbsp;original&nbsp;code&nbsp;was&nbsp;written&nbsp;years&nbsp;ago,&nbsp;and&nbsp;the&nbsp;loading&nbsp;code&nbsp;was&nbsp;taken&nbsp;directly&nbsp;the&nbsp;first&nbsp;sample&nbsp;that&nbsp;loaded&nbsp;a&nbsp;model&nbsp;file&nbsp;-&nbsp;osganimationhardware. &nbsp;We&#39;ve&nbsp;never&nbsp;had&nbsp;an&nbsp;issue&nbsp;but&nbsp;I&nbsp;did&nbsp;make&nbsp;the&nbsp;changes&nbsp;you&nbsp;suggested.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;After&nbsp;the&nbsp;changes&nbsp;I&nbsp;found&nbsp;the&nbsp;problem&nbsp;persisted. &nbsp;It&nbsp;ended&nbsp;up&nbsp;being&nbsp;a&nbsp;change&nbsp;to&nbsp;the&nbsp;OpenFlight&nbsp;plugin. &nbsp;The&nbsp;older&nbsp;version&nbsp;had&nbsp;its&nbsp;own&nbsp;caches&nbsp;for&nbsp;textures&nbsp;and&nbsp;external&nbsp;references&nbsp;(3.4.0). &nbsp;The&nbsp;newer&nbsp;version&nbsp;(3.6.3/4)&nbsp;uses&nbsp;the&nbsp;osgDB&nbsp;ObjectCache&nbsp;class. &nbsp;The&nbsp;problem&nbsp;with&nbsp;that&nbsp;is&nbsp;Texture2D.cpp&nbsp;deletes&nbsp;the&nbsp;texture&nbsp;image&nbsp;data&nbsp;on&nbsp;the&nbsp;first&nbsp;render&nbsp;(line&nbsp;285)&nbsp;so&nbsp;the&nbsp;cached&nbsp;data&nbsp;is&nbsp;null&nbsp;right&nbsp;after&nbsp;the&nbsp;file&nbsp;is&nbsp;loaded,&nbsp;thus&nbsp;the&nbsp;black&nbsp;textures.&nbsp;In&nbsp;reality,&nbsp;the&nbsp;osgDB&nbsp;cache&nbsp;is&nbsp;useless&nbsp;since&nbsp;(at&nbsp;least)&nbsp;the&nbsp;texture&nbsp;data&nbsp;is&nbsp;overwritten&nbsp;almost&nbsp;immediately. &nbsp;I&nbsp;found&nbsp;that&nbsp;after&nbsp;the&nbsp;cache&nbsp;expiration&nbsp;timed&nbsp;out&nbsp;all&nbsp;the&nbsp;cached&nbsp;data&nbsp;was&nbsp;deleted&nbsp;and&nbsp;the&nbsp;model&nbsp;will&nbsp;load&nbsp;correctly&nbsp;since&nbsp;it&nbsp;is&nbsp;not&nbsp;getting&nbsp;corrupted&nbsp;data&nbsp;from&nbsp;the&nbsp;cache&nbsp;but&nbsp;loading&nbsp;the&nbsp;files.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Will&nbsp;there&nbsp;be&nbsp;a&nbsp;fix&nbsp;coming&nbsp;for&nbsp;the&nbsp;cache&nbsp;issue&nbsp;or&nbsp;should&nbsp;I&nbsp;do&nbsp;a&nbsp;workaround&nbsp;(perhaps&nbsp;re-using&nbsp;the&nbsp;3.4.0&nbsp;OpenFlight&nbsp;cache&nbsp;code)?&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Thanks.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;br&gt;On&nbsp;Friday,&nbsp;December&nbsp;6,&nbsp;2019&nbsp;at&nbsp;1:35:45&nbsp;PM&nbsp;UTC-6,&nbsp;Greg&nbsp;D&nbsp;wrote:&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:&nbsp;0;margin-left:&nbsp;0.8ex;border-left:&nbsp;1px&nbsp;#ccc&nbsp;solid;padding-left:&nbsp;1ex;&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;I&nbsp;have&nbsp;been&nbsp;using&nbsp;OSG&nbsp;for&nbsp;a&nbsp;number&nbsp;of&nbsp;years&nbsp;for&nbsp;a&nbsp;commercial<br>
+product. <br>
+Our&nbsp;product&nbsp;loads&nbsp;various&nbsp;models&nbsp;and&nbsp;earth&nbsp;views&nbsp;as&nbsp;the&nbsp;user&nbsp;requires&nbsp;them&nbsp;(for<br>
+security&nbsp;monitoring&nbsp;–&nbsp;buildings&nbsp;and&nbsp;campuses&nbsp;mostly). &nbsp;I&nbsp;have&nbsp;a&nbsp;problem<br>
+with&nbsp;3.6.3/4&nbsp;that&nbsp;wasn&#39;t&nbsp;there&nbsp;in&nbsp;3.4.0.&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;I&nbsp;have&nbsp;an&nbsp;OpenFlight&nbsp;model&nbsp;(sample/demo&nbsp;model)&nbsp;that&nbsp;uses&nbsp;textures&nbsp;for&nbsp;terrain<br>
+and&nbsp;on&nbsp;buildings. &nbsp;The&nbsp;first&nbsp;time&nbsp;I&nbsp;load&nbsp;it&nbsp;all&nbsp;is&nbsp;fine. &nbsp;However,&nbsp;if<br>
+I&nbsp;load&nbsp;another&nbsp;model&nbsp;(or&nbsp;another&nbsp;graphics&nbsp;file&nbsp;–&nbsp;the&nbsp;application&nbsp;supports&nbsp;AutoCAD,&nbsp;raster,&nbsp;OSG<br>
+Earth,&nbsp;and&nbsp;ArcGIS&nbsp;formats&nbsp;as&nbsp;well)&nbsp;then&nbsp;reload&nbsp;the&nbsp;model&nbsp;the&nbsp;terrain&nbsp;is&nbsp;black&nbsp;and&nbsp;the<br>
+textures&nbsp;are&nbsp;corrupted&nbsp;if&nbsp;they&nbsp;are&nbsp;not&nbsp;black. &nbsp;This&nbsp;worked&nbsp;fine&nbsp;with&nbsp;3.4.0&nbsp;and&nbsp;3.4.1<br>
+but&nbsp;does&nbsp;not&nbsp;work&nbsp;with&nbsp;3.6.3&nbsp;or&nbsp;3.6.4.&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;I&nbsp;have&nbsp;debugged&nbsp;into&nbsp;the&nbsp;code&nbsp;and&nbsp;it&nbsp;appears&nbsp;that&nbsp;the&nbsp;model&nbsp;and&nbsp;textures&nbsp;are&nbsp;always&nbsp;reloaded&nbsp;from&nbsp;the&nbsp;cache&nbsp;and&nbsp;I&nbsp;cannot&nbsp;override&nbsp;this&nbsp;(setting<br>
+Options::CACHE_NONE&nbsp;doesn’t&nbsp;affect&nbsp;it&nbsp;-&nbsp;in&nbsp;3.4.0&nbsp;the&nbsp;model&nbsp;always&nbsp;loaded&nbsp;from&nbsp;files&nbsp;with&nbsp;Options&nbsp;set&nbsp;to&nbsp;CACHE_NONE). &nbsp;If&nbsp;I&nbsp;look&nbsp;at&nbsp;the&nbsp;model&nbsp;graph&nbsp;in&nbsp;memory&nbsp;(after&nbsp;the&nbsp;first&nbsp;load),&nbsp;the&nbsp;textures&nbsp;appear&nbsp;to&nbsp;be&nbsp;erased&nbsp;or&nbsp;over-written&nbsp;during&nbsp;the<br>
+traversals&nbsp;in&nbsp;one&nbsp;of&nbsp;the&nbsp;classes&nbsp;called&nbsp;in&nbsp;ViewerBase::runOperations()&nbsp;(though&nbsp;it’s&nbsp;a&nbsp;little&nbsp;confusing&nbsp;to&nbsp;me&nbsp;at&nbsp;that<br>
+point,&nbsp;it&nbsp;appears&nbsp;to&nbsp;be&nbsp;when&nbsp;GlobalObjectVisitor::compile()&nbsp;calls&nbsp;node.accept(*this)). &nbsp;During&nbsp;the&nbsp;traversals&nbsp;where&nbsp;the&nbsp;textures&nbsp;appear&nbsp;to&nbsp;be<br>
+over-written,&nbsp;I&nbsp;noticed&nbsp;the&nbsp;context&nbsp;ID&nbsp;is&nbsp;always&nbsp;0,&nbsp;so&nbsp;the&nbsp;textures&nbsp;appear&nbsp;to<br>
+be&nbsp;reloaded,&nbsp;over-writing&nbsp;the&nbsp;original&nbsp;data&nbsp;in&nbsp;the&nbsp;process&nbsp;(though&nbsp;I&nbsp;could&nbsp;be<br>
+quite&nbsp;confused&nbsp;as&nbsp;to&nbsp;what&nbsp;I&nbsp;am&nbsp;seeing&nbsp;and&nbsp;it&nbsp;may&nbsp;all&nbsp;be&nbsp;irrelevant&nbsp;to&nbsp;the<br>
+issue). &lt;/p&gt;&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;Below&nbsp;is&nbsp;a&nbsp;short&nbsp;snippet&nbsp;from&nbsp;my&nbsp;initialization&nbsp;and&nbsp;cleanup&nbsp;code<br>
+between&nbsp;model&nbsp;loads.&nbsp; I&nbsp;load&nbsp;the&nbsp;model,&nbsp;add&nbsp;a&nbsp;clip&nbsp;node&nbsp;to&nbsp;peel&nbsp;down<br>
+through&nbsp;the&nbsp;models&nbsp;vertically. &nbsp;I&nbsp;also&nbsp;add&nbsp;other&nbsp;nodes&nbsp;to&nbsp;hold&nbsp;embedded&nbsp;bitmaps&nbsp;(Billboards)&nbsp;representing&nbsp;security&nbsp;devices&nbsp;–&nbsp;cameras,&nbsp;doors,&nbsp;alarm&nbsp;points,&nbsp;etc. <br>
+Those&nbsp;details&nbsp;are&nbsp;omitted&nbsp;from&nbsp;the&nbsp;code&nbsp;below. &nbsp;After&nbsp;the&nbsp;model&nbsp;is&nbsp;loaded<br>
+I&nbsp;set&nbsp;up&nbsp;the&nbsp;graphics&nbsp;context&nbsp;and&nbsp;render&nbsp;the&nbsp;image&nbsp;to&nbsp;an&nbsp;offscreen&nbsp;window<br>
+(which&nbsp;is&nbsp;then&nbsp;copied&nbsp;to&nbsp;a&nbsp;memory&nbsp;bitmap). &nbsp;The&nbsp;application&nbsp;is&nbsp;a&nbsp;Windows&nbsp;console<br>
+app&nbsp;(with&nbsp;hidden&nbsp;window)&nbsp;that&nbsp;streams&nbsp;bitmap&nbsp;images&nbsp;to&nbsp;the&nbsp;client&nbsp;app&nbsp;via&nbsp;named<br>
+pipe&nbsp;on&nbsp;the&nbsp;same&nbsp;machine&nbsp;(I&nbsp;know,&nbsp;it’s&nbsp;complicated,&nbsp;but&nbsp;it’s&nbsp;a&nbsp;complex<br>
+environment,&nbsp;including&nbsp;live&nbsp;video&nbsp;windows).&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;/p&gt;&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;As&nbsp;I&nbsp;said,&nbsp;it&nbsp;has&nbsp;worked&nbsp;fine&nbsp;with&nbsp;previous&nbsp;versions&nbsp;of&nbsp;OSG&nbsp;(back&nbsp;to&nbsp;3.0.1,&nbsp;if&nbsp;not&nbsp;earlier). &nbsp;This&nbsp;may&nbsp;be&nbsp;specific&nbsp;to&nbsp;Open&nbsp;Flight&nbsp;models,&nbsp;as&nbsp;I&nbsp;can&nbsp;load&nbsp;FBX&nbsp;models,&nbsp;OSG&nbsp;earth&nbsp;files,&nbsp;or&nbsp;the&nbsp;cessnafire.osg&nbsp;model&nbsp;and&nbsp;the&nbsp;textures&nbsp;appear&nbsp;correct.&lt;/p&gt;&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;Any&nbsp;help&nbsp;would&nbsp;be&nbsp;appreciated. &nbsp;If&nbsp;the&nbsp;model&nbsp;would&nbsp;always&nbsp;be&nbsp;loaded&nbsp;from&nbsp;the&nbsp;file&nbsp;when&nbsp;Options::CACHE_NONE&nbsp;were&nbsp;set&nbsp;it&nbsp;would&nbsp;solve&nbsp;my&nbsp;problem.&lt;/p&gt;&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;br&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;OSGLoadResult&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;OpenSceneGraphBitmap&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;::&lt;wbr&gt;LoadModel(std::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;string&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:gray&quot;&gt;fileName&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;,&nbsp;osgDB::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;Options&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;*&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:gray&quot;&gt;dbOptions&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;)&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;{&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      <br>
+CleanupModel();&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &nbsp; &nbsp; &nbsp; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;if&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;(m_Root&nbsp;==&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;nullptr&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;)&lt;/span&gt;&lt;br&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+m_Root&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;=&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;new&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;Group&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;;         <br>
+&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:green&quot;&gt;//&nbsp;Init<br>
+the&nbsp;main&nbsp;Root&nbsp;Node/Group&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:green&quot;&gt;//&nbsp;Load&nbsp;the&nbsp;Model&nbsp;from<br>
+the&nbsp;model&nbsp;name&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;Group&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;*&nbsp;model&nbsp;=&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;dynamic_cast&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&lt;osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;Group&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;*&gt;(&lt;wbr&gt;osgDB::readNodeFile(&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:gray&quot;&gt;fileName&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;,&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:gray&quot;&gt;dbOptions&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;));&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;if&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;(model&nbsp;!=&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;nullptr&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;)&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;{&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:green&quot;&gt;//<br>
+Optimize&nbsp;the&nbsp;model&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+osgUtil::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;Optimizer&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;optimizer;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+optimizer.optimize(model);&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+optimizer.reset();&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:green&quot;&gt;//&nbsp;Create<br>
+the&nbsp;clip&nbsp;node&nbsp;and&nbsp;add&nbsp;to&nbsp;scene&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;ComputeBoundsVisitor&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;cbbv;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+model-&gt;accept(cbbv);&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;BoundingBox&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;bb&nbsp;=<br>
+cbbv.getBoundingBox();&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;ref_ptr&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&lt;osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;ClipPlane&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&gt;&nbsp;clipPlane&nbsp;=&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;new&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;ClipPlane&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+clipPlane&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;setClipPlane(0.0,&nbsp;0.0,<br>
+-1.0,&nbsp;bb.zMin()&nbsp;+&nbsp;(bb.zMax()&nbsp;-&nbsp;bb.zMin()));&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+clipPlane&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;setClipPlaneNum(0);&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;ref_ptr&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&lt;osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;ClipNode&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&gt;&nbsp;clipNode&nbsp;=&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;new&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;ClipNode&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+clipNode&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;setName(&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#a31515&quot;&gt;&quot;CLIP_NODE&quot;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;)&lt;wbr&gt;;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+clipNode&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;addClipPlane(&lt;wbr&gt;clipPlane.get());&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+clipNode&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;setCullingActive(&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;fal&lt;wbr&gt;se&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;);&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+model-&gt;setStateSet(clipNode&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;g&lt;wbr&gt;etStateSet());&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+m_Root&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;addChild(clipNode);&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+m_Root&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;addChild(model);&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+m_Root&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;setDataVariance(osg::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;O&lt;wbr&gt;bject&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:darkslategray&quot;&gt;DYNAMIC&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;);&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;return&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;OSGLoadResult&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:darkslategray&quot;&gt;Sucess&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;}&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:green&quot;&gt;//&nbsp;since&nbsp;load&nbsp;failed,<br>
+reset&nbsp;the&nbsp;wait&nbsp;event&nbsp;so&nbsp;the&nbsp;render&nbsp;thread&nbsp;resumes&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;return&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;OSGLoadResult&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;::&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:darkslategray&quot;&gt;FileLoadError&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;}&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;void&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;OpenSceneGraphBitmap&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;::&lt;wbr&gt;CleanupModel()&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;{&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      <br>
+RemoveViews();&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;if&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;(m_Root&nbsp;!=&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;nullptr&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;)    <br>
+&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:green&quot;&gt;//&nbsp;if<br>
+root&nbsp;already&nbsp;exists&nbsp;(already&nbsp;loaded&nbsp;previous&nbsp;scene)&nbsp;remove&nbsp;children&nbsp;to&nbsp;clean&nbsp;up&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;{&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+m_Root&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;releaseGLObjects();&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+m_Root&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;removeChildren(0,<br>
+m_Root&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;-&gt;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;getNumChildren());&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;void&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;*&nbsp;ptr&nbsp;=<br>
+m_Root.release();&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;delete&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;ptr;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+m_Root&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:teal&quot;&gt;=&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;nullptr&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;}&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;}&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;void&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:#2b91af&quot;&gt;OpenSceneGraphBitmap&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;::&lt;wbr&gt;RemoveViews()&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;{&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;if&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;(m_nhiCompositeViewer<br>
+!=&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;nullptr&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;)&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;{&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+m_nhiCompositeViewer-&gt;setDone(&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;&lt;wbr&gt;true&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;);&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt; &lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;delete&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;&nbsp;m_nhiCompositeViewer;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;             <br>
+m_nhiCompositeViewer&nbsp;=&nbsp;&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:blue&quot;&gt;nullptr&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;;&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;      &nbsp;}&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt;font-family:Consolas;color:black&quot;&gt;}&lt;/span&gt;&lt;/p&gt;<br>
+<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;/p&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;/div&gt;<br>
+<br>
+&lt;p&gt;&lt;/p&gt;<br>
+<br>
+--&nbsp;&lt;br&nbsp;/&gt;<br>
+You&nbsp;received&nbsp;this&nbsp;message&nbsp;because&nbsp;you&nbsp;are&nbsp;subscribed&nbsp;to&nbsp;the&nbsp;Google&nbsp;Groups&nbsp;&quot;OpenSceneGraph&nbsp;Users&quot;&nbsp;group.&lt;br&nbsp;/&gt;<br>
+To&nbsp;unsubscribe&nbsp;from&nbsp;this&nbsp;group&nbsp;and&nbsp;stop&nbsp;receiving&nbsp;emails&nbsp;from&nbsp;it,&nbsp;send&nbsp;an&nbsp;email&nbsp;to&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users+unsubscribe@googlegroups.com&quot;&gt;osg-users+unsubscribe@googlegroups.com&lt;/a&gt;.&lt;br&nbsp;/&gt;<br>
+To&nbsp;view&nbsp;this&nbsp;discussion&nbsp;on&nbsp;the&nbsp;web&nbsp;visit&nbsp;&lt;a&nbsp;href=&quot;https://groups.google.com/d/msgid/osg-users/8ab9bfc5-c4c2-4787-bb53-a60d39bd47b2%40googlegroups.com?utm_medium=email&amp;utm_source=footer&quot;&gt;https://groups.google.com/d/msgid/osg-users/8ab9bfc5-c4c2-4787-bb53-a60d39bd47b2%40googlegroups.com&lt;/a&gt;.&lt;br&nbsp;/&gt;<br>
+
+</tt>

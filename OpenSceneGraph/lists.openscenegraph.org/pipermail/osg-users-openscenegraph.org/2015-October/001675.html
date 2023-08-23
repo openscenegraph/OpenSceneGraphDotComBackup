@@ -1,0 +1,190 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Crash when application closes if linking with OSG
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20when%20application%20closes%20if%20linking%20with%20OSG&In-Reply-To=%3CCAAnWJMksRyaDY7sQ7%2BqT%3DAn8JRAT1OXJFNV56E%3DyCo084gg%3D-w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001671.html">
+   <LINK REL="Next"  HREF="001676.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Crash when application closes if linking with OSG</H1>
+<!--htdig_noindex-->
+    <B>David Si&#241;uela</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20when%20application%20closes%20if%20linking%20with%20OSG&In-Reply-To=%3CCAAnWJMksRyaDY7sQ7%2BqT%3DAn8JRAT1OXJFNV56E%3DyCo084gg%3D-w%40mail.gmail.com%3E"
+       TITLE="[osg-users] Crash when application closes if linking with OSG">david.sinuela at pix4d.com
+       </A><BR>
+    <I>Mon Oct  5 02:24:07 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001671.html">[osg-users] Crash when application closes if linking with OSG
+</A></li>
+        <LI>Next message: <A HREF="001676.html">[osg-users] Crash when application closes if linking with OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1675">[ date ]</a>
+              <a href="thread.html#1675">[ thread ]</a>
+              <a href="subject.html#1675">[ subject ]</a>
+              <a href="author.html#1675">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+
+Thanks for your input. We can wait for an upstream fix, in the meanwhile we
+will patch it in our development branch.
+
+I tried your proposed solution, calling DisplaySettings::instance() from
+main(), and it didn't work, when s_InitRegistry is destroyed the
+DisplaySettings::s_displaySettings has been destroyed already. It can be
+fixed by defining a static initializer like InitRegistry that simply calls
+DisplaySettings::instance() in our program. If I understood it correctly
+this works because the compiler/linker will see this static member and
+DisplaySettings::s_displaySettings before InitRegistry, changing the order
+of initialization so that DisplaySettings::s_displaySettings is allocated
+before s_InitRegistry and deallocated after.
+
+It can also be fixed by calling &quot;osgDB::DatabasePager::prototype()&quot; or
+&quot;osg::DisplaySettings::instance()&quot; from InitRegistry's constructor.
+
+Regards,
+David
+
+
+
+On Fri, Oct 2, 2015 at 6:28 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi David,
+</I>&gt;<i>
+</I>&gt;<i> Curious bug.  Perhaps another solution would be to call
+</I>&gt;<i> DisplaySettings::instance() at the start of main.
+</I>&gt;<i>
+</I>&gt;<i> An actual bug fix might be to put in a proxy object into
+</I>&gt;<i> src/osg/DisplauySettings.cpp that forces that DisplaySettings::instance()
+</I>&gt;<i> to be constructed during static initialization, this would obviously
+</I>&gt;<i> require a patch to the core OSG, something I'm happy to do, but won't help
+</I>&gt;<i> you right away.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On 2 October 2015 at 17:07, David Si&#241;uela &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david.sinuela at pix4d.com</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hello,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> We have a Qt application that uses OSG for the 3D viewer/editor, but the
+</I>&gt;&gt;<i> OSG viewer may not be used if the user does not open the 3D view tab. We
+</I>&gt;&gt;<i> are in the process of upgrading to OSG 3.4 and we noticed that the
+</I>&gt;&gt;<i> application crashes when the user quits if the 3D view is never open.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> The problem seems to be the order in which the static variables are
+</I>&gt;&gt;<i> destroyed at shutdown. The stacktrace looks like this:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Program received signal SIGSEGV, Segmentation fault.
+</I>&gt;&gt;<i> 0x0000000001d8a0b0 in
+</I>&gt;&gt;<i> osg::DisplaySettings::getNumOfHttpDatabaseThreadsHint (this=0x0) at
+</I>&gt;&gt;<i> /home/siu/src/pix4dmapper/2.1/external_tmp/build/openscenegraph/include/osg/DisplaySettings:203
+</I>&gt;&gt;<i> (gdb) bt
+</I>&gt;&gt;<i> #0  0x0000000001d8a0b0 in
+</I>&gt;&gt;<i> osg::DisplaySettings::getNumOfHttpDatabaseThreadsHint (this=0x0) at
+</I>&gt;&gt;<i> /home/siu/src/pix4dmapper/2.1/external_tmp/build/openscenegraph/include/osg/DisplaySettings:203
+</I>&gt;&gt;<i> #1  0x0000000001d86b47 in osgDB::DatabasePager::DatabasePager
+</I>&gt;&gt;<i> (this=0x3a10fb0) at
+</I>&gt;&gt;<i> /home/siu/src/pix4dmapper/2.1/external_tmp/build/openscenegraph/src/osgDB/DatabasePager.cpp:1111
+</I>&gt;&gt;<i> #2  0x0000000001d87815 in osgDB::DatabasePager::prototype () at
+</I>&gt;&gt;<i> /home/siu/src/pix4dmapper/2.1/external_tmp/build/openscenegraph/src/osgDB/DatabasePager.cpp:1235
+</I>&gt;&gt;<i> #3  0x0000000001d1ceef in InitRegistry::~InitRegistry (this=0x32cc6f3
+</I>&gt;&gt;<i> &lt;s_InitRegistry&gt;, __in_chrg=&lt;optimized out&gt;) at
+</I>&gt;&gt;<i> /home/siu/src/pix4dmapper/2.1/external_tmp/build/openscenegraph/src/osgViewer/ViewerBase.cpp:53
+</I>&gt;&gt;<i> #4  0x00007fffec82df88 in __run_exit_handlers () from /usr/lib/libc.so.6
+</I>&gt;&gt;<i> #5  0x00007fffec82dfd5 in exit () from /usr/lib/libc.so.6
+</I>&gt;&gt;<i> #6  0x00007fffec818617 in __libc_start_main () from /usr/lib/libc.so.6
+</I>&gt;&gt;<i> #7  0x0000000000ea3709 in _start ()
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> As shown in the trace calling DatabasePager::prototype() is creating the
+</I>&gt;&gt;<i> static DatabasePager for the first time and this one calls
+</I>&gt;&gt;<i> osg::DisplaySettings::instance() which was released already. It is easily
+</I>&gt;&gt;<i> reproducible on linux with gcc. Removing the
+</I>&gt;&gt;<i> osgDB::DatabasePager::prototype() = 0; line fixes the crash but I am not
+</I>&gt;&gt;<i> sure about the intent of that line.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Regards,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> --
+</I>&gt;&gt;<i> David Sinuela Pastor
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> *Pix4D SA*
+</I>&gt;&gt;<i> *EPFL Innovation Park*
+</I>&gt;&gt;<i> *Building D*
+</I>&gt;&gt;<i> *1015 Lausanne - Switzerland*
+</I>&gt;&gt;<i> *Email: &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david.sinuela at pix4d.com</A>&gt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david.sinuela at pix4d.com</A>
+</I>&gt;&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david.sinuela at gmail.com</A>&gt;*
+</I>&gt;&gt;<i> *Skype: david.sinuela.pix4d*
+</I>&gt;&gt;<i> *www.pix4d.com* &lt;<A HREF="http://www.pix4d.com/">http://www.pix4d.com</A>&gt;
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>
+
+-- 
+David Sinuela Pastor
+
+
+*Pix4D SA*
+*EPFL Innovation Park*
+*Building D*
+*1015 Lausanne - Switzerland*
+*Email: &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david.sinuela at pix4d.com</A>&gt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david.sinuela at pix4d.com</A>
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">david.sinuela at gmail.com</A>&gt;*
+*Skype: david.sinuela.pix4d*
+*www.pix4d.com* &lt;<A HREF="http://www.pix4d.com/">http://www.pix4d.com</A>&gt;
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151005/cc69673c/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151005/cc69673c/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001671.html">[osg-users] Crash when application closes if linking with OSG
+</A></li>
+	<LI>Next message: <A HREF="001676.html">[osg-users] Crash when application closes if linking with OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1675">[ date ]</a>
+              <a href="thread.html#1675">[ thread ]</a>
+              <a href="subject.html#1675">[ subject ]</a>
+              <a href="author.html#1675">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,204 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20What%20wrong%20with%20my%20%22SubloadCallback%22%20derived%20class%3F&In-Reply-To=%3CCAFN7Y%2BVbAvLC8Y27LuvwOOYj9qF6NvUZEKnF__zPdYdP0daYAw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278808.html">
+   <LINK REL="Next"  HREF="002598.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20What%20wrong%20with%20my%20%22SubloadCallback%22%20derived%20class%3F&In-Reply-To=%3CCAFN7Y%2BVbAvLC8Y27LuvwOOYj9qF6NvUZEKnF__zPdYdP0daYAw%40mail.gmail.com%3E"
+       TITLE="[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Mar 24 01:43:21 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278808.html">[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?
+</A></li>
+        <LI>Next message: <A HREF="002598.html">[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2594">[ date ]</a>
+              <a href="thread.html#2594">[ thread ]</a>
+              <a href="subject.html#2594">[ subject ]</a>
+              <a href="author.html#2594">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Zheng,
+
+I am away from my dev machine so not in a position to look up the
+implementation side for subload callback to double check your code.
+
+In general though I wouldn't recommend having the draw traversal doing a
+read from a device as this is very likely to cause a frame drop. The
+standard way to tackle this type of problem is to have a back ground thread
+read from the device copying the data an osg::Image, after copying calling
+dirty() on the image.  This osg::Image would also be attached to the
+osg::Texture in the scene graph, but there is no need to implement a
+subload callback as the Texture::apply() checks the Image modifiedCount()
+and automatically subloads for you.
+
+The video plugins like ffmpeg, quicktime and directshow ones implement this
+approach.
+
+Robert.
+
+On 23 March 2016 at 15:10, Zheng Li &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">908835930 at qq.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I wrote a &quot;SubloadCallback&quot; derived class and attach it to a texture2D
+</I>&gt;<i> object to update image dynamically,but unfortunately the texture image can
+</I>&gt;<i> not be updated,the texture always show a piece of white;below is my
+</I>&gt;<i> code,what wrong happened to it?
+</I>&gt;<i>
+</I>&gt;<i> void main()
+</I>&gt;<i> {
+</I>&gt;<i>         // the class to update texture image dynamically;
+</I>&gt;<i>         class UpdateTextureCallback : public
+</I>&gt;<i> osg::Texture2D::SubloadCallback
+</I>&gt;<i>         {
+</I>&gt;<i>         public:
+</I>&gt;<i>                 osg::ref_ptr&lt;osg::Image&gt; _image;
+</I>&gt;<i>                 SIZE m_szVideo;
+</I>&gt;<i>
+</I>&gt;<i>         public:
+</I>&gt;<i>                 UpdateTextureCallback(int vwidth,int vheight)
+</I>&gt;<i>                 {
+</I>&gt;<i>                         m_szVideo.cx = vwidth;
+</I>&gt;<i>                         m_szVideo.cy = vheight;
+</I>&gt;<i>                         _image = osgDB::readImageFile(&quot;C:\\test.jpg&quot;);
+</I>&gt;<i>                         assert(_image-&gt;valid());
+</I>&gt;<i>                         _image-&gt;scaleImage(vwidth,vheight,_image-&gt;r());
+</I>&gt;<i>                 };
+</I>&gt;<i>
+</I>&gt;<i>                 virtual ~UpdateTextureCallback()
+</I>&gt;<i>                 {
+</I>&gt;<i>                         _image = NULL;
+</I>&gt;<i>                 };
+</I>&gt;<i>
+</I>&gt;<i>                 virtual void load(const osg::Texture2D&amp;
+</I>&gt;<i> texture,osg::State&amp; state) const
+</I>&gt;<i>                 {
+</I>&gt;<i>
+</I>&gt;<i> glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,m_szVideo.cx,m_szVideo.cy,0,GL_BGRA_EXT,GL_UNSIGNED_BYTE,NULL);
+</I>&gt;<i>                 };
+</I>&gt;<i>
+</I>&gt;<i>                 virtual void subload(const osg::Texture2D&amp;
+</I>&gt;<i> texture,osg::State&amp; state) const
+</I>&gt;<i>                 {
+</I>&gt;<i>                         readImageFromDevice(_image);
+</I>&gt;<i>
+</I>&gt;<i> glTexSubImage2D(GL_TEXTURE_2D,0,0,0,_image-&gt;s(),_image-&gt;t(),_image-&gt;getPixelFormat(),_image-&gt;getDataType(),_image-&gt;getDataPointer());
+</I>&gt;<i>                 };
+</I>&gt;<i>         };
+</I>&gt;<i>
+</I>&gt;<i>         const int VideoWidth = 3840;
+</I>&gt;<i>         const int VideoHeight = 2160;
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Texture2D&gt; texVideo = new osg::Texture2D();
+</I>&gt;<i>         texVideo-&gt;setResizeNonPowerOfTwoHint(false);
+</I>&gt;<i>         texVideo-&gt;setTextureSize(VideoWidth,VideoHeight);
+</I>&gt;<i>         texVideo-&gt;setInternalFormat(GL_RGBA);
+</I>&gt;<i>         texVideo-&gt;setSubloadCallback(new
+</I>&gt;<i> UpdateTextureCallback(VideoWidth,VideoHeight));
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Geode&gt; quad = new osg::Geode();
+</I>&gt;<i>         quad-&gt;addDrawable(createDrawable_Quad());
+</I>&gt;<i>
+</I>&gt;<i> quad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,texVideo.get());
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osgViewer::Viewer&gt; viewer = new osgViewer::Viewer();
+</I>&gt;<i>         viewer-&gt;realize();
+</I>&gt;<i>         viewer-&gt;getCamera()-&gt;setAllowEventFocus(false);
+</I>&gt;<i>         viewer-&gt;getCamera()-&gt;setProjectionMatrixAsOrtho2D(0,1,0,1);
+</I>&gt;<i>         viewer-&gt;getCamera()-&gt;setViewMatrix(osg::Matrix::identity());
+</I>&gt;<i>         viewer-&gt;setSceneData( quad );
+</I>&gt;<i>         viewer-&gt;run();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> osg::Geometry * createDrawable_Quad(float alpha=1.0f)
+</I>&gt;<i> {
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Vec2Array&gt; vertices = new osg::Vec2Array;
+</I>&gt;<i>         vertices-&gt;push_back( osg::Vec2(0,0) );
+</I>&gt;<i>         vertices-&gt;push_back( osg::Vec2(0,1) );
+</I>&gt;<i>         vertices-&gt;push_back( osg::Vec2(1,1) );
+</I>&gt;<i>         vertices-&gt;push_back( osg::Vec2(1,0) );
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Vec2Array&gt; texcoords = new osg::Vec2Array;
+</I>&gt;<i>         texcoords-&gt;push_back( osg::Vec2(0.0f, 0.0f) );
+</I>&gt;<i>         texcoords-&gt;push_back( osg::Vec2(0.0f, 1.0f) );
+</I>&gt;<i>         texcoords-&gt;push_back( osg::Vec2(1.0f, 1.0f) );
+</I>&gt;<i>         texcoords-&gt;push_back( osg::Vec2(1.0f, 0.0f) );
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Vec4Array&gt; colors = new osg::Vec4Array();
+</I>&gt;<i>         colors-&gt;push_back(osg::Vec4(1.0f,1.0f,1.0f,alpha));
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Geometry&gt; quad = new osg::Geometry;
+</I>&gt;<i>         quad-&gt;setVertexArray( vertices.get() );
+</I>&gt;<i>         quad-&gt;setColorArray(colors.get());
+</I>&gt;<i>         quad-&gt;setColorBinding( osg::Geometry::BIND_OVERALL );
+</I>&gt;<i>         quad-&gt;setTexCoordArray( 0, texcoords.get() );
+</I>&gt;<i>         quad-&gt;addPrimitiveSet( new osg::DrawArrays(GL_QUADS, 0, 4) );
+</I>&gt;<i>         return quad.release();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Zheng
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic94f5-2.php?p=66611#66611">http://forum.openscenegraph.org/viewtopic.php?p=66611#66611</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160324/463b1f9f/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160324/463b1f9f/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278808.html">[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?
+</A></li>
+	<LI>Next message: <A HREF="002598.html">[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2594">[ date ]</a>
+              <a href="thread.html#2594">[ thread ]</a>
+              <a href="subject.html#2594">[ subject ]</a>
+              <a href="author.html#2594">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

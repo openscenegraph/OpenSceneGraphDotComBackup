@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] RTT Camera does not render anything
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RTT%20Camera%20does%20not%20render%20anything&In-Reply-To=%3CCALm6U%2BoEE51htX8uioVbJwSZwBVQnbPWLdixzj5J7AwYpD1yeQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="276308.html">
+   <LINK REL="Next"  HREF="000094.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] RTT Camera does not render anything</H1>
+<!--htdig_noindex-->
+    <B>Christian Buchner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RTT%20Camera%20does%20not%20render%20anything&In-Reply-To=%3CCALm6U%2BoEE51htX8uioVbJwSZwBVQnbPWLdixzj5J7AwYpD1yeQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] RTT Camera does not render anything">christian.buchner at gmail.com
+       </A><BR>
+    <I>Tue Apr 14 06:48:43 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="276308.html">[osg-users] RTT Camera does not render anything
+</A></li>
+        <LI>Next message: <A HREF="000094.html">[osg-users] RTT Camera does not render anything
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#86">[ date ]</a>
+              <a href="thread.html#86">[ thread ]</a>
+              <a href="subject.html#86">[ subject ]</a>
+              <a href="author.html#86">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Maybe you forgot to add the camera to the main scene graph?
+
+An addChild() into the scene graph root should do the trick.
+
+
+2015-04-14 15:16 GMT+02:00 Andreas Schreiber &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ayss at online.de</A>&gt;:
+
+&gt;<i> Hi
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I'm trying to generate a texture with a rtt-camera, so I can use this
+</I>&gt;<i> texture later in my main scene.
+</I>&gt;<i> To verify if the texture is correct I'm trying to put the texture on a
+</I>&gt;<i> quad in my main scene.
+</I>&gt;<i>
+</I>&gt;<i> I use the following method for the rtt-camera, the red clearColor I used
+</I>&gt;<i> to test what the camera renders, but it did not help me out.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> osg::Camera *createRTTCamera(osg::Camera::BufferComponent buffer,
+</I>&gt;<i> osg::Texture *tex, bool isAbsolute)
+</I>&gt;<i> {
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+</I>&gt;<i>         osg::Vec4f textureStartColor = osg::Vec4f(1.0, 0.0, 0.0, 0.0);
+</I>&gt;<i>     camera-&gt;setClearColor(textureStartColor);
+</I>&gt;<i>     camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+</I>&gt;<i>
+</I>&gt;<i> camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+</I>&gt;<i>     camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+</I>&gt;<i>
+</I>&gt;<i>     if (tex)
+</I>&gt;<i>     {
+</I>&gt;<i>         tex-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+</I>&gt;<i>         tex-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+</I>&gt;<i>         camera-&gt;setViewport(0, 0, tex-&gt;getTextureWidth(),
+</I>&gt;<i> tex-&gt;getTextureHeight());
+</I>&gt;<i>         camera-&gt;attach(buffer, tex);
+</I>&gt;<i>     }
+</I>&gt;<i>     if (isAbsolute)
+</I>&gt;<i>     {
+</I>&gt;<i>         camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+</I>&gt;<i>                 camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0.0, 1.0,
+</I>&gt;<i> 0.0, 1.0));
+</I>&gt;<i>         camera-&gt;setViewMatrix(osg::Matrix::identity());
+</I>&gt;<i>                 osg::Vec3 corner = osg::Vec3();
+</I>&gt;<i>         camera-&gt;addChild(createScreenQuad(1.0f, 1.0f, 1, corner));
+</I>&gt;<i>     }
+</I>&gt;<i>     return camera.release();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> In the main part I do the following:
+</I>&gt;<i>
+</I>&gt;<i> 1. I initialize the global texture2D variable with an image
+</I>&gt;<i>
+</I>&gt;<i> 2. Create the rrt camera with color_buffer, the texture (which is global),
+</I>&gt;<i> and 1 for absolute
+</I>&gt;<i>
+</I>&gt;<i> 3. load geometry
+</I>&gt;<i>
+</I>&gt;<i> 4.      Setup Light, here an example
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> osg::ref_ptr&lt;osg::LightSource&gt; sunLight = new osg::LightSource();
+</I>&gt;<i>         sunLight.get()-&gt;setLight(createLightSpot(osg::Vec4(0, 1, 0, 0),
+</I>&gt;<i> osg::Vec4(0, 1, 0, 1)));
+</I>&gt;<i>         sunLight.get()-&gt;setReferenceFrame(osg::LightSource::ABSOLUTE_RF);
+</I>&gt;<i>         sunLight.get()-&gt;setLocalStateSetModes(osg::StateAttribute::ON);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> 5. Add the light and the geometry to the rtt camera
+</I>&gt;<i> 6. Add the light and the geometry to the main scene
+</I>&gt;<i>
+</I>&gt;<i> Now there should be the scene on the quad geometry which I generated, but
+</I>&gt;<i> this is always rendered with the color of the light and nothing else on it.
+</I>&gt;<i> It isn't even a mix of the light color and the clear color of the rtt
+</I>&gt;<i> camera, its just the light color.
+</I>&gt;<i>
+</I>&gt;<i> Here is my quad generation as well:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Geode&gt; planeRTT = new osg::Geode();
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Geometry&gt; geometry = new osg::Geometry();
+</I>&gt;<i>         planeRTT-&gt;addDrawable(geometry);
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Vec3Array&gt; vertexArray = new osg::Vec3Array();
+</I>&gt;<i>         vertexArray-&gt;push_back(osg::Vec3(1, -0.25, -1));
+</I>&gt;<i>         vertexArray-&gt;push_back(osg::Vec3(1, 0.75, -1));
+</I>&gt;<i>         vertexArray-&gt;push_back(osg::Vec3(1, 0.75, 1));
+</I>&gt;<i>         vertexArray-&gt;push_back(osg::Vec3(1, -0.25, 1));
+</I>&gt;<i>         geometry-&gt;setVertexArray(vertexArray);
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Vec4Array&gt; colorArray = new osg::Vec4Array();
+</I>&gt;<i>         colorArray-&gt;push_back(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+</I>&gt;<i>         geometry-&gt;setColorArray(colorArray);
+</I>&gt;<i>         geometry-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Vec2Array&gt; texCoordArray = new osg::Vec2Array();
+</I>&gt;<i>         texCoordArray-&gt;push_back(osg::Vec2(0.0f, 0.0f));
+</I>&gt;<i>         texCoordArray-&gt;push_back(osg::Vec2(1.0f, 0.0f));
+</I>&gt;<i>         texCoordArray-&gt;push_back(osg::Vec2(1.0f, 1.0f));
+</I>&gt;<i>         texCoordArray-&gt;push_back(osg::Vec2(0.0f, 1.0f));
+</I>&gt;<i>         geometry-&gt;setTexCoordArray(0, texCoordArray);
+</I>&gt;<i>
+</I>&gt;<i>         geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLE_FAN, 0,
+</I>&gt;<i> 4));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> planeRTT.get()-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,
+</I>&gt;<i> rttTexture.get(), osg::StateAttribute::ON);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Did I miss something or did I mixed up some order?!
+</I>&gt;<i> Would be grateful for any help!
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Andreas
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopica6cf-2.php?p=63381#63381">http://forum.openscenegraph.org/viewtopic.php?p=63381#63381</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150414/cc03bbf0/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150414/cc03bbf0/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="276308.html">[osg-users] RTT Camera does not render anything
+</A></li>
+	<LI>Next message: <A HREF="000094.html">[osg-users] RTT Camera does not render anything
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#86">[ date ]</a>
+              <a href="thread.html#86">[ thread ]</a>
+              <a href="subject.html#86">[ subject ]</a>
+              <a href="author.html#86">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

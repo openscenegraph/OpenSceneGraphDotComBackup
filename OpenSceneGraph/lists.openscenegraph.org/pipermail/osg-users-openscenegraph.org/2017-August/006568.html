@@ -1,0 +1,249 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problem to load images
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20to%20load%20images&In-Reply-To=%3C1502848696.m2f.71422%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006562.html">
+   <LINK REL="Next"  HREF="006569.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problem to load images</H1>
+<!--htdig_noindex-->
+    <B>R&#195;&#180;mulo Cerqueira</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20to%20load%20images&In-Reply-To=%3C1502848696.m2f.71422%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Problem to load images">romulogcerqueira at gmail.com
+       </A><BR>
+    <I>Tue Aug 15 18:58:16 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006562.html">[osg-users] Problem to load images
+</A></li>
+        <LI>Next message: <A HREF="006569.html">[osg-users] Problem to load images
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6568">[ date ]</a>
+              <a href="thread.html#6568">[ thread ]</a>
+              <a href="subject.html#6568">[ subject ]</a>
+              <a href="author.html#6568">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+thanks for your reply. Follows my code:
+
+Code:
+
+#define BOOST_TEST_MODULE &quot;NormalMapping_test&quot;
+#include &lt;boost/test/unit_test.hpp&gt;
+
+// OpenSceneGraph includes
+#include &lt;osg/Geode&gt;
+#include &lt;osg/Group&gt;
+#include &lt;osg/Image&gt;
+#include &lt;osg/ShapeDrawable&gt;
+#include &lt;osg/StateSet&gt;
+#include &lt;osg/Texture2D&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgViewer/Viewer&gt;
+
+// Rock includes
+#include &lt;normal_depth_map/NormalDepthMap.hpp&gt;
+#include &lt;normal_depth_map/ImageViewerCaptureTool.hpp&gt;
+
+// OpenCV includes
+#include &lt;opencv2/core/core.hpp&gt;
+#include &lt;opencv2/highgui/highgui.hpp&gt;
+#include &lt;opencv2/imgproc/imgproc.hpp&gt;
+#include &lt;opencv2/contrib/contrib.hpp&gt;
+
+// C++ includes
+#include &lt;iostream&gt;
+
+using namespace normal_depth_map;
+
+BOOST_AUTO_TEST_SUITE(NormalMapping)
+
+
+// add one object to scene (sphere)
+void addSimpleObject(osg::ref_ptr&lt;osg::Group&gt; root) {
+    osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode();
+    geode-&gt;addDrawable(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(0,0,-14), 5)));
+    root-&gt;addChild(geode);
+    root-&gt;getChild(0)-&gt;asGeode()-&gt;addDrawable(geode-&gt;getDrawable(0));
+}
+
+// define texture attributes
+osg::ref_ptr&lt;osg::StateSet&gt; insertNormalMapTexture(osg::ref_ptr&lt;osg::Image&gt; diffuseImage, osg::ref_ptr&lt;osg::Image&gt; normalImage) {
+    osg::ref_ptr&lt;osg::Texture2D&gt; diffuse = new osg::Texture2D();
+    osg::ref_ptr&lt;osg::Texture2D&gt; normal = new osg::Texture2D();
+
+    diffuse-&gt;setImage(diffuseImage);
+    diffuse-&gt;setDataVariance(osg::Object::DYNAMIC);
+    diffuse-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+    diffuse-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+    diffuse-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+    diffuse-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    diffuse-&gt;setResizeNonPowerOfTwoHint(false);
+    diffuse-&gt;setMaxAnisotropy(8.0f);
+
+    normal-&gt;setImage(normalImage);
+    normal-&gt;setDataVariance(osg::Object::DYNAMIC);
+    normal-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+    normal-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+    normal-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+    normal-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    normal-&gt;setResizeNonPowerOfTwoHint(false);
+    normal-&gt;setMaxAnisotropy(8.0f);
+
+    osg::ref_ptr&lt;osg::StateSet&gt; normalState = new osg::StateSet();
+    normalState-&gt;setTextureAttributeAndModes(TEXTURE_UNIT_DIFFUSE, diffuse, osg::StateAttribute::ON);
+    normalState-&gt;setTextureAttributeAndModes(TEXTURE_UNIT_NORMAL, normal, osg::StateAttribute::ON);
+    return normalState;
+}
+
+// get texture files
+void loadTextures(osg::ref_ptr&lt;osg::Group&gt; root, TextureImages textureId) {
+    osg::ref_ptr&lt;osg::Image&gt; diffuseImage = osgDB::readImageFile(&quot;/home/romulo/dev.bir.master/simulation/normal_depth_map/textures/gray_texture_d.jpg&quot;);
+    osg::ref_ptr&lt;osg::Image&gt; normalImage = osgDB::readImageFile(&quot;/home/romulo/dev.bir.master/simulation/normal_depth_map/textures/gray_texture_n.jpg&quot;);
+
+    // texture properties
+    osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode();
+    geode-&gt;setStateSet(insertNormalMapTexture(diffuseImage, normalImage));
+    root-&gt;addChild(geode);
+}
+
+// create scene with normal mapping and one object
+osg::ref_ptr&lt;osg::Group&gt; createNormalMapSimpleScene() {
+    osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group();
+    osg::ref_ptr&lt;osg::StateSet&gt; stateset = new osg::StateSet();
+    stateset-&gt;addUniform(new osg::Uniform(&quot;diffuseTexture&quot;, TEXTURE_UNIT_DIFFUSE));
+    stateset-&gt;addUniform(new osg::Uniform(&quot;normalTexture&quot;, TEXTURE_UNIT_NORMAL));
+    stateset-&gt;setDataVariance(osg::Object::STATIC);
+    root-&gt;setStateSet(stateset);
+
+    loadTextures(root, TEXTURE_GRAY);
+    addSimpleObject(root);
+    return root;
+}
+
+// compute the normal depth map for a osg scene
+cv::Mat computeNormalDepthMap(osg::ref_ptr&lt;osg::Group&gt; root, float maxRange, float fovX, float fovY) {
+    uint height = 500;
+
+    // normal depth map
+    NormalDepthMap normalDepthMap(maxRange, fovX * 0.5, fovY * 0.5);
+    ImageViewerCaptureTool capture(fovY, fovX, height);
+    capture.setBackgroundColor(osg::Vec4d(0, 0, 0, 0));
+    normalDepthMap.addNodeChild(root);
+
+    // grab scene
+    osg::ref_ptr&lt;osg::Image&gt; osgImage = capture.grabImage(normalDepthMap.getNormalDepthMapNode());
+    osg::ref_ptr&lt;osg::Image&gt; osgDepth = capture.getDepthBuffer();
+    cv::Mat cvImage = cv::Mat(osgImage-&gt;t(), osgImage-&gt;s(), CV_32FC3, osgImage-&gt;data());
+    cv::Mat cvDepth = cv::Mat(osgDepth-&gt;t(), osgDepth-&gt;s(), CV_32FC1, osgDepth-&gt;data());
+    cvDepth = cvDepth.mul( cv::Mat1f(cvDepth &lt; 1) / 255);
+
+    std::vector&lt;cv::Mat&gt; channels;
+    cv::split(cvImage, channels);
+    channels[1] = cvDepth;
+    cv::merge(channels, cvImage);
+    cv::cvtColor(cvImage, cvImage, cv::COLOR_RGB2BGR);
+    cv::flip(cvImage, cvImage, 0);
+
+    return cvImage.clone();
+}
+
+BOOST_AUTO_TEST_CASE(differentNormalMaps_TestCase) {
+    float maxRange = 20.0f;
+    float fovX = M_PI / 3;  // 60 degrees
+    float fovY = M_PI / 3;  // 60 degrees
+
+    osg::ref_ptr&lt;osg::Group&gt; normalRoot = createNormalMapSimpleScene();
+
+    cv::Mat cvNormal = computeNormalDepthMap(normalRoot, maxRange, fovX, fovY);
+
+    plotSonarTest(cvNormal, maxRange, fovX * 0.5);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+
+
+
+
+... 
+
+Thank you!
+
+Cheers,
+R&#244;mulo
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicd646.php?p=71422#71422">http://forum.openscenegraph.org/viewtopic.php?p=71422#71422</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006562.html">[osg-users] Problem to load images
+</A></li>
+	<LI>Next message: <A HREF="006569.html">[osg-users] Problem to load images
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6568">[ date ]</a>
+              <a href="thread.html#6568">[ thread ]</a>
+              <a href="subject.html#6568">[ subject ]</a>
+              <a href="author.html#6568">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

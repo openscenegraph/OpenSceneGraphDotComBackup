@@ -1,0 +1,135 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] SingleThreaded leading to whole application just running on one core
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3Ce7d1222d-9bc2-1f9b-c321-6ecf452d15ff%40wsoptics.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004208.html">
+   <LINK REL="Next"  HREF="004210.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] SingleThreaded leading to whole application just running on one core</H1>
+<!--htdig_noindex-->
+    <B>Christoph Weiss</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3Ce7d1222d-9bc2-1f9b-c321-6ecf452d15ff%40wsoptics.de%3E"
+       TITLE="[osg-users] SingleThreaded leading to whole application just running on one core">weiss at wsoptics.de
+       </A><BR>
+    <I>Fri Sep 23 01:19:50 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004208.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+        <LI>Next message: <A HREF="004210.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4209">[ date ]</a>
+              <a href="thread.html#4209">[ thread ]</a>
+              <a href="subject.html#4209">[ subject ]</a>
+              <a href="author.html#4209">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+&gt;<i> When running SingleThread the OSG just sets the affinity of the
+</I>&gt;<i> current thread.  That's it, that's all it's doing.
+</I>
+This actually has a very bad side effect that I only noticed now.  Since 
+it explicitly sets the affinity to core zero, any other application that 
+does so will share its CPU entirely with it.  In particular if you start 
+a SingleThread OSG application twice, it will share the core and have 
+degraded performance.
+
+I also wouldn't be surprised if the kernel favors core zero for things 
+that aren't properly multithreaded, but I'm just guessing here, and 
+maybe that's a thing of the past already, at least under linux.
+
+I'm not even sure why setting the CPU affinity to a single core should 
+improve performance at all unless the OS's scheduler performs poorly.
+
+&gt;<i> It does not explicitly change the affinity of any of threads created
+</I>&gt;<i> by user applications.  I think what Pete found was under Linux is that
+</I>&gt;<i> threads created after the set affinity to the current thread, all
+</I>&gt;<i> threads created by that thread then inherit that affinity, which what
+</I>&gt;<i> his code snippet looks to work around.
+</I>
+Yes, they inherit the mask.  It would be quite similar if OSG set up a 
+ulimit().
+
+&gt;&gt;<i> Judging by your comment, this has already been discussed and not deemed a
+</I>&gt;&gt;<i> fault that should be fixed?
+</I>&gt;<i>
+</I>&gt;<i> Changing something that was done by design because one class of usage
+</I>&gt;<i> on one platform doesn't do exactly what they want.  There isn't a bug
+</I>&gt;<i> to fix here.  It's sub-optimal behavior for certain types of
+</I>&gt;<i> application usage on certain platforms.
+</I>
+I agree, it's not a bug, it's a design choice.  However, it's a rather 
+strict enforcement on the user.
+
+&gt;<i> I haven't yet seen a reason to change the behaviour, it's not the case
+</I>&gt;<i> that the behaviour is wrong for all users, it's not a bug.  Removing
+</I>&gt;<i> the setting of affinity would leave the main thread to float around
+</I>&gt;<i> and increase the changes of breaking cache.  The OSG is just trying to
+</I>&gt;<i> do something sensible out of the box for most users.
+</I>
+I totally understand that.  But I disagree with it being the most 
+sensible choice ;)  Subclassing CompositeViewer is a good solution.  For 
+me, it really does not make that much of a difference if the design is 
+changed or not.  I'd be surprised if I was the last to run into this 
+issue though and spend quite some time on figuring this out.
+
+Apart from this, I think in general a library should not impose 
+restrictions on the calling thread without it explicitly asking for 
+them.  Suppose a library just decided to close file descriptors 0, 1, 2 
+because it doesn't need them and can thus save some memory...
+
+&gt;<i> In the case of Qt application, they should be run multi-theaded, for
+</I>&gt;<i> all the native windowing systems the OSG support all work
+</I>&gt;<i> multi-threaded without any problem.  Unfortunately Qt has created a
+</I>&gt;<i> series of problems on the threading front that we've had to try and
+</I>&gt;<i> work around, Qt then goes and moves the goal posts though between
+</I>&gt;<i> releases. it's been a real pain to try and keep osgQt working well
+</I>&gt;<i> over the years.  If you don't need a traditional 2D UI then it's
+</I>&gt;<i> generally best to avoid Qt as it causes problems because it has it's
+</I>&gt;<i> way of working that doesn't fit well with the needs of real-time
+</I>&gt;<i> visualization.
+</I>
+Alas, we're quite stuck with Qt since we require a 2D UI.  But thanks 
+for the information.
+
+Christoph
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004208.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+	<LI>Next message: <A HREF="004210.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4209">[ date ]</a>
+              <a href="thread.html#4209">[ thread ]</a>
+              <a href="subject.html#4209">[ subject ]</a>
+              <a href="author.html#4209">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Mapping world cordinates to screen cordinates
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Mapping%20world%20cordinates%20to%20screen%20cordinates&In-Reply-To=%3C1474190644.m2f.68648%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004157.html">
+   <LINK REL="Next"  HREF="004238.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Mapping world cordinates to screen cordinates</H1>
+<!--htdig_noindex-->
+    <B>Suraj Paul</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Mapping%20world%20cordinates%20to%20screen%20cordinates&In-Reply-To=%3C1474190644.m2f.68648%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Mapping world cordinates to screen cordinates">suraj at isac.gov.in
+       </A><BR>
+    <I>Sun Sep 18 02:24:04 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004157.html">[osg-users] writeNodeFile with texture infomation
+</A></li>
+        <LI>Next message: <A HREF="004238.html">[osg-users] Mapping world cordinates to screen cordinates
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280381">[ date ]</a>
+              <a href="thread.html#280381">[ thread ]</a>
+              <a href="subject.html#280381">[ subject ]</a>
+              <a href="author.html#280381">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I am trying to find out what is the screen cordinates corresponding to the world cordinates of a moving node. 
+
+I read the post: <A HREF="../../../../forum.openscenegraph.org/viewtopicfc4b.php?t=2292">http://forum.openscenegraph.org/viewtopic.php?t=2292</A>
+ and referred to OSG beginners guide also.
+
+So, I did the following:-
+
+//set viewport of viewer for screensize 1280X768
+viewer.getCamera()-&gt;setViewport( new osg::Viewport(0, 0, 1280, 768) );
+
+
+//Setup the viewer position used to position the camera in simulation loop
+
+osg::Vec3d cam_eye( 0., -50.0, 0.0);
+osg::Vec3d cam_center( 0.,-40.0, 0.0 );
+osg::Vec3d cam_up( 0.0, 0.0,1.0 );
+
+
+//compute the camera matrix using modelview*ProjectionMat*windowMat
+
+osg::Matrix mv =  viewer.getCamera()-&gt;getViewMatrix();
+osg::Matrix windowMatrix = viewer.getCamera()-&gt;getViewport()-&gt;computeWindowMatrix();
+osg::Matrix projectionMatrix = viewer.getCamera()-&gt;getProjectionMatrix();
+
+//get the camera matrix
+osg::Matrix cameraMatrix = mv* projectionMatrix * windowMatrix;
+
+//Now make a moving node in the scene that moves in steps of delta in every frame
+
+float delta = 0.;
+
+ while(!viewer.done())
+        {
+            viewer.getCamera()-&gt;setViewMatrixAsLookAt( cam_eye, cam_center, cam_up );
+            viewer.getCamera()-&gt;setProjectionMatrixAsPerspective(80, 1280.0/768.0, 0.1f, 80.0f);
+
+//I translate the model in x -direction everyframe and get its world cordinate
+            trans-&gt;setMatrix( osg::Matrix::translate(osg::Vec3d(delta,0.,0.)));
+            osg::Vec3 posInWorld = model-&gt;getBound().center() *osg::computeLocalToWorld(model-&gt;getParentalNodePaths()[0]);
+
+            //compute the screen coordinates of model
+            osg::Vec3d ssc = posInWorld*cameraMatrix;
+       
+
+           delta+=2;  //increment the position of model
+            viewer.frame();
+    }
+
+
+I have checked that [0 , 0, 0] vector in WCS is mapped to ssc = [0, 0, 0]*cameraMatrix which gives ssc= [640, 384, 0.984]. Neglecting the z-cordinate, it is same as center of the screen.
+
+My question is: Upon printing the 3 dimensional vector 'ssc' (screen-space cordinate),  i am  getting some values of its x-cordinate larger than 1268 (the viewport dimension!). This happens even when the moving 'model' is still well within the screen. 
+For example the WCS point [18, 0, 0] gives ssc as = [1348.92, 384, 0.984]
+
+Where i have gone wrong in computing the screen cordinates? Shouldn't the screen cordinates be lying in range 0&lt;x&lt;1268  and 0&lt;y&lt;768 ?
+
+I want to find out when the image of the moving node on the screen moves out of the screen.
+
+Please reply.
+
+
+Thank you!
+
+Cheers,
+Suraj
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic3fa5.php?p=68648#68648">http://forum.openscenegraph.org/viewtopic.php?p=68648#68648</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004157.html">[osg-users] writeNodeFile with texture infomation
+</A></li>
+	<LI>Next message: <A HREF="004238.html">[osg-users] Mapping world cordinates to screen cordinates
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280381">[ date ]</a>
+              <a href="thread.html#280381">[ thread ]</a>
+              <a href="subject.html#280381">[ subject ]</a>
+              <a href="author.html#280381">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

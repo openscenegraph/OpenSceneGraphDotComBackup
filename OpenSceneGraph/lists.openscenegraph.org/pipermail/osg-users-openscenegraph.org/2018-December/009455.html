@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Dynamic VBO Performance Drop
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dynamic%20VBO%20Performance%20Drop&In-Reply-To=%3CCAHhtjQbbpbOtJMKXSLWJpg-QGUhh-BJDEgBVDSQfnh2mwnzHBA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009452.html">
+   <LINK REL="Next"  HREF="009456.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Dynamic VBO Performance Drop</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Dynamic%20VBO%20Performance%20Drop&In-Reply-To=%3CCAHhtjQbbpbOtJMKXSLWJpg-QGUhh-BJDEgBVDSQfnh2mwnzHBA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Dynamic VBO Performance Drop">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Mon Dec 10 05:34:57 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009452.html">[osg-users] Dynamic VBO Performance Drop
+</A></li>
+        <LI>Next message (by thread): <A HREF="009456.html">[osg-users] Dynamic VBO Performance Drop
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9455">[ date ]</a>
+              <a href="thread.html#9455">[ thread ]</a>
+              <a href="subject.html#9455">[ subject ]</a>
+              <a href="author.html#9455">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Ravi,
+
+We usually do not make such extensive checks but we were debuging other
+interesting VBO problem so we also checked yours. Few observations.:
+
+0. I noticed you used multithreaded configuration and switched to
+SingleThreaded. Multithreaded config creates 2 instances of GL resources
+and I thought it may affect your measurments so we continued with
+SingleThreaded later.
+
+1. Code line where you set DYNAMIC_DRAW is followed by setVertexArray and
+setVertexArray resets this to STATIC_DRAW. You will get better results when
+you setUsage after all arrays were defined (like this, note I made
+numPoints and batchSize global) :
+
+[...]
+  geom-&gt;setColorArray(lineColors, osg::Array::BIND_OVERALL);
+  geom-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,
+0, 0));
+
+  if ( numPoints &gt; batchSize )
+    geom-&gt;getOrCreateVertexBufferObject()-&gt;setUsage(GL_DYNAMIC_DRAW);
+  else
+    geom-&gt;getOrCreateVertexBufferObject()-&gt;setUsage(GL_STATIC_DRAW);
+[...]
+
+2. Once we set GL_DYNAMIC_DRAW we see similar performance (on Nvidia GTX
+1080 Windows 10) in both versions.
+
+3. So in your code the VBO was always refreshed with GL_STATIC_DRAW. We
+suspect that problem is actually related to OpenGL driver memory
+management. My friend Marcin Hajder  checked the underlying OpenGL calls
+with CodeXL and both versions made exactly the same calls per frame after
+updates stopped. And buffer and array sizes were the same too. So we
+concluded that it must be some memory fragmentation/thrashing issue in
+OpenGL driver. This suspicion was somewhat confirmed when we checked the
+memory use. When updates stabilized the dynamic version was still taking 10
+MB more GPU/RAM than static version. See attached screenshots from
+ProcessExplorer. Picture with larger mem use is dynamic, smaller mem use
+picter is static version. Note MB usage drop in dynamic version after
+minute or so from the moment updates stopped. I suspect driver compacted
+the memory when it noticed the resources are no longer updated.
+
+[image: dynamic.png]
+[image: static.png]
+
+Cheers,
+Hope this helps,
+Wojtek Lewandowski &amp; Marcin Hajder
+
+czw., 6 gru 2018 o 21:36 Ravi Mathur &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ravidavi at utexas.edu</A>&gt; napisa&#322;(a):
+
+&gt;<i> Hello all,
+</I>&gt;<i>
+</I>&gt;<i> I'm running into a strange performance drop issue when using dynamic VBOs
+</I>&gt;<i> that change frequently. I am measuring performance using framerate with
+</I>&gt;<i> vsync turned off. I know that framerate isn't always the best performance
+</I>&gt;<i> measurement, but my example is simple enough and the performance drop is
+</I>&gt;<i> significant and repeatable, so I feel comfortable using framerate.
+</I>&gt;<i>
+</I>&gt;<i> The issue: Suppose I have a Geometry that will hold lots of points (e.g.
+</I>&gt;<i> 100k or more). If I choose to pre-define all points in its vertex array,
+</I>&gt;<i> then a certain framerate is achieved. However, if I choose to add a batch
+</I>&gt;<i> of points during each update traversal, up to the same total number of
+</I>&gt;<i> points, then after all points have been added the framerate is much lower
+</I>&gt;<i> than in the pre-defined model. Note that &quot;much lower&quot; means over 30% lower.
+</I>&gt;<i>
+</I>&gt;<i> Note that in both cases, the same number of points are being drawn, and
+</I>&gt;<i> the Geometry and its vertex array are created once and modified (I'm not
+</I>&gt;<i> creating new Geometry objects at every update). All that changes is whether
+</I>&gt;<i> I added the points all at once before rendering or a few at a time while
+</I>&gt;<i> rendering.
+</I>&gt;<i>
+</I>&gt;<i> I wrote a small standalone osg example (attached). Compile, run, and show
+</I>&gt;<i> stats using:
+</I>&gt;<i> &gt; .\osgdynamicvbotest.exe --numPoints 100000 --batchSize 100000
+</I>&gt;<i>    * If batchSize = 100000 (same as numPoints) then you'll see the case
+</I>&gt;<i> where all points are pre-defined.
+</I>&gt;<i>    * As you reduce batchSize (e.g. 100), it will take longer to add the
+</I>&gt;<i> total number of points, but after all points have been added and the
+</I>&gt;<i> framerate stabilizes, you'll see it is much lower than the pre-defined case
+</I>&gt;<i> above.
+</I>&gt;<i>
+</I>&gt;<i> My question is, why is this happening? Is it related to intermediate VBOs
+</I>&gt;<i> being kept in memory and slowing down the GPU? All the other forum posts I
+</I>&gt;<i> see on the topic are either about VBOs not displaying properly (not the
+</I>&gt;<i> case here) or about memory usage (not the case here).
+</I>&gt;<i>
+</I>&gt;<i> Any thoughts on what's going on here would be very much appreciated.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i> Ravi
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20181210/1861f5fd/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20181210/1861f5fd/attachment.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: static.png
+Type: image/png
+Size: 16342 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20181210/1861f5fd/attachment.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20181210/1861f5fd/attachment.png</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: dynamic.png
+Type: image/png
+Size: 17314 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20181210/1861f5fd/attachment-0001.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20181210/1861f5fd/attachment-0001.png</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009452.html">[osg-users] Dynamic VBO Performance Drop
+</A></li>
+	<LI>Next message (by thread): <A HREF="009456.html">[osg-users] Dynamic VBO Performance Drop
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9455">[ date ]</a>
+              <a href="thread.html#9455">[ thread ]</a>
+              <a href="subject.html#9455">[ subject ]</a>
+              <a href="author.html#9455">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

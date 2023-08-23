@@ -1,0 +1,147 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] SingleThreaded leading to whole application just running on one core
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3CCAFN7Y%2BX4YPZYfuRwdjSgZucgTcZKy3jhmt71ZUvmyCCxPNT0ow%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004323.html">
+   <LINK REL="Next"  HREF="004241.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] SingleThreaded leading to whole application just running on one core</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3CCAFN7Y%2BX4YPZYfuRwdjSgZucgTcZKy3jhmt71ZUvmyCCxPNT0ow%40mail.gmail.com%3E"
+       TITLE="[osg-users] SingleThreaded leading to whole application just running on one core">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Sep 26 11:42:13 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004323.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+        <LI>Next message: <A HREF="004241.html">[osg-users] SingleThreaded leading to whole application just	running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4277">[ date ]</a>
+              <a href="thread.html#4277">[ thread ]</a>
+              <a href="subject.html#4277">[ subject ]</a>
+              <a href="author.html#4277">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>When reviewing doing a code review of the affinity code in OpenThreads
+today I noticed that OpenThreads doesn't fully expose all the
+functionality available for setting or resetting the thread affinity,
+as OpenThrreads just allowed you to specify a single cpu number for a
+thread to have affinity with.
+
+To improve the flexibility of setting the Thread processor affinity I
+have introduced a new function:
+
+/**
+ *  Set the processor affinity mask of current thread.  If you want to
+allow thread to run on any processor core use ~0ul for the cpumask
+ */
+extern OPENTHREAD_EXPORT_DIRECTIVE int
+SetProcessorAffinityMaskOfCurrentThread(unsigned long cpumask);
+
+
+And a new Thread method:
+
+      * If you want this threadd to run on any processor core then use
+a cpumask of ~0ul
+      * This call must be made before
+      * start() or startThread() and has no effect after the thread
+      * has been running. Returns 0 on success, implementation's
+      * error on failure, or -1 if ignored.
+      */
+    int setProcessorAffinityMask( unsigned long cpumask);
+
+I have implemented these for pthreads so far, creating a git branch
+openthreads_affinity_mask:
+
+    <A HREF="https://github.com/openscenegraph/OpenSceneGraph/tree/openthreads_affinity_mask">https://github.com/openscenegraph/OpenSceneGraph/tree/openthreads_affinity_mask</A>
+
+It's experimental, the API isn't settled yet, but it's a start.  I
+will need to boot into Windows tomorrow and implement the Windows
+side.  Members of the community are welcome to dive in and beat me to
+this.
+
+As a test of this new API I have modified the thread testing example
+that Christian wrote and I extended earlier today, the addition simple
+is:
+
+        if (arguments.read(&quot;--reset&quot;))
+        {
+            OpenThreads::SetProcessorAffinityMaskOfCurrentThread(~0);
+        }
+
+What this does is set the affinity of the main thread to run on all
+threads.  With this change even the troublesome C++11 threads now work
+fine even if the OSG viewer sets the affinity initialize to CPU 0.
+
+This addresses a serious short coming in C++11 threads without needing
+to just move all code across to OpenThreads, this call above is
+sufficient to fix the lack of affinity support in C++ threads.  Since
+OSG applications that might use C++11 threads will be using
+OpenThreads anyway this doesn't add any extra dependencies.
+
+This could be used more widely as well, for instance is you want to
+set the affinity to just four of the CPU cores this can easily be done
+by just setting up the mask appropriately.
+
+I'm tempted to tweak the previous affinity API to:
+
+     OpenThreads::SetProcessorAffinityOfCurrentThread(unsigned int
+basecpunum, unsgined int numcores=1)
+
+Which would allow you to say set the affinity for cores 4,5,6,7 via:
+
+     OpenThreads::SetProcessorAffinityOfCurrentThread(4,4)
+
+I'll sleep on this bit of the API.
+
+These changes in some form will make it into OSG-3.6.  They also could
+potentially utilized in osgViewer.
+
+Robert.
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: main.cpp
+Type: text/x-c++src
+Size: 2285 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160926/f5ac604f/attachment-0003.cpp">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160926/f5ac604f/attachment-0003.cpp</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004323.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+	<LI>Next message: <A HREF="004241.html">[osg-users] SingleThreaded leading to whole application just	running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4277">[ date ]</a>
+              <a href="thread.html#4277">[ thread ]</a>
+              <a href="subject.html#4277">[ subject ]</a>
+              <a href="author.html#4277">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

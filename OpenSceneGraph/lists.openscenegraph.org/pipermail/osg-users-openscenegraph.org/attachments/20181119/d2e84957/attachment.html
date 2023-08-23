@@ -1,0 +1,67 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;That&#39;s&nbsp;not&nbsp;really&nbsp;how&nbsp;it&#39;s&nbsp;done.&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;You&nbsp;can&#39;t&nbsp;add&nbsp;the&nbsp;Node&nbsp;you&nbsp;got&nbsp;from&nbsp;ReadNodeFile&nbsp;as&nbsp;a&nbsp;child&nbsp;of&nbsp;a&nbsp;Geode.&nbsp;I&nbsp;don&#39;t&nbsp;even&nbsp;think&nbsp;that&nbsp;should&nbsp;compile&nbsp;because&nbsp;Geode&nbsp;isn&#39;t&nbsp;derive&nbsp;from&nbsp;osg::Group.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;What&nbsp;you&nbsp;need&nbsp;to&nbsp;do&nbsp;is&nbsp;create&nbsp;a&nbsp;visitor&nbsp;to&nbsp;travel&nbsp;through&nbsp;the&nbsp;children&nbsp;of&nbsp;the&nbsp;&quot;lines&quot;&nbsp;Node&nbsp;(that&nbsp;Node&nbsp;is&nbsp;almost&nbsp;100%&nbsp;certain&nbsp;to&nbsp;be&nbsp;an&nbsp;osg::Group&nbsp;with&nbsp;many&nbsp;children),&nbsp;finding&nbsp;any&nbsp;osg::Nodes&nbsp;you&nbsp;are&nbsp;interested&nbsp;in&nbsp;and&nbsp;examining&nbsp;how&nbsp;the&nbsp;color&nbsp;is&nbsp;set&nbsp;up&nbsp;on&nbsp;them&nbsp;(per-vertex,&nbsp;overall,&nbsp;etc)&nbsp;and&nbsp;changing&nbsp;the&nbsp;color&nbsp;data&nbsp;there.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;At&nbsp;a&nbsp;glance,&nbsp;this&nbsp;old&nbsp;example&nbsp;shows&nbsp;sort&nbsp;of&nbsp;what&nbsp;I&#39;m&nbsp;talking&nbsp;about,&nbsp;but&nbsp;it&nbsp;may&nbsp;need&nbsp;tweaking&nbsp;to&nbsp;compile&nbsp;with&nbsp;current&nbsp;sources: &lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?t=10590&amp;view=next&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?t=10590&amp;view=next&lt;/a&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;On&nbsp;Mon,&nbsp;Nov&nbsp;19,&nbsp;2018&nbsp;at&nbsp;10:56&nbsp;AM&nbsp;Diego&nbsp;Mancilla&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:dmancillac@gmail.com&quot;&gt;dmancillac@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;I&#39;m&nbsp;a&nbsp;newbie&nbsp;on&nbsp;OpenSceneGraph&nbsp;and&nbsp;3D&nbsp;development.&lt;br&gt;<br>
+&lt;br&gt;<br>
+ I&nbsp;have&nbsp;a&nbsp;dxf&nbsp;file&nbsp;that&nbsp;contains&nbsp;a&nbsp;bunch&nbsp;of&nbsp;3DPOLYLINES&nbsp;(with&nbsp;different&nbsp;colors).&nbsp;So&nbsp;far&nbsp;I&nbsp;have&nbsp;been&nbsp;able&nbsp;to&nbsp;read&nbsp;and&nbsp;display&nbsp;them&nbsp;on&nbsp;a&nbsp;viewer,&nbsp;but&nbsp;I&nbsp;haven&nbsp;been&nbsp;able&nbsp;to&nbsp;change&nbsp;the&nbsp;color&nbsp;of&nbsp;the&nbsp;rendered&nbsp;lines.&nbsp;I&nbsp;believe&nbsp;that&nbsp;I&#39;m&nbsp;not&nbsp;understanding&nbsp;properly&nbsp;the&nbsp;graph&nbsp;relationships.&lt;br&gt;<br>
+&lt;br&gt;<br>
+ I&#39;m &nbsp;using&nbsp;the&nbsp;&quot;Quick&nbsp;Start&nbsp;Guide&quot;&nbsp;as&nbsp;reference&nbsp;and&nbsp;modifying&nbsp;an&nbsp;example&nbsp;that&nbsp;I&nbsp;found&nbsp;on&nbsp;the&nbsp;web.&lt;br&gt;<br>
+&lt;br&gt;<br>
+ A&nbsp;code&nbsp;snippet&nbsp;of&nbsp;what&nbsp;I&nbsp;have:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+osg::ref_ptr&lt;osg::Geometry&gt;&nbsp;geom&nbsp;=&nbsp;new&nbsp;osg::Geometry;&lt;br&gt;<br>
+osg::ref_ptr&lt;osg::Vec4Array&gt;&nbsp;c&nbsp;=&nbsp;new&nbsp;osg::Vec4Array;&lt;br&gt;<br>
+geom-&gt;setColorArray(c.get());&lt;br&gt;<br>
+geom-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);&lt;br&gt;<br>
+c-&gt;push_back(osg::Vec4(1.f,&nbsp;0.f,&nbsp;0.f,&nbsp;1.f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+osg::ref_ptr&lt;osg::Vec3Array&gt;&nbsp;n&nbsp;=&nbsp;new&nbsp;osg::Vec3Array;&lt;br&gt;<br>
+geom-&gt;setNormalArray(n.get());&lt;br&gt;<br>
+geom-&gt;setNormalBinding(osg::Geometry::BIND_OVERALL);&lt;br&gt;<br>
+n-&gt;push_back(osg::Vec3(0.f,&nbsp;-1.f,&nbsp;0.f));&lt;br&gt;<br>
+&lt;br&gt;<br>
+osg::Node*&nbsp;lines&nbsp;=&nbsp;osgDB::readNodeFile(&quot;lines.dxf&quot;);&lt;br&gt;<br>
+osg::Geode*&nbsp;geode&nbsp;=&nbsp;new&nbsp;osg::Geode;&lt;br&gt;<br>
+&lt;br&gt;<br>
+geode-&gt;addChild(lines);&lt;br&gt;<br>
+geode-&gt;addDrawable(geom.get());&lt;br&gt;<br>
+&lt;br&gt;<br>
+std::cout&nbsp;&lt;&lt;&nbsp;&quot;Num&nbsp;Drawables&nbsp;in&nbsp;geode:&nbsp;&quot;&nbsp;&lt;&lt;&nbsp;geode-&gt;getNumDrawables()&nbsp;&lt;&lt;&nbsp;std::endl;&lt;br&gt;<br>
+&lt;br&gt;<br>
+osg::Camera*&nbsp;camera&nbsp;=&nbsp;new&nbsp;osg::Camera;&lt;br&gt;<br>
+camera-&gt;setViewport(0,&nbsp;0,&nbsp;this-&gt;width(),&nbsp;this-&gt;height());&lt;br&gt;<br>
+camera-&gt;setClearColor(osg::Vec4(0.9f,&nbsp;0.9f,&nbsp;1.f,&nbsp;1.f));&lt;br&gt;<br>
+float&nbsp;aspectRatio&nbsp;=&nbsp;static_cast&lt;float&gt;(this-&gt;width())&nbsp;/&nbsp;static_cast&lt;float&gt;(this-&gt;height());&lt;br&gt;<br>
+camera-&gt;setProjectionMatrixAsPerspective(30.f,&nbsp;aspectRatio,&nbsp;1.f,&nbsp;1000.f);&lt;br&gt;<br>
+camera-&gt;setGraphicsContext(_mGraphicsWindow);&lt;br&gt;<br>
+&lt;br&gt;<br>
+_mViewer-&gt;setCamera(camera);&lt;br&gt;<br>
+_mViewer-&gt;setSceneData(geode);&lt;br&gt;<br>
+osgGA::TrackballManipulator*&nbsp;manipulator&nbsp;=&nbsp;new&nbsp;osgGA::TrackballManipulator;&lt;br&gt;<br>
+manipulator-&gt;setAllowThrow(false);&lt;br&gt;<br>
+this-&gt;setMouseTracking(true);&lt;br&gt;<br>
+_mViewer-&gt;setCameraManipulator(manipulator);&lt;br&gt;<br>
+_mViewer-&gt;setThreadingModel(osgViewer::Viewer::SingleThreaded);&lt;br&gt;<br>
+_mViewer-&gt;realize();&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers.&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=75209#75209&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=75209#75209&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_signature&quot;&nbsp;data-smartmail=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Chris&nbsp;&#39;Xenon&#39;&nbsp;Hanson,&nbsp;omo&nbsp;sanza&nbsp;lettere.&nbsp;Xenon@AlphaPixel.com&nbsp;&lt;a&nbsp;href=&quot;http://www.alphapixel.com/&quot;&nbsp;target=&quot;_blank&quot;&gt;http://www.alphapixel.com/&lt;/a&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Training&nbsp;•&nbsp;Consulting&nbsp;•&nbsp;Contracting&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;3D&nbsp;•&nbsp;Scene&nbsp;Graphs&nbsp;(Open&nbsp;Scene&nbsp;Graph/OSG)&nbsp;•&nbsp;OpenGL&nbsp;2&nbsp;•&nbsp;OpenGL&nbsp;3&nbsp;•&nbsp;OpenGL&nbsp;4&nbsp;•&nbsp;GLSL&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;1&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;2&nbsp;•&nbsp;OpenCL&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;span&nbsp;style=&quot;font-size:12.8000001907349px&quot;&gt;Legal/IP&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8000001907349px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8000001907349px&quot;&gt;Forensics&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8000001907349px&quot;&gt; &lt;/span&gt;Imaging &lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;UAVs &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&nbsp;GIS&nbsp;•&nbsp;GPS&nbsp;•&nbsp;osgEarth • Terrain • Telemetry&nbsp;•&nbsp;Cryptography&nbsp;•&nbsp;LIDAR&nbsp;•&nbsp;Embedded&nbsp;•&nbsp;Mobile&nbsp;•&nbsp;iPhone/iPad/iOS&nbsp;•&nbsp;Android&lt;/span&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;a&nbsp;href=&quot;https://twitter.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;@alphapixel&lt;/a&gt;&nbsp;&lt;a&nbsp;href=&quot;http://facebook.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;facebook.com/alphapixel&lt;/a&gt; (775)&nbsp;623-PIXL&nbsp;[7495]&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;<br>
+
+</tt>

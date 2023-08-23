@@ -1,0 +1,91 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSX/X11 graphics context not updating after window	resize
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSX/X11%20graphics%20context%20not%20updating%20after%20window%0A%09resize&In-Reply-To=%3C1467062271.m2f.67865%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279737.html">
+   <LINK REL="Next"  HREF="279750.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSX/X11 graphics context not updating after window	resize</H1>
+<!--htdig_noindex-->
+    <B>Ravi Mathur</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSX/X11%20graphics%20context%20not%20updating%20after%20window%0A%09resize&In-Reply-To=%3C1467062271.m2f.67865%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] OSX/X11 graphics context not updating after window	resize">ravidavi at utexas.edu
+       </A><BR>
+    <I>Mon Jun 27 14:17:51 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279737.html">[osg-users] Multi touch with WPF
+</A></li>
+        <LI>Next message: <A HREF="279750.html">[osg-users] Problem with osg::Dragger::handle
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279740">[ date ]</a>
+              <a href="thread.html#279740">[ thread ]</a>
+              <a href="subject.html#279740">[ subject ]</a>
+              <a href="author.html#279740">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+I have an interesting problem to which I found a strange solution. I don't know why the solution works, and I'd like to know if anyone here could shed some light.
+
+I have an OSG-based visualization API that is designed for use from within any user-provided GUI toolkit. All OpenGL rendering is done in a separate thread; the developer just needs to provide SetGLContext and SwapBuffers callback functions. Simple enough, and it works great with several GUI toolkits on Windows and Mac.
+
+I recently started testing its use on OSX with an OpenMotif-based GUI toolkit called Winteracter. The problem I ran across happens when I get a resize message. I process the message in the OpenGL thread using a GUIEventHandler, which changes the appropriate viewport. However, while the viewport size does change, its origin does not shift to match the resized window's corner! So basically if I increase the window size, the newly exposed portions are left blank even though the rendered image does seem to get bigger, as if OSG thinks everything resized correctly. See the attached picture for an example.
+
+After a lot of tinkering, I found that I can fix the problem if I call glXMakeCurrent to release and immediately reattach the context. This happens in the OpenGL thread when it's processing the resize event.
+
+So, does anyone know WHY this solution (hack) works? Interestingly, everything works correctly if I use OSG's own X11-based viewer. It's only if I use Winteracter's OpenMotif-based window management to create a window that the resize issue happens.
+
+Thanks!
+Ravi
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic46b6.php?p=67865#67865">http://forum.openscenegraph.org/viewtopic.php?p=67865#67865</A>
+
+
+
+
+Attachments: 
+<A HREF="../../../../forum.openscenegraph.org/files/resize_without_wglselect_117.png">http://forum.openscenegraph.org//files/resize_without_wglselect_117.png</A>
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279737.html">[osg-users] Multi touch with WPF
+</A></li>
+	<LI>Next message: <A HREF="279750.html">[osg-users] Problem with osg::Dragger::handle
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279740">[ date ]</a>
+              <a href="thread.html#279740">[ thread ]</a>
+              <a href="subject.html#279740">[ subject ]</a>
+              <a href="author.html#279740">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

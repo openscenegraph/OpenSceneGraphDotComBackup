@@ -1,0 +1,731 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Intercepting Windows messages
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Intercepting%20Windows%20messages&In-Reply-To=%3CCAOuEi%2BFr9909Y204b1tQhgamPcCMNTtix1V82QHOeg%3DV8ed3zg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001974.html">
+   <LINK REL="Next"  HREF="002008.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Intercepting Windows messages</H1>
+<!--htdig_noindex-->
+    <B>Anders Backman</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Intercepting%20Windows%20messages&In-Reply-To=%3CCAOuEi%2BFr9909Y204b1tQhgamPcCMNTtix1V82QHOeg%3DV8ed3zg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Intercepting Windows messages">andersb at cs.umu.se
+       </A><BR>
+    <I>Wed Nov 18 03:41:10 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001974.html">[osg-users] Intercepting Windows messages
+</A></li>
+        <LI>Next message: <A HREF="002008.html">[osg-users] Intercepting Windows messages
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2005">[ date ]</a>
+              <a href="thread.html#2005">[ thread ]</a>
+              <a href="subject.html#2005">[ subject ]</a>
+              <a href="author.html#2005">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>No one experienced that OSG consumes 3DConnexion messages until you move
+the window with the mouse, then auddenly messages related to the
+3DConnexion Space Navigator starts coming in...?
+
+On Friday, 13 November 2015, Anders Backman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>&gt; wrote:
+
+&gt;<i> It seems to me that OSG eats the 3DConnexion messages, until you move the
+</I>&gt;<i> window explicitly with the mouse.
+</I>&gt;<i> The code below show that a console window works just fine, all messages
+</I>&gt;<i> are intercepted by the &quot;message window&quot;.
+</I>&gt;<i> However, when a osgViewer run loop is being used, the messages seem to be
+</I>&gt;<i> filtered.
+</I>&gt;<i>
+</I>&gt;<i> I only get a Spaceball event when I move the window(!).
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> #include &lt;osgViewer/Viewer&gt;
+</I>&gt;<i> #include &lt;osgViewer/api/Win32/GraphicsWindowWin32&gt;
+</I>&gt;<i>
+</I>&gt;<i> #include &lt;iostream&gt;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> #pragma comment(lib, &quot;siapp.lib&quot;)
+</I>&gt;<i>
+</I>&gt;<i> #include&quot;windows.h&quot;
+</I>&gt;<i> #include &lt;iostream&gt;
+</I>&gt;<i>
+</I>&gt;<i> #include &quot;spwmacro.h&quot;  /* Common macros used by SpaceWare functions. */
+</I>&gt;<i> #include &quot;si.h&quot;        /* Required for any SpaceWare support within an
+</I>&gt;<i> app.*/
+</I>&gt;<i> #include &quot;siapp.h&quot;     /* Required for siapp.lib symbols */
+</I>&gt;<i>
+</I>&gt;<i> #pragma warning(disable:4700)
+</I>&gt;<i>
+</I>&gt;<i> SiHdl       devHdl;       /* Handle to 3D Mouse Device */
+</I>&gt;<i> SiOpenData oData;
+</I>&gt;<i> WNDPROC wndProcOrig;
+</I>&gt;<i>
+</I>&gt;<i> void ClearScreen() {
+</I>&gt;<i>   for (unsigned i = 0; i&lt;100; ++i) std::cout &lt;&lt; std::endl;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> int SbInit(HWND hwndC);
+</I>&gt;<i> void  SbMotionEvent(SiSpwEvent *pEvent);
+</I>&gt;<i> void  SbZeroEvent();
+</I>&gt;<i> void  SbButtonPressEvent(int buttonnumber);
+</I>&gt;<i> void  SbButtonReleaseEvent(int buttonnumber);
+</I>&gt;<i> void  HandleDeviceChangeEvent(SiSpwEvent *pEvent);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> LRESULT CALLBACK MyWndCBProc(
+</I>&gt;<i>   HWND hwnd, UINT wm, WPARAM wParam, LPARAM lParam)
+</I>&gt;<i> {
+</I>&gt;<i>   SiSpwEvent     Event;    /* SpaceWare Event */
+</I>&gt;<i>   SiGetEventData EData;    /* SpaceWare Event Data */
+</I>&gt;<i>
+</I>&gt;<i>   /* initialize Window platform specific data for a call to SiGetEvent */
+</I>&gt;<i>   SiGetEventWinInit(&amp;EData, wm, wParam, lParam);
+</I>&gt;<i>
+</I>&gt;<i>   /* check whether wm was a 3D mouse event and process it */
+</I>&gt;<i>   //if (SiGetEvent (devHdl, SI_AVERAGE_EVENTS, &amp;EData, &amp;Event) ==
+</I>&gt;<i> SI_IS_EVENT)
+</I>&gt;<i>   SpwRetVal retval = SiGetEvent(devHdl, 0, &amp;EData, &amp;Event);
+</I>&gt;<i>
+</I>&gt;<i>   if (retval == SI_IS_EVENT)
+</I>&gt;<i>   {
+</I>&gt;<i>     if (Event.type == SI_MOTION_EVENT)
+</I>&gt;<i>     {
+</I>&gt;<i>       SbMotionEvent(&amp;Event);        /* process 3D mouse motion event */
+</I>&gt;<i>     }
+</I>&gt;<i>     else if (Event.type == SI_ZERO_EVENT)
+</I>&gt;<i>     {
+</I>&gt;<i>       SbZeroEvent();                /* process 3D mouse zero event */
+</I>&gt;<i>     }
+</I>&gt;<i>     else if (Event.type == SI_BUTTON_PRESS_EVENT)
+</I>&gt;<i>     {
+</I>&gt;<i>       SbButtonPressEvent(Event.u.hwButtonEvent.buttonNumber);  /* process
+</I>&gt;<i> button press event */
+</I>&gt;<i>     }
+</I>&gt;<i>     else if (Event.type == SI_BUTTON_RELEASE_EVENT)
+</I>&gt;<i>     {
+</I>&gt;<i>       SbButtonReleaseEvent(Event.u.hwButtonEvent.buttonNumber); /* process
+</I>&gt;<i> button release event */
+</I>&gt;<i>     }
+</I>&gt;<i>     else if (Event.type == SI_DEVICE_CHANGE_EVENT)
+</I>&gt;<i>     {
+</I>&gt;<i>       //SbHandleDeviceChangeEvent(&amp;Event); /* process 3D mouse device
+</I>&gt;<i> change event */
+</I>&gt;<i>     }
+</I>&gt;<i>   }
+</I>&gt;<i>
+</I>&gt;<i>   return DefWindowProc(hwnd, wm, wParam, lParam);
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void mainx(void) {
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>   /* Implement message loop */
+</I>&gt;<i>   int bRet;
+</I>&gt;<i>   MSG msg;      /* incoming message to be evaluated */
+</I>&gt;<i>   while (bRet = GetMessage(&amp;msg, NULL, 0, 0))
+</I>&gt;<i>   {
+</I>&gt;<i>     if (bRet == -1){
+</I>&gt;<i>       /* handle the error and possibly exit */
+</I>&gt;<i>       return;
+</I>&gt;<i>     }
+</I>&gt;<i>     else{
+</I>&gt;<i>       TranslateMessage(&amp;msg);
+</I>&gt;<i>       DispatchMessage(&amp;msg);
+</I>&gt;<i>     }
+</I>&gt;<i>   }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> int SbInit(HWND hwndC)
+</I>&gt;<i> {
+</I>&gt;<i>   int res;                             /* result of SiOpen, to be returned
+</I>&gt;<i>  */
+</I>&gt;<i>
+</I>&gt;<i>   /*init the SpaceWare input library */
+</I>&gt;<i>   if (SiInitialize() == SPW_DLL_LOAD_ERROR)  {
+</I>&gt;<i>     std::cout &lt;&lt; &quot;Error: Could not load SiAppDll dll files&quot; &lt;&lt; std::endl;
+</I>&gt;<i>   }
+</I>&gt;<i>   else {
+</I>&gt;<i>     //std::cout &lt;&lt; &quot;SiInitialize() done &quot; &lt;&lt; std::endl;
+</I>&gt;<i>   }
+</I>&gt;<i>
+</I>&gt;<i>   SiOpenWinInit(&amp;oData, hwndC);    /* init Win. platform specific data  */
+</I>&gt;<i>
+</I>&gt;<i>   /* open data, which will check for device type and return the device
+</I>&gt;<i> handle to be used by this function */
+</I>&gt;<i>   if ((devHdl = SiOpen(&quot;AppSpaceMouse.exe&quot;, SI_ANY_DEVICE, SI_NO_MASK,
+</I>&gt;<i> SI_EVENT, &amp;oData)) == NULL) {
+</I>&gt;<i>     std::cout &lt;&lt; &quot;SiOpen error:&quot; &lt;&lt; std::endl;
+</I>&gt;<i>     SiTerminate();  /* called to shut down the SpaceWare input library */
+</I>&gt;<i>     std::cout &lt;&lt; &quot;SiTerminate()&quot; &lt;&lt; std::endl;
+</I>&gt;<i>     res = 0;        /* could not open device */
+</I>&gt;<i>     return res;
+</I>&gt;<i>   }
+</I>&gt;<i>
+</I>&gt;<i>   SiDeviceName pname;
+</I>&gt;<i>   SiGetDeviceName(devHdl, &amp;pname);
+</I>&gt;<i>   //std::cout &lt;&lt; &quot;devicename =  &quot; &lt;&lt; pname.name &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i>   SiSetUiMode(devHdl, SI_UI_ALL_CONTROLS); /* Config SoftButton Win
+</I>&gt;<i> Display */
+</I>&gt;<i>   SiGrabDevice(devHdl, SPW_TRUE); /* PREVENTS OTHER APPLICATIONS FROM
+</I>&gt;<i> RECEIVING 3D CONNEXION DATA !!! */
+</I>&gt;<i>   res = 1;        /* opened device succesfully */
+</I>&gt;<i>   return res;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> void  SbMotionEvent(SiSpwEvent *pEvent) {
+</I>&gt;<i>   std::cout &lt;&lt; &quot;TX=&quot; &lt;&lt; pEvent-&gt;u.spwData.mData[SI_TX] &lt;&lt; &quot; TY=&quot; &lt;&lt;
+</I>&gt;<i> pEvent-&gt;u.spwData.mData[SI_TY] &lt;&lt; &quot; TZ=&quot; &lt;&lt; pEvent-&gt;u.spwData.mData[SI_TZ]
+</I>&gt;<i> &lt;&lt; &quot; RX=&quot; &lt;&lt; pEvent-&gt;u.spwData.mData[SI_RX] &lt;&lt; &quot; RY=&quot; &lt;&lt;
+</I>&gt;<i> pEvent-&gt;u.spwData.mData[SI_RY] &lt;&lt; &quot; RZ=&quot; &lt;&lt; pEvent-&gt;u.spwData.mData[SI_RZ]
+</I>&gt;<i> &lt;&lt; std::endl;
+</I>&gt;<i> }
+</I>&gt;<i> void  SbZeroEvent() {
+</I>&gt;<i>   std::cout &lt;&lt; &quot;zeroevent: &quot; &lt;&lt; std::endl;
+</I>&gt;<i> }
+</I>&gt;<i> void  SbButtonPressEvent(int buttonnumber) {
+</I>&gt;<i>   std::cout &lt;&lt; &quot;Buttonnumber : &quot; &lt;&lt; buttonnumber &lt;&lt; std::endl;
+</I>&gt;<i> }
+</I>&gt;<i> void  SbButtonReleaseEvent(int buttonnumber) {
+</I>&gt;<i>   std::cout &lt;&lt; &quot;Buttonnumber : &quot; &lt;&lt; buttonnumber &lt;&lt; std::endl;
+</I>&gt;<i> }
+</I>&gt;<i> void  HandleDeviceChangeEvent(SiSpwEvent *pEvent) {
+</I>&gt;<i>   std::cout &lt;&lt; &quot;HandleDeviceChangeEvent : &quot; &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> int main(int argc, char** argv)
+</I>&gt;<i> {
+</I>&gt;<i>   osg::ArgumentParser arguments(&amp;argc, argv);
+</I>&gt;<i> #if 1
+</I>&gt;<i>   osgViewer::Viewer viewer(arguments);
+</I>&gt;<i> #else
+</I>&gt;<i>   osgViewer::CompositeViewer viewer(arguments);
+</I>&gt;<i>
+</I>&gt;<i>   osgViewer::View* view = new osgViewer::View;
+</I>&gt;<i>   view-&gt;setName(&quot;View one&quot;);
+</I>&gt;<i>   viewer.addView(view);
+</I>&gt;<i>
+</I>&gt;<i>   view-&gt;setSceneData(scene.get());
+</I>&gt;<i>   view-&gt;getCamera()-&gt;setName(&quot;Cam one&quot;);
+</I>&gt;<i>   view-&gt;getCamera()-&gt;setViewport(new osg::Viewport(0, 0, traits-&gt;width /
+</I>&gt;<i> 2, traits-&gt;height / 2));
+</I>&gt;<i>   view-&gt;getCamera()-&gt;setGraphicsContext(gc.get());
+</I>&gt;<i>
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     viewer.realize();
+</I>&gt;<i>
+</I>&gt;<i>     osgViewer::Viewer::Windows windows;
+</I>&gt;<i>     viewer.getWindows(windows);
+</I>&gt;<i>
+</I>&gt;<i>     osgViewer::GraphicsWindow* window = windows[0];
+</I>&gt;<i>     window-&gt;setWindowRectangle(40, 40,1024,768);
+</I>&gt;<i>     window-&gt;setWindowDecoration(true);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>     /* Retrieve console application main window using GetConsoleWindow() */
+</I>&gt;<i>     //HWND windowHandle = GetConsoleWindow(); /* Great!!  This function
+</I>&gt;<i>  cleverly &quot;retrieves the window handle  used by the console associated with
+</I>&gt;<i> the calling process&quot;,   as msdn says */
+</I>&gt;<i>
+</I>&gt;<i>     /* Register a custom window class */
+</I>&gt;<i>     WNDCLASSEX wcex;
+</I>&gt;<i>     wcex.cbSize = sizeof(WNDCLASSEX);
+</I>&gt;<i>     wcex.style = CS_HREDRAW | CS_VREDRAW;
+</I>&gt;<i>     wcex.lpfnWndProc = MyWndCBProc;
+</I>&gt;<i>     wcex.cbClsExtra = 0;
+</I>&gt;<i>     wcex.cbWndExtra = 0;
+</I>&gt;<i>     wcex.hInstance = GetModuleHandle(NULL);
+</I>&gt;<i>     wcex.hIcon = NULL;
+</I>&gt;<i>     wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+</I>&gt;<i>     wcex.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
+</I>&gt;<i>     wcex.lpszMenuName = NULL;
+</I>&gt;<i>     wcex.lpszClassName = &quot;MyWindowClassName&quot;;
+</I>&gt;<i>     wcex.hIconSm = NULL;
+</I>&gt;<i>     RegisterClassEx(&amp;wcex);
+</I>&gt;<i>
+</I>&gt;<i>     /* Create a hidden window owned by our process and parented to the
+</I>&gt;<i> console window */
+</I>&gt;<i>     HWND hWndChild = CreateWindow(wcex.lpszClassName, &quot;MyWindowTitle&quot;,
+</I>&gt;<i> WS_OVERLAPPEDWINDOW,
+</I>&gt;<i>       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, wcex.hInstance,
+</I>&gt;<i> NULL);
+</I>&gt;<i>
+</I>&gt;<i>     /* Initialise 3DxWare access / call to SbInit() */
+</I>&gt;<i>     SbInit(hWndChild);
+</I>&gt;<i>
+</I>&gt;<i> #if 0
+</I>&gt;<i>      /* Implement message loop */
+</I>&gt;<i>   int bRet;
+</I>&gt;<i>   MSG msg;      /* incoming message to be evaluated */
+</I>&gt;<i>   while (bRet = GetMessage(&amp;msg, NULL, 0, 0))
+</I>&gt;<i>   {
+</I>&gt;<i>     if (bRet == -1){
+</I>&gt;<i>       /* handle the error and possibly exit */
+</I>&gt;<i>       return 1;
+</I>&gt;<i>     }
+</I>&gt;<i>     else{
+</I>&gt;<i>       TranslateMessage(&amp;msg);
+</I>&gt;<i>       DispatchMessage(&amp;msg);
+</I>&gt;<i>     }
+</I>&gt;<i>   }
+</I>&gt;<i>   return 0;
+</I>&gt;<i> #else
+</I>&gt;<i>   return viewer.run();
+</I>&gt;<i> #endif
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Fri, Nov 13, 2015 at 3:50 PM, Anders Backman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>
+</I>&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>');&gt;&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Ah thats great. A good step forward.
+</I>&gt;&gt;<i> However, two minor questions:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> 1. Do you need the instance to the main osg window?
+</I>&gt;&gt;<i> 2. If not, how do you manage to get events from the device when you apply
+</I>&gt;&gt;<i> force on it?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I get it to read data (in my message callback) but only if a move/modify
+</I>&gt;&gt;<i> the osg window (Im using osgViewer::Viewer with just one window).
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> /A
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On Thu, Nov 12, 2015 at 10:53 PM, Farshid Lashkari &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">flashk at gmail.com</A>
+</I>&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">flashk at gmail.com</A>');&gt;&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Hi Anders,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> You can create a separate &quot;message-only&quot; window to receive windows
+</I>&gt;&gt;&gt;<i> messages from the SpaceMouse. See the following MSDN page:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> <A HREF="https://msdn.microsoft.com/en-us/library/windows/desktop/ms632599(v=vs.85">https://msdn.microsoft.com/en-us/library/windows/desktop/ms632599(v=vs.85</A>).aspx#message_only
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I've integrated the 3DConnexion SpaceNavigator into our application
+</I>&gt;&gt;&gt;<i> using this method, along with other 3rd party APIs that require a window
+</I>&gt;&gt;&gt;<i> handle.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Cheers,
+</I>&gt;&gt;&gt;<i> Farshid
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> On Thu, Nov 12, 2015 at 11:01 AM, Anders Backman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>
+</I>&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>');&gt;&gt; wrote:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> So there seem to be only a very few alternatives for integrating such a
+</I>&gt;&gt;&gt;&gt;<i> windows oriented toolkit as the 3DConnexion SpaceMouse...
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> My idea of being able to create a custom implementation of a
+</I>&gt;&gt;&gt;&gt;<i> GraphicsWindowWin32 would really open up for a better integration, albeit
+</I>&gt;&gt;&gt;&gt;<i> not a portable one...
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Right now, using VRPN feels a bit strange in a native application (as
+</I>&gt;&gt;&gt;&gt;<i> it requires a server).
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> As far as I know there is no polling API for the 3DConnexion devices,
+</I>&gt;&gt;&gt;&gt;<i> no?
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> I see older emails about accessing it through Direct3D, and native
+</I>&gt;&gt;&gt;&gt;<i> USB...whereas listening to windows messages would be the &quot;correct&quot; way of
+</I>&gt;&gt;&gt;&gt;<i> integrating it.
+</I>&gt;&gt;&gt;&gt;<i> I would have to hack into the context classes to do this...
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> Hm....
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> /Anders
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> On Thu, Nov 12, 2015 at 3:54 PM, Anders Backman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>
+</I>&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>');&gt;&gt; wrote:
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> That is certainly an important call yes.
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> I guess my problem is that these two calls are not interchangeable:
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> #if 1
+</I>&gt;&gt;&gt;&gt;&gt;<i>     osg::ref_ptr&lt;osg::GraphicsContext&gt; gc =
+</I>&gt;&gt;&gt;&gt;&gt;<i> osg::GraphicsContext::createGraphicsContext(traits.get());
+</I>&gt;&gt;&gt;&gt;&gt;<i> #else
+</I>&gt;&gt;&gt;&gt;&gt;<i>     osg::ref_ptr&lt;osgViewer::GraphicsWindowWin32&gt; window = new
+</I>&gt;&gt;&gt;&gt;&gt;<i> osgViewer::GraphicsWindowWin32(traits);
+</I>&gt;&gt;&gt;&gt;&gt;<i>     gc = window.get();
+</I>&gt;&gt;&gt;&gt;&gt;<i> #endif
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> createGraphicsContext() will do a few more things which the creation
+</I>&gt;&gt;&gt;&gt;&gt;<i> of a osgViewer::GraphicsWindowWin32 does not. The question is really, is it
+</I>&gt;&gt;&gt;&gt;&gt;<i> possible to even consider this?
+</I>&gt;&gt;&gt;&gt;&gt;<i> Is there a mechanism for creating a custom GraphicsWindowWin32 or is
+</I>&gt;&gt;&gt;&gt;&gt;<i> this path doomed to fail.
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> /Anders
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> On Thu, Nov 12, 2015 at 3:31 PM, Trajce Nikolov NICK &lt;
+</I>&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>
+</I>&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>');&gt;&gt;
+</I>&gt;&gt;&gt;&gt;&gt;<i> wrote:
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> Did you tried something like:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> osgViewer::Viewer viewer;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> viewer.getCamera()-&gt;setGraphicContext(gc);
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> ?
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> On Thu, Nov 12, 2015 at 2:52 PM, Anders Backman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>');&gt;&gt; wrote:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> I notice that there is a major difference between osgViewer::Viewer
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> and osgViewer::CompositeViewer:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> The following code:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> osgViewer::CompositeViewer viewer;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>  osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> osg::GraphicsContext::Traits;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     traits-&gt;x = 100;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     traits-&gt;y = 100;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     traits-&gt;width = 1000;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     traits-&gt;height = 800;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     traits-&gt;windowDecoration = true;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     traits-&gt;doubleBuffer = true;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     traits-&gt;sharedContext = 0;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     osg::ref_ptr&lt;osg::GraphicsContext&gt; gc =
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> osg::GraphicsContext::createGraphicsContext(traits.get());
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>    osgViewer::View* view = new osgViewer::View;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     view-&gt;setName(&quot;View one&quot;);
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     viewer.addView(view);
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     view-&gt;setSceneData(scene.get());
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     view-&gt;getCamera()-&gt;setViewport(new osg::Viewport(0, 0,
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> traits-&gt;width / 2, traits-&gt;height / 2));
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     view-&gt;getCamera()-&gt;setGraphicsContext(gc.get());
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     viewer.realize(); // Context already created. No call to
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> GraphicsWIndowWIn32::GraphicsWIndowWin32 will be called
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> If I replace osgViewerCompositeViewer with a osgViewer::Viewer and
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> remove the creation of View, I get:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     viewer.realize(); // A new context is created. A new call to
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> GraphicsWIndowWIn32::GraphicsWIndowWin32 will be called
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> So it seems that osgViewer::Viewer does not respect? the previously
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> created GraphicsCOntext?
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> /Anders
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> On Thu, Nov 12, 2015 at 2:24 PM, Anders Backman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>');&gt;&gt; wrote:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> That is quite explicit. I was thinking about some method for
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> intercepting events.
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> I tried fiddling with creating a custom GraphicsWindowWin32 class,
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> but it turns out that this is explicitly created internally in:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> osg::GraphicsContext* Win32WindowingSystem::createGraphicsContext(
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> osg::GraphicsContext::Traits* traits )
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> {
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> ...
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>         osg::ref_ptr&lt;osgViewer::GraphicsWindowWin32&gt; window = new
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> GraphicsWindowWin32(traits);
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> }
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> So this does not seem to be the way to catch windows messages.
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> My idea was that I could register my instance of the
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> GraphicsWindowWin32 to implement the virtual method:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> LRESULT GraphicsWindowWin32::handleNativeWindowingEvent( HWND hwnd,
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> UINT uMsg, WPARAM wParam, LPARAM lParam )
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Where I could catch all windows events.
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Turns out that I do not have enough understanding when and where
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> context etc is created.
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> It seems that a GraphicsWindowWIn32 is first created at the call to:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     osg::ref_ptr&lt;osg::GraphicsContext&gt; gc =
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> osg::GraphicsContext::createGraphicsContext(traits.get());
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> And then at the call to:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> viewer-&gt;realize();
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> will also result in a call
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> to GraphicsContext::createGraphicsContext(Traits* traits), which in turn
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> will create yet another GraphicsWindowWin32.
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> So there lies my problem, my call to viewer-&gt;realize() will
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> override my first call to
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> GraphicsContext::createGraphicsContext(traits.get());
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Not sure how to get around this though. Ideas?
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> /Anders
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> On Wed, Nov 11, 2015 at 5:05 PM, Trajce Nikolov NICK &lt;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>');&gt;&gt;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> wrote:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Hi Anders,
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> here is what I do for this on Windows
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     while (!viewer-&gt;done())
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>     {
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> #if defined(_WIN32)
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>         MSG msg;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>         if (::PeekMessage(&amp;msg,NULL,0,0,PM_NOREMOVE))
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>         {
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>             ::GetMessage(&amp;msg, NULL, 0, 0);
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>             if (wins.size())
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>             {
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>                 osgViewer::GraphicsHandleWin32 *hdl =
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> dynamic_cast&lt;osgViewer::GraphicsHandleWin32*&gt;(wins.at(0));
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>                 if(hdl)
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>                 {
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>                     WNDPROC fWndProc =
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> (WNDPROC)::GetWindowLongPtr(hdl-&gt;getHWND(), GWLP_WNDPROC);
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>                     if (fWndProc &amp;&amp; hdl-&gt;getHWND())
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> {
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> ::CallWindowProc(fWndProc,hdl-&gt;getHWND(),msg.message, msg.wParam,
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> msg.lParam);
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> }
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>                 }
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>             }
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>         }
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> #endif
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> On Wed, Nov 11, 2015 at 4:21 PM, Anders Backman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">andersb at cs.umu.se</A>');&gt;&gt; wrote:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Hi.
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Trying the 3DConnexion SpaceNavigator with OSG. However I would
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> like to stay away from VRPN and such dependencies...
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> I was wondering how to best intercept Windows messages from the
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> GraphicsWindowWin32 class.
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> This class has a virtual method handleNativeWindowingEvent which
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> I would like to override to catch custom messages from my device.
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Would it be possible to implement a derived class and have that
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> instantiated instead of the standard osgViewer::GraphicsWindowWin32 one?
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Or is there a different method to listen to the  messages:
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> ( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Thanks,
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Anders
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> --
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> __________________________________________
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Anders Backman, HPC2N
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> 90187 Ume&#229; University, Sweden
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A>');&gt;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Cell: +46-70-392 64 67
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>');&gt;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> --
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> trajce nikolov nick
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>');&gt;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> --
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> __________________________________________
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Anders Backman, HPC2N
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> 90187 Ume&#229; University, Sweden
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A>');&gt;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>  <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Cell: +46-70-392 64 67
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> --
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> __________________________________________
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Anders Backman, HPC2N
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> 90187 Ume&#229; University, Sweden
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A>');&gt;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> Cell: +46-70-392 64 67
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>');&gt;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> --
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> trajce nikolov nick
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>');&gt;
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;&gt;<i> --
+</I>&gt;&gt;&gt;&gt;&gt;<i> __________________________________________
+</I>&gt;&gt;&gt;&gt;&gt;<i> Anders Backman, HPC2N
+</I>&gt;&gt;&gt;&gt;&gt;<i> 90187 Ume&#229; University, Sweden
+</I>&gt;&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A>');&gt;
+</I>&gt;&gt;&gt;&gt;&gt;<i> <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+</I>&gt;&gt;&gt;&gt;&gt;<i> Cell: +46-70-392 64 67
+</I>&gt;&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> --
+</I>&gt;&gt;&gt;&gt;<i> __________________________________________
+</I>&gt;&gt;&gt;&gt;<i> Anders Backman, HPC2N
+</I>&gt;&gt;&gt;&gt;<i> 90187 Ume&#229; University, Sweden
+</I>&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A>');&gt;
+</I>&gt;&gt;&gt;&gt;<i> <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+</I>&gt;&gt;&gt;&gt;<i> Cell: +46-70-392 64 67
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>');&gt;
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>');&gt;
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> --
+</I>&gt;&gt;<i> __________________________________________
+</I>&gt;&gt;<i> Anders Backman, HPC2N
+</I>&gt;&gt;<i> 90187 Ume&#229; University, Sweden
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A>');&gt;
+</I>&gt;&gt;<i> <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+</I>&gt;&gt;<i> Cell: +46-70-392 64 67
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> __________________________________________
+</I>&gt;<i> Anders Backman, HPC2N
+</I>&gt;<i> 90187 Ume&#229; University, Sweden
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A> &lt;javascript:_e(%7B%7D,'cvml','<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A>');&gt;
+</I>&gt;<i> <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+</I>&gt;<i> Cell: +46-70-392 64 67
+</I>&gt;<i>
+</I>
+
+-- 
+__________________________________________
+Anders Backman, HPC2N
+90187 Ume&#229; University, Sweden
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">anders at cs.umu.se</A> <A HREF="http://www.hpc2n.umu.se/">http://www.hpc2n.umu.se</A>
+Cell: +46-70-392 64 67
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151118/81d01a97/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151118/81d01a97/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001974.html">[osg-users] Intercepting Windows messages
+</A></li>
+	<LI>Next message: <A HREF="002008.html">[osg-users] Intercepting Windows messages
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2005">[ date ]</a>
+              <a href="thread.html#2005">[ thread ]</a>
+              <a href="subject.html#2005">[ subject ]</a>
+              <a href="author.html#2005">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

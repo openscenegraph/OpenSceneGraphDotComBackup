@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] 3D osg::Image allocation size problem
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%203D%20osg%3A%3AImage%20allocation%20size%20problem&In-Reply-To=%3C3274f729-121f-a8d9-5cdc-28a86be5dc99%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003758.html">
+   <LINK REL="Next"  HREF="003760.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] 3D osg::Image allocation size problem</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%203D%20osg%3A%3AImage%20allocation%20size%20problem&In-Reply-To=%3C3274f729-121f-a8d9-5cdc-28a86be5dc99%40gmx.de%3E"
+       TITLE="[osg-users] 3D osg::Image allocation size problem">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Fri Jul 22 10:26:24 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003758.html">[osg-users] 3D osg::Image allocation size problem
+</A></li>
+        <LI>Next message: <A HREF="003760.html">[osg-users] 3D osg::Image allocation size problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3759">[ date ]</a>
+              <a href="thread.html#3759">[ thread ]</a>
+              <a href="subject.html#3759">[ subject ]</a>
+              <a href="author.html#3759">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi
+
+Josiah
+
+
+
+Am 22.07.2016 um 13:00 schrieb Josiah Jideani:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I am developing a scientific visualization application using Qt and Openscenegraph.  I am trying to create a 3D osg::Image to add to an osgVolume.  I am having problems allocating the image data when I call the allocateImage member function (see the code snippet below).
+</I>&gt;<i>
+</I>&gt;<i> The allocation works for equal dimensions less than 640.
+</I>&gt;<i>
+</I>&gt;<i> When I try to allocate anything above 640x640x640 but less than 800x800x800, it seems to allocate successfully because image_s, image_t and image_r hold the correct sizes however when I try to write to the image data (the nested for loops) a segmentation fault is thrown at data[0] = 0.0f when s = 0; t = 0; and r = some random but valid number.
+</I>Putting the numbers together, 640^3 with 4*4 bytes (float and rgba) hits 
+the 4 gig limit.
+I believe the image size used internally by OSG is an unsigned int(which 
+on most platforms is 32bits) , so that is probably what you're 
+hitting.[1] Could you check what the calculated image size returns, when 
+you encounter the allocation fails?
+Typ
+
+If my theory is right, we would have to change the data type used for 
+calculation to long/size_t. (Seems like the calculation and the 
+constructor are the only places that fail to use the correct size)
+
+
+Cheers
+Sebastian
+
+[1] 
+<A HREF="../../../../trac.openscenegraph.org/projects/osg/browser/OpenSceneGraph/trunk/src/osg/Image9e41.cpp?rev=10890">http://trac.openscenegraph.org/projects/osg//browser/OpenSceneGraph/trunk/src/osg/Image.cpp?rev=10890</A>
+*unsigned* *int* *Image::getTotalSizeInBytesIncludingMipmaps*() *const
+
+
+*
+&gt;<i>
+</I>&gt;<i> I can allocate and write to the image data with sizes between 800x800x800 and 1024x1024x1024, but a segmentation fault is thrown from the object code after the call to the viewer's frame() method.
+</I>&gt;<i>
+</I>&gt;<i> And finally for sizes above 1024 the allocation completely fails as image_s image_t and image_r all hold 0.
+</I>&gt;<i>
+</I>&gt;<i> Any clue on how to solve this? It was my understanding that the maximum size of the image is limited by the maximum 3D texture size of the graphics card which for the Quadro K4200 that I'm using is 4096x4096x4096.  So why am I only able to allocate a 640x640x640 image?
+</I>&gt;<i>
+</I>&gt;<i> These are the specifications of my system:
+</I>&gt;<i> Operating system: Opensuse Leap 42.1
+</I>&gt;<i> RAM: 128GB
+</I>&gt;<i> Graphics Card: Quadro K4200
+</I>&gt;<i> Qt: Qt 4.7.1
+</I>&gt;<i> OSG version: 3.2.3
+</I>Are you trying to compensate something? ;-)
+
+&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Josiah
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::Image&gt; image = new osg::Image
+</I>&gt;<i> image-&gt;allocateImage(1024, 1024, 1024, GL_RGBA, GL_FLOAT);
+</I>&gt;<i>
+</I>&gt;<i> int image_s = image-&gt;s();
+</I>&gt;<i> int image_t = image-&gt;t();
+</I>&gt;<i> int image_r = image-&gt;r();
+</I>&gt;<i>
+</I>&gt;<i> for(int s = 0; s &lt; image_s; s++)
+</I>&gt;<i> {
+</I>&gt;<i>      for(int t = 0; t &lt; image_t; t++)
+</I>&gt;<i>      {
+</I>&gt;<i>          for(int r = 0; r &lt; image_r; r++)
+</I>&gt;<i>          {
+</I>&gt;<i>              float* data = (float*) image-&gt;data(s,t,r);
+</I>&gt;<i>              data[0] = 0.0f;
+</I>&gt;<i>              data[1] = 0.0f;
+</I>&gt;<i>              data[2] = 1.0f;
+</I>&gt;<i>              data[3] = 0.1f;
+</I>&gt;<i>          }
+</I>&gt;<i>      }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicbf6b-2.php?p=68195#68195">http://forum.openscenegraph.org/viewtopic.php?p=68195#68195</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160722/3a9ec5c6/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160722/3a9ec5c6/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003758.html">[osg-users] 3D osg::Image allocation size problem
+</A></li>
+	<LI>Next message: <A HREF="003760.html">[osg-users] 3D osg::Image allocation size problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3759">[ date ]</a>
+              <a href="thread.html#3759">[ thread ]</a>
+              <a href="subject.html#3759">[ subject ]</a>
+              <a href="author.html#3759">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

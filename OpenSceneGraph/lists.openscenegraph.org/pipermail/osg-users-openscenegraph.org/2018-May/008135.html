@@ -1,0 +1,189 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Getting the combined matrix from a Node?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Getting%20the%20combined%20matrix%20from%20a%20Node%3F&In-Reply-To=%3CCAFN7Y%2BXrF1By78BqHLaCZfFRa5ctDpEPzLEUL-Z5z3ssRzZVvw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008134.html">
+   <LINK REL="Next"  HREF="008136.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Getting the combined matrix from a Node?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Getting%20the%20combined%20matrix%20from%20a%20Node%3F&In-Reply-To=%3CCAFN7Y%2BXrF1By78BqHLaCZfFRa5ctDpEPzLEUL-Z5z3ssRzZVvw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Getting the combined matrix from a Node?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue May  8 00:23:47 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008134.html">[osg-users] Getting the combined matrix from a Node?
+</A></li>
+        <LI>Next message (by thread): <A HREF="008136.html">[osg-users] EXTERNAL: Re: Getting the combined matrix from a Node?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8135">[ date ]</a>
+              <a href="thread.html#8135">[ thread ]</a>
+              <a href="subject.html#8135">[ subject ]</a>
+              <a href="author.html#8135">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Marlin,
+
+The Transform class and it's subclasses are designed to be used as part of
+scene graph, this allow Transform subclasses that are absolute (ignore
+transforms+camera matrices above them) or relative (multiple the inherited
+modelview matrix) to enable this in a generic way the Transform class has
+two helper methods Transform::computeLocalToWorld(osg::Matrix&amp; matrix,
+NodeVistor*) and computeWorldToLocal(osg::Matrix&amp; matrix, NodeVisior*).
+Only some Transform implementations need to check the NodeVisitor for extra
+data, most will just ignore that parameter and just do the matrix maths
+required.
+
+The computeLocalToWorld() method returns a bool on success, and you pass in
+the matrix you want to apply,  You're code segment appears to confuse
+things in this regard.
+
+
+If you want to transform of any node in the scene graph you can do
+Node::getWorldMatrices(), this finds all the parental NodePaths of that
+node and then returns a vector containing a matrix for each NodePath
+found.
+
+Robert.
+
+
+
+On 7 May 2018 at 19:58, Rowley, Marlin R &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt; wrote:
+
+&gt;<i> Hello,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I&#8217;m trying to figure out how to retrieve the combined matrix from a node
+</I>&gt;<i> that is of a PositionAttitudeTransform node type.  I can get it converted
+</I>&gt;<i> to a Transform() class, but there is no clear way of getting the combined
+</I>&gt;<i> matrix from local to world.  For example,
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Osg::PositionAttitudeTransform trans;
+</I>&gt;<i>
+</I>&gt;<i> Trans.setScale(2,2,2);
+</I>&gt;<i>
+</I>&gt;<i> Trans.setPosition(0,10,0);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Osg::Matrixd temp = getCombinedTransform(trans);
+</I>&gt;<i>
+</I>&gt;<i> Osg::Matrixd getCombinedTransform(const osg::ref_ptr&lt;osg::Node&gt; &amp; mat)
+</I>&gt;<i>
+</I>&gt;<i> {
+</I>&gt;<i>
+</I>&gt;<i>               Auto m = mat-&gt;asTransform();
+</I>&gt;<i>
+</I>&gt;<i>               Return m-&gt;computeLocalToWorldMatrix (m, ???); &lt;&lt; ====== why
+</I>&gt;<i> use a node visitor on yourself?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>               Or
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>               Return m-&gt;getCombinedMatrix()?? &lt;&lt;  ===== is there such a
+</I>&gt;<i> thing?
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ----------------------------------------
+</I>&gt;<i>
+</I>&gt;<i> Marlin Rowley
+</I>&gt;<i>
+</I>&gt;<i> Software Engineer, Staff
+</I>&gt;<i>
+</I>&gt;<i> [image: cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>]
+</I>&gt;<i>
+</I>&gt;<i> *Missiles and Fire Control*
+</I>&gt;<i>
+</I>&gt;<i> 972-603-1931 (office)
+</I>&gt;<i>
+</I>&gt;<i> 214-926-0622 (mobile)
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180508/421c771c/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180508/421c771c/attachment.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: image001.jpg
+Type: image/jpeg
+Size: 3114 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20180508/421c771c/attachment.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180508/421c771c/attachment.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008134.html">[osg-users] Getting the combined matrix from a Node?
+</A></li>
+	<LI>Next message (by thread): <A HREF="008136.html">[osg-users] EXTERNAL: Re: Getting the combined matrix from a Node?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8135">[ date ]</a>
+              <a href="thread.html#8135">[ thread ]</a>
+              <a href="subject.html#8135">[ subject ]</a>
+              <a href="author.html#8135">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,188 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Textured ply file is black when loaded.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Textured%20ply%20file%20is%20black%20when%20loaded.&In-Reply-To=%3Cb1f92194-53eb-42ff-a7c8-e73cd2a65b60%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010751.html">
+   <LINK REL="Next"  HREF="010758.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Textured ply file is black when loaded.</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Textured%20ply%20file%20is%20black%20when%20loaded.&In-Reply-To=%3Cb1f92194-53eb-42ff-a7c8-e73cd2a65b60%40googlegroups.com%3E"
+       TITLE="[osg-users] Textured ply file is black when loaded.">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Jan 21 03:47:07 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010751.html">[osg-users]  Textured ply file is black when loaded.
+</A></li>
+        <LI>Next message (by thread): <A HREF="010758.html">[osg-users] Textured ply file is black when loaded.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10756">[ date ]</a>
+              <a href="thread.html#10756">[ thread ]</a>
+              <a href="subject.html#10756">[ subject ]</a>
+              <a href="author.html#10756">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Tom,
+
+FYI, it's was a community submission back in 2009, I don't personally know 
+the ply format or have done anything more than cosmetic work on this 
+plugin.  I basically in the same boat as yourself in terms of ability to 
+debug the format, I just have to look at the code and see what it's doing 
+with your file.  It could be a buggy file, or a buggy plugin, or perhaps a 
+revision to the ply specs since the OSG plugin was written.  The 
+investigation might determine which.
+
+I have begun looking into the issue with reading your ply file, I just get 
+a grey model right now.  Converting to .osgt using:
+
+   osgconv Wareneingang2.ply test.osgt
+
+And then looking the test.osgt in an editor reveals that the model has no 
+texture coordinats.
+
+The next step was to add some debugging to the ply plugin to see what was 
+happening in texture coordinates code:
+
+diff --git a/src/osgPlugins/ply/vertexData.cpp 
+b/src/osgPlugins/ply/vertexData.cpp
+index f2db29e00..58293f8dd 100644
+--- a/src/osgPlugins/ply/vertexData.cpp
++++ b/src/osgPlugins/ply/vertexData.cpp
+@@ -174,6 +174,9 @@ void VertexData::readVertices( PlyFile* file, const int 
+nVertices,
+             _texcoord = new osg::Vec2Array;
+     }
+ 
++    std::cout&lt;&lt;&quot;fields = &quot;&lt;&lt;(fields)&lt;&lt;std::endl;
++    std::cout&lt;&lt;&quot;fields &amp; TEXCOORD = &quot;&lt;&lt;(fields &amp; TEXCOORD)&lt;&lt;std::endl;
++
+     // read in the vertices
+     for( int i = 0; i &lt; nVertices; ++i )
+     {
+
+The result was that the plugin wasn't detected any valid texture 
+coordinates as the field mask didn't enable TEXCOORD , so then I looked 
+header parsing code and it looks like:
+
+           // determine if the file stores vertex colors
+            for( int j = 0; j &lt; nProps; ++j )
+            {
+                // if the string have the red means color info is there
+                if( equal_strings( props[j]-&gt;name, &quot;x&quot; ) )
+                    fields |= XYZ;
+                if( equal_strings( props[j]-&gt;name, &quot;nx&quot; ) )
+                    fields |= NORMALS;
+                if( equal_strings( props[j]-&gt;name, &quot;alpha&quot; ) )
+                    fields |= RGBA;
+                if ( equal_strings( props[j]-&gt;name, &quot;red&quot; ) )
+                    fields |= RGB;
+                if( equal_strings( props[j]-&gt;name, &quot;ambient&quot; ) )
+                    fields |= AMBIENT;
+                if( equal_strings( props[j]-&gt;name, &quot;diffuse_red&quot; ) )
+                    fields |= DIFFUSE;
+                if (equal_strings(props[j]-&gt;name, &quot;specular_red&quot;))
+                    fields |= SPECULAR;
+                if (equal_strings(props[j]-&gt;name, &quot;texture_u&quot;))
+                    fields |= TEXCOORD;
+                if (equal_strings(props[j]-&gt;name, &quot;texture_v&quot;))
+                    fields |= TEXCOORD;
+            }
+
+So... the plugin is only checking for texture_u and texture_v, but if we 
+look at your .ply file the header has: 
+
+ly
+format binary_little_endian 1.0
+comment VCGLIB generated
+comment TextureFile Wareneingang_material_0_map_Kd.jpg
+element vertex 99428
+property float x
+property float y
+property float z
+element face 186642
+property list uchar int vertex_indices
+property list uchar float texcoord
+property uchar red
+property uchar green
+property uchar blue
+property uchar alpha
+end_header
+
+Which suggests it only has a single texcoord, no texcoord_u or texcoord_v 
+field that the OSG is assuming is required for textured ply files.  For a 
+2D textured file I would expect two fields, like the head explicitly has to 
+the x, y, z and red, green, blue, alpha values.
+
+Does texcoord now implictly mean a x,y value?  Is there some other encoding?
+
+A quick search online for the spec takes me to:
+
+   <A HREF="http://paulbourke.net/dataformats/ply/">http://paulbourke.net/dataformats/ply/</A>
+
+Which doesn't say anything explicit about texcoords so it looks like this 
+is user definable in which case how to interpret things could be really 
+open ended.
+
+I haven't yet found any explanation online about what is expected in this 
+case.  I know nothing about the tools you've used to create the file.  This 
+my first experience with looking into the PLY spec and the actual file 
+format and haven't away knowing is there is any official guide to what 
+should be doing with files which using the texcoords field.  To me it looks 
+like some tools have decided on their own convention and some other tools 
+honour this, but without know exactly what it is I don't have anything to 
+go on to make modifications to the OSG's ply plugin.
+
+I have to defer further work on this to members of the community that 
+actually use PLY files in their applications, you will have more knowledge 
+than myself and what might be meant.
+
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/b1f92194-53eb-42ff-a7c8-e73cd2a65b60%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/b1f92194-53eb-42ff-a7c8-e73cd2a65b60%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200121/e9273aa5/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200121/e9273aa5/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010751.html">[osg-users]  Textured ply file is black when loaded.
+</A></li>
+	<LI>Next message (by thread): <A HREF="010758.html">[osg-users] Textured ply file is black when loaded.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10756">[ date ]</a>
+              <a href="thread.html#10756">[ thread ]</a>
+              <a href="subject.html#10756">[ subject ]</a>
+              <a href="author.html#10756">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

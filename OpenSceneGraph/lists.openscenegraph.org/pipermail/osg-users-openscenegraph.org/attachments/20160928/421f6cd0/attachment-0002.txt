@@ -1,0 +1,237 @@
+#include "stdafx.h"
+
+#include <iostream>
+
+#include <osg/Geometry>
+#include <osg/Geode>
+#include <osg/Material>
+#include <osg/PolygonOffset>
+
+#include <osgViewer/ViewerEventHandlers>
+
+#include <osgGA/TrackballManipulator>
+#include <osgGA/StateSetManipulator>
+
+const unsigned int DIMENSION = 4;
+
+class SelectModelHandler : public osgGA::GUIEventHandler
+{
+public:
+   SelectModelHandler()
+      : selectedColor(0.5f, 0.5f, 0.5f, 1.0f)
+   {}
+
+   virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa )
+   {
+      if (ea.getEventType() == osgGA::GUIEventAdapter::RELEASE &&
+          ea.getButton() == osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON &&
+          ea.getModKeyMask() & osgGA::GUIEventAdapter::MODKEY_CTRL)
+      {
+         osgViewer::View* viewer = dynamic_cast<osgViewer::View*>(&aa);
+         if (viewer) {
+            osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector = new osgUtil::LineSegmentIntersector(osgUtil::Intersector::WINDOW, ea.getX(), ea.getY());
+            osgUtil::IntersectionVisitor iv(intersector.get());
+            osg::Camera* camera = viewer->getCamera();
+            camera->accept( iv );
+
+            if (intersector->containsIntersections()) {
+               osgUtil::LineSegmentIntersector::Intersection result = *(intersector->getIntersections().begin());
+               doUserOperations( result );
+            }
+         }
+      }
+      if (ea.getKey() == osgGA::GUIEventAdapter::KEY_1) {
+         selectedColor.set(1.0f, 0.0f, 0.0f, 1.0f);
+      }
+      if (ea.getKey() == osgGA::GUIEventAdapter::KEY_2) {
+         selectedColor.set(0.0f, 1.0f, 0.0f, 1.0f);
+      }
+      if (ea.getKey() == osgGA::GUIEventAdapter::KEY_3) {
+         selectedColor.set(0.0f, 0.0f, 1.0f, 1.0f);
+      }
+      if (ea.getKey() == osgGA::GUIEventAdapter::KEY_4) {
+         selectedColor.set(1.0f, 0.0f, 1.0f, 1.0f);
+      }
+      return false;
+   }
+
+   virtual void doUserOperations( osgUtil::LineSegmentIntersector::Intersection& result )
+   {
+      osg::Geometry* geom = dynamic_cast<osg::Geometry*>(result.drawable.get());
+      osg::Vec3 tc;
+      //the result seems slightly off 
+      osg::Texture* tex = result.getTextureLookUp(tc);
+      if (tex && tex->getImage(0)) {
+         tex->getImage(0)->setColor(selectedColor, tc);
+         tex->getImage(0)->dirty();
+         tex->dirtyTextureObject();
+      }
+   }
+
+protected:
+   osg::Vec4 selectedColor;
+};
+
+osg::Image* makeDataImage(unsigned int rows)
+{
+   osg::Image* image = new osg::Image;
+   image->allocateImage(rows, rows, 1, GL_RGB, GL_UNSIGNED_BYTE);
+   for (unsigned int i = 0; i < rows; ++i) {
+      for (unsigned int j = 0; j < rows; ++j) {
+         osg::Vec2 uv(i / static_cast<float>(rows - 1), j / static_cast<float>(rows - 1));
+         image->setColor(osg::Vec4(1, 0, 0, 1), uv);
+      }
+   }
+   return image;
+}
+
+osg::Vec2Array* buildTexCoords(unsigned int num_rows)
+{
+#if 1
+	//create a grid	
+	osg::Vec2Array* v = new osg::Vec2Array(num_rows* num_rows);
+	for (unsigned int i = 0; i < num_rows; ++i)
+	{
+		for (unsigned int j = 0; j < num_rows; ++j)
+		{
+			(*v)[i * num_rows + j] = osg::Vec2(i / static_cast<float>(num_rows -1), j / static_cast<float>(num_rows -1));
+		}
+	}
+	return v;
+#else
+	osg::Vec2Array* textureCoords = new osg::Vec2Array;
+   textureCoords->push_back(osg::Vec2(0,0));
+   textureCoords->push_back(osg::Vec2(1,0));
+   textureCoords->push_back(osg::Vec2(0,1));
+   textureCoords->push_back(osg::Vec2(1,1));
+	return textureCoords;
+#endif
+}
+
+osg::Vec3Array* buildVertices() {
+   osg::Vec3Array* vertices = new osg::Vec3Array;
+   vertices->push_back(osg::Vec3(0,0,0));
+   vertices->push_back(osg::Vec3(10,0,0));
+   vertices->push_back(osg::Vec3(10,10,0));
+   vertices->push_back(osg::Vec3(0,10,0));
+   vertices->push_back(osg::Vec3(20,0,0));
+   vertices->push_back(osg::Vec3(20,10,0));
+   vertices->push_back(osg::Vec3(20,20,0));
+   vertices->push_back(osg::Vec3(10,20,0));
+   vertices->push_back(osg::Vec3(0,20,0));
+   return vertices;
+}
+
+osg::DrawElementsUInt* buildElements() 
+{ 
+   osg::DrawElementsUInt* element = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES);
+
+   element->push_back(0); 
+   element->push_back(1); 
+   element->push_back(2); 
+   element->push_back(0); 
+   element->push_back(2); 
+   element->push_back(3); 
+   ////////////////////////////////////////////////////////////////////////// 
+   element->push_back(1); 
+   element->push_back(4); 
+   element->push_back(5); 
+   element->push_back(1); 
+   element->push_back(5); 
+   element->push_back(2); 
+   ////////////////////////////////////////////////////////////////////////// 
+   element->push_back(2); 
+   element->push_back(5); 
+   element->push_back(6); 
+   element->push_back(2); 
+   element->push_back(6); 
+   element->push_back(7); 
+   ////////////////////////////////////////////////////////////////////////// 
+   element->push_back(3); 
+   element->push_back(2); 
+   element->push_back(7); 
+   element->push_back(3); 
+   element->push_back(7); 
+   element->push_back(8); 
+
+   return element; 
+}
+
+osg::Vec4Array* buildColors()
+{
+   osg::Vec4Array* colors = new osg::Vec4Array;
+   colors->push_back(osg::Vec4(1.0f, 1.0f, 0.0f, 1.0f));
+   return colors;
+}
+
+osg::Geometry* buildGeometry()
+{
+   osg::Geometry* geometry = new osg::Geometry;
+   geometry->setDataVariance(osg::Object::DYNAMIC);
+	geometry->setUseVertexBufferObjects(true);
+   geometry->setVertexArray(buildVertices());
+   geometry->setColorArray(buildColors(), osg::Array::BIND_OVERALL);
+	geometry->setTexCoordArray(0, buildTexCoords(DIMENSION));
+
+   geometry->addPrimitiveSet(buildElements());
+
+   osg::Image* image = makeDataImage(DIMENSION);
+	osg::Texture2D* texture = new osg::Texture2D(image);
+	texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::NEAREST);
+	texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::NEAREST);
+	geometry->getOrCreateStateSet()->setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+
+   return geometry;
+}
+
+osg::Node* createScene() {
+	osg::Geode* geode = new osg::Geode;
+	geode->addDrawable(buildGeometry());
+	return geode;
+}
+
+void addWireframe(osg::Group* root, osg::Node* scene)
+{
+   osg::ref_ptr<osg::Group> decorator = new osg::Group;
+   decorator->setNodeMask(0x1); //disable wireframe by default
+
+   osg::StateSet* stateset = decorator->getOrCreateStateSet();
+
+   osg::PolygonOffset* polyoffset = new osg::PolygonOffset;
+   polyoffset->setFactor(-1.0f);
+   polyoffset->setUnits(-1.0f);
+   stateset->setAttributeAndModes(polyoffset, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+
+   osg::PolygonMode* polymode = new osg::PolygonMode;
+   polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+   stateset->setAttributeAndModes(polymode, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+
+   osg::Material* material = new osg::Material;
+   stateset->setMode(GL_LIGHTING, osg::StateAttribute::OVERRIDE | osg::StateAttribute::OFF);
+   stateset->setAttributeAndModes(material, osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+
+   decorator->addChild(scene);
+   root->addChild(decorator);
+}
+
+int main( int argc, char** argv )
+{
+   osg::ArgumentParser arguments(&argc, argv);
+
+   osgViewer::Viewer viewer(arguments);
+
+   osg::Group* root = new osg::Group;
+   osg::Node* scene = createScene();
+   root->addChild(scene);
+   addWireframe(root, scene);
+   viewer.setSceneData(root);
+
+   viewer.addEventHandler(new SelectModelHandler());
+   viewer.setCameraManipulator(new osgGA::TrackballManipulator);
+   viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()->getOrCreateStateSet()));
+
+   // add the window size toggle handler
+   viewer.addEventHandler(new osgViewer::WindowSizeHandler);
+
+   viewer.run();
+}

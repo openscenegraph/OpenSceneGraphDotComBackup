@@ -1,0 +1,307 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] CompositeViewer Node render order problem Win32 osg 3.4
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CompositeViewer%20Node%20render%20order%20problem%20Win32%20osg%203.4&In-Reply-To=%3CCAN%2B1YdhgGx6U_71v8JpyDHgX%2B4AJrpLYFi2kZ_tpc0M%3DT%2BqmeQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002099.html">
+   <LINK REL="Next"  HREF="002101.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] CompositeViewer Node render order problem Win32 osg 3.4</H1>
+<!--htdig_noindex-->
+    <B>ted morris</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20CompositeViewer%20Node%20render%20order%20problem%20Win32%20osg%203.4&In-Reply-To=%3CCAN%2B1YdhgGx6U_71v8JpyDHgX%2B4AJrpLYFi2kZ_tpc0M%3DT%2BqmeQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] CompositeViewer Node render order problem Win32 osg 3.4">ted.morris at gmail.com
+       </A><BR>
+    <I>Mon Nov 30 08:39:40 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002099.html">[osg-users] Stats Handler showing prerender cameras
+</A></li>
+        <LI>Next message: <A HREF="002101.html">[osg-users] CompositeViewer Node render order problem Win32 osg	3.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278323">[ date ]</a>
+              <a href="thread.html#278323">[ thread ]</a>
+              <a href="subject.html#278323">[ subject ]</a>
+              <a href="author.html#278323">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Greetings OSG'ers.
+
+I have a program which utilizes CompositeViewer to render a &quot;corner window&quot;
+view of my scene graph, within a bigger main window view. To achieve a
+boarder effect around the corner window viewport, a HUD overlay used to
+render a grey box underneath the 2nd view corner window.
+
+It worked without a hitch  in an older version, 2.8.5 win32 of
+OpenSceneGraph (build with VisualStudio).
+
+But when I recompiled the program with a later built version (CMake.exe/VS
+2013), I get rather strange object rendering order problems with the
+objects in the same scene graph with the **2nd, corner window**  of the
+osgCompositeViewer.  The **first main window** renders perfectly fine. The
+essence of the code is below. A lot of extra code  is used for determining
+the appropriate window and HUD boarder 'frame' dimensions and camera view
+frustums, but barring that,  it is pretty straight forward and not much to
+it, I think.
+
+To simplify the code a little bit for brevity, I have the removed Trackball
+code because with much testing on various configurations this doesn't
+change the observed behavior anyway (nor does any lighting mode).
+
+I did try clone(osg::CopyOp::SHALLOW_COPY) of the entire scene graph model,
+and even re-creating parts ofit from scratch and the same
+strange rendering order behavior resulted.
+
+Any advice or insights would be greatly appreciated,
+
+thanks all,
+
+ted
+
+
+&lt;snip&gt;
+.
+.
+.
+// osgViewers decl on the heap
+    osg::ref_ptr&lt;osgViewer::Viewer&gt;  m_viewer;
+osg::ref_ptr&lt;osgViewer::Viewer&gt;  m_OVERLAYviewer;
+osg::ref_ptr&lt;osgViewer::CompositeViewer&gt;  m_dualviewer;
+osg::Camera  * m_HUDcam;
+// view manipulators configured and constrained as appropriate...
+// &lt;-- code removed for brevity...&gt;
+osgGA::NodeTrackerManipulator   * m_Camera_followcar;
+osgGA::NodeTrackerManipulator::TrackerMode   m_trackerMode;
+osgGA::NodeTrackerManipulator::RotationMode  m_rotationMode;
+osgGA::TrackballManipulator  * m_tbm;
+
+// NOTE: gw is a wxWidgets OpenGL context canvas set up earlier...
+m_viewer-&gt;getCamera()-&gt;setGraphicsContext(gw);
+m_viewer-&gt;getCamera()-&gt;setClearColor(osg::Vec4(153./0xff, 216./0xff,
+238./0xff, 1.0));
+// use CullMask to hide rendering of specific nodes in the scene
+m_viewer-&gt;getCamera()-&gt;setCullMask(0x04);
+m_viewer-&gt;getCamera()-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+
+// create a camera to set up the projection and model view matrices, and
+the subgraph to drawn in the HUD
+    osg::Camera* camera = new osg::Camera;
+
+    // set the projection matrix
+    //camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0,1280,0,1024));
+m_width_fraction_of_mainW  = 0.225;  // 0.25;
+m_height_fraction_of_mainW = 0.275; //(1.0/3.0);
+// ll =&gt; &quot;lower left&quot;, ur =&gt; &quot;upper right&quot;
+int xll = -(int)(m_width_fraction_of_mainW  * m_viewersize.GetX())/2;
+int yll = -(int)(m_height_fraction_of_mainW * m_viewersize.GetY())/2;
+int yur = -yll;
+double left = (double)xll/(double)(yur-yll);
+double right = -left;
+double bottom = -0.5;
+double top = 0.5;
+double zfar = 13000.0; // make arbitrarily huge ... but not too big so for
+things like a skydome won't get clipped
+double znear = 4.5;
+// scale everything so clipping plane is about 0.25 meters
+double scale_fac = 0.5/znear;
+
+znear  *= scale_fac;
+left   *= scale_fac;
+right  *= scale_fac;
+top    *= scale_fac;
+bottom *= scale_fac;
+
+camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // draw subgraph after main camera view.
+
+    // we don't want the camera to grab event focus from the viewers main
+camera(s).
+    //camera-&gt;setAllowEventFocus(true);
+camera-&gt;setAllowEventFocus(false);
+
+double cornerX0 = 1.0 - m_width_fraction_of_mainW;
+double cornerY0 = 1.0 - m_height_fraction_of_mainW;
+camera-&gt;setViewport(
+                (int)( cornerX0 * m_viewersize.GetX()+5 ),
+                (int)( cornerY0 * m_viewersize.GetY()+5 ),
+(int)( m_width_fraction_of_mainW *  m_viewersize.GetX()-5 ),
+(int)( m_height_fraction_of_mainW * m_viewersize.GetY()-5 )
+);
+zfar = 10000;
+camera-&gt;setProjectionMatrixAsFrustum(left,right, bottom, top, znear, zfar);
+camera-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+camera-&gt;setGraphicsContext(gw);
+camera-&gt;setCullMask(0x02);
+camera-&gt;setRenderOrder(osg::Camera::POST_RENDER,1);
+// =false: we don't want the camera to grab event focus from the viewers
+main camera(s).
+camera-&gt;setAllowEventFocus(true); //(false);
+m_OVERLAYviewer-&gt;setCamera(camera);
+m_OVERLAYviewer-&gt;getCamera()-&gt;setGraphicsContext(gw);
+
+// &lt;!-- basic NodeTracker manipulator code removed for brevety... --&gt;
+m_Camera_followcar = new osgGA::NodeTrackerManipulator;
+.
+.
+.
+// set up the scene for the camera and camera view using the loaded scene
+// model
+m_OVERLAYviewer-&gt;setSceneData(themodel);
+// try HUD slave cam for drawing a boarder
+m_HUDcam = new osg::Camera;
+
+//HUDcam-&gt;setProjectionMatrixAsOrtho(0.5*xll,0.5*xur,0.5*yll, 0.5*yur,
+-1000.0,1000.0);
+m_HUDcam-&gt;setProjectionMatrix( osg::Matrix::ortho2D(0,
+m_viewersize.GetX(),0, m_viewersize.GetY()));
+// don't let other cam influence this camera's transform view matrix
+    m_HUDcam-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+
+    // only clear the depth buffer for HUD, so other pixels behind it don't
+get erased.
+    m_HUDcam-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+
+// draw subgraph after main camera view.
+    m_HUDcam-&gt;setRenderOrder(osg::Camera::POST_RENDER,0);
+m_HUDcam-&gt;setAllowEventFocus(false);
+
+// create the frame
+osg::MatrixTransform * matrixtransfm = new osg::MatrixTransform;
+matrixtransfm-&gt;setMatrix(osg::Matrix::identity());
+// create the Geode (Geometry Node) to contain all our osg::Geometry
+objects.
+    osg::Geode* geode = new osg::Geode();
+osg::StateSet* stateset = geode-&gt;getOrCreateStateSet();
+    stateset-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+matrixtransfm-&gt;addChild(geode);
+
+osg::ref_ptr&lt;osg::Vec4Array&gt; shared_colors = new osg::Vec4Array;
+shared_colors-&gt;push_back(osg::Vec4(0.75f,0.75f,0.75f,1.0f));
+// same trick for shared normal.
+    osg::ref_ptr&lt;osg::Vec3Array&gt; shared_normals = new osg::Vec3Array;
+    shared_normals-&gt;push_back(osg::Vec3(0.0f,-1.0f,0.0f));
+
+// create POLYGON
+{
+        // create Geometry object to store all the vertices and lines
+primitive.
+        osg::Geometry* polyGeom = new osg::Geometry();
+
+        // this time we'll a C arrays to initialize the vertices.
+        // note, anticlockwise ordering.
+        // note II, OpenGL polygons must be convex plan polygons, otherwise
+        // undefined results will occur.  If you have concave polygons or
+ones
+        // that cross over themselves then use the osgUtil::Tessellator to
+fix
+        // the polygons into a set of valid polygons.
+double xll =  -2.0;
+double yll =  -2.0;
+double xlr =  m_width_fraction_of_mainW  * m_viewersize.GetX()+2;
+double yur =  m_height_fraction_of_mainW * m_viewersize.GetY()+2;
+        osg::Vec3 myCoords[] =
+        {
+            osg::Vec3( xll,yll, 0),
+            osg::Vec3( xlr, yll, 0),
+            osg::Vec3( xlr, yur, 0),
+            osg::Vec3(xll, yur, 0)
+        };
+
+m_HUDxaxis = xlr - xll;
+m_HUDyaxis = yur - yll;
+
+        int numCoords = sizeof(myCoords)/sizeof(osg::Vec3);
+
+        osg::Vec3Array* vertices = new osg::Vec3Array(numCoords,myCoords);
+
+        // pass the created vertex array to the points geometry object.
+        polyGeom-&gt;setVertexArray(vertices);
+
+        // use the shared color array.
+        polyGeom-&gt;setColorArray(shared_colors.get());
+        polyGeom-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+
+
+        // use the shared normal array.
+        polyGeom-&gt;setNormalArray(shared_normals.get());
+        polyGeom-&gt;setNormalBinding(osg::Geometry::BIND_OVERALL);
+
+        // This time we simply use primitive, and hardwire the number of
+coords to use
+        // since we know up front,
+        polyGeom-&gt;addPrimitiveSet(new
+osg::DrawArrays(osg::PrimitiveSet::POLYGON,0,numCoords));
+
+        // add the points geometry to the geode.
+        geode-&gt;addDrawable(polyGeom);
+    }
+matrixtransfm-&gt;setMatrix(osg::Matrix::translate(-200.0,-200.0,0.0));
+m_HUDcam-&gt;addChild(matrixtransfm);
+
+m_HUDcam-&gt;setViewport(  0 ,0, m_viewersize.GetX(), m_viewersize.GetY());
+
+m_HUDcam-&gt;setGraphicsContext(gw);
+
+m_viewer-&gt;addSlave(m_HUDcam, false);
+
+// &lt;!-- basic trackball manipulator code removed for brevety... --&gt;
+m_tbm = new osgGA::TrackballManipulator;
+.
+.
+  .
+// take the loaded scene graph, &quot;themodel&quot; and associate with the 'main
+window' osgViewer
+m_viewer-&gt;setSceneData(themodel);
+
+m_viewer-&gt;getCamera()-&gt;setViewport(0,0,m_viewersize.GetWidth(),m_viewersize.GetHeight());
+m_viewer-&gt;addEventHandler(new osgViewer::StatsHandler);
+    m_viewer-&gt;setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    double zfocal = 1.5; // w.r.t normalized screen coords were min/max
+vertical= -0.5/+0.5
+this-&gt;AdjustPerspective(zfocal);
+int width = m_viewersize.GetWidth();
+
+m_dualviewer = new osgViewer::CompositeViewer;
+m_dualviewer-&gt;addView(m_viewer);
+m_dualviewer-&gt;addView(m_OVERLAYviewer);
+&lt;snip&gt;
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151130/ece4560a/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151130/ece4560a/attachment-0001.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002099.html">[osg-users] Stats Handler showing prerender cameras
+</A></li>
+	<LI>Next message: <A HREF="002101.html">[osg-users] CompositeViewer Node render order problem Win32 osg	3.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278323">[ date ]</a>
+              <a href="thread.html#278323">[ thread ]</a>
+              <a href="subject.html#278323">[ subject ]</a>
+              <a href="author.html#278323">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

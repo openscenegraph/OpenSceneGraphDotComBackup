@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Pragmatic shader composition - bug
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20composition%20-%20bug&In-Reply-To=%3CCANfcm6YsNyO7_nBLyt1jpfxuacEVXt0Px%3DUsXhvQD2GK5Zp7qw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004541.html">
+   <LINK REL="Next"  HREF="004446.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Pragmatic shader composition - bug</H1>
+<!--htdig_noindex-->
+    <B>Glenn Waldron</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20composition%20-%20bug&In-Reply-To=%3CCANfcm6YsNyO7_nBLyt1jpfxuacEVXt0Px%3DUsXhvQD2GK5Zp7qw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Pragmatic shader composition - bug">gwaldron at gmail.com
+       </A><BR>
+    <I>Wed Oct 12 06:57:48 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004541.html">[osg-users] Crash using current OSG master with collada dom	2.4.0
+</A></li>
+        <LI>Next message: <A HREF="004446.html">[osg-users] Pragmatic shader composition - bug
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280667">[ date ]</a>
+              <a href="thread.html#280667">[ thread ]</a>
+              <a href="subject.html#280667">[ subject ]</a>
+              <a href="author.html#280667">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Robert,
+I was trying to use the pragmatic shader comp in OSG 3.4 and ran into the
+following bug.
+
+osg::Shader attempts to extract the &quot;#version&quot; string and insert the new
+#define statements between the #version line and the rest of the source.
+However, if the #version line ends in a CRLF combination (\r\n), the LF is
+stripped and never replaced -- this causes the NVIDIA driver to report an
+illegal version string.
+
+I was able to fix it by checking for a LF and appending it if it's missing.
+
+In Shader::PerContextShader::compileShader, I inserted this line:
+
+if ((end_of_line-start_of_line)&gt;=8 &amp;&amp; source.compare(start_of_line, 8,
+&quot;#version&quot;)==0)
+{
+    versionLine = source.substr(start_of_line, end_of_line-start_of_line+1);
+    if (versionLine.back() != '\n') versionLine.push_back('\n');    // FIX
+BY INSERTING THIS LINE
+    if (source[source.size()-1]!='\n') source.push_back('\n');
+    ....
+
+Let me know if you think this fix makes sense to put in the master. Thanks.
+
+Glenn Waldron
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161012/9f06d4f4/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161012/9f06d4f4/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004541.html">[osg-users] Crash using current OSG master with collada dom	2.4.0
+</A></li>
+	<LI>Next message: <A HREF="004446.html">[osg-users] Pragmatic shader composition - bug
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280667">[ date ]</a>
+              <a href="thread.html#280667">[ thread ]</a>
+              <a href="subject.html#280667">[ subject ]</a>
+              <a href="author.html#280667">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

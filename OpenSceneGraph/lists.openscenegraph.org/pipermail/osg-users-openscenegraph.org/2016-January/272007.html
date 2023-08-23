@@ -1,0 +1,263 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Float 32 bit texture map
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Float%2032%20bit%20texture%20map&In-Reply-To=%3CCAHhtjQYbkZX8jnr1Ot%3DSZQo7f7cKf%2Bnvynxe%3DvAhyy4qOOBghw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="272006.html">
+   <LINK REL="Next"  HREF="272016.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Float 32 bit texture map</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Float%2032%20bit%20texture%20map&In-Reply-To=%3CCAHhtjQYbkZX8jnr1Ot%3DSZQo7f7cKf%2Bnvynxe%3DvAhyy4qOOBghw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Float 32 bit texture map">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Wed Jan 20 14:15:09 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="272006.html">[osg-users] Float 32 bit texture map
+</A></li>
+        <LI>Next message: <A HREF="272016.html">[osg-users] Float 32 bit texture map
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#272007">[ date ]</a>
+              <a href="thread.html#272007">[ thread ]</a>
+              <a href="subject.html#272007">[ subject ]</a>
+              <a href="author.html#272007">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Paul,
+
+I guess you have one channel float data. Certainly this is wrong:
+
+rImage-&gt;setImage(
+rawImage.rows(),rawImage.cols(),arrayDepth,
+GL_LUMINANCE, GL_RGB32F_ARB, GL_FLOAT,
+pData, osg::Image::NO_DELETE );
+
+At least GL_RGB32F_ARB should be swapped with GL_LUMINANCE. First you pass
+internal format for GPU storage then you pass pixel format in which image
+is stored in CPU mem.
+
+If texture is one channel float luminance I suppose you should just use
+with GL_LUMINANCE as internal format too (instead of GL_RGB32F). You later
+force GL_LUMINANCE32F when texture is created anyway, so both should work
+imho. But passing GL_RGB32F_ARB as pixel format probably causes that
+texture is not created correctly (if created at all).
+
+Cheers,
+Wojtek
+
+2016-01-20 21:34 GMT+01:00 Paul Leopard &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">paul.leopard at gmail.com</A>&gt;:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I've been trying to map a 32 bit float texture onto a quad for a while
+</I>&gt;<i> without success. Below is my code, can anyone tell me what I am doing
+</I>&gt;<i> wrong? This code opens a float32 image file, reads it into an array,
+</I>&gt;<i> creates an osg::Image with the array data, creates an osg::Texture2D with
+</I>&gt;<i> the image, then maps that texture onto a quad.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Paul
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> #include &quot;sgp_core/TArrayAlgo.h&quot;
+</I>&gt;<i>
+</I>&gt;<i> #include &lt;osgViewer/Viewer&gt;
+</I>&gt;<i> #include &lt;osg/Texture2D&gt;
+</I>&gt;<i>
+</I>&gt;<i> #include &lt;string&gt;
+</I>&gt;<i>
+</I>&gt;<i> // Imply namespaces
+</I>&gt;<i>
+</I>&gt;<i> using namespace sgp_core;
+</I>&gt;<i> using namespace std;
+</I>&gt;<i>
+</I>&gt;<i> // Scene graph root and HUD
+</I>&gt;<i> osg::ref_ptr&lt;osg::Group&gt; SceneGraph = new osg::Group();
+</I>&gt;<i>
+</I>&gt;<i> /**
+</I>&gt;<i> * Create an OSG Image given a float data array
+</I>&gt;<i> */
+</I>&gt;<i> osg::ref_ptr&lt;osg::Image&gt; CreateImage( TScalarArray&lt;float&gt;&amp; rawImage )
+</I>&gt;<i> {
+</I>&gt;<i> osg::ref_ptr&lt;osg::Image&gt; rImage = new osg::Image();
+</I>&gt;<i> unsigned char* pData = reinterpret_cast&lt;unsigned char*&gt;( rawImage.c_data()
+</I>&gt;<i> );
+</I>&gt;<i>
+</I>&gt;<i> size_t arrayDepth = 1;
+</I>&gt;<i>
+</I>&gt;<i> rImage-&gt;setImage(
+</I>&gt;<i> rawImage.rows(),
+</I>&gt;<i> rawImage.cols(),
+</I>&gt;<i> arrayDepth,
+</I>&gt;<i> GL_LUMINANCE,
+</I>&gt;<i> GL_RGB32F_ARB,
+</I>&gt;<i> GL_FLOAT,
+</I>&gt;<i> pData,
+</I>&gt;<i> osg::Image::NO_DELETE
+</I>&gt;<i> );
+</I>&gt;<i>
+</I>&gt;<i> return rImage;
+</I>&gt;<i>
+</I>&gt;<i> } // end CreateImage()
+</I>&gt;<i> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+</I>&gt;<i>
+</I>&gt;<i> /**
+</I>&gt;<i> * Create a unit textured quad (Geometry) given it's position, size, and an
+</I>&gt;<i> image
+</I>&gt;<i> */
+</I>&gt;<i> osg::ref_ptr&lt;osg::Geometry&gt; CreateTexturedQuad( osg::Image* pImage )
+</I>&gt;<i> {
+</I>&gt;<i> float xDim = pImage-&gt;t();
+</I>&gt;<i> float yDim = pImage-&gt;s();
+</I>&gt;<i>
+</I>&gt;<i> float32 xLrc = -xDim*0.5f;
+</I>&gt;<i> float32 yLrc = -yDim*0.5f;
+</I>&gt;<i> float32 zLrc = 0;
+</I>&gt;<i> osg::ref_ptr&lt;osg::Geometry&gt; rQuad =
+</I>&gt;<i> osg::createTexturedQuadGeometry(
+</I>&gt;<i> osg::Vec3( xLrc, yLrc, zLrc ),
+</I>&gt;<i> osg::Vec3( xDim, 0.0f, 0.0f ),
+</I>&gt;<i> osg::Vec3( 0.0f, yDim, 0.0f )
+</I>&gt;<i> );
+</I>&gt;<i>
+</I>&gt;<i> osg::Texture2D* pTex = new osg::Texture2D();
+</I>&gt;<i> pTex-&gt;setInternalFormat( GL_LUMINANCE32F_ARB );
+</I>&gt;<i> pTex-&gt;setFilter( osg::Texture::MIN_FILTER, osg::Texture::LINEAR );
+</I>&gt;<i> pTex-&gt;setFilter( osg::Texture::MAG_FILTER, osg::Texture::LINEAR );
+</I>&gt;<i> pTex-&gt;setWrap( osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE );
+</I>&gt;<i> pTex-&gt;setWrap( osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE );
+</I>&gt;<i> pTex-&gt;setImage( pImage );
+</I>&gt;<i>
+</I>&gt;<i> osg::StateSet* pSS = rQuad-&gt;getOrCreateStateSet();
+</I>&gt;<i> pSS-&gt;setTextureAttributeAndModes( 0, pTex );
+</I>&gt;<i>
+</I>&gt;<i> return rQuad;
+</I>&gt;<i> } // CreateTexturedQuad()
+</I>&gt;<i> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+</I>&gt;<i>
+</I>&gt;<i> //
+</I>&gt;<i> ________________________________________________________________________________________________
+</I>&gt;<i> // Main program
+</I>&gt;<i>
+</I>&gt;<i> int main( int argc, const char** pArgv )
+</I>&gt;<i> {
+</I>&gt;<i> // Parse parameters
+</I>&gt;<i> osg::ArgumentParser arguments( &amp;argc,const_cast&lt;char**&gt;( pArgv ) );
+</I>&gt;<i> string description(&quot;Scratch Program for Apache DFT Task&quot;);
+</I>&gt;<i>
+</I>&gt;<i> try
+</I>&gt;<i> {
+</I>&gt;<i> // Create image array and load image data from disk
+</I>&gt;<i> string imageFileName( &quot;512x432_FLIR.float&quot; );
+</I>&gt;<i> TScalarArray&lt;float&gt; rawImage;
+</I>&gt;<i> readFrom( rawImage, imageFileName );
+</I>&gt;<i> cout &lt;&lt; &quot;IMAGE : &quot; &lt;&lt; imageFileName &lt;&lt; endl;
+</I>&gt;<i> cout &lt;&lt; &quot;SIZE : &quot; &lt;&lt; rawImage.rows() &lt;&lt; &quot;x&quot; &lt;&lt; rawImage.cols() &lt;&lt; endl;
+</I>&gt;<i>
+</I>&gt;<i> // Create OSG image with the raw data
+</I>&gt;<i> osg::ref_ptr&lt;osg::Image&gt; rImage = CreateImage( rawImage );
+</I>&gt;<i>
+</I>&gt;<i> // Create a quad and map the image as a texture on it
+</I>&gt;<i> osg::ref_ptr&lt;osg::Geometry&gt; rGeom = CreateTexturedQuad( rImage );
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::Geode&gt; rQuadGeode = new osg::Geode();
+</I>&gt;<i> rQuadGeode-&gt;addDrawable( rGeom );
+</I>&gt;<i>
+</I>&gt;<i> SceneGraph-&gt;addChild( rQuadGeode );
+</I>&gt;<i> }
+</I>&gt;<i> catch( Exception&amp; e )
+</I>&gt;<i> {
+</I>&gt;<i> cerr &lt;&lt; &quot;ERROR: &quot; &lt;&lt; e.what() &lt;&lt; endl;
+</I>&gt;<i> return 1;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> // Setup viewer
+</I>&gt;<i> osgViewer::Viewer viewer(arguments);
+</I>&gt;<i> viewer.setSceneData( SceneGraph.get() );
+</I>&gt;<i>
+</I>&gt;<i> return viewer.run();
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> // EOF
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------------
+</I>&gt;<i> things are more like they are now than they have ever been before
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopice604.php?p=66064#66064">http://forum.openscenegraph.org/viewtopic.php?p=66064#66064</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160120/99ebd084/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160120/99ebd084/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="272006.html">[osg-users] Float 32 bit texture map
+</A></li>
+	<LI>Next message: <A HREF="272016.html">[osg-users] Float 32 bit texture map
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#272007">[ date ]</a>
+              <a href="thread.html#272007">[ thread ]</a>
+              <a href="subject.html#272007">[ subject ]</a>
+              <a href="author.html#272007">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,242 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to track down memory leaks?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20track%20down%20memory%20leaks%3F&In-Reply-To=%3CCAHhtjQZDtTOvS6neduh1PWKzYih5scoZ9NAx_ExG-%2BooX6cYdg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008718.html">
+   <LINK REL="Next"  HREF="008721.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to track down memory leaks?</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20track%20down%20memory%20leaks%3F&In-Reply-To=%3CCAHhtjQZDtTOvS6neduh1PWKzYih5scoZ9NAx_ExG-%2BooX6cYdg%40mail.gmail.com%3E"
+       TITLE="[osg-users] How to track down memory leaks?">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Thu Jul 12 15:49:55 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008718.html">[osg-users] How to track down memory leaks?
+</A></li>
+        <LI>Next message (by thread): <A HREF="008721.html">[osg-users] How to track down memory leaks?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8720">[ date ]</a>
+              <a href="thread.html#8720">[ thread ]</a>
+              <a href="subject.html#8720">[ subject ]</a>
+              <a href="author.html#8720">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, Igor,
+
+I  got interested in this problem and checked your code by converting it to
+pure osgViewer. Here are my observations:
+
+I believe you do have circular reference. Your class Scene is a callback.
+So RootNode points to callback but Scene callback points to RootNode. Hence
+circular ref.
+However, this does not explain increased ref count of your geometries. But
+I believe this issue can be explained by by lazy clearing of render bins.
+RenderBins are not
+cleared after Draw but before next frame Draw. So after your Update, your
+geometry is Culled/Drawn and lands in RenderLeaves of RenderBin. This
+RenderBin is used to draw visible geometries but its not cleared after
+Draw. Its cleared later, ie on next Cull/Draw traversal when RenderLeaves
+container cleared before it gets filled again. So on next Update you will
+notice increased ref count because its also added to RenderLeaves
+container. But the next Cull/Draw will clear RenderLeaves and your geometry
+will be finally released. Here is your modified test applet code ported to
+vanilla osgViewer and modified to use observer_ptr instead of ref_ptr for
+RootNode. I have put breakpoint in MyGeometry Destructor to see the call
+stack and the call where the geometry is actually released and that way I
+found the explanation.
+
+Cheers, hth,
+Wojtek Lewandowski
+
+czw., 12 lip 2018 o 21:49 Igor Spiridonov &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">igwasm at rambler.ru</A>&gt; napisa&#322;(a):
+
+&gt;<i> Here is simple project which reproduces this issue - RefCountTest (
+</I>&gt;<i> <A HREF="https://bitbucket.org/OmegaDoom/osgrefcounttest">https://bitbucket.org/OmegaDoom/osgrefcounttest</A>)
+</I>&gt;<i>
+</I>&gt;<i> It's a visual studio project with qt and osg. Not sure you are using
+</I>&gt;<i> windows but the main code in scene.cpp. ref count checks inside
+</I>&gt;<i> &quot;Scene::operator()(osg::Node* node, osg::NodeVisitor* nv)&quot;
+</I>&gt;<i>
+</I>&gt;<i> I expect both checks to return 1 but first one returns 2 as I explained
+</I>&gt;<i> earlier.
+</I>&gt;<i>
+</I>&gt;<i> I suppose it's the cause of memleak. I use osg 3.2.
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic5993.php?p=74334#74334">http://forum.openscenegraph.org/viewtopic.php?p=74334#74334</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180713/275bc44f/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180713/275bc44f/attachment.html</A>&gt;
+-------------- next part --------------
+#include &lt;osg/Group&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osg/Texture2D&gt;
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+#include &lt;osg/NodeCallback&gt;
+#include &lt;osgGA/StateSetManipulator&gt;
+
+class Scene : public osg::NodeCallback
+{
+public:
+  Scene();
+  osg::Node* getRoot();
+
+private:
+  void operator()(osg::Node*, osg::NodeVisitor*) override;
+  void UpdateScene() const;
+
+  osg::observer_ptr&lt;osg::Group&gt; m_rootNode;
+};
+
+Scene::Scene()
+  : m_rootNode(new osg::Group)
+{
+  m_rootNode-&gt;addChild(new osg::Geode);
+  m_rootNode-&gt;addUpdateCallback(this);
+}
+
+osg::Node* Scene::getRoot()
+{
+  return m_rootNode.get();
+}
+
+void PrintDtor(int refcount)
+{
+  printf(&quot;Dtor Refcount: %d \n&quot;, refcount);
+}
+
+class MyGeometry : public osg::Geometry
+{
+public:
+  ~MyGeometry()
+  {
+    int refcount = referenceCount();
+    
+    PrintDtor(refcount);
+  }
+};
+
+void Scene::operator()(osg::Node* node, osg::NodeVisitor* nv)
+{
+  //check refcount
+  if (static_cast&lt;osg::Geode*&gt;(m_rootNode-&gt;getChild(0))-&gt;getNumDrawables())
+  {
+    auto drawable = static_cast&lt;osg::Geode*&gt;(m_rootNode-&gt;getChild(0))-&gt;getDrawable(0);
+    int refcount = drawable-&gt;referenceCount();
+    printf(&quot;Callback 1 Refcount: %d \n&quot;, refcount);
+  }
+
+  UpdateScene();
+
+  //check refcount
+  if (static_cast&lt;osg::Geode*&gt;(m_rootNode-&gt;getChild(0))-&gt;getNumDrawables())
+  {
+    auto drawable = static_cast&lt;osg::Geode*&gt;(m_rootNode-&gt;getChild(0))-&gt;getDrawable(0);
+    int refcount = drawable-&gt;referenceCount();
+    printf(&quot;Callback 2 Refcount: %d \n&quot;, refcount);
+  }
+
+
+  OpenThreads::Thread::microSleep(100000);
+};
+
+void Scene::UpdateScene() const
+{
+  auto childNode = static_cast&lt;osg::Geode*&gt;(m_rootNode-&gt;getChild(0));
+  childNode-&gt;removeDrawables(0, childNode-&gt;getNumDrawables());
+
+  osg::ref_ptr&lt;osg::Geometry&gt; geometry(new MyGeometry);
+  childNode-&gt;addDrawable(geometry);
+
+  int refcount = geometry-&gt;referenceCount();  
+  printf(&quot;UpdateScene Refcount: %d \n&quot;, refcount);
+
+}
+
+int main(int argc, char** argv)
+{
+    osg::ArgumentParser arguments(&amp;argc, argv);
+    osgViewer::Viewer viewer( arguments );    
+
+    // add the state manipulator
+    viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()));
+
+    // add the thread model handler
+    viewer.addEventHandler(new osgViewer::ThreadingHandler);
+
+    // add the window size toggle handler
+    viewer.addEventHandler(new osgViewer::WindowSizeHandler);
+
+    // add the stats handler
+    viewer.addEventHandler(new osgViewer::StatsHandler);
+
+    // add the help handler
+    viewer.addEventHandler(new osgViewer::HelpHandler(arguments.getApplicationUsage()));
+
+    Scene view;
+    viewer.setSceneData(view.getRoot());
+
+    viewer.run();
+}
+</PRE>
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008718.html">[osg-users] How to track down memory leaks?
+</A></li>
+	<LI>Next message (by thread): <A HREF="008721.html">[osg-users] How to track down memory leaks?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8720">[ date ]</a>
+              <a href="thread.html#8720">[ thread ]</a>
+              <a href="subject.html#8720">[ subject ]</a>
+              <a href="author.html#8720">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

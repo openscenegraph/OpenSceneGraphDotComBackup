@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Seeking advice: Efficient method for large grid rendering (terrain) with unique state per grid square
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Seeking%20advice%3A%20Efficient%20method%20for%20large%20grid%0A%20rendering%20%28terrain%29%20with%20unique%20state%20per%20grid%20square&In-Reply-To=%3CCAFN7Y%2BXf4F0sqNb%3DFFOEVj0hgz4kXbGejADZoy%2B7xnEHJ-3V1g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277721.html">
+   <LINK REL="Next"  HREF="001507.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Seeking advice: Efficient method for large grid rendering (terrain) with unique state per grid square</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Seeking%20advice%3A%20Efficient%20method%20for%20large%20grid%0A%20rendering%20%28terrain%29%20with%20unique%20state%20per%20grid%20square&In-Reply-To=%3CCAFN7Y%2BXf4F0sqNb%3DFFOEVj0hgz4kXbGejADZoy%2B7xnEHJ-3V1g%40mail.gmail.com%3E"
+       TITLE="[osg-users] Seeking advice: Efficient method for large grid rendering (terrain) with unique state per grid square">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Sep 10 03:33:47 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277721.html">[osg-users] Seeking advice: Efficient method for large grid	rendering (terrain) with unique state per grid square
+</A></li>
+        <LI>Next message: <A HREF="001507.html">[osg-users] Seeking advice: Efficient method for large grid	rendering (terrain) with unique state per grid square
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1500">[ date ]</a>
+              <a href="thread.html#1500">[ thread ]</a>
+              <a href="subject.html#1500">[ subject ]</a>
+              <a href="author.html#1500">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi John,
+
+When dealing with large amounts of data the best approach is typically to
+use paging, you can use the osg::PageLOD node to support this when
+generating your own scene graphs, or use VirtualPlanetBuilder to creat a
+paged database offline, or osgEarth to create the paged database at runtime
+on demand.  Either of these approaches may be appropriate for your dataset.
+
+You don't say much about the nature of your dataset.  The area of coverage
+of each tile isn't important, what is important is the amount of data.
+Typically one needs to balance the amount of data per tile, so the area of
+the tile you will want to build will be governed by the amount of data you
+want to use per tile.  In OSG-3.4 there is support in osgTerrain for
+sharing the osg::Geometry between tiles and assigning seperate texture
+layers to each tile, this drastically cuts the memory footprint and
+bandwidth needs.  Even you don't use osgTerrain/osgEarth etc. this sharing
+approach might be appropriate for you.
+
+Robert.
+
+
+On 8 September 2015 at 23:35, John Peterson &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">halalkitty at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hello everyone,
+</I>&gt;<i>
+</I>&gt;<i> I am seeking some advice on the best way to implement a particular task
+</I>&gt;<i> using OSG. Hopefully I can articulate what I'd like to do in a way that
+</I>&gt;<i> makes sense--please do not hesitate to ask if I need to clarify.
+</I>&gt;<i>
+</I>&gt;<i> Essentially, I'd like to use OSG to render a large grid which is basically
+</I>&gt;<i> a heightfield representing a terrain. Each square of the grid will
+</I>&gt;<i> represent a fairy large amount of area, about 5000 m^2 per grid square, and
+</I>&gt;<i> I envision having a large number of these grid squares--on the order of a
+</I>&gt;<i> couple hundred thousand. I'd like to be able to assign a unique state
+</I>&gt;<i> consisting of one or more textures to each grid square. For instance, one
+</I>&gt;<i> grid square may have a water texture, another square a grass texture,
+</I>&gt;<i> another a road segment, etc. My camera will almost always be just above the
+</I>&gt;<i> terrain, similar to what the DriveManipulator accomplishes. I do not
+</I>&gt;<i> foresee having to 'fly' high above the terrain; I don't know if that allows
+</I>&gt;<i> for some sort of optimization.
+</I>&gt;<i>
+</I>&gt;<i> I've tried creating my own geometry objects, one per grid square, which
+</I>&gt;<i> allows me to set a unique StateSet per square. Performance scales poorly
+</I>&gt;<i> with total number of grid squares added, as one might expect. I thought OSG
+</I>&gt;<i> would cull the grid squares that were out out the viewport, but I suppose
+</I>&gt;<i> traversing all those geometries is CPU-intensive. That said, I did add all
+</I>&gt;<i> my objects to the root of the scene; I did not try grouping them
+</I>&gt;<i> hierarchically in any way (for instance, breaking down the grid into
+</I>&gt;<i> quadrants, then breaking those quadrants into four, etc.) If I built up a
+</I>&gt;<i> tree in this manner using osg::Groups, would OSG know to cull the entire
+</I>&gt;<i> group if its bounding box were outside the viewport, or does it just
+</I>&gt;<i> iterate over all the children each time? Is there a facility I should look
+</I>&gt;<i> into that can accomplish this?
+</I>&gt;<i>
+</I>&gt;<i> My application sounds like a perfect fix for osgTerrain and its
+</I>&gt;<i> constituent classes, but my understanding (which may be incorrect) from
+</I>&gt;<i> reading osgTerrainTile is that while it can be assigned an elevation layer
+</I>&gt;<i> with many rows and columns, a colour layer for a texture will cover the
+</I>&gt;<i> entire tile. If I were to use osgTerrainTile, I'd be creating tiles with
+</I>&gt;<i> one row and column (one height value), and setting layers for my textures.
+</I>&gt;<i> This basically sounds like my existing solution and seems like an abuse (or
+</I>&gt;<i> horrible misuse? underuse?) of the terrain facilities, and again I'm
+</I>&gt;<i> concerned about performance.
+</I>&gt;<i>
+</I>&gt;<i> Are there any techniques that I should look into to ensure a performant
+</I>&gt;<i> application? I'll admit that this is not my area of expertise. I appreciate
+</I>&gt;<i> any pointers in the right direction.
+</I>&gt;<i>
+</I>&gt;<i> Best regards,
+</I>&gt;<i> John
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic890b-2.php?p=65071#65071">http://forum.openscenegraph.org/viewtopic.php?p=65071#65071</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150910/61658cd6/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150910/61658cd6/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277721.html">[osg-users] Seeking advice: Efficient method for large grid	rendering (terrain) with unique state per grid square
+</A></li>
+	<LI>Next message: <A HREF="001507.html">[osg-users] Seeking advice: Efficient method for large grid	rendering (terrain) with unique state per grid square
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1500">[ date ]</a>
+              <a href="thread.html#1500">[ thread ]</a>
+              <a href="subject.html#1500">[ subject ]</a>
+              <a href="author.html#1500">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

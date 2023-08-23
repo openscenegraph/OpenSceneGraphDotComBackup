@@ -1,0 +1,222 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to properly update a Geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20properly%20update%20a%20Geometry&In-Reply-To=%3C1461873079.m2f.67011%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002979.html">
+   <LINK REL="Next"  HREF="002973.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to properly update a Geometry</H1>
+<!--htdig_noindex-->
+    <B>Daniel Neos</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20properly%20update%20a%20Geometry&In-Reply-To=%3C1461873079.m2f.67011%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] How to properly update a Geometry">daniel.rd at hotmail.de
+       </A><BR>
+    <I>Thu Apr 28 12:51:19 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002979.html">[osg-users] osgViewer::Viewer fullscreen dual monitor issue
+</A></li>
+        <LI>Next message: <A HREF="002973.html">[osg-users] How to properly update a Geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279195">[ date ]</a>
+              <a href="thread.html#279195">[ thread ]</a>
+              <a href="subject.html#279195">[ subject ]</a>
+              <a href="author.html#279195">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Greetings everyone,
+
+I am trying to display a point cloud, consisting of vertices and color with OpenSceneGraph. A static point cloud to display is rather easy with this guide. 
+But I am not capable of updating such a point cloud. My intention is to create a geometry and attach it to my viewer class once.
+This is the mentioned method which is called once in the beginning.
+
+The OSGWidget strongly depends on this OpenGLWidget based approach. 
+
+
+Code:
+
+void OSGWidget::attachGeometry(osg::ref_ptr&lt;osg::Geometry&gt; geom)
+{
+osg::Geode* geode = new osg::Geode;
+
+geom-&gt;setDataVariance(osg::Object::DYNAMIC);
+geom-&gt;setUseDisplayList(false);
+geom-&gt;setUseVertexBufferObjects(true);
+bool addDrawSuccess = geode-&gt;addDrawable(geom.get()); // Adding Drawable Shape to the geometry node
+
+
+if (!addDrawSuccess)
+{
+throw &quot;Adding Drawable failed!&quot;;
+}
+
+osg::StateSet* stateSet = geode-&gt;getOrCreateStateSet();
+stateSet-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+
+float aspectRatio = static_cast&lt;float&gt;(this-&gt;width()) / static_cast&lt;float&gt;(this-&gt;height());
+
+// Setting up the camera
+osg::Camera* camera = new osg::Camera;
+camera-&gt;setViewport(0, 0, this-&gt;width(), this-&gt;height());
+camera-&gt;setClearColor(osg::Vec4(0.f, 0.f, 0.f, 1.f)); // Kind of Backgroundcolor, clears the buffer and sets the default color (RGBA)
+camera-&gt;setProjectionMatrixAsPerspective(30.f, aspectRatio, 1.f, 1000.f); // Create perspective projection
+camera-&gt;setGraphicsContext(graphicsWindow_); // embed 
+
+osgViewer::View* view = new osgViewer::View;
+view-&gt;setCamera(camera); // Set the defined camera
+view-&gt;setSceneData(geode); // Set the geometry
+view-&gt;addEventHandler(new osgViewer::StatsHandler);
+
+
+osgGA::TrackballManipulator* manipulator = new osgGA::TrackballManipulator;
+manipulator-&gt;setAllowThrow(false);
+
+view-&gt;setCameraManipulator(manipulator);
+
+///////////////////////////////////////////////////
+// Set the viewer
+//////////////////////////////////////////////////
+viewer_-&gt;addView(view);
+viewer_-&gt;setThreadingModel(osgViewer::CompositeViewer::SingleThreaded);
+viewer_-&gt;realize();
+
+this-&gt;setFocusPolicy(Qt::StrongFocus);
+this-&gt;setMinimumSize(100, 100);
+
+this-&gt;setMouseTracking(true);
+}
+
+
+
+
+
+This method gets set once and shall set up the camera, interactor settings and the overall scene which only consists of one geode containing the geometry which shall be updated continiously.
+And after I have 'attached' the geometry, I am trying to update the geometry like this
+
+
+Code:
+
+void PointCloudViewOSG::processData(DepthDataSet depthData)
+{
+if (depthData.points()-&gt;empty())
+{
+return; // empty cloud, cannot do anything
+}
+
+const DepthDataSet::IndexPtr::element_type&amp; index = *depthData.index();
+const size_t nPixel = depthData.points().get()-&gt;points.size();
+
+if (depthData.intensity().isValid() &amp;&amp; !index.empty() )
+{
+    for (int i = 0; i &lt; nPixel; i++)
+    {
+        float x = depthData.points().get()-&gt;points[i].x;
+        float y = depthData.points().get()-&gt;points[i].y;
+        float z = depthData.points().get()-&gt;points[i].z;
+        m_vertices-&gt;push_back(osg::Vec3(x
+            , y
+            , z));
+
+        // 32 bit integer variable containing the rgb (8 bit per channel) value
+        uint32_t rgb_val_;
+        memcpy(&amp;rgb_val_, &amp;(depthData.points().get()-&gt;points[i].rgb), sizeof(uint32_t));
+
+        uint32_t red, green, blue;
+        blue = rgb_val_ &amp; 0x000000ff;
+
+        rgb_val_ = rgb_val_ &gt;&gt; 8;
+        green = rgb_val_ &amp; 0x000000ff;
+
+        rgb_val_ = rgb_val_ &gt;&gt; 8;
+        red = rgb_val_ &amp; 0x000000ff;
+
+        m_colors-&gt;push_back(
+            osg::Vec4f((float)red / 255.0f,
+            (float)green / 255.0f,
+                (float)blue / 255.0f,
+                1.0f)
+        );
+    }
+
+    m_geometry-&gt;setVertexArray(m_vertices.get());
+
+    m_geometry-&gt;setColorArray(m_colors.get());
+
+    m_geometry-&gt;setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    m_geometry-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, m_vertices-&gt;size()));      
+    }
+}
+
+
+
+
+(Apperantly the code tag can somehow not handle the whitespaces but i will let it be since it is more readable than if everything is aligned)
+
+So my guess is that the  addPrimitiveSet(...)  shall not be called everytime I update the geometry, since it will push_back 
+the primitive set everytime the geometry gets updated?
+
+Do I have to reattach my geometry after every update? Or do I have to rewrite my update method?
+So it boils down to the question  What steps are necessary to update my underlying geometry with new vertices and colors
+
+I have read the basic tutorials and looked for similar questions in this forum 
+and the only thing that I could adapt is the use of VBO for performance gain
+
+PointCloudlibrary (PCL) is unfortunately not an alternative since of some incompatibilities with my application.
+
+
+
+
+Thank you!
+
+Cheers,
+Daniel
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic99e3.php?p=67011#67011">http://forum.openscenegraph.org/viewtopic.php?p=67011#67011</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002979.html">[osg-users] osgViewer::Viewer fullscreen dual monitor issue
+</A></li>
+	<LI>Next message: <A HREF="002973.html">[osg-users] How to properly update a Geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279195">[ date ]</a>
+              <a href="thread.html#279195">[ thread ]</a>
+              <a href="subject.html#279195">[ subject ]</a>
+              <a href="author.html#279195">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

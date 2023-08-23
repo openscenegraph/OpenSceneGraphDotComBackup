@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] _intersectionLimit doesn't seem to be working...
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20_intersectionLimit%20doesn%27t%20seem%20to%20be%20working...&In-Reply-To=%3CCAFN7Y%2BUiMEng-L5DuvMv6-8DmM3jyKtgHpYgtx8KYhF0WQsXfQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001198.html">
+   <LINK REL="Next"  HREF="001277.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] _intersectionLimit doesn't seem to be working...</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20_intersectionLimit%20doesn%27t%20seem%20to%20be%20working...&In-Reply-To=%3CCAFN7Y%2BUiMEng-L5DuvMv6-8DmM3jyKtgHpYgtx8KYhF0WQsXfQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] _intersectionLimit doesn't seem to be working...">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Aug 14 00:47:30 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001198.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+        <LI>Next message: <A HREF="001277.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1202">[ date ]</a>
+              <a href="thread.html#1202">[ thread ]</a>
+              <a href="subject.html#1202">[ subject ]</a>
+              <a href="author.html#1202">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Shayne,
+
+Using a paged database for LOS queries introduces the complication that if
+you need the highest resolution tiles then you need to iteratively retrieve
+them from lowest to highest res tile.  The osgSim::LineOfSight class has
+this support built in, but it so slow when the tiles aren't yet loaded.
+There really isn't any way around this.
+
+The crux of the problem is that VPB generates paged databases for rendering
+purposes, it's all geared towards getting a solid 60Hz.  Hierarchical paged
+databases aren't ideal for serious intersection testing.  The OSG can
+provide tools like LineOfSight that workaround some of the issues but it
+can't resolve the fundamental problem that the hierarchy of LOD levels has
+to be traversed to get to the highest res tile.
+
+As for a discrepancy between the original height field and the VPB
+generated database this can come about for a couple of reasons, first your
+settings, if you don't build a deep enough database then the high res tiles
+won't have a resolution high enough to map the original height fields,
+secondly the source height fields are unlikely to align perfect to the
+generated tiles (these are aligned according to a geocentric division not a
+local projection.)  When you don't get perfect alignment sampling will lead
+smoothing out of the data and a discrepency developing.  In flat areas this
+discrepency should be small, but in rapidly changing heightfields the
+potential for bigger discrepencies is higher.
+
+Over-sampling the generated database would help minimize the
+discrepancies.  However, you can't fully avoid discrepancies when the
+source data and the generated data aren't in the same coordinate frame and
+have exactly matching resolution.
+
+If you need to do intersection tests against the source data then this is
+probably what you should do.  So rather than the try to co-opt a paged
+database fine tuned for rendering you consider building an parallel
+database and intersection scheme just for doing your intersections. I.e. if
+you have a square peg and it has to be a square peg then build a square
+hole to start with rather than try and force it into a pre-pared round hole.
+
+Doing this is non-trivial, but should be significantly less work than
+building a scheme for rendering purposes.
+
+Robert.
+
+
+
+On 13 August 2015 at 20:29, Shayne Tueller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">shayne.tueller at hill.af.mil</A>&gt;
+wrote:
+
+&gt;<i> Robert,
+</I>&gt;<i>
+</I>&gt;<i> I appreciate the detailed response and correction. My databases are always
+</I>&gt;<i> geocentric round earth built from source DTED or GeoTiff data.
+</I>&gt;<i>
+</I>&gt;<i> I guess my problems are two-fold which are performance and correlation.
+</I>&gt;<i>
+</I>&gt;<i> I was hoping that the general implementation in OSG would get me there on
+</I>&gt;<i> both counts but it is apparent that I will most likely need to roll my own
+</I>&gt;<i> stuff to get the performance and correlation to where I need it to be.
+</I>&gt;<i>
+</I>&gt;<i> I'm hoping to still use the some of the OSG infrastructure (e.g. the
+</I>&gt;<i> database pager) since I don't want to develop something from scratch
+</I>&gt;<i> entirely.
+</I>&gt;<i>
+</I>&gt;<i> At this point, correlation seems to be a much larger problem than
+</I>&gt;<i> performance at this point. I was hoping that when I query for terrain
+</I>&gt;<i> height at a given lat,lon, the OSG would page in the highest LOD which
+</I>&gt;<i> would match closely the height of the source data. Unfortunately this is
+</I>&gt;<i> NOT the case. In most instances, I see height deltas of 30-50 feet between
+</I>&gt;<i> what OSG returns and what the actual source data reports for height! I
+</I>&gt;<i> understand the interpolation schemes  between elevation data will introduce
+</I>&gt;<i> differences but I wouldn't expect that much.
+</I>&gt;<i>
+</I>&gt;<i> Do you know any way to resolve this problem? Is the highest LOD of an
+</I>&gt;<i> osgTerrain::TerrainTile that much different from the source elevation data
+</I>&gt;<i> for its elevation values? It would appear that it is which is a major
+</I>&gt;<i> problem. I suppose I could try and build a height field database from
+</I>&gt;<i> source data in VPB but I haven't been able to get that to work. Further,
+</I>&gt;<i> can a height field be built as a paged LOD database or is it just flat?
+</I>&gt;<i> How's the performance for a height field database? Not too good compared
+</I>&gt;<i> with an osgTerrain database would be my guess...
+</I>&gt;<i>
+</I>&gt;<i> If you could answer these questions or provide feedback on the correlation
+</I>&gt;<i> issue, that would be great.
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i> Shayne
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic8bbb.php?p=64760#64760">http://forum.openscenegraph.org/viewtopic.php?p=64760#64760</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150814/138bb63b/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150814/138bb63b/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001198.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+	<LI>Next message: <A HREF="001277.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1202">[ date ]</a>
+              <a href="thread.html#1202">[ thread ]</a>
+              <a href="subject.html#1202">[ subject ]</a>
+              <a href="author.html#1202">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

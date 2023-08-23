@@ -1,0 +1,302 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Texture Caching Problem with 3.6.3/4
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3C56cb1ab8-754c-40a4-a9f4-dc47654e11f1%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010625.html">
+   <LINK REL="Next"  HREF="010627.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Texture Caching Problem with 3.6.3/4</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Texture%20Caching%20Problem%20with%203.6.3/4&In-Reply-To=%3C56cb1ab8-754c-40a4-a9f4-dc47654e11f1%40googlegroups.com%3E"
+       TITLE="[osg-users] Texture Caching Problem with 3.6.3/4">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Dec  7 03:58:05 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010625.html">[osg-users]  Texture Caching Problem with 3.6.3/4
+</A></li>
+        <LI>Next message (by thread): <A HREF="010627.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10626">[ date ]</a>
+              <a href="thread.html#10626">[ thread ]</a>
+              <a href="subject.html#10626">[ subject ]</a>
+              <a href="author.html#10626">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>The explanation and code snippet doesn't tell us enough of what is going on 
+in your app to be able to guess what might be wrong.
+
+The best thing I can do at this point is flag up a couple of issues in the 
+code that could be improved, or flag up stuff that seems odd.
+
+First up a memory leak:
+
+      osg::Group* model = dynamic_cast&lt;osg::Group*&gt;(osgDB::readNodeFile(
+fileName, dbOptions));
+
+       if (model != nullptr)
+
+       {...
+
+
+This code will only assign the loaded object the m_Root if the loaded model 
+root node is a Group, if isn't then it'll just be leaked, never to be 
+deleted.
+
+
+The best way to do a read to a particular type in robust way is to use 
+ref_ptr&lt;&gt; and the readFile&lt;T&gt;(..) method i.e.
+
+
+     auto model = osgDB::readRefFile&lt;osg::Group&gt;(fileName, dbOptions));  // 
+return a ref_ptr&lt;osg::Group&gt; that internally uses an 
+dynamic_cast&lt;osg::Group*&gt;
+
+
+
+The next odditiyr is that you have a CleanupModel method that removes the 
+whole Viewer, but you call it a View:
+
+
+void OpenSceneGraphBitmap::CleanupModel()
+
+{
+
+       RemoveViews();
+
+...
+
+
+}
+
+
+This seems like your application is conflating various different features 
+together, which is a red flag by itself and makes me wonder if you have 
+mis-understood the intent of the various osgViewer class available.
+
+
+The new bit of related code is another sign of misuse of the how the OSG is 
+intended to be used:
+
+
+void OpenSceneGraphBitmap::RemoveViews()
+
+{
+
+       if (m_nhiCompositeViewer != nullptr)
+
+       {
+
+              m_nhiCompositeViewer-&gt;setDone(true);
+
+ 
+
+              delete m_nhiCompositeViewer;
+
+              m_nhiCompositeViewer = nullptr;
+
+       }
+
+
+The OSG has built in robust reference counting, it is almost never 
+appropriate to directly delete a object, not in the scene graph, not in the 
+viewer, not a whole viewer.  I suspect your application at a higher level 
+is not ideally organized so the following suggestion might just gloss over 
+wider problems, any I say it here as understanding ref_ptr&lt;&gt; usage is 
+important regardless...
+
+
+So your m_nhiCompositeViewer pointer should *always* be a ref_ptr&lt;&gt; and 
+*never* a straight C pointer.  If you want to delete a viewer you just set 
+the ref_ptr&lt;&gt; to nullptr and it'll be automatically deleted for you if no 
+other references exist t it.  The above method could safely be replaced 
+with a single line : m_nhiCompositeViewer = nullptr;
+
+
+However, this doesn't fix the other problems in the code, it'd just fix a 
+bad practice.
+
+
+Next problem will need to look at is back to the OpenSceneGraphBitmap::CleanupModel() 
+method:
+
+
+
+void OpenSceneGraphBitmap::CleanupModel()
+
+{
+
+       RemoveViews();
+
+ 
+
+       if (m_Root != nullptr)     // if root already exists (already loaded 
+previous scene) remove children to clean up
+
+       {
+
+              m_Root-&gt;releaseGLObjects();
+
+              m_Root-&gt;removeChildren(0, m_Root-&gt;getNumChildren());
+
+ 
+
+              void* ptr = m_Root.release();
+
+              delete ptr;
+
+              m_Root = nullptr;
+
+       }
+
+}
+
+
+Here you call RemoveViews() which will delete the Viewer and all graphics 
+contexts associated with it.  The you try and do some manual clean up:
+
+
+       if (m_Root != nullptr)     // if root already exists (already loaded 
+previous scene) remove children to clean up
+
+       {
+
+              m_Root-&gt;releaseGLObjects();
+
+              m_Root-&gt;removeChildren(0, m_Root-&gt;getNumChildren());
+
+
+This suggest to me that you are keeping m_Root around as some form of 
+global container and then trying to manage it's contents.  The code 
+snippets don't say how the node and it's children.  Deleting a Viewer will 
+delete all it's GraphicsContext and clean up all the scene graphs that are 
+directly attached to it, but it you have scene graph elements that are 
+detached from the scene graph then it can't clean up these.  If these 
+detached elements contain GL objects will have already been deleted by the 
+graphics context deletion, so the handles are orphaned but the OSG itself 
+doesn't know about it, and calling releaseGLObjects() will release the 
+handles into containers that the OSG uses to schedule deletion or reuse of 
+the GL objects.  If the graphics contexts already deleted then you have to 
+discard any GL handles via calling discardGLObjects() rather than 
+releaseGLObjects().
+
+
+The osgViewer and scene graph are design to do all the automatic clean up 
+and management of GL objects behind the scenes for you, for most 
+applications there should never be a need to explicitly call 
+releaseGLObjects();  The OSG can't track what you detach from viewers and 
+then manipulate, in these cases you really need to think whether what you 
+are doing is necessary and sensible.  My strong recommendation is that 
+users avoid doing this.  
+
+
+Finally we have another instance of manually an object:
+
+
+              void* ptr = m_Root.release();
+
+              delete ptr;
+
+              m_Root = nullptr;
+
+
+The code tells me that m_Root is likely a ref_ptr&lt;Group&gt; which rather than 
+just do the sensible thing and call m_Root = nullptr and let the smart 
+pointer do it's job in clean up you release the pointer and then manually 
+delete it.
+
+
+It's painful to see such a combination a misuse of the OSG.  I don't know 
+where you have picked up this coding style, but it's never been part of the 
+OSG usage, none of the OSG examples, none of books, never in it's near 20 
+year history has abusing ref_ptr&lt;&gt; in this way been advocated.  
+
+
+I don't know the history of your application, it could be that you've 
+inherited bad code and have been thrown in the deepened trying to learn and 
+fix stuff at the same time.  From this point, I am pretty sure that the 
+regression you see in going from 3.6.0 to 3.6.4 is likely to mis-use of the 
+OSG in your application code that make it's so fragile and dependent on 
+accidental behaviors to function.  Fixing bugs on the OSG then can easily 
+break your application as it was relying on buggy behavior.
+
+
+&gt;<i>From the little snippets I've picked up a number of problems, fixing these 
+</I>might work around the problems, but my guess is that there are major 
+problem throughout the code.  The good news is that if you learn to use the 
+OSG a bit more appropriately your codebase will become smaller, cleaner, 
+easier to maintain, more robust, more fun to work with.
+
+
+Spending a bit of time learning about how smart pointers work and how to 
+use them will really help you.  You have accesses to the full OSG source 
+code so if you aren't sure about something just have a look at the code, 
+put break points into the code, see what happens when smart pointers do 
+there thing.  Have a look through the examples, discussions online, have a 
+look at the OSG books.  This investment in learning more about the how 
+thing work will make you much more productive.
+
+
+Best of luck,
+
+Robert.
+
+
+
+
+
+
+
+
+
+}
+
+
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/56cb1ab8-754c-40a4-a9f4-dc47654e11f1%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/56cb1ab8-754c-40a4-a9f4-dc47654e11f1%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191207/59ebfd9c/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191207/59ebfd9c/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010625.html">[osg-users]  Texture Caching Problem with 3.6.3/4
+</A></li>
+	<LI>Next message (by thread): <A HREF="010627.html">[osg-users] Texture Caching Problem with 3.6.3/4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10626">[ date ]</a>
+              <a href="thread.html#10626">[ thread ]</a>
+              <a href="subject.html#10626">[ subject ]</a>
+              <a href="author.html#10626">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

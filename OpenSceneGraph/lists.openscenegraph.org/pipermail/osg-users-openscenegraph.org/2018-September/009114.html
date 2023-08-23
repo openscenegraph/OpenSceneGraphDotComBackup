@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20porting%20from%20osg-3.4.0%20to%20osg-3.6.0&In-Reply-To=%3CCAFN7Y%2BVjnAzmb6zJMV%2BQq83TwWnb%2Bbd-79SEn7%3DQ-%3D3Ncb9nbQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009112.html">
+   <LINK REL="Next"  HREF="009128.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problems%20porting%20from%20osg-3.4.0%20to%20osg-3.6.0&In-Reply-To=%3CCAFN7Y%2BVjnAzmb6zJMV%2BQq83TwWnb%2Bbd-79SEn7%3DQ-%3D3Ncb9nbQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Sep 13 06:31:13 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009112.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+        <LI>Next message (by thread): <A HREF="009128.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9114">[ date ]</a>
+              <a href="thread.html#9114">[ thread ]</a>
+              <a href="subject.html#9114">[ subject ]</a>
+              <a href="author.html#9114">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Harman
+
+On Thu, 13 Sep 2018 at 13:55, Herman Varma &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hermanvarma at eastlink.ca</A>&gt; wrote:
+&gt;<i> Just to clarify I should replace in the class CSimpleInterimShadowTechnique
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>         CSimpleInterimShadowTechnique();
+</I>&gt;<i>         CSimpleInterimShadowTechnique(const CSimpleInterimShadowTechnique&amp; es, const osg::CopyOp&amp; copyop=osg::CopyOp::SHALLOW_COPY);
+</I>&gt;<i>         META_Object(osgShadow, CSimpleInterimShadowTechnique);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> with
+</I>&gt;<i>
+</I>&gt;<i> CSimpleInterimShadowTechnique();
+</I>&gt;<i> CSimpleInterimShadowTechnique(const CSimpleInterimShadowTechnique&amp; es, const osg::CopyOp&amp; copyop = osg::CopyOp::SHALLOW_COPY);
+</I>&gt;<i>
+</I>&gt;<i> virtual bool isSameKindAs(const osg::Object* obj) const { return dynamic_cast&lt;const CSimpleInterimShadowTechnique*&gt;(obj) != NULL; } \
+</I>&gt;<i> virtual const char* libraryName() const { return &quot;osgShadow&quot;; }\
+</I>&gt;<i> virtual const char* className() const { return &quot;CSimpleInterimShadowTechnique&quot;; }
+</I>
+There should be no need to replace the use of META_Object, the
+original code should be fine.  The only reason why META_Object macro
+wasn't working is because the CSimpleInterimShadowTechnique doesn't
+implement the pure virtual methods that have been added in 3.6.x - the
+ones I mentioned above.
+
+
+&gt;<i> and also add
+</I>&gt;<i>
+</I>&gt;<i>         /** Resize any per context GLObject buffers to specified size. */
+</I>&gt;<i>         virtual void resizeGLObjectBuffers(unsigned int maxSize) = 0;
+</I>&gt;<i>
+</I>&gt;<i>         /** If State is non-zero, this function releases any associated OpenGL objects for
+</I>&gt;<i>            * the specified graphics context. Otherwise, releases OpenGL objects
+</I>&gt;<i>            * for all graphics contexts. */
+</I>&gt;<i>         virtual void releaseGLObjects(osg::State* = 0) const = 0;
+</I>&gt;<i>
+</I>&gt;<i> to the class.
+</I>&gt;<i>
+</I>&gt;<i> Do I have this right?
+</I>
+Yes, but you'll have to actually implement as well :-)
+
+Have a look at the include/osgShadow/ShadowMap example as it
+subclasses from ShadowTechnique is uses META_Objects and override the
+required methods.  Have a look at the src/osgShadow/ShadowMap.cpp to
+see how the
+resizeGLObjectBuffers and releaseGLObjects are implemented.
+
+Robert
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009112.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+	<LI>Next message (by thread): <A HREF="009128.html">[osg-users] Problems porting from osg-3.4.0 to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9114">[ date ]</a>
+              <a href="thread.html#9114">[ thread ]</a>
+              <a href="subject.html#9114">[ subject ]</a>
+              <a href="author.html#9114">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

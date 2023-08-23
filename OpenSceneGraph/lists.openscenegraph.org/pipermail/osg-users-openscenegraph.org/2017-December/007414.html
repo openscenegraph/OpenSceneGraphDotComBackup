@@ -1,0 +1,439 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] dynamic cube map
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20dynamic%20cube%20map&In-Reply-To=%3C1513635232.m2f.72605%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007377.html">
+   <LINK REL="Next"  HREF="007422.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] dynamic cube map</H1>
+<!--htdig_noindex-->
+    <B>R&#195;&#180;mulo Cerqueira</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20dynamic%20cube%20map&In-Reply-To=%3C1513635232.m2f.72605%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] dynamic cube map">romulogcerqueira at gmail.com
+       </A><BR>
+    <I>Mon Dec 18 14:13:52 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007377.html">[osg-users] dynamic cube map
+</A></li>
+        <LI>Next message (by thread): <A HREF="007422.html">[osg-users] dynamic cube map
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7414">[ date ]</a>
+              <a href="thread.html#7414">[ thread ]</a>
+              <a href="subject.html#7414">[ subject ]</a>
+              <a href="author.html#7414">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Nick,
+
+I still need help to get the normal/depth data from reflected objects. Could you have a look in my current code?
+
+C++ code:
+
+Code:
+
+// OSG includes
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osg/Texture&gt;
+#include &lt;osg/TexGen&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osg/ShapeDrawable&gt;
+#include &lt;osg/TextureCubeMap&gt;
+#include &lt;osg/TexMat&gt;
+#include &lt;osg/MatrixTransform&gt;
+#include &lt;osg/PositionAttitudeTransform&gt;
+#include &lt;osg/Camera&gt;
+#include &lt;osg/TexGenNode&gt;
+#include &lt;osgDB/FileUtils&gt;
+
+// C++ includes
+#include &lt;iostream&gt;
+
+#define SHADER_PATH_FRAG &quot;normal_depth_map/shaders/normalDepthMap.frag&quot;
+#define SHADER_PATH_VERT &quot;normal_depth_map/shaders/normalDepthMap.vert&quot;
+
+#define BOOST_TEST_MODULE &quot;DynamicCubeMap_test&quot;
+
+using namespace osg;
+
+unsigned int numTextures = 6;
+
+enum TextureUnitTypes {
+    TEXTURE_UNIT_DIFFUSE,
+    TEXTURE_UNIT_NORMAL,
+    TEXTURE_UNIT_CUBEMAP
+};
+
+osg::ref_ptr&lt;osg::Group&gt; _create_scene() {
+    osg::ref_ptr&lt;osg::Group&gt; scene = new osg::Group;
+
+    osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+    scene-&gt;addChild(geode.get());
+
+    const float radius = 0.8f;
+    const float height = 1.0f;
+    osg::ref_ptr&lt;osg::ShapeDrawable&gt; shape;
+
+    // sphere
+    shape = new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(-3.0f, 0.0f, 0.0f), radius));
+    shape-&gt;setColor(osg::Vec4(0.6f, 0.8f, 0.8f, 1.0f));
+    geode-&gt;addDrawable(shape.get());
+
+    // box
+    shape = new osg::ShapeDrawable(new osg::Box(osg::Vec3(3.0f, 0.0f, 0.0f), 2 * radius));
+    shape-&gt;setColor(osg::Vec4(0.4f, 0.9f, 0.3f, 1.0f));
+    geode-&gt;addDrawable(shape.get());
+
+    // cone
+    shape = new osg::ShapeDrawable(new osg::Cylinder(osg::Vec3(0.0f, 0.0f, -3.0f), radius, height));
+    shape-&gt;setColor(osg::Vec4(1.0f, 0.3f, 0.3f, 1.0f));
+    geode-&gt;addDrawable(shape.get());
+
+    // cylinder
+    shape = new osg::ShapeDrawable(new osg::Box(osg::Vec3(0.0f, 0.0f, 3.0f), 2* radius));
+    shape-&gt;setColor(osg::Vec4(0.8f, 0.8f, 0.4f, 1.0f));
+    geode-&gt;addDrawable(shape.get());
+
+    return scene;
+}
+
+osg::NodePath createReflector() {
+    Geode* node = new Geode;
+    const float radius = 0.8f;
+    ref_ptr&lt;TessellationHints&gt; hints = new TessellationHints;
+    hints-&gt;setDetailRatio(2.0f);
+    ShapeDrawable* shape = new ShapeDrawable(new Sphere(Vec3(0.0f, 0.0f, 0.0f), radius * 1.5f), hints.get());
+    shape-&gt;setColor(Vec4(0.8f, 0.8f, 0.8f, 1.0f));
+    node-&gt;addDrawable(shape);
+
+    osg::NodePath nodeList;
+    nodeList.push_back(node);
+
+    return nodeList;
+}
+
+class UpdateCameraAndTexGenCallback : public osg::NodeCallback
+{
+    public:
+
+        typedef std::vector&lt; osg::ref_ptr&lt;osg::Camera&gt; &gt;  CameraList;
+
+        UpdateCameraAndTexGenCallback(osg::NodePath&amp; reflectorNodePath, CameraList&amp; Cameras):
+            _reflectorNodePath(reflectorNodePath),
+            _Cameras(Cameras)
+        {
+        }
+
+        virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+        {
+            // first update subgraph to make sure objects are all moved into position
+            traverse(node,nv);
+
+            // compute the position of the center of the reflector subgraph
+            osg::Matrixd worldToLocal = osg::computeWorldToLocal(_reflectorNodePath);
+            osg::BoundingSphere bs = _reflectorNodePath.back()-&gt;getBound();
+            osg::Vec3 position = bs.center();
+
+            typedef std::pair&lt;osg::Vec3, osg::Vec3&gt; ImageData;
+            const ImageData id[] =
+            {
+                ImageData( osg::Vec3( 1,  0,  0), osg::Vec3( 0, -1,  0) ), // +X
+                ImageData( osg::Vec3(-1,  0,  0), osg::Vec3( 0, -1,  0) ), // -X
+                ImageData( osg::Vec3( 0,  1,  0), osg::Vec3( 0,  0,  1) ), // +Y
+                ImageData( osg::Vec3( 0, -1,  0), osg::Vec3( 0,  0, -1) ), // -Y
+                ImageData( osg::Vec3( 0,  0,  1), osg::Vec3( 0, -1,  0) ), // +Z
+                ImageData( osg::Vec3( 0,  0, -1), osg::Vec3( 0, -1,  0) )  // -Z
+            };
+
+            for(unsigned int i = 0; i &lt; 6 &amp;&amp; i &lt; _Cameras.size(); ++i) {
+                osg::Matrix localOffset;
+                localOffset.makeLookAt(position,position+id[i].first,id[i].second);
+
+                osg::Matrix viewMatrix = worldToLocal*localOffset;
+
+                _Cameras[i]-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+                _Cameras[i]-&gt;setProjectionMatrixAsFrustum(-1.0,1.0,-1.0,1.0,1.0,10000.0);
+                _Cameras[i]-&gt;setViewMatrix(viewMatrix);
+            }
+        }
+
+    protected:
+
+        virtual ~UpdateCameraAndTexGenCallback() {}
+
+        osg::NodePath               _reflectorNodePath;
+        CameraList                  _Cameras;
+};
+
+class TexMatCullCallback : public osg::NodeCallback
+{
+    public:
+
+        TexMatCullCallback(osg::TexMat* texmat):
+            _texmat(texmat)
+        {
+        }
+
+        virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+        {
+            // first update subgraph to make sure objects are all moved into position
+            traverse(node,nv);
+
+            osgUtil::CullVisitor* cv = dynamic_cast&lt;osgUtil::CullVisitor*&gt;(nv);
+            if (cv)
+            {
+				osg::Quat q = osg::Matrix::inverse(*cv-&gt;getModelViewMatrix()).getRotate();
+
+
+				float yaw2 = asin(-2.0f*(q.x()*q.z() - q.w()*q.y()));
+				osg::Matrixd mxY;
+				mxY.makeRotate(yaw2,osg::Vec3(0,0,1));
+
+				osg::Matrixd mx = mxY;
+                _texmat-&gt;setMatrix(mx);
+            }
+        }
+
+    protected:
+
+        osg::ref_ptr&lt;TexMat&gt;    _texmat;
+};
+
+class UpdateCameraPosUniformCallback : public osg::Uniform::Callback
+{
+public:
+	UpdateCameraPosUniformCallback(osg::Camera* camera)
+		: mCamera(camera)
+	{
+	}
+
+	virtual void operator () (osg::Uniform* u, osg::NodeVisitor*)
+	{
+		osg::Vec3 eye;
+		osg::Vec3 center;
+		osg::Vec3 up;
+		mCamera-&gt;getViewMatrixAsLookAt(eye,center,up);
+
+		u-&gt;set(eye);
+	}
+protected:
+	osg::Camera* mCamera;
+};
+
+osg::Group* createShadowedScene(osg::Node* reflectedSubgraph, osg::NodePath reflectorNodePath, unsigned int unit, const osg::Vec4&amp; clearColor, unsigned tex_width, unsigned tex_height, osg::Camera::RenderTargetImplementation renderImplementation, osg::Camera* camera = 0) {
+    osg::Group* group = new osg::Group;
+
+    osg::TextureCubeMap* texture = new osg::TextureCubeMap;
+    texture-&gt;setTextureSize(tex_width, tex_height);
+    texture-&gt;setInternalFormat(GL_RGB);
+    texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+    texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+    texture-&gt;setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+    texture-&gt;setFilter(osg::TextureCubeMap::MIN_FILTER,osg::TextureCubeMap::LINEAR);
+    texture-&gt;setFilter(osg::TextureCubeMap::MAG_FILTER,osg::TextureCubeMap::LINEAR);
+
+    // set up the render to texture cameras.
+    UpdateCameraAndTexGenCallback::CameraList Cameras;
+    for(unsigned int i = 0; i &lt; 6; ++i) {
+        // create the camera
+        osg::Camera* camera = new osg::Camera;
+
+        camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        camera-&gt;setClearColor(clearColor);
+
+        // set viewport
+        camera-&gt;setViewport(0,0,tex_width,tex_height);
+
+        // set the camera to render before the main camera.
+        camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+
+        // tell the camera to use OpenGL frame buffer object where supported.
+        camera-&gt;setRenderTargetImplementation(renderImplementation);
+
+        // attach the texture and use it as the color buffer.
+        camera-&gt;attach(osg::Camera::COLOR_BUFFER, texture, 0, i);
+
+        // add subgraph to render
+        camera-&gt;addChild(reflectedSubgraph);
+
+        group-&gt;addChild(camera);
+
+        Cameras.push_back(camera);
+    }
+
+    // create the texgen node to project the tex coords onto the subgraph
+    osg::TexGenNode* texgenNode = new osg::TexGenNode;
+    texgenNode-&gt;getTexGen()-&gt;setMode(osg::TexGen::REFLECTION_MAP);
+    texgenNode-&gt;setTextureUnit(unit);
+    group-&gt;addChild(texgenNode);
+
+    // set the reflected subgraph so that it uses the texture and tex gen settings.
+	osg::Node* reflectorNode = reflectorNodePath.front();
+    {
+
+        group-&gt;addChild(reflectorNode);
+
+        osg::StateSet* stateset = reflectorNode-&gt;getOrCreateStateSet();
+		stateset-&gt;setTextureAttributeAndModes(unit,texture,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+        stateset-&gt;setTextureMode(unit,GL_TEXTURE_GEN_S,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+        stateset-&gt;setTextureMode(unit,GL_TEXTURE_GEN_T,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+        stateset-&gt;setTextureMode(unit,GL_TEXTURE_GEN_R,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+        stateset-&gt;setTextureMode(unit,GL_TEXTURE_GEN_Q,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+
+        osg::TexMat* texmat = new osg::TexMat;
+        stateset-&gt;setTextureAttributeAndModes(unit,texmat,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+
+        reflectorNode-&gt;setCullCallback(new TexMatCullCallback(texmat));
+    }
+
+	osg::StateSet* ss = reflectorNode-&gt;getOrCreateStateSet();
+	ss-&gt;setTextureAttributeAndModes(unit,texture,osg::StateAttribute::ON|osg::StateAttribute::OVERRIDE);
+
+	osg::Program* program = new osg::Program;
+    osg::ref_ptr&lt;osg::Shader&gt; shaderVertex = osg::Shader::readShaderFile(osg::Shader::VERTEX, osgDB::findDataFile(SHADER_PATH_VERT));
+    osg::ref_ptr&lt;osg::Shader&gt; shaderFragment = osg::Shader::readShaderFile(osg::Shader::FRAGMENT, osgDB::findDataFile(SHADER_PATH_FRAG));
+    program-&gt;addShader(shaderFragment);
+    program-&gt;addShader(shaderVertex);
+    ss-&gt;setAttributeAndModes( program, osg::StateAttribute::ON );
+	ss-&gt;addUniform( new osg::Uniform(&quot;cubeMap&quot;, unit) );
+
+	osg::Uniform* u = new osg::Uniform(&quot;cameraPos&quot;,osg::Vec3());
+	u-&gt;setUpdateCallback( new UpdateCameraPosUniformCallback( camera ) );
+	ss-&gt;addUniform( u );
+
+    // add the reflector scene to draw just as normal
+    group-&gt;addChild(reflectedSubgraph);
+
+    // set an update callback to keep moving the camera and tex gen in the right direction.
+    group-&gt;setUpdateCallback(new UpdateCameraAndTexGenCallback(reflectorNodePath, Cameras));
+
+    return group;
+}
+
+
+int main() {
+    // construct the viewer.
+    osgViewer::Viewer viewer;
+
+    unsigned tex_width = 256;
+    unsigned tex_height = 256;
+
+    osg::Camera::RenderTargetImplementation renderImplementation = osg::Camera::FRAME_BUFFER_OBJECT;
+
+    osg::ref_ptr&lt;osg::Group&gt; scene = new osg::Group;
+    osg::ref_ptr&lt;osg::Group&gt; reflectedSubgraph = _create_scene();
+    if (!reflectedSubgraph.valid()) exit(0);
+
+    osg::ref_ptr&lt;osg::Group&gt; reflectedScene = createShadowedScene(
+			reflectedSubgraph.get(),
+			createReflector(),
+			TEXTURE_UNIT_CUBEMAP,
+			viewer.getCamera()-&gt;getClearColor(),
+            tex_width,
+			tex_height,
+			renderImplementation,
+			viewer.getCamera());
+
+    scene-&gt;addChild(reflectedScene.get());
+    viewer.setSceneData(scene.get());
+    viewer.setUpViewInWindow(0,0,600,600);
+    viewer.run();
+    return 0;
+}
+
+
+
+
+
+Vertex Shader:
+
+Code:
+#version 130
+
+uniform mat4 osg_ViewMatrixInverse;
+uniform vec3 cameraPos;
+
+void main() {
+    gl_Position = ftransform();
+    gl_TexCoord[0] = gl_MultiTexCoord0;
+    mat4 ModelWorld4x4 = osg_ViewMatrixInverse * gl_ModelViewMatrix;
+    mat3 ModelWorld3x3 = mat3( ModelWorld4x4 );
+    vec4 WorldPos = ModelWorld4x4 *  gl_Vertex;
+    vec3 N = normalize( ModelWorld3x3 * gl_Normal );
+    vec3 E = normalize( WorldPos.xyz - cameraPos.xyz );
+    gl_TexCoord[1].xyz = reflect( E, N );
+}
+
+
+
+Fragment Shader:
+
+Code:
+#version 130
+
+uniform samplerCube cubeMap;
+uniform sampler2D colorMap;
+const float reflect_factor = 0.5;
+
+void main (void)                                                            
+{
+    vec3 base_color = texture2D(colorMap, gl_TexCoord[0].xy).rgb;
+    vec3 cube_color = textureCube(cubeMap, gl_TexCoord[1].xyz).rgb;
+    gl_FragColor = vec4( mix(cube_color, base_color, reflect_factor).rgb, 1.0);
+}
+
+
+... 
+
+Thank you!
+
+Cheers,
+R&#244;mulo
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic0bb7.php?p=72605#72605">http://forum.openscenegraph.org/viewtopic.php?p=72605#72605</A>
+
+
+
+
+
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007377.html">[osg-users] dynamic cube map
+</A></li>
+	<LI>Next message (by thread): <A HREF="007422.html">[osg-users] dynamic cube map
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7414">[ date ]</a>
+              <a href="thread.html#7414">[ thread ]</a>
+              <a href="subject.html#7414">[ subject ]</a>
+              <a href="author.html#7414">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

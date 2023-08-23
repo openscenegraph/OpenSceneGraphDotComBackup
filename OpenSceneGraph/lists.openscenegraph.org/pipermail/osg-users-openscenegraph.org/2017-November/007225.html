@@ -1,0 +1,208 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OsgText compile issue with the newer versions of OSG
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OsgText%20compile%20issue%20with%20the%20newer%20versions%20of%20OSG&In-Reply-To=%3CCAFN7Y%2BWp9_d7UFtFhUjBTFPoiAyVzNg1j%2BMjxt%3DyugaLcUussg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007224.html">
+   <LINK REL="Next"  HREF="007226.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OsgText compile issue with the newer versions of OSG</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OsgText%20compile%20issue%20with%20the%20newer%20versions%20of%20OSG&In-Reply-To=%3CCAFN7Y%2BWp9_d7UFtFhUjBTFPoiAyVzNg1j%2BMjxt%3DyugaLcUussg%40mail.gmail.com%3E"
+       TITLE="[osg-users] OsgText compile issue with the newer versions of OSG">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Nov 16 09:03:07 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007224.html">[osg-users] OsgText compile issue with the newer versions of OSG
+</A></li>
+        <LI>Next message (by thread): <A HREF="007226.html">[osg-users] OsgText compile issue with the newer versions of OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7225">[ date ]</a>
+              <a href="thread.html#7225">[ thread ]</a>
+              <a href="subject.html#7225">[ subject ]</a>
+              <a href="author.html#7225">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Nick,
+
+Thanks for the links and explanation.
+
+The new implementation is completely different, it simply not an issue
+of making an old API public again, there is no way you can map the old
+to the new implementation for backwards compatibility as they are so
+different.  The new implementation shares a single vertex array for
+the whole osgText::Text object, the old implementation uses mutliple
+vertex arrays for different texture atlas and view combinations.
+
+Getting the coords of glyphs is something we'd need to add to
+osgText::Text, such as Text::getGlyphCorners(int characterPosition,
+osg::Vec3&amp; bottomLeft,   osg::Vec3&amp; bottomRight etc.).
+
+Robert.
+
+On 16 November 2017 at 16:54, Trajce Nikolov NICK
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> that is part of a code I wrote that has history :-) and now is part of the
+</I>&gt;<i> OpenIG project. Originally this was written like 6-7 (???) years ago and was
+</I>&gt;<i> part of the osgWidget::Input too ( I had submission then for this ). The
+</I>&gt;<i> purpose was to have a Line Edit as is known in any UI. OpenIG is using it
+</I>&gt;<i> for typing commands as from terminal and here is the whole code
+</I>&gt;<i> <A HREF="https://github.com/CCSI-CSSI/MuseOpenIG/blob/master/Core-OpenIG/Terminal.cpp">https://github.com/CCSI-CSSI/MuseOpenIG/blob/master/Core-OpenIG/Terminal.cpp</A>
+</I>&gt;<i> ....
+</I>&gt;<i>
+</I>&gt;<i> This particular snippet Curtis is mentioning was changed over time (simple
+</I>&gt;<i> changes that are handled with #ifdefs) and now we have the same case - I am
+</I>&gt;<i> aware of the recent osgText refactors but don't know the details. The
+</I>&gt;<i> purpose of this snippet is to get the glyphs coords of the edited text in
+</I>&gt;<i> order to set the cursor position. That simple :-).
+</I>&gt;<i>
+</I>&gt;<i> The mentioned snippet is using the API for a decade that now become broken,
+</I>&gt;<i> so I will vote to make it back compatible again - if it will be a simple
+</I>&gt;<i> addition what I believe it is the case
+</I>&gt;<i>
+</I>&gt;<i> Please let me know your thoughts and what will be the best effort to fix
+</I>&gt;<i> this issue
+</I>&gt;<i>
+</I>&gt;<i> Thanks a bunch as always!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> NIck
+</I>&gt;<i>
+</I>&gt;<i> On Wed, Nov 15, 2017 at 10:35 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi Curtis,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> It might be that we need to add some extra API to osgText to help you
+</I>&gt;&gt;<i> do what you want to do.  As a general trend I would much rather have
+</I>&gt;&gt;<i> users no need to grapple with the internal implementation details of
+</I>&gt;&gt;<i> classes to do their work, if this requires some amendments to the
+</I>&gt;&gt;<i> public interface or just providing some advice to solve it another way
+</I>&gt;&gt;<i> then this will be preferable.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> At this point I can't really provide any specific advice as to what
+</I>&gt;&gt;<i> would be appropriate in hour case as the small code snippet really
+</I>&gt;&gt;<i> doesn't tell me anything about the what you are and why.  Could you
+</I>&gt;&gt;<i> provide a small compilable code example that illustrates what you were
+</I>&gt;&gt;<i> doing with older versions of the OSG.  From this I should be able to
+</I>&gt;&gt;<i> work out what you were doing and why, and then work out what would be
+</I>&gt;&gt;<i> appropriate to do next.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 15 November 2017 at 19:29, Curtis Rubel &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">crubel at compro.net</A>&gt; wrote:
+</I>&gt;&gt;<i> &gt; Hello community,
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;    I was attempting to test the latest release of OSG 3.5.8 and am now
+</I>&gt;&gt;<i> &gt; getting
+</I>&gt;&gt;<i> &gt; some compiler errors.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; error: &#8216;const struct osgText::Text::GlyphQuads&#8217; has no member named
+</I>&gt;&gt;<i> &gt; &#8216;getCoords&#8217;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; coords.insert(coords.end(),gq.getCoords()-&gt;begin(),gq.getCoords()-&gt;end());
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Snippet of the code in question:
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Code:
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; std::vector&lt;osg::Vec2&gt;                          coords;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; osgText::Text::TextureGlyphQuadMap&amp; tgqm =
+</I>&gt;&gt;<i> &gt; const_cast&lt;osgText::Text::TextureGlyphQuadMap&amp;&gt;(_text-&gt;getTextureGlyphQuadMap());
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; const osgText::Text::GlyphQuads&amp; gq = tgqmi-&gt;second;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; coords.insert(coords.end(),gq.getCoords()-&gt;begin(),gq.getCoords()-&gt;end());
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; We are using this code to control onscreen text command line input.
+</I>&gt;&gt;<i> &gt; What would be the proper way to fix this code under the newer versions
+</I>&gt;&gt;<i> &gt; of OSG to
+</I>&gt;&gt;<i> &gt; accomplish the same, if it is still possible in some way?
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Any hints would be appreciated.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Thank you all as always...
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Cheers,
+</I>&gt;&gt;<i> &gt; Curtis[/code]
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; ------------------
+</I>&gt;&gt;<i> &gt; Read this topic online here:
+</I>&gt;&gt;<i> &gt; <A HREF="../../../../forum.openscenegraph.org/viewtopicee58.php?p=72393#72393">http://forum.openscenegraph.org/viewtopic.php?p=72393#72393</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; _______________________________________________
+</I>&gt;&gt;<i> &gt; osg-users mailing list
+</I>&gt;&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> trajce nikolov nick
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I></PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007224.html">[osg-users] OsgText compile issue with the newer versions of OSG
+</A></li>
+	<LI>Next message (by thread): <A HREF="007226.html">[osg-users] OsgText compile issue with the newer versions of OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7225">[ date ]</a>
+              <a href="thread.html#7225">[ thread ]</a>
+              <a href="subject.html#7225">[ subject ]</a>
+              <a href="author.html#7225">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

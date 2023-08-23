@@ -1,0 +1,214 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Visibility of Vertices
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Visibility%20of%20Vertices&In-Reply-To=%3CCAFN7Y%2BWV2EeEx%2ByTs%3DOegzuDffH4w-nimJVWW2vpWVqVDu9cEA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279871.html">
+   <LINK REL="Next"  HREF="279872.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Visibility of Vertices</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Visibility%20of%20Vertices&In-Reply-To=%3CCAFN7Y%2BWV2EeEx%2ByTs%3DOegzuDffH4w-nimJVWW2vpWVqVDu9cEA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Visibility of Vertices">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Jul  9 01:30:17 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279871.html">[osg-users] Visibility of Vertices
+</A></li>
+        <LI>Next message: <A HREF="279872.html">[osg-users] osg shadow minimal shadow map and auto-rotating text	objects
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3657">[ date ]</a>
+              <a href="thread.html#3657">[ thread ]</a>
+              <a href="subject.html#3657">[ subject ]</a>
+              <a href="author.html#3657">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Daniel,
+
+There isn't a perfect solution for what you are after as points are
+how &quot;large&quot; points are can be an poorly controlled property.  It's
+perfect legal to have a point be inifinitely small so that it's not
+likely that two points will ever be in front of each other.  Only if
+you start to assign a size to points does it become practical to doing
+tests against which points may be in front of each other.
+
+The osg::PolytopeIntersector doesn't know anything about the possible
+size of points so can't make any decision about what might be in front
+of another.  To implement a form of infront/behind test for points
+you'll need t come up with a way of mapping a size to the points.
+That size could be in screen space or object space, which is
+appropriate for your usage is entirely down to the needs of your app.
+ You'll then need to work out a means for projecting the points into a
+form of cyclinder or polytope to do the collision test and then do the
+tests.  The OSG doesn't have anything off the shelf that implements
+this so it's down to you.
+
+Robert.
+
+
+
+
+
+On 8 July 2016 at 16:04, Daniel Neos &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">daniel.rd at hotmail.de</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> is there an easy way to determine whether a single vertex is visible or not, i.e. no other object is blocking the line of sight?
+</I>&gt;<i>
+</I>&gt;<i> My problem is that my geometry does not consist of solid objects or planes, just a lot of single vertices.
+</I>&gt;<i>
+</I>&gt;<i> I want to be enable to pick a point reliably by a mouseclick. My approach is to use the polytopeintersector, then mapping all points that have been caught by the intersector into screen-coordinates and comparing them with the screen-coordinates of my mouseclick.
+</I>&gt;<i>
+</I>&gt;<i> This works very well until my camera is set such that multiple vertices seems to be &quot;in line&quot;, so that a point in the background gets accidentally picked.
+</I>&gt;<i> I could exclude those points if I am able to tell that those points are occluded by the points in the foreground. I could imagine that this is rather simple with solid objects, but how can I achieve this in my setup?
+</I>&gt;<i>
+</I>&gt;<i> Any help would by appreciated.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Here is the code which handles the pointpicking so far:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::Vec2d worldToScreenNormalized(const osg::Vec3d&amp; worldPosition, const osg::Camera* pCamera, const osgGA::GUIEventAdapter&amp; ea)
+</I>&gt;<i> {
+</I>&gt;<i>     osg::Vec2d screenPosition;
+</I>&gt;<i>
+</I>&gt;<i>     if (pCamera != nullptr)
+</I>&gt;<i>     {
+</I>&gt;<i>         osg::Matrixd MVPW = pCamera-&gt;getViewMatrix() * pCamera-&gt;getProjectionMatrix() * pCamera-&gt;getViewport()-&gt;computeWindowMatrix();
+</I>&gt;<i>         osg::Vec4d screenPosition4d = osg::Vec4d(worldPosition, 1.0) * MVPW;
+</I>&gt;<i>         screenPosition4d = screenPosition4d / screenPosition4d.w();
+</I>&gt;<i>         screenPosition4d.y() = pCamera-&gt;getViewport()-&gt;height() - screenPosition4d.y();
+</I>&gt;<i>         screenPosition.set(screenPosition4d.x(), screenPosition4d.y());
+</I>&gt;<i>         screenPosition.set(2.0f*(screenPosition.x() - ea.getXmin()) / (ea.getXmax()- ea.getXmin()) - 1.0f,
+</I>&gt;<i>             -(2.0f*(screenPosition.y() - ea.getYmin()) / (ea.getYmax() - ea.getYmin()) - 1.0f));
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     return screenPosition;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> bool PickHandler::getPickedPoint(const osgGA::GUIEventAdapter&amp; ea, float buffer,
+</I>&gt;<i>     osgViewer::View* viewer)
+</I>&gt;<i> {
+</I>&gt;<i>     try
+</I>&gt;<i>     {
+</I>&gt;<i>         intersector = new osgUtil::PolytopeIntersector(
+</I>&gt;<i>             osgUtil::Intersector::PROJECTION,
+</I>&gt;<i>             ea.getXnormalized() - buffer, ea.getYnormalized() - buffer, ea.getXnormalized() + buffer, ea.getYnormalized() + buffer);
+</I>&gt;<i>     }
+</I>&gt;<i>     catch (const std::bad_alloc&amp;)
+</I>&gt;<i>     {
+</I>&gt;<i>         return false;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     const osg::Vec2d clickedNormalizedScreencoord(ea.getXnormalized(), ea.getYnormalized());
+</I>&gt;<i>     // DimZero = check only for points
+</I>&gt;<i>     intersector-&gt;setDimensionMask(osgUtil::PolytopeIntersector::DimZero);
+</I>&gt;<i>     // nearest intersection
+</I>&gt;<i>     intersector-&gt;setIntersectionLimit(osgUtil::Intersector::NO_LIMIT);
+</I>&gt;<i>     osgUtil::IntersectionVisitor iv(intersector);
+</I>&gt;<i>     viewer-&gt;getCamera()-&gt;accept(iv);
+</I>&gt;<i>
+</I>&gt;<i>     // check if intersector has got intersections and chooses the first one, else set NaN
+</I>&gt;<i>     if (intersector-&gt;containsIntersections())
+</I>&gt;<i>     {
+</I>&gt;<i>         osgUtil::PolytopeIntersector::Intersection intersection
+</I>&gt;<i>             = *(intersector-&gt;getIntersections().begin());
+</I>&gt;<i>
+</I>&gt;<i>         osg::Vec3f pickedPoint;
+</I>&gt;<i>
+</I>&gt;<i>         float distance = 1E10;
+</I>&gt;<i>         unsigned int numIntersection=0;
+</I>&gt;<i>         osg::Vec3f sum;
+</I>&gt;<i>         for (auto it = intersector-&gt;getIntersections().begin(); it != intersector-&gt;getIntersections().end(); it++)
+</I>&gt;<i>         {
+</I>&gt;<i>             unsigned int numIntersections = it-&gt;numIntersectionPoints;
+</I>&gt;<i>             numIntersection++;
+</I>&gt;<i>             for (size_t i = 0; i &lt; numIntersections; ++i)
+</I>&gt;<i>             {
+</I>&gt;<i>                 osg::Vec2d screen = worldToScreenNormalized(it-&gt;intersectionPoints[i], viewer-&gt;getCamera(),ea);
+</I>&gt;<i>                 if ((screen - clickedNormalizedScreencoord).length2() &lt; distance )
+</I>&gt;<i>                 {
+</I>&gt;<i>                     distance = (screen - clickedNormalizedScreencoord).length2();
+</I>&gt;<i>                     pickedPoint = it-&gt;intersectionPoints[i];
+</I>&gt;<i>                 }
+</I>&gt;<i>             }
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         if (pickedPoint.isNaN())
+</I>&gt;<i>         {
+</I>&gt;<i>             return false;
+</I>&gt;<i>         }
+</I>&gt;<i>         m_point.set(pickedPoint[0], pickedPoint[1], pickedPoint[2]);
+</I>&gt;<i>     }
+</I>&gt;<i>     else
+</I>&gt;<i>     {
+</I>&gt;<i>         float NaN = std::numeric_limits&lt;float&gt;::quiet_NaN();
+</I>&gt;<i>         m_point.set(NaN, NaN, NaN);
+</I>&gt;<i>     }
+</I>&gt;<i>     return true;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Daniel[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic8913.php?p=68065#68065">http://forum.openscenegraph.org/viewtopic.php?p=68065#68065</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279871.html">[osg-users] Visibility of Vertices
+</A></li>
+	<LI>Next message: <A HREF="279872.html">[osg-users] osg shadow minimal shadow map and auto-rotating text	objects
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3657">[ date ]</a>
+              <a href="thread.html#3657">[ thread ]</a>
+              <a href="subject.html#3657">[ subject ]</a>
+              <a href="author.html#3657">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

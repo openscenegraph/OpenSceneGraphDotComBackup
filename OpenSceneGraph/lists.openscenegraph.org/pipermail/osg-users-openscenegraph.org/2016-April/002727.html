@@ -1,0 +1,100 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Vec3Array instantiation
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vec3Array%20instantiation&In-Reply-To=%3C1460021605.m2f.66764%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002726.html">
+   <LINK REL="Next"  HREF="278951.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Vec3Array instantiation</H1>
+<!--htdig_noindex-->
+    <B>Filip Arlet</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Vec3Array%20instantiation&In-Reply-To=%3C1460021605.m2f.66764%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Vec3Array instantiation">filip89 at seznam.cz
+       </A><BR>
+    <I>Thu Apr  7 02:33:25 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002726.html">[osg-users] Vec3Array instantiation
+</A></li>
+        <LI>Next message: <A HREF="278951.html">[osg-users] Clipping planes and osgVolume
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2727">[ date ]</a>
+              <a href="thread.html#2727">[ thread ]</a>
+              <a href="subject.html#2727">[ subject ]</a>
+              <a href="author.html#2727">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+Simply you can't do it. They are completle different smart pointers. shared_ptr has outside reference counting and ref_ptr has inside reference counting in osg::Referenced class. Basically you would need to call ref() everytime you create or copy shared_ptr and call unref() (unref_nodelete()) every time shared_ptr is destroyed. And use custom deleter (void custom_del(osg::Referenced* referenced) { referenced-&gt;unref(); ??}. But I dont think it will work. Your main problem is that those pointer types have no idea about each other. If your osg::Referenced ref counter drop to zero, your object gets deleted, but you can still have some shared_ptr around with bad data and vice versa, if your shared_ptr gets deleted, you can still have some ref_ptrs in osg classes.
+
+But what I can recommend is this:
+subclass osg::Drawable (or Geometry) if you look into osg/Geometry.cpp all functions that accepts arrays (drawImplementation, acceptPrimitiveFunctor, computeBounds, ... ) can use float* values  ...basically glVertexPointer doesnt care about your array type. You can create your custom class without Array Pointers, but with your own shared_ptrs.
+
+
+Code:
+
+class MyDrawable : public osg::Drawable
+{
+MyDrawable(std::shared_ptr&lt;MyCustomArrayType&gt; arr) :
+m_arr(arr)
+{}
+private:
+std::shared_ptr&lt;MyCustomArrayType&gt; m_arr;
+}
+
+
+
+
+Then you would have to look at each virtual function of osg::Drawable and implement it (its not so hard, just take a look at osg::Geometry, how its done - but instead of osg::VecArrays you will use your Array). Of course you dont need to implement all of them.
+
+Cheers,
+Filip
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic6d71.php?p=66764#66764">http://forum.openscenegraph.org/viewtopic.php?p=66764#66764</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002726.html">[osg-users] Vec3Array instantiation
+</A></li>
+	<LI>Next message: <A HREF="278951.html">[osg-users] Clipping planes and osgVolume
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2727">[ date ]</a>
+              <a href="thread.html#2727">[ thread ]</a>
+              <a href="subject.html#2727">[ subject ]</a>
+              <a href="author.html#2727">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

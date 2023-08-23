@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] setAttribute / Material issue
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20setAttribute%20/%20Material%20issue&In-Reply-To=%3C1502871347.m2f.71425%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006593.html">
+   <LINK REL="Next"  HREF="006576.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] setAttribute / Material issue</H1>
+<!--htdig_noindex-->
+    <B>Paul Bigeon</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20setAttribute%20/%20Material%20issue&In-Reply-To=%3C1502871347.m2f.71425%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] setAttribute / Material issue">paulbigeon at hotmail.fr
+       </A><BR>
+    <I>Wed Aug 16 01:15:47 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006593.html">[osg-users] access to viewer instances in plugins
+</A></li>
+        <LI>Next message: <A HREF="006576.html">[osg-users] setAttribute / Material issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6573">[ date ]</a>
+              <a href="thread.html#6573">[ thread ]</a>
+              <a href="subject.html#6573">[ subject ]</a>
+              <a href="author.html#6573">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I'm very new to OSG, but here's a problem I've stumbled upon.
+I'll try to give as many as possible infos about the context, but in the case that I miss something please do ask me for more.
+
+So, basically, I use OpenSceneGraph 3.5.6.148 with Qt 5.6 to create a 3D Viewer that display a specific group of nodes that I have loaded in the view. Further on the execution of this program, the user has the possibility to add more group of nodes in the view, by adding a child to the main group of nodes that has been loaded.
+
+For this purpose I use
+
+osgQt\GraphicsWindowQt
+
+To interact with the groups of nodes that are loaded in the GraphicsWindowQt, I use a osgUtil::LineSegmentIntersector which return to me the group of nodes under the cursor by sending a Qt signal to a function designed for coloring the group if it has not been selected yet or to reset the default color if it has already been selected.
+
+The coloring function for it's main part consists of this :
+
+This part is called if the group has to be selected :
+
+
+Code:
+
+osg::ref_ptr&lt;osg::StateSet&gt; stateset = grp-&gt;getOrCreateStateSet(); // Get the StateSet of the group
+osg::Material* material_previous = (osg::Material*)stateset-&gt;getAttribute(osg::StateAttribute::MATERIAL); // Get the default Material of this group
+
+if (material_previous)
+{
+selected_entity-&gt;m_material_previous = material_previous; // Store the default material in the selected object
+}
+
+stateset-&gt;setAttribute(m_material_selected, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE); // Set the new Material to this node.
+selected_entity-&gt;m_material_selected = m_material_selected; // Store default material in the selected object
+
+
+
+
+This part is called if the node has to be deselected:
+
+
+Code:
+
+osg::ref_ptr&lt;osg::StateSet&gt; stateset_selected_node = selected_entity-&gt;m_osg_group-&gt;getOrCreateStateSet(); // Get the StateSet of the group
+if (selected_entity-&gt;m_material_previous)
+{
+stateset_selected_node-&gt;setAttribute(selected_entity-&gt;m_material_previous, osg::StateAttribute::ON); // Restore the previous material to this group
+}
+else if (selected_entity-&gt;m_material_selected)
+{
+stateset_selected_node-&gt;removeAttribute(selected_entity-&gt;m_material_selected); // Remove the attribute if there is no previous material stored on this group
+}
+
+
+
+
+Here's the problem :
+
+Under certain camera angles, and before the user has selected any of the nodes that are in the scene, some nodes are already colored.
+It seems to me that if the camera doesn't show some groups, others will be colored without any interaction at all from the user.
+
+See the attached files to see what's happening on screen :
+
+Thank in advance for your intereset in this request, and my apologies if my english is bad.
+
+Cheers,
+Paul[/img]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic75e2.php?p=71425#71425">http://forum.openscenegraph.org/viewtopic.php?p=71425#71425</A>
+
+
+
+
+Attachments: 
+<A HREF="../../../../forum.openscenegraph.org/files/osg_material_issue_4_150.png">http://forum.openscenegraph.org//files/osg_material_issue_4_150.png</A>
+<A HREF="../../../../forum.openscenegraph.org/files/osg_material_issue_3_198.png">http://forum.openscenegraph.org//files/osg_material_issue_3_198.png</A>
+<A HREF="../../../../forum.openscenegraph.org/files/osg_material_issue_2_182.png">http://forum.openscenegraph.org//files/osg_material_issue_2_182.png</A>
+<A HREF="../../../../forum.openscenegraph.org/files/osg_material_issue_1_169.png">http://forum.openscenegraph.org//files/osg_material_issue_1_169.png</A>
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006593.html">[osg-users] access to viewer instances in plugins
+</A></li>
+	<LI>Next message: <A HREF="006576.html">[osg-users] setAttribute / Material issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6573">[ date ]</a>
+              <a href="thread.html#6573">[ thread ]</a>
+              <a href="subject.html#6573">[ subject ]</a>
+              <a href="author.html#6573">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

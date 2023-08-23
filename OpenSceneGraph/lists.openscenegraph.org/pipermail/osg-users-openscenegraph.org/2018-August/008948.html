@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Core%20Profile%3A%20glEnable/glDisable%20GL_POINT_SPRITE&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827F8F426%40tewdmx.enews.nrl.navy.mil%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008829.html">
+   <LINK REL="Next"  HREF="008956.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE</H1>
+<!--htdig_noindex-->
+    <B>Daniel Emminizer, Code 5773</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Core%20Profile%3A%20glEnable/glDisable%20GL_POINT_SPRITE&In-Reply-To=%3CFF01D17217297C42BEF1AAC01640C2C827F8F426%40tewdmx.enews.nrl.navy.mil%3E"
+       TITLE="[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE">dan.emminizer at nrl.navy.mil
+       </A><BR>
+    <I>Mon Aug 20 06:25:25 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008829.html">[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</A></li>
+        <LI>Next message (by thread): <A HREF="008956.html">[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8948">[ date ]</a>
+              <a href="thread.html#8948">[ thread ]</a>
+              <a href="subject.html#8948">[ subject ]</a>
+              <a href="author.html#8948">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Still a low priority because I am able to work around in my own code.  But wanted to make sure this doesn't get lost in the traffic about texture modes in other threads.  The original message had an example .cpp that demonstrated the issue.
+
+Is it worthwhile to create an issue on the github issue tracker?
+
+Thanks.
+
+ - Dan
+
+
+
+&gt;<i> -----Original Message-----
+</I>&gt;<i> From: Daniel Emminizer, Code 5773
+</I>&gt;<i> Sent: Wednesday, August 01, 2018 7:25 AM
+</I>&gt;<i> To: OpenSceneGraph Users
+</I>&gt;<i> Subject: RE: [osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</I>&gt;<i> 
+</I>&gt;<i> Hi Robert,
+</I>&gt;<i> 
+</I>&gt;<i> I just started seeing something similar at the end of the day yesterday.  I am
+</I>&gt;<i> using osg::PointSprite, not using GL_POINT_SPRITE directly.  I have some
+</I>&gt;<i> more background too and I think I see the cause, but not the solution.
+</I>&gt;<i> 
+</I>&gt;<i> PointSprite::checkValidityOfAssociatedModes() is great, and it works great
+</I>&gt;<i> and is right when called.  But I found an edge case where it's not being called
+</I>&gt;<i> although PointSprite is in the scene.
+</I>&gt;<i> 
+</I>&gt;<i> I have a scene that is generated dynamically on user input.  When the Viewer
+</I>&gt;<i> starts, there are no points, and there is no PointSprite.  This is when the
+</I>&gt;<i> GLObjectsVisitor is called, who is responsible for (among other things) calling
+</I>&gt;<i> checkValidityOfAssociatedModes(), due to the
+</I>&gt;<i> Renderer::_compileOnNextDraw flag being set.
+</I>&gt;<i> 
+</I>&gt;<i> Later on in some GUIEventHandler, a GL_POINTS drawable is added with
+</I>&gt;<i> PointSprite in its stateset.  checkValidityOfAssociatedModes() is never called
+</I>&gt;<i> because the Renderer already did its compile pass.  Because it's never called,
+</I>&gt;<i> we never get to state.setModeValidity(GL_POINT_SPRITE_ARB, modeValid
+</I>&gt;<i> [false]).
+</I>&gt;<i> 
+</I>&gt;<i> Because of this, the associated mode of PointSprite ends up applying,
+</I>&gt;<i> causing a GL error.  Basically, checkValidityOfAssociatedModes() never gets
+</I>&gt;<i> called if that mode is not present under the scene, when the scene is first
+</I>&gt;<i> compiled.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Things I tried:
+</I>&gt;<i> 
+</I>&gt;<i> * Adding PointSprite to the osg::View::getCamera() on start-up.  Did not
+</I>&gt;<i> work because GLObjectVisitor only visits scene data.
+</I>&gt;<i> checkValidityOfAssociatedModes() never called.
+</I>&gt;<i> 
+</I>&gt;<i> * Adding PointSprite to osgViewer::View's root node near setSceneData()
+</I>&gt;<i> call.  This did work.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> I can work around this because I do control my View/Viewer and I can add
+</I>&gt;<i> this PointSprite.  But this bug might have other side effects.   Though I'm
+</I>&gt;<i> seeing this in GL3/GLCORE, it is not a bug exclusive to GL core nor to Point
+</I>&gt;<i> Sprite. (I think)
+</I>&gt;<i> 
+</I>&gt;<i> Attached is a small example that demonstrates the bad behavior.  I know
+</I>&gt;<i> you're not currently working on OSG, for me at least this issue can sit for a
+</I>&gt;<i> while.  But I wanted to provide you with all the info I had while it was fresh in
+</I>&gt;<i> my mind.
+</I>&gt;<i> 
+</I>&gt;<i>  - Dan
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> &gt; -----Original Message-----
+</I>&gt;<i> &gt; From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On
+</I>&gt;<i> &gt; Behalf Of Robert Osfield
+</I>&gt;<i> &gt; Sent: Sunday, July 29, 2018 10:28 AM
+</I>&gt;<i> &gt; To: OpenSceneGraph Users
+</I>&gt;<i> &gt; Subject: Re: [osg-users] Core Profile: glEnable/glDisable
+</I>&gt;<i> &gt; GL_POINT_SPRITE
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Hi Damian,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The glEnable/glDisable will be done directed by your scene graph via
+</I>&gt;<i> &gt; the StateSet::setMode(GLenum,..), so simply remove the
+</I>&gt;<i> &gt; setMode(GL_POINT_SPRITE).
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Robert.
+</I>
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008829.html">[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</A></li>
+	<LI>Next message (by thread): <A HREF="008956.html">[osg-users] Core Profile: glEnable/glDisable GL_POINT_SPRITE
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8948">[ date ]</a>
+              <a href="thread.html#8948">[ thread ]</a>
+              <a href="subject.html#8948">[ subject ]</a>
+              <a href="author.html#8948">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [Toward BindImageTexture completness]
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BToward%20BindImageTexture%20completness%5D&In-Reply-To=%3CCAFN7Y%2BXbgT%3D08PuJyyfdQMXGzbQr9ojPt894NkTeoS8uAESKYA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007708.html">
+   <LINK REL="Next"  HREF="007710.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [Toward BindImageTexture completness]</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BToward%20BindImageTexture%20completness%5D&In-Reply-To=%3CCAFN7Y%2BXbgT%3D08PuJyyfdQMXGzbQr9ojPt894NkTeoS8uAESKYA%40mail.gmail.com%3E"
+       TITLE="[osg-users] [Toward BindImageTexture completness]">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Feb  8 04:10:51 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007708.html">[osg-users] [Toward BindImageTexture completness]
+</A></li>
+        <LI>Next message (by thread): <A HREF="007710.html">[osg-users] OSG not rendering CEGUI drawable inheritted from Drawable
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7713">[ date ]</a>
+              <a href="thread.html#7713">[ thread ]</a>
+              <a href="subject.html#7713">[ subject ]</a>
+              <a href="author.html#7713">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Julien,
+
+I have replied on the original thread, it provides all suggestions
+there, now you have started a new thread, arggg,   I'm not going to
+double post as well as it's really not helpful to contribute to a
+bifurcated thread.
+
+Robert.
+
+On 7 February 2018 at 20:56, Julien Valentin &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">julienvalentin51 at gmail.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i> (Sorry to spam ML but I modified a lot my last post trying to be clearer
+</I>&gt;<i> and i also though a dedicated topic would be better..)
+</I>&gt;<i>
+</I>&gt;<i> So to sum up the problem:
+</I>&gt;<i> BindImageTexture stateattribute is not a textureattribute (_imageunit != _textureunit) but it sometimes have to bind texture object on a textureunit in case data of the associated texture has gone dirty
+</I>&gt;<i>
+</I>&gt;<i> The current implementation relies on user to setup BindImageTexture::_targettex as texture attribute of &quot;the same stateset&quot; (and then relies on this texatt to upload dirtied data if required)
+</I>&gt;<i> It works well but involves a systematic texture-&gt;apply (texobj.bind) overcost at each use...
+</I>&gt;<i>
+</I>&gt;<i> to make BindImageTexture &quot;autonomous&quot;, We then need:
+</I>&gt;<i> - a way to know if texture have to be applied :
+</I>&gt;<i> - a textureunit on which to applied
+</I>&gt;<i>
+</I>&gt;<i> What I've proposed :
+</I>&gt;<i> - clarify semantic given to textures::_modifiedcount to be the textureobjectmodifiedcount. So, as texobjs are owned by Texture, i putted modifiedcount in Texture and removed it from daughter classes.
+</I>&gt;<i> - in LayeredTextures (cubemap, texture2Darray) i changed modifiedcount to layermodifiedcount these flags doesn't have the same purpose as the textureobjectmodifiedcount as it's just a inner mechanism not to upload unchanged layer image (not related to the textureobject state).
+</I>&gt;<i>
+</I>&gt;<i> and Then I added a textureunit prop in BindImageTexture, this tu is used to applytexattribute(_targettex) if required.
+</I>&gt;<i> (Note it's user charge to set this prop correctely according other uses of the _targettex as texattribute in the rest of your scenegraph)
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="https://github.com/openscenegraph/OpenSceneGraph/pull/467">https://github.com/openscenegraph/OpenSceneGraph/pull/467</A>
+</I>&gt;<i> My pr has been rejected:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Making _modifiedCount part of the base class is broken because you end up having to duplicate the data structure for the array version of texture.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Also I can grasp how 12 changed files could be at all a minimal change set. You've merged three set of changes into one commit.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Adding the texture unit as into BindImageTexture just feels like this class is getting more a more tightly coupled state that breaks the orthogonal design that the OSG and OpenGL try to maintain, the fact you are having to do this tight coupling suggests that approach is far from idea and may need revising at a fundamental level.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm closing this PR as it just contains too many different problems.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> so i'm now asking community reviews and insights because I can't see myself a better compromise to finish BindImageTexture.
+</I>&gt;<i>
+</I>&gt;<i> Thanks in advance
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Julien
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicce8c.php?p=72947#72947">http://forum.openscenegraph.org/viewtopic.php?p=72947#72947</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007708.html">[osg-users] [Toward BindImageTexture completness]
+</A></li>
+	<LI>Next message (by thread): <A HREF="007710.html">[osg-users] OSG not rendering CEGUI drawable inheritted from Drawable
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7713">[ date ]</a>
+              <a href="thread.html#7713">[ thread ]</a>
+              <a href="subject.html#7713">[ subject ]</a>
+              <a href="author.html#7713">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

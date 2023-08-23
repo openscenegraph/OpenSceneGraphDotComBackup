@@ -1,0 +1,187 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Drawing a partially transparent image in a quad
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Drawing%20a%20partially%20transparent%20image%20in%20a%20quad&In-Reply-To=%3CAM5PR1001MB09649857C47B0B1C4FC7F3328E410%40AM5PR1001MB0964.EURPRD10.PROD.OUTLOOK.COM%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008637.html">
+   <LINK REL="Next"  HREF="008646.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Drawing a partially transparent image in a quad</H1>
+<!--htdig_noindex-->
+    <B>Jose Pedro Canilho</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Drawing%20a%20partially%20transparent%20image%20in%20a%20quad&In-Reply-To=%3CAM5PR1001MB09649857C47B0B1C4FC7F3328E410%40AM5PR1001MB0964.EURPRD10.PROD.OUTLOOK.COM%3E"
+       TITLE="[osg-users] Drawing a partially transparent image in a quad">jpc_ace at hotmail.com
+       </A><BR>
+    <I>Wed Jul  4 01:37:54 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008637.html">[osg-users] Drawing a partially transparent image in a quad
+</A></li>
+        <LI>Next message (by thread): <A HREF="008646.html">[osg-users] Drawing a partially transparent image in a quad
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8643">[ date ]</a>
+              <a href="thread.html#8643">[ thread ]</a>
+              <a href="subject.html#8643">[ subject ]</a>
+              <a href="author.html#8643">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Laurens.
+
+Thank you for your patience regarding my issue.
+
+
+I was not familiar with the &quot;writing out .osg files and view them with osgviewer&quot; method, but it is indeed a helpful hint!
+I was able to view my quads/images in the osgviewer, and, to my surprise, they didn't seem to have any transparency issues!
+So I must be doing something wrong within my program itself.
+
+
+I'll try and keep digging for my issue, and report any interesting findings. And I'll keep your suggestions in mind.
+
+Thank you for all the help!
+
+________________________________
+From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; on behalf of L. Voerman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">l.voerman at rug.nl</A>&gt;
+Sent: Tuesday, July 3, 2018 9:04 AM
+To: OpenSceneGraph Users
+Subject: Re: [osg-users] Drawing a partially transparent image in a quad
+
+Hi ,
+I can't see what you are doing wrong, other guesses:
+- you moved all quads into the transparent bin, and render them all at the same depth
+- you compress the images to textures without transparency
+- you are looking at a mipmap where the alpha values are interpolated as well.
+
+for testing you could add
+osg::AlphaFunc *alphaTest = new osg::AlphaFunc(osg::AlphaFunc::GREATER, 0.5f);
+qss.setAttributeAndModes(alphaTest);
+to discard (not blend) the fragments with an alpha value below 0.5
+
+as you seem to have problems in your data, I would strongly recommend to write out the data to file (.osgt will do) and look at it in the osgviewer.
+Laurens.
+
+On Mon, Jul 2, 2018 at 6:25 PM Jose Pedro Canilho &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">jpc_ace at hotmail.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">jpc_ace at hotmail.com</A>&gt;&gt; wrote:
+
+Hi Laurens.
+Thank you for your reply!
+
+I've actually already had a black background color set in my camera (&quot;setClearColor( 0,0,0,1 )&quot;).
+
+I've tried your rendering hint solution, but unfortunately it didn't solve my problem. Do I need to call any state set updating function after setting the rendering hint?
+
+I've also double checked for the correct format in pretty much any place I can think of. I've checked that my raw images are indeed 8bit RGBA. When I construct my osg::image, I use the following:
+
+
+osg::ref_ptr&lt;osg::Image&gt; img = new osg::Image();
+img-&gt;setImage(width,height,1,GL_RGBA8,GL_RGBA,GL_UNSIGNED_BYTE,dataPtr,osg::Image::NO_DELETE);
+
+
+I believe these format options are correct, since I'm able to create other RGBA images correctly.
+
+
+Thanks once again.
+
+Jos&#233;
+
+________________________________
+From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt;&gt; on behalf of L. Voerman &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">l.voerman at rug.nl</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">l.voerman at rug.nl</A>&gt;&gt;
+Sent: Monday, July 2, 2018 3:13 PM
+To: OpenSceneGraph Users
+Subject: Re: [osg-users] Drawing a partially transparent image in a quad
+
+
+Hi Jose,
+You may have a black background, with the blending actually (partly) working, change
+getCamera()-&gt;setClearColor( osg::Vec4(r,g,b,a) );
+to see if that's the case.
+the stuff that needs blending needs to be rendered after the background, normally done with:
+stateset-&gt;setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
+If it's not blending at all I would recommend you to check if your image did not end up as an RGB image instead of RGBA.
+Regards, Laurens.
+
+
+
+
+On Mon, Jul 2, 2018 at 11:28 AM Jose Pedro Canilho &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">jpc_ace at hotmail.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">jpc_ace at hotmail.com</A>&gt;&gt; wrote:
+
+Hi everyone!
+
+I've been battling with this issue for a couple of days and could really use some assistance. I'm fairly new to OSG (and 3D rendering in general) so I might be doing some rookie mistake.
+
+
+In my program, I draw several quads, each containing a RGBA squared image.
+
+At one point, I'm required to draw a new image on top of the existent images. This new image is also squared, but it is partially transparent (i.e., several pixels have the RGBA value of 0,0,0,0). At the moment, these pixels are being rendered black instead of transparent, and thus are mistakenly covering some regions of the background images/quads.
+
+After quite a few searches online, I was pointed in the direction of the GL_BLEND macro and blend functions. I tried to enable blending for the new image/quad:
+
+auto qss = quad-&gt;getOrCreateStateSet();
+qss-&gt;setMode(GL_BLEND, osg::StateAttribute::ON)
+
+
+but to no avail.
+
+I also tried to attach a blend function to the quad, like such:
+
+osg::BlendFunc* blendFunc = new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA );
+qss-&gt;setAttributeAndModes(blendFunc);
+
+
+but that didn't work either.
+
+
+Are there any other issues that I might be overlooking here?
+
+
+Thanks in advance.
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180704/bd96afd5/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180704/bd96afd5/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008637.html">[osg-users] Drawing a partially transparent image in a quad
+</A></li>
+	<LI>Next message (by thread): <A HREF="008646.html">[osg-users] Drawing a partially transparent image in a quad
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8643">[ date ]</a>
+              <a href="thread.html#8643">[ thread ]</a>
+              <a href="subject.html#8643">[ subject ]</a>
+              <a href="author.html#8643">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

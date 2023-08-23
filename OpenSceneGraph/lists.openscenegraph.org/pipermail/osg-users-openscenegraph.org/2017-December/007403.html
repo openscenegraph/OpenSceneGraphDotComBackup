@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Resizing an FBO camera with OSG 3.2.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Resizing%20an%20FBO%20camera%20with%20OSG%203.2.0&In-Reply-To=%3CCAFN7Y%2BVX4ywcF3eY-C4NSAxsd9sk09ZB%2BcUZTw3dOi96aLiVgw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007402.html">
+   <LINK REL="Next"  HREF="007438.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Resizing an FBO camera with OSG 3.2.0</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Resizing%20an%20FBO%20camera%20with%20OSG%203.2.0&In-Reply-To=%3CCAFN7Y%2BVX4ywcF3eY-C4NSAxsd9sk09ZB%2BcUZTw3dOi96aLiVgw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Resizing an FBO camera with OSG 3.2.0">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Dec 18 03:51:55 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007402.html">[osg-users] Resizing an FBO camera with OSG 3.2.0
+</A></li>
+        <LI>Next message (by thread): <A HREF="007438.html">[osg-users] Resizing an FBO camera with OSG 3.2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7403">[ date ]</a>
+              <a href="thread.html#7403">[ thread ]</a>
+              <a href="subject.html#7403">[ subject ]</a>
+              <a href="author.html#7403">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI James,
+
+&gt;<i> Any hints on what else to try, to work-around this behaviour, or other
+</I>&gt;<i> examples of keeping a full-screen FBO camera in sync with 3.2.x, would be
+</I>&gt;<i> most appreciated.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I guess no one here is using 3.2.x any more? Or people are busy, of course.
+</I>
+I've been away for the last 8 days, I guess others are busy too or
+just don't have an answer for the problem you have as it's a very
+specific usage case that most users will probably not have issues with
+so won't have any specific experience to help.
+
+I don't have any specific advice off the top of my head, the general
+issues boils down to forcing recreation of FBO and Texture objects as
+you can't resize existing FBO and Texture objects.  The other part is
+resizing the viewport and projection &amp; view matrices.
+
+Perhaps you can get away with implementing the OSG-3.4/master version
+of osg::Camera::resizeAttachmentt(..) locally in your app :
+
+void Camera::resizeAttachments(int width, int height)
+{
+    bool modified = false;
+    for(BufferAttachmentMap::iterator itr = _bufferAttachmentMap.begin();
+        itr != _bufferAttachmentMap.end();
+        ++itr)
+    {
+        Attachment&amp; attachment = itr-&gt;second;
+        if (attachment._texture.valid())
+        {
+            {
+                osg::Texture1D* texture =
+dynamic_cast&lt;osg::Texture1D*&gt;(attachment._texture.get());
+                if (texture &amp;&amp; (texture-&gt;getTextureWidth()!=width))
+                {
+                    modified = true;
+                    texture-&gt;setTextureWidth(width);
+                    texture-&gt;dirtyTextureObject();
+                }
+            }
+
+            {
+                osg::Texture2D* texture =
+dynamic_cast&lt;osg::Texture2D*&gt;(attachment._texture.get());
+                if (texture &amp;&amp; ((texture-&gt;getTextureWidth()!=width) ||
+(texture-&gt;getTextureHeight()!=height)))
+                {
+                    modified = true;
+                    texture-&gt;setTextureSize(width, height);
+                    texture-&gt;dirtyTextureObject();
+                }
+            }
+
+            {
+                osg::Texture3D* texture =
+dynamic_cast&lt;osg::Texture3D*&gt;(attachment._texture.get());
+                if (texture &amp;&amp; ((texture-&gt;getTextureWidth()!=width) ||
+(texture-&gt;getTextureHeight()!=height)))
+                {
+                    modified = true;
+                    texture-&gt;setTextureSize(width, height,
+texture-&gt;getTextureDepth());
+                    texture-&gt;dirtyTextureObject();
+                }
+            }
+
+            {
+                osg::Texture2DArray* texture =
+dynamic_cast&lt;osg::Texture2DArray*&gt;(attachment._texture.get());
+                if (texture &amp;&amp; ((texture-&gt;getTextureWidth()!=width) ||
+(texture-&gt;getTextureHeight()!=height)))
+                {
+                    modified = true;
+                    texture-&gt;setTextureSize(width, height,
+texture-&gt;getTextureDepth());
+                    texture-&gt;dirtyTextureObject();
+                }
+            }
+        }
+
+        if (attachment._image.valid() &amp;&amp;
+(attachment._image-&gt;s()!=width || attachment._image-&gt;s()!=height) )
+        {
+            modified = true;
+            osg::Image* image = attachment._image.get();
+            image-&gt;allocateImage(width, height, image-&gt;r(),
+                                 image-&gt;getPixelFormat(), image-&gt;getDataType(),
+                                 image-&gt;getPacking());
+        }
+    }
+
+    if (modified)
+    {
+        dirtyAttachmentMap();
+    }
+}
+
+Robert.
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007402.html">[osg-users] Resizing an FBO camera with OSG 3.2.0
+</A></li>
+	<LI>Next message (by thread): <A HREF="007438.html">[osg-users] Resizing an FBO camera with OSG 3.2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7403">[ date ]</a>
+              <a href="thread.html#7403">[ thread ]</a>
+              <a href="subject.html#7403">[ subject ]</a>
+              <a href="author.html#7403">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

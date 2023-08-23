@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Threadsafe IntersectionVisitor and	LineSegmentIntersector?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Threadsafe%20IntersectionVisitor%20and%0A%09LineSegmentIntersector%3F&In-Reply-To=%3C55BF93C2.7050406%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001046.html">
+   <LINK REL="Next"  HREF="001055.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Threadsafe IntersectionVisitor and	LineSegmentIntersector?</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Threadsafe%20IntersectionVisitor%20and%0A%09LineSegmentIntersector%3F&In-Reply-To=%3C55BF93C2.7050406%40gmx.de%3E"
+       TITLE="[osg-users] Threadsafe IntersectionVisitor and	LineSegmentIntersector?">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Mon Aug  3 09:16:02 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001046.html">[osg-users] Threadsafe IntersectionVisitor and	LineSegmentIntersector?
+</A></li>
+        <LI>Next message: <A HREF="001055.html">[osg-users] Threadsafe IntersectionVisitor and	LineSegmentIntersector?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1047">[ date ]</a>
+              <a href="thread.html#1047">[ thread ]</a>
+              <a href="subject.html#1047">[ subject ]</a>
+              <a href="author.html#1047">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+Hi Matthias,
+&gt;<i> Hi Sebastian,
+</I>&gt;<i>
+</I>&gt;<i> the sample code is called asynchronously from several compute threads.
+</I>&gt;<i> When I make sure that only one thread at a time calls accept() everything is rock solid (millions of calls).  But it's running slowly and doesn't scale well with the number of cores.
+</I>&gt;<i>
+</I>&gt;<i> Without the lock the calls to accept() are asynchronous too and I get wrong results every few hundred calls.
+</I>If the scenegraph isn't static I'd expect data races or even crashes if 
+elements are added/removed.
+You can traverse the graph after update/traversal safely.
+Take a look at osg::Operation. You can use it to add threaded operations 
+to the update phase and synchronize against the frame only instead of 
+interlocking your intersection traversal.
+I'm using it to populate the scene with instanced vegetation by querying 
+the terrain height/color etc. and it is working fine.
+I don't think the problem is asynchronously call accept on the visitor 
+but calling it when draw/update of the scenegraph are running. You could 
+grep the intersection code for non-reentrant code (use of static objects 
+for instance) to be sure.
+
+Cheers
+Sebastian
+&gt;<i>
+</I>&gt;<i> The compute threads themselves run independetly from the main thread with the viewer. In fact this even happens in batch mode too without any visual representation at all.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Matthias
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic7efc.php?p=64596#64596">http://forum.openscenegraph.org/viewtopic.php?p=64596#64596</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001046.html">[osg-users] Threadsafe IntersectionVisitor and	LineSegmentIntersector?
+</A></li>
+	<LI>Next message: <A HREF="001055.html">[osg-users] Threadsafe IntersectionVisitor and	LineSegmentIntersector?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1047">[ date ]</a>
+              <a href="thread.html#1047">[ thread ]</a>
+              <a href="subject.html#1047">[ subject ]</a>
+              <a href="author.html#1047">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,335 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [GL ES2.0] Render to texture
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BGL%20ES2.0%5D%20Render%20to%20texture&In-Reply-To=%3C1429092242.m2f.63410%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000143.html">
+   <LINK REL="Next"  HREF="276347.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [GL ES2.0] Render to texture</H1>
+<!--htdig_noindex-->
+    <B>Jean Baptiste Poquelin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BGL%20ES2.0%5D%20Render%20to%20texture&In-Reply-To=%3C1429092242.m2f.63410%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [GL ES2.0] Render to texture">coudboule at yahoo.fr
+       </A><BR>
+    <I>Wed Apr 15 03:04:02 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000143.html">[osg-users] [3rdparty] Combining OSG and Qt 5.4 architecture
+</A></li>
+        <LI>Next message: <A HREF="276347.html">[osg-users] OpenSceneGraph-3.3.7 developer release tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276338">[ date ]</a>
+              <a href="thread.html#276338">[ thread ]</a>
+              <a href="subject.html#276338">[ subject ]</a>
+              <a href="author.html#276338">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I am trying to render a scene inside a texture using OpenGL ES 2.0 in the particular context of a server side renderer using render node and GBM. Here is a sample of what I am trying to achieve:
+
+
+Code:
+
+static const EGLint conf_att[] =
+{
+	EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+	EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+	EGL_RED_SIZE, 1,
+	EGL_GREEN_SIZE, 1,
+	EGL_BLUE_SIZE, 1,
+	EGL_ALPHA_SIZE, 0,
+	EGL_NONE,
+};
+static const EGLint ctx_att[] =
+{
+	EGL_CONTEXT_CLIENT_VERSION, 2,
+	EGL_NONE
+};
+EGLBoolean b;
+EGLenum api;
+EGLint major, minor, n;
+EGLConfig egl_conf;
+	struct gbm_device *gbm_dev;
+
+int rnode = rnode_open();
+gbm_dev = gbm_create_device(rnode);
+if(!gbm_dev)
+{
+	std::cerr &lt;&lt; &quot;cannot create gbm device&quot; &lt;&lt; std::endl;
+	return;
+}
+
+EGLDisplay egl_display = eglGetDisplay((EGLNativeDisplayType)gbm_dev);
+if(!egl_display)
+{
+	std::cerr &lt;&lt; &quot;cannot create EGL display&quot; &lt;&lt; std::endl;
+	return;
+}
+
+b = eglInitialize(egl_display, &amp;major, &amp;minor);
+if(!b)
+{
+	std::cerr &lt;&lt; &quot;cannot initialize EGL&quot; &lt;&lt; std::endl;
+	return;
+}
+
+std::cout &lt;&lt; &quot;EGL major/minor: &quot; &lt;&lt; major &lt;&lt; &quot;.&quot; &lt;&lt; minor &lt;&lt; std::endl;
+std::cout &lt;&lt; &quot;EGL version: &quot; &lt;&lt; eglQueryString(egl_display, EGL_VERSION) &lt;&lt; std::endl;
+std::cout &lt;&lt; &quot;EGL vendor: &quot; &lt;&lt; eglQueryString(egl_display, EGL_VENDOR) &lt;&lt; std::endl;
+std::cout &lt;&lt; &quot;EGL extensions: &quot; &lt;&lt; eglQueryString(egl_display, EGL_EXTENSIONS) &lt;&lt; std::endl;
+
+api = EGL_OPENGL_API;
+b = eglBindAPI(api);
+if(!b)
+{
+	std::cerr &lt;&lt; &quot;cannot bind OpenGLES API&quot; &lt;&lt; std::endl;
+	return;
+}
+
+b = eglChooseConfig(egl_display, conf_att, &amp;egl_conf, 1, &amp;n);
+
+if(!b || n != 1)
+{
+	std::cerr &lt;&lt; &quot;cannot find suitable EGL config&quot; &lt;&lt; std::endl;
+	return;
+}
+
+EGLContext egl_ctx = eglCreateContext(egl_display, egl_conf, EGL_NO_CONTEXT, ctx_att);
+if(!egl_ctx)
+{
+	std::cerr &lt;&lt; &quot;cannot create EGL context&quot; &lt;&lt; std::endl;
+	return;
+}
+
+eglMakeCurrent(egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, egl_ctx);
+
+osg::ref_ptr&lt;osgViewer::Viewer&gt; viewer = new osgViewer::Viewer();
+osg::ref_ptr&lt;osgViewer::GraphicsWindow&gt; graphicsWindow = viewer-&gt;setUpViewerAsEmbeddedInWindow(0, 0, width, height);
+if(!graphicsWindow-&gt;valid())
+{
+	std::cerr &lt;&lt; &quot;Viewer window is invalid.&quot; &lt;&lt; std::endl;
+	return;
+}
+
+viewer-&gt;setThreadingModel(osgViewer::ViewerBase::SingleThreaded);
+
+viewer-&gt;realize();
+
+if(!viewer-&gt;isRealized())
+{
+	std::cerr &lt;&lt; &quot;No viewer window is realized.&quot; &lt;&lt; std::endl;
+	return;
+}
+
+osgViewer::Viewer::Windows windows;
+viewer-&gt;getWindows(windows);
+for(osgViewer::Viewer::Windows::iterator itr = windows.begin();itr != windows.end();++itr)
+{
+  (*itr)-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms(true);
+  (*itr)-&gt;getState()-&gt;setUseVertexAttributeAliasing(true);
+}
+
+// create texture
+texture = new osg::Texture2D;
+texture-&gt;setTextureSize(width, height);
+texture-&gt;setInternalFormat(GL_RGBA);
+texture-&gt;setSourceFormat(GL_RGBA);
+texture-&gt;setSourceType(GL_FLOAT);
+texture-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR_MIPMAP_LINEAR);
+texture-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+texture-&gt;setWrap(osg::Texture2D::WRAP_S, osg::Texture2D::CLAMP_TO_EDGE);
+texture-&gt;setWrap(osg::Texture2D::WRAP_T, osg::Texture2D::CLAMP_TO_EDGE);
+
+// attach texture to camera
+osg::Camera *camera = viewer-&gt;getCamera();
+camera-&gt;setViewport(0, 0, texture-&gt;getTextureWidth(), texture-&gt;getTextureHeight());
+camera-&gt;setClearColor(osg::Vec4(1.0f, 1.0f, 1.0f, 0.0f));
+camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+camera-&gt;attach(osg::Camera::COLOR_BUFFER, texture);
+
+camera-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+
+osg::State &amp;state = graphicsWindow-&gt;getState();
+state.initializeExtensionProcs();
+texture-&gt;apply(state);
+
+// create an EGL image from that texture
+EGLImageKHR image = eglCreateImageKHR(egl_display, egl_ctx,
+						   EGL_GL_TEXTURE_2D_KHR,
+						   (EGLClientBuffer)(unsigned long)texture-&gt;getTextureObject(0)-&gt;id(),
+						   NULL);
+
+std::cout &lt;&lt; &quot;got image &quot; &lt;&lt; image &lt;&lt; std::endl;
+
+EGLint handle;
+int stride;
+b = eglExportDRMImageMESA(egl_display, image, NULL, &amp;handle, &amp;stride);
+if(!b)
+{
+	std::cerr &lt;&lt; &quot;failed to export image&quot; &lt;&lt; std::endl;
+	return;
+}
+
+std::cout &lt;&lt; &quot;image exported &quot; &lt;&lt; handle &lt;&lt; &quot; &quot; &lt;&lt; stride &lt;&lt; std::endl;
+int fd;
+int r = drmPrimeHandleToFD(rnode, handle, DRM_CLOEXEC, &amp;fd);
+if(r &lt; 0)
+{
+	std::cerr &lt;&lt; &quot;cannot get prime-fd for handle&quot; &lt;&lt; std::endl;
+	return;
+}
+
+// create quad
+osg::ref_ptr&lt;osg::Vec3Array&gt; vertices = new osg::Vec3Array;
+vertices-&gt;push_back(osg::Vec3(-0.5f, 0.0f,-0.5f));
+vertices-&gt;push_back(osg::Vec3(0.5f, 0.0f,-0.5f));
+vertices-&gt;push_back(osg::Vec3(0.5f, 0.0f, 0.5f));
+vertices-&gt;push_back(osg::Vec3(-0.5f, 0.0f, 0.5f));
+osg::ref_ptr&lt;osg::Vec3Array&gt; normals = new osg::Vec3Array;
+normals-&gt;push_back(osg::Vec3(0.0f,-1.0f, 0.0f));
+osg::ref_ptr&lt;osg::Vec2Array&gt; texcoords = new osg::Vec2Array;
+texcoords-&gt;push_back(osg::Vec2(0.0f, 0.0f));
+texcoords-&gt;push_back(osg::Vec2(0.0f, 1.0f));
+texcoords-&gt;push_back(osg::Vec2(1.0f, 1.0f));
+texcoords-&gt;push_back(osg::Vec2(1.0f, 0.0f));
+
+osg::ref_ptr&lt;osg::Geometry&gt; quad = new osg::Geometry;
+quad-&gt;setVertexArray(vertices.get());
+quad-&gt;setNormalArray(normals.get());
+quad-&gt;setNormalBinding(osg::Geometry::BIND_OVERALL);
+quad-&gt;setTexCoordArray(0, texcoords.get());
+quad-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4));
+
+osg::ref_ptr&lt;osg::Texture2D&gt; texture2 = new osg::Texture2D;
+osg::ref_ptr&lt;osg::Image&gt; image = osgDB::readImageFile(&quot;lz.rgb&quot;);
+texture2-&gt;setImage(image.get());
+
+osg::ref_ptr&lt;osg::Geode&gt; root = new osg::Geode;
+root-&gt;addDrawable(quad.get());
+root-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, texture2.get());
+
+camera-&gt;addChild(root.get());
+
+while(!viewer-&gt;done())
+{
+	viewer-&gt;frame();
+}
+
+
+
+
+The relevant part is:
+
+
+Code:
+
+// create texture
+texture = new osg::Texture2D;
+texture-&gt;setTextureSize(width, height);
+texture-&gt;setInternalFormat(GL_RGBA);
+texture-&gt;setSourceFormat(GL_RGBA);
+texture-&gt;setSourceType(GL_FLOAT);
+texture-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR_MIPMAP_LINEAR);
+texture-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+texture-&gt;setWrap(osg::Texture2D::WRAP_S, osg::Texture2D::CLAMP_TO_EDGE);
+texture-&gt;setWrap(osg::Texture2D::WRAP_T, osg::Texture2D::CLAMP_TO_EDGE);
+
+// attach texture to camera
+osg::Camera *camera = viewer-&gt;getCamera();
+camera-&gt;setViewport(0, 0, texture-&gt;getTextureWidth(), texture-&gt;getTextureHeight());
+camera-&gt;setClearColor(osg::Vec4(1.0f, 1.0f, 1.0f, 0.0f));
+camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+camera-&gt;attach(osg::Camera::COLOR_BUFFER, texture);
+
+camera-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+
+osg::State &amp;state = graphicsWindow-&gt;getState();
+state.initializeExtensionProcs();
+texture-&gt;apply(state);
+
+...
+
+osg::ref_ptr&lt;osg::Geode&gt; root = new osg::Geode;
+root-&gt;addDrawable(quad.get());
+root-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0, texture2.get());
+
+camera-&gt;addChild(root.get());
+
+
+
+
+The quad object is not drawn inside the texture. Can you explain to me why?
+
+OSG is compiled for OpenGL ES 2.0:
+OSG_GL1_AVAILABLE 	OFF
+OSG_GL2_AVAILABLE 	OFF
+OSG_GL3_AVAILABLE 	OFF
+OSG_GLES1_AVAILABLE 	OFF
+OSG_GLES2_AVAILABLE 	ON
+OPENGL_INCLUDE_DIR (must manually &quot;Add Entry&quot; in Cmake) 	/pathtogles/include/
+OPENGL_LIBRARY 	/pathtogles/lib/libGLESv2.so
+OPENGL_egl_LIBRARY 	/pathtoegllib/libEGL.so
+OSG_GL_DISPLAYLISTS_AVAILABLE 	OFF
+SG_GL_MATRICES_AVAILABLE 	OFF
+OSG_GL_VERTEX_FUNCS_AVAILABLE 	OFF
+OSG_GL_VERTEX_ARRAY_FUNCS_AVAILABLE 	OFF
+OSG_GL_FIXED_FUNCTION_AVAILABLE 	OFF
+OSG_CPP_EXCEPTIONS_AVAILABLE 	OFF 
+
+Best regards,
+Jean Baptiste[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic933b.php?p=63410#63410">http://forum.openscenegraph.org/viewtopic.php?p=63410#63410</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000143.html">[osg-users] [3rdparty] Combining OSG and Qt 5.4 architecture
+</A></li>
+	<LI>Next message: <A HREF="276347.html">[osg-users] OpenSceneGraph-3.3.7 developer release tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276338">[ date ]</a>
+              <a href="thread.html#276338">[ thread ]</a>
+              <a href="subject.html#276338">[ subject ]</a>
+              <a href="author.html#276338">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

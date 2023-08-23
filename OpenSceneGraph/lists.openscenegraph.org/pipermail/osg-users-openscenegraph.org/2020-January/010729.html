@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users]  Create BoundingBoxes dynamically, by creating global Geode and attaching children later
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20Create%20BoundingBoxes%20dynamically%2C%0A%20by%20creating%20global%20Geode%20and%20attaching%20children%20later&In-Reply-To=%3Cb2866ce9-f4c2-4395-bf2a-06db06d84ed5%40googlegroups.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010742.html">
+   <LINK REL="Next"  HREF="010810.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users]  Create BoundingBoxes dynamically, by creating global Geode and attaching children later</H1>
+<!--htdig_noindex-->
+    <B>Martin Steinborn</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20Create%20BoundingBoxes%20dynamically%2C%0A%20by%20creating%20global%20Geode%20and%20attaching%20children%20later&In-Reply-To=%3Cb2866ce9-f4c2-4395-bf2a-06db06d84ed5%40googlegroups.com%3E"
+       TITLE="[osg-users]  Create BoundingBoxes dynamically, by creating global Geode and attaching children later">bmmartint.stb at web.de
+       </A><BR>
+    <I>Wed Jan 15 00:34:21 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010742.html">[osg-users] OpenSceneGraph-3.6.5 release candidate 1 tagged, please test
+</A></li>
+        <LI>Next message (by thread): <A HREF="010810.html">[osg-users] Create BoundingBoxes dynamically, by creating global Geode and attaching children later
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10729">[ date ]</a>
+              <a href="thread.html#10729">[ thread ]</a>
+              <a href="subject.html#10729">[ subject ]</a>
+              <a href="author.html#10729">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+
+I want to display my own BoundingBoxes (BBs) using osg. The way I am trying 
+to do it is the following:
+1) create a Geode and set it as Child of the overall scene. Create a global 
+pointer to be able to add children to this Geode.
+2) for every BoundingBox I find, create a new Geometry with a LINE_LOOP 
+PrimitiveSet and add the draw-able as Child to the geode
+3) after every iteration, multiple BBs could be generated and need to be 
+deleted, because the objects in the BBs or the camera may have moved
+
+I managed to show one BB in my scene by directly creating the Geode and the 
+Box as child, but I cant get it working, using the above described method. 
+I think that the Problem is with rerendering the previously created Geode, 
+but I may be wrong. The other think, that may prevent stuff from rendering, 
+is that I delete the BBs in the next &quot;iteration&quot;.
+
+Scene creation and Vertex positions are &quot;correct&quot;, I've used the same code 
+in my working example where I created Geode and DrawArray at once.
+
+Here is a part of my Code, ill try to add some explanation:
+
+Visual.h
+...
+/** Create scene object for all the Bounding Boxes to be drawn into **/
+osg::ref_ptr&lt;osg::Geode&gt; myGeode;
+...
+
+--------------------------------------------------
+Visual.cpp
+
+// called on plug-in load
+void Visual::load()
+{
+    ...
+    createBoundingBoxScene();
+}
+
+// called with 60fps
+void Visual::update()
+{
+// remove old BBs and create new one
+myGeode-&gt;removeDrawables(0, myGeode-&gt;getNumDrawables());
+     createBoundingBox();
+}
+
+/*
+* \brief   Visual create BoundingBox as Child to Geode
+* creates a BoundingBox via DrawArray and lines over (later given) 
+vertices, and adds them as child to the global Geode
+*/
+void Visual::createBoundingBox()
+{
+osg::Geometry* geo = new osg::Geometry;
+osg::ref_ptr&lt;osg::Vec3dArray&gt; myBBPoints = new osg::Vec3dArray; // array of 
+BB cordinates
+osg::ref_ptr&lt;osg::Vec4dArray&gt; color = new osg::Vec4dArray;
+color-&gt;push_back(osg::Vec4d(1.0, 0.0, 0.0, 1.0)); // create color: red
+osg::DrawArrays* da = new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP, 0, 
+myBBPoints-&gt;size()); // LINE_LOOP, because BBs are a loop for sure
+
+myBBPoints-&gt;push_back(osg::Vec3d(754.0, 3860.0, 11.0)); // 4 corner 
+vertices, TODO: if working, pass Global Points as parameters in function
+myBBPoints-&gt;push_back(osg::Vec3d(760.0, 3860.0, 11.0));
+myBBPoints-&gt;push_back(osg::Vec3d(760.0, 3860.0, 13.0));
+myBBPoints-&gt;push_back(osg::Vec3d(754.0, 3860.0, 13.0));
+
+geo-&gt;setVertexArray(myBBPoints);
+geo-&gt;addPrimitiveSet(da);
+geo-&gt;setColorArray(color);
+geo-&gt;setColorBinding(osg::Geometry::BIND_PER_PRIMITIVE);
+geo-&gt;setDataVariance(osg::Object::DYNAMIC);
+
+        // add geometry to geode to be drawn
+myGeode-&gt;addDrawable(geo);
+
+        // force scene / Geode to be redrawn ? all necessary, all useless?
+geo-&gt;dirtyDisplayList();
+geo-&gt;dirtyBound();
+da-&gt;dirty();
+myGeode-&gt;dirtyBound();
+}
+
+/*
+* \brief   Visual create global Geode as child to scene
+* get 3D scene of environment, create a (global) geode and add it as child 
+to scene.
+*/
+
+void Visual::createBoundingBoxScene()
+{
+osg::Group * scene = 
+findScene3D(dynamic_cast&lt;osg::Group*&gt;(myGraphicalContext-&gt;getScene())); 
+//works
+if (scene)
+{
+myGeode = new osg::Geode;
+myGeode-&gt;setDataVariance(osg::Object::DYNAMIC);
+myGeode-&gt;setName(&quot;Geode&quot;);
+osg::MatrixTransform* mat = new osg::MatrixTransform;
+mat-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF); // (?) use global 
+coordinate system, not local
+osg::StateSet *stateset = myGeode-&gt;getOrCreateStateSet();
+
+stateset-&gt;setMode(GL_LIGHTING, osg::StateAttribute::ON);
+           stateset-&gt;setRenderBinDetails(INT_MAX, &quot;RenderBin&quot;); // make 
+sure to print at last possible time
+
+                // add global Geode as child to scene
+scene-&gt;addChild(mat);
+mat-&gt;addChild(myGeode);
+
+std::cout &lt;&lt; &quot;Scene created successfully, name: &quot; &lt;&lt; scene-&gt;getName() &lt;&lt; &quot; 
+with &quot; &lt;&lt; scene-&gt;getNumChildren() &lt;&lt; &quot; children.&quot; &lt;&lt; std::endl;
+}
+else mySimulationContext-&gt;printErrorMessage(&quot;Failed to get scene node.&quot;);
+}
+
+I hope the code is not too long, but because I'm new to osg, I dont know 
+what is important and what not.
+
+Have a nice Day and thanks for your responses
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/b2866ce9-f4c2-4395-bf2a-06db06d84ed5%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/b2866ce9-f4c2-4395-bf2a-06db06d84ed5%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200115/4e8422d0/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200115/4e8422d0/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010742.html">[osg-users] OpenSceneGraph-3.6.5 release candidate 1 tagged, please test
+</A></li>
+	<LI>Next message (by thread): <A HREF="010810.html">[osg-users] Create BoundingBoxes dynamically, by creating global Geode and attaching children later
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10729">[ date ]</a>
+              <a href="thread.html#10729">[ thread ]</a>
+              <a href="subject.html#10729">[ subject ]</a>
+              <a href="author.html#10729">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

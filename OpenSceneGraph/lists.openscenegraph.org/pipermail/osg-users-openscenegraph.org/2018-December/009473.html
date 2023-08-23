@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText crash with multiple Viewers
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20crash%20with%20multiple%20Viewers&In-Reply-To=%3CCAGYwD3C0Up%3DousYxV_jfGWGrEjn8A1Pp9zYxRzGS80j6yE64cg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009471.html">
+   <LINK REL="Next"  HREF="009474.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText crash with multiple Viewers</H1>
+<!--htdig_noindex-->
+    <B>Ravi Mathur</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20crash%20with%20multiple%20Viewers&In-Reply-To=%3CCAGYwD3C0Up%3DousYxV_jfGWGrEjn8A1Pp9zYxRzGS80j6yE64cg%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgText crash with multiple Viewers">ravidavi at utexas.edu
+       </A><BR>
+    <I>Tue Dec 18 00:50:01 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009471.html">[osg-users] Returning FILE_REQUESTED from a ReaderWriter
+</A></li>
+        <LI>Next message (by thread): <A HREF="009474.html">[osg-users] osgText crash with multiple Viewers
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9473">[ date ]</a>
+              <a href="thread.html#9473">[ thread ]</a>
+              <a href="subject.html#9473">[ subject ]</a>
+              <a href="author.html#9473">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello all,
+
+I'm seeing a crash on the OpenSceneGraph-3.6 branch that occurs when I have
+two CompositeViewers that contain Text objects in their scenes. My
+simplified scenario is this:
+- 2 CompositeViewers, each in singlethreaded mode, but being run at the
+same time in separate threads (via OpenThreads::Thread wrappers)
+- The viewers do not share scenes or contexts, and each has a single Text
+object as its scene
+- Each viewer is destroyed immediately after its run() loop returns (needed
+for my application)
+
+Both viewers animate just fine in their own windows. The crash happens if
+one viewer is being destroyed while the other is actively rendering. Note
+that it only seems to crash if there are Text objects in each scene, and
+did not crash with the old (pre-3.6) Text implementation.
+
+Is this usage model ok in the first place? Robert, I read your post in this
+recent thread &lt;<A HREF="../../../../forum.openscenegraph.org/viewtopicec70.php?t=16844">http://forum.openscenegraph.org/viewtopic.php?t=16844</A>&gt; in
+which you advise against manually destroying viewers. Should I assume that
+I was just lucky in getting away with this until now? The new Text
+implementation seems to be the only thing that triggers the crash.
+
+In case anybody is interested, the crash happens due to this sequence of
+calls:
+- ~CompositeViewer() calls GraphicsContext::close(), which deletes its State
+- ~CompositeViewer() then destroys its osgViewer::View, which in turn
+destroys its Camera
+- ~Camera() eventually calls osgText::releaseGLObjects() with a null State.
+- osgText::releaseGLObjects(null) deletes text-related objects (Programs)
+on ALL contexts
+- The other CompositeViewer, which is actively rendering its Text on
+another context, crashes with an access violation since its Text-related
+Programs were just deleted.
+
+Thanks,
+Ravi
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20181218/688de7f1/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20181218/688de7f1/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009471.html">[osg-users] Returning FILE_REQUESTED from a ReaderWriter
+</A></li>
+	<LI>Next message (by thread): <A HREF="009474.html">[osg-users] osgText crash with multiple Viewers
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9473">[ date ]</a>
+              <a href="thread.html#9473">[ thread ]</a>
+              <a href="subject.html#9473">[ subject ]</a>
+              <a href="author.html#9473">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

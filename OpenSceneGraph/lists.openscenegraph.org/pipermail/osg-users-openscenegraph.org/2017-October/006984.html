@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BosgPlugins%5D%20Multiple%20video%20textures%20using%20ffmpeg%0A%20plugin&In-Reply-To=%3CCAG7xrZdG2_6b8ihzbwTLDPOygcG4M_COj1pGSSSqN-OQjGFk7w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006976.html">
+   <LINK REL="Next"  HREF="006980.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BosgPlugins%5D%20Multiple%20video%20textures%20using%20ffmpeg%0A%20plugin&In-Reply-To=%3CCAG7xrZdG2_6b8ihzbwTLDPOygcG4M_COj1pGSSSqN-OQjGFk7w%40mail.gmail.com%3E"
+       TITLE="[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin">l.voerman at rug.nl
+       </A><BR>
+    <I>Fri Oct  6 05:56:48 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="006976.html">[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+</A></li>
+        <LI>Next message (by thread): <A HREF="006980.html">[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6984">[ date ]</a>
+              <a href="thread.html#6984">[ thread ]</a>
+              <a href="subject.html#6984">[ subject ]</a>
+              <a href="author.html#6984">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Michael,
+we use a modified version of the ffmpeg plugin with changes in
+OpenSceneGraph\src\osgPlugins\ffmpeg\FFmpegDecoderVideo.cpp
+to move the threads to different processors. (full modified file attached)
+It's a crude bit of code,
+but it allows us to decode and show 2  1920x1080 movies at 30 fps.
+I've pulled out just the code for cpu affinity, this should work with osg
+3.4.2 as well as git master.
+Regards, Laurens.
+
+
++ #define RESERVERD_CORES 2
++ static int next_cpu = RESERVERD_CORES;
+
+void FFmpegDecoderVideo::decodeLoop()
+{
+    FFmpegPacket packet;
+    double pts;
++     {
++         int num_cpus = OpenThreads::GetNumberOfProcessors();
++         if (num_cpus &gt; RESERVERD_CORES + 1) {
++             int cpu = next_cpu;
++             ++next_cpu;
++             if (next_cpu &gt;= num_cpus) next_cpu -= num_cpus -
+RESERVERD_CORES;
++             if (cpu &gt;= num_cpus) cpu -= num_cpus - RESERVERD_CORES;
++             OpenThreads::SetProcessorAffinityOfCurrentThread(cpu);
++             OSG_WARN &lt;&lt; &quot;FFmpegDecoderVideo::run :
+OpenThreads::SetProcessorAffinityOfCurrentThread&quot; &lt;&lt; cpu &lt;&lt; std::endl;
++         }
++     }
+
+On Thu, Oct 5, 2017 at 4:54 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Michael,
+</I>&gt;<i>
+</I>&gt;<i> On 5 October 2017 at 15:41, Michael Maurus &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">michael.maurus at web.de</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> This was actually a nice hint.
+</I>&gt;&gt;<i> Only one of my CPUs was working at full capacity.
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I haven't looked at the code recently so I'm a bit cold on the ffmpeg
+</I>&gt;<i> implementation side.  I don't recall any external way to control the
+</I>&gt;<i> threads that the ffmpeg creates.
+</I>&gt;<i>
+</I>&gt;<i> From what it sounds like is the threads that the ffmpeg plugin is creating
+</I>&gt;<i> is inheriting the affinity of the thread that created them.  In OSG master
+</I>&gt;<i> there is finer grained control over the affinity setting behaviour, in your
+</I>&gt;<i> case it might be appropriate to disable the default setting of affinity.
+</I>&gt;<i>
+</I>&gt;<i> In an ideal world you want to decided which threads you want to run on
+</I>&gt;<i> what threads, but this reques knowledge of all the threads, their needs,
+</I>&gt;<i> and the hardware you are working on.
+</I>&gt;<i>
+</I>&gt;<i> FYI, the OSG by default tries to make a best guess based on your the
+</I>&gt;<i> number of CPU cores the OS says the machine has and the configuration of
+</I>&gt;<i> your viewer, this scheme doesn't know about any extra threads that plugins
+</I>&gt;<i> might create though.  This scheme is more hardwired in OSG-3.4 and prior
+</I>&gt;<i> releases, so master might be the thing to use if you do end up needing more
+</I>&gt;<i> control.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20171006/9d1816ba/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20171006/9d1816ba/attachment-0001.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: FFmpegDecoderVideo.zip
+Type: application/zip
+Size: 3682 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20171006/9d1816ba/attachment-0001.zip">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20171006/9d1816ba/attachment-0001.zip</A>&gt;
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="006976.html">[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+</A></li>
+	<LI>Next message (by thread): <A HREF="006980.html">[osg-users] [osgPlugins] Multiple video textures using ffmpeg plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6984">[ date ]</a>
+              <a href="thread.html#6984">[ thread ]</a>
+              <a href="subject.html#6984">[ subject ]</a>
+              <a href="author.html#6984">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

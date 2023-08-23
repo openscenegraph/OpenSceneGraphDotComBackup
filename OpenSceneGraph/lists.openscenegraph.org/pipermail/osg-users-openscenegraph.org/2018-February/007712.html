@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] BindImageTexture Crash
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20BindImageTexture%20Crash&In-Reply-To=%3CCAFN7Y%2BXF3GmWOY79UVNoCtd-o-0CHysCdLR-nat0rCEfC%2BrBZg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007707.html">
+   <LINK REL="Next"  HREF="007667.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] BindImageTexture Crash</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20BindImageTexture%20Crash&In-Reply-To=%3CCAFN7Y%2BXF3GmWOY79UVNoCtd-o-0CHysCdLR-nat0rCEfC%2BrBZg%40mail.gmail.com%3E"
+       TITLE="[osg-users] BindImageTexture Crash">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Feb  8 02:08:48 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007707.html">[osg-users] BindImageTexture Crash
+</A></li>
+        <LI>Next message (by thread): <A HREF="007667.html">[osg-users] osgText - alignment differences using the new implementation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7712">[ date ]</a>
+              <a href="thread.html#7712">[ thread ]</a>
+              <a href="subject.html#7712">[ subject ]</a>
+              <a href="author.html#7712">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Juilien,
+
+On 7 February 2018 at 18:59, Julien Valentin &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">julienvalentin51 at gmail.com</A>&gt; wrote:
+&gt;<i> So to sum up the problem:
+</I>&gt;<i> - BindImageTexture stateattribute is not a textureattribute (_imageunit != _textureunit) but it sometimes have to bind texture object on a textureunit in case data of the associated texture has gone dirty
+</I>
+It is a form of texture attribute, it relates directly to texture, the
+only thing that decouples BindImageTexture from being a traditional
+OSG style texture attribute is that you don't always need to apply the
+texture unit when applying it as the interface provides this.  This
+duality of concepts/implementation is down to OpenGL 4.x introducing
+APIs that don't work like previous OpenGL APIs worked.
+
+The only reason I can see for BindImageTexture attribute needing to
+bind a particular texture unit being applying the texture would be to
+avoid osg::State lazy state updating for not apply a texture for a
+texture unit.
+
+In normal OSG usage There are several things going on when you apply a
+Texture::apply(), the create a texture object is not already created,
+any data is uploaded to this texture object if required and the
+texture object is made current to currently set up texture unit
+(osg::State handles this part).  Once a texture is created doing a
+Texture::apply() only really does the binding of the texture object to
+the texture unit.
+
+For BindImageTexture my guess is that if you do need to respond to the
+dirty Texture by calling apply() is to just apply it on the current
+texture unit and then may sure osg::State's lazy state updating knows
+about it.  The osg::State::applyTextureAttribute(unsigned int unit,
+const StateAttribute* attribute) method is the tool for the job.  The
+actual texture unit is probably irrelevant as the OSG should
+automatically reset if required so you could using unit=0 just fine,
+or the value of osg::State::getActiveTextureUnit() if you want to
+avoid changing as much state as possible,
+
+
+&gt;<i> We then need a way to know if texture have to be applied:
+</I>&gt;<i>
+</I>&gt;<i> What I've propose :
+</I>&gt;<i> - clarify semantic given to textures::_modifiedcount to be the textureobjectmodifiedcount. Son as tos belong to Texture i putted modifiedcount in Texture and removed it from daughter classes
+</I>
+That's a dreadful idea given it directly conflicts with the
+array/cubmemap version of texture subclasses, that alone should have
+raised a red flag with your implementation not being appropriate.
+
+Perhaps a virtual bool Texture::isDirty(const unsigned int contextID)
+would be the way to implement a generic mechanism. This is the
+standard object orientation way of decoupling interface from
+implementation.
+
+
+&gt;<i> -in LayeredTextures (cubemap, texture2Darray) i changed modifiedcount to layermodifiedcount these flags doesn't have the same purpose as the textureobjectmodifiedcount as it's just a inner mecanism not t upload unchanged layer image (not related to the to)
+</I>
+modifiedCount implementation has the same function in all Texture
+subclasses, of you tracking whether image data and associated texture
+objects are in sync or not.
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007707.html">[osg-users] BindImageTexture Crash
+</A></li>
+	<LI>Next message (by thread): <A HREF="007667.html">[osg-users] osgText - alignment differences using the new implementation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7712">[ date ]</a>
+              <a href="thread.html#7712">[ thread ]</a>
+              <a href="subject.html#7712">[ subject ]</a>
+              <a href="author.html#7712">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

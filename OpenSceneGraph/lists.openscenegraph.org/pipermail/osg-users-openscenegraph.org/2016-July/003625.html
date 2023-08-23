@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Why is setTexCoordArray(0, texcoords) needed if array is modified in-place
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20is%20setTexCoordArray%280%2C%0A%20texcoords%29%20needed%20if%20array%20is%20modified%20in-place&In-Reply-To=%3Ce4be4952-ae6d-9c89-e1e9-c0beb9f48e1c%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279847.html">
+   <LINK REL="Next"  HREF="003626.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Why is setTexCoordArray(0, texcoords) needed if array is modified in-place</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Why%20is%20setTexCoordArray%280%2C%0A%20texcoords%29%20needed%20if%20array%20is%20modified%20in-place&In-Reply-To=%3Ce4be4952-ae6d-9c89-e1e9-c0beb9f48e1c%40gmx.de%3E"
+       TITLE="[osg-users] Why is setTexCoordArray(0, texcoords) needed if array is modified in-place">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Thu Jul  7 03:23:05 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279847.html">[osg-users] Why is setTexCoordArray(0,	texcoords) needed if array is modified in-place
+</A></li>
+        <LI>Next message: <A HREF="003626.html">[osg-users] Why is setTexCoordArray(0,	texcoords) needed if array is modified in-place
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3625">[ date ]</a>
+              <a href="thread.html#3625">[ thread ]</a>
+              <a href="subject.html#3625">[ subject ]</a>
+              <a href="author.html#3625">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Florian
+
+Calling dirty on the modified array should be enough. Are you sure you 
+set the useDisplayList to false and the useVertexBufferObject to true?
+You don't need to call setTexCoordArray unless you want to assign a 
+different array.
+I don't quite recall if you need to set the datavariance of the geometry 
+to dynamic however, so it might be worth a shot.
+
+Cheers
+Sebastian
+
+&gt;<i> Greetings fellow OSG users :)
+</I>&gt;<i>
+</I>&gt;<i> There is a detail in my code that I found disturbing:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> void applyTextureToCenter( MyNameSpace::SpecificNode* floor )
+</I>&gt;<i> {
+</I>&gt;<i>    MyNameSpace::MyGeode* center = floor-&gt;getCenterGeode() ;
+</I>&gt;<i>    osg::StateSet* stateSet = center-&gt;getOrCreateStateSet() ;
+</I>&gt;<i>    MyNameSpace::MyGeometry* geometry = center -&gt; getGeometry() ;
+</I>&gt;<i>    const osg::DrawElementsUShort* indices = geometry -&gt; getIndexArray() ;
+</I>&gt;<i>    const osg::Vec3Array* vtxArray = static_cast&lt;osg::Vec3Array*&gt;( geometry-&gt;getVertexArray() ) ;
+</I>&gt;<i>    osg::Vec2Array* texArray = floor -&gt;getTexCoordArray() ;
+</I>&gt;<i>    const unsigned numVertex = geometry-&gt;getVertexArray()-&gt;getNumElements() ;
+</I>&gt;<i>    const unsigned numIndices = geometry-&gt;getIndexArray() -&gt;getNumIndices() ;
+</I>&gt;<i>
+</I>&gt;<i>    for ( unsigned id = 0 ; id &lt; numIndices ; ++id )
+</I>&gt;<i>    {
+</I>&gt;<i>      const unsigned idx = (*indices)[id] ;
+</I>&gt;<i>      osg::Vec2 uv ;
+</I>&gt;<i>
+</I>&gt;<i>      /* *snip*
+</I>&gt;<i>       * some texture coordinates computation
+</I>&gt;<i>       */
+</I>&gt;<i>    
+</I>&gt;<i>      (*texArray)[idx].set( uv.x(), uv.y() ) ;
+</I>&gt;<i>    }
+</I>&gt;<i>
+</I>&gt;<i>    geometry-&gt;setTexCoordArray( 0, texArray ) ; //Why is this needed ?
+</I>&gt;<i>
+</I>&gt;<i>      /* *snip*
+</I>&gt;<i>       * Code setting the stateSet parameters (shader program, uniforms...)
+</I>&gt;<i>       */
+</I>&gt;<i>    return ;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I don't understand why the line
+</I>&gt;<i> Code:
+</I>&gt;<i> geometry-&gt;setTexCoordArray( 0, texArray ) ;
+</I>&gt;<i>
+</I>&gt;<i>   is needed. AFAIK since texArray points to the value given by getTexCoordArray(), we are not actually changing anything...  :?
+</I>&gt;<i> I was thinking that maybe it was because setTexCoordArray() caused dirty() to be called, causing re-evaluation of the texture coordinates, but calling
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> geometry-&gt;getTexCoordArray(0)-&gt;dirty() ;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> is not enough for my texture to be displayed.
+</I>&gt;<i>
+</I>&gt;<i> So I went on and looked at the code for setTexCoordArray:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> openscenegraph/OpenSceneGraph/blob/master/src/osg/Geometry.cpp
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I see that it is calling
+</I>&gt;<i> Code:
+</I>&gt;<i> geometry-&gt;dirtyDisplayList() ;
+</I>&gt;<i>
+</I>&gt;<i>   but since we are using VBOs (Vertex Buffer Objects) and not display lists that should not do anything.
+</I>&gt;<i> The code is also calling
+</I>&gt;<i> Code:
+</I>&gt;<i> geometry-&gt;addVertexBufferObjectIfRequired()
+</I>&gt;<i>
+</I>&gt;<i> , which should itself call
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> texArray-&gt;setVertexBufferObject(geometry-&gt;getOrCreateVertexBufferObject());
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> , which AFAIK should not be changing anything here either, since it is setting the array to use the existing VBOs (which should already be the case).
+</I>&gt;<i>
+</I>&gt;<i> What is your take on this? There must be something I'm missing.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Best regards,
+</I>&gt;<i> Florian.
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic3586.php?p=68035#68035">http://forum.openscenegraph.org/viewtopic.php?p=68035#68035</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279847.html">[osg-users] Why is setTexCoordArray(0,	texcoords) needed if array is modified in-place
+</A></li>
+	<LI>Next message: <A HREF="003626.html">[osg-users] Why is setTexCoordArray(0,	texcoords) needed if array is modified in-place
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3625">[ date ]</a>
+              <a href="thread.html#3625">[ thread ]</a>
+              <a href="subject.html#3625">[ subject ]</a>
+              <a href="author.html#3625">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

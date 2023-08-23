@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Culling with custom clip planes
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Culling%20with%20custom%20clip%20planes&In-Reply-To=%3CCAFN7Y%2BWYrMEstZ-7Hcabkz0wvn3rWKuWQSEBiWvfsDPi59Qs4w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001794.html">
+   <LINK REL="Next"  HREF="278018.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Culling with custom clip planes</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Culling%20with%20custom%20clip%20planes&In-Reply-To=%3CCAFN7Y%2BWYrMEstZ-7Hcabkz0wvn3rWKuWQSEBiWvfsDPi59Qs4w%40mail.gmail.com%3E"
+       TITLE="[osg-users] Culling with custom clip planes">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Oct 26 03:21:11 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001794.html">[osg-users] Culling with custom clip planes
+</A></li>
+        <LI>Next message: <A HREF="278018.html">[osg-users] Shaders for textures with OpenGL ES 2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1804">[ date ]</a>
+              <a href="thread.html#1804">[ thread ]</a>
+              <a href="subject.html#1804">[ subject ]</a>
+              <a href="author.html#1804">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Jannik,
+
+Just catching up with this thread, but am afraid my brain isn't yet clear
+enough this Monday morning to be able spot anything.  I'm afraid I'm still
+a bit foggy brained, did a 38 mile, hilly and muddy ultramarathon at the
+weekend :-)
+
+For now I don't have anything else to add to your experiments.  If you are
+still struggling after your latest experiments I'll just to my head around
+the issue later.
+
+Robert.
+
+On 24 October 2015 at 22:50, Jannik Heller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">scrawl at baseoftrash.de</A>&gt; wrote:
+
+&gt;<i> Ok, setting on projectionCullingStack works fine for the whole subgraph,
+</I>&gt;<i> you just have to transform the plane to view space first:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>     virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+</I>&gt;<i>     {
+</I>&gt;<i>         osgUtil::CullVisitor* cv = dynamic_cast&lt;osgUtil::CullVisitor*&gt;(nv);
+</I>&gt;<i>         if (cv)
+</I>&gt;<i>         {
+</I>&gt;<i>             osg::CullingSet&amp; cullingStack =
+</I>&gt;<i> cv-&gt;getProjectionCullingStack().back();
+</I>&gt;<i>
+</I>&gt;<i>             osg::Polytope::PlaneList origPlaneList =
+</I>&gt;<i> cullingStack.getFrustum().getPlaneList();
+</I>&gt;<i>
+</I>&gt;<i>             osg::Plane transformed = mCullPlane;
+</I>&gt;<i>             transformed.transform(cv-&gt;getCurrentCamera()-&gt;getViewMatrix());
+</I>&gt;<i>
+</I>&gt;<i>             cullingStack.getFrustum().add(transformed);
+</I>&gt;<i>
+</I>&gt;<i>             traverse(node, nv);
+</I>&gt;<i>
+</I>&gt;<i>             // undo
+</I>&gt;<i>             cullingStack.getFrustum().set(origPlaneList);
+</I>&gt;<i>         }
+</I>&gt;<i>         else
+</I>&gt;<i>             traverse(node, nv);
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> It's a bit ugly, but good enough for me. Unless Robert has a better idea,
+</I>&gt;<i> I'll stick with this approach!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Jannik[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicda94.php?p=65434#65434">http://forum.openscenegraph.org/viewtopic.php?p=65434#65434</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151026/594423ad/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151026/594423ad/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001794.html">[osg-users] Culling with custom clip planes
+</A></li>
+	<LI>Next message: <A HREF="278018.html">[osg-users] Shaders for textures with OpenGL ES 2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1804">[ date ]</a>
+              <a href="thread.html#1804">[ thread ]</a>
+              <a href="subject.html#1804">[ subject ]</a>
+              <a href="author.html#1804">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

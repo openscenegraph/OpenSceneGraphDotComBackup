@@ -1,0 +1,174 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Getting the combined matrix from a Node?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Getting%20the%20combined%20matrix%20from%20a%20Node%3F&In-Reply-To=%3C3047fc11-435b-cde0-63e6-c7c2e129d8c5%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008133.html">
+   <LINK REL="Next"  HREF="008135.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Getting the combined matrix from a Node?</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Getting%20the%20combined%20matrix%20from%20a%20Node%3F&In-Reply-To=%3C3047fc11-435b-cde0-63e6-c7c2e129d8c5%40gmx.de%3E"
+       TITLE="[osg-users] Getting the combined matrix from a Node?">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Mon May  7 23:27:57 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008133.html">[osg-users] Getting the combined matrix from a Node?
+</A></li>
+        <LI>Next message (by thread): <A HREF="008135.html">[osg-users] Getting the combined matrix from a Node?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8134">[ date ]</a>
+              <a href="thread.html#8134">[ thread ]</a>
+              <a href="subject.html#8134">[ subject ]</a>
+              <a href="author.html#8134">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+Hi Marlin,
+
+you need to get the appropriate parent-node paths:
+
+osg::NodePathList parent_node_list = mat.getParentalNodePaths();
+Now if you know the path you want to retrieve, you can call
+e.g.:
+node_path = parent_node_list[1];
+
+osg::Matrix mat = osg::computeLocalToWorld(node_path);
+
+Also the getParentalNodePaths() function lets you specify the node in 
+the parent path where to stop traversal (e.g. to get transformations in 
+a local model reference-frame)
+
+The reason is, that the scene-graph is a DAG where nodes can have 
+multiple parents.
+Another possibility is to use the per-instance transform inside an 
+update callback:
+
+void MyUpdateCallback::operator()( osg::Node* node, osg::NodeVisitor* nv)
+{
+	osg::NodePath&amp; node_path = nv-&gt;getNodePath() ;
+	osg::Matrix mat = osg::computeLocalToWorld(node_path);
+	///...
+	traverse(node,nv);
+}
+
+
+
+Cheers
+Sebastian
+
+
+Am 07.05.2018 um 20:58 schrieb Rowley, Marlin R:
+&gt;<i> Hello,
+</I>&gt;<i> 
+</I>&gt;<i> I&#8217;m trying to figure out how to retrieve the combined matrix from a node 
+</I>&gt;<i> that is of a PositionAttitudeTransform node type.&#160; I can get it 
+</I>&gt;<i> converted to a Transform() class, but there is no clear way of getting 
+</I>&gt;<i> the combined matrix from local to world.&#160; For example,
+</I>&gt;<i> 
+</I>&gt;<i> Osg::PositionAttitudeTransform trans;
+</I>&gt;<i> 
+</I>&gt;<i> Trans.setScale(2,2,2);
+</I>&gt;<i> 
+</I>&gt;<i> Trans.setPosition(0,10,0);
+</I>&gt;<i> 
+</I>&gt;<i> Osg::Matrixd temp = getCombinedTransform(trans);
+</I>&gt;<i> 
+</I>&gt;<i> Osg::Matrixd getCombinedTransform(const osg::ref_ptr&lt;osg::Node&gt; &amp; mat)
+</I>&gt;<i> 
+</I>&gt;<i> {
+</I>&gt;<i> 
+</I>&gt;<i>  &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; Auto m = mat-&gt;asTransform();
+</I>&gt;<i> 
+</I>&gt;<i>  &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; Return m-&gt;computeLocalToWorldMatrix (m, ???); &lt;&lt; ====== 
+</I>&gt;<i> why use a node visitor on yourself?
+</I>&gt;<i> 
+</I>&gt;<i>  &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; Or
+</I>&gt;<i> 
+</I>&gt;<i>  &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; Return m-&gt;getCombinedMatrix()?? &lt;&lt; &#160;===== is there such a 
+</I>&gt;<i> thing?
+</I>&gt;<i> 
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> ----------------------------------------
+</I>&gt;<i> 
+</I>&gt;<i> Marlin Rowley
+</I>&gt;<i> 
+</I>&gt;<i> Software Engineer, Staff
+</I>&gt;<i> 
+</I>&gt;<i> cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>
+</I>&gt;<i> 
+</I>&gt;<i> /Missiles and Fire Control/
+</I>&gt;<i> 
+</I>&gt;<i> 972-603-1931 (office)
+</I>&gt;<i> 
+</I>&gt;<i> 214-926-0622 (mobile)
+</I>&gt;<i> 
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008133.html">[osg-users] Getting the combined matrix from a Node?
+</A></li>
+	<LI>Next message (by thread): <A HREF="008135.html">[osg-users] Getting the combined matrix from a Node?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8134">[ date ]</a>
+              <a href="thread.html#8134">[ thread ]</a>
+              <a href="subject.html#8134">[ subject ]</a>
+              <a href="author.html#8134">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

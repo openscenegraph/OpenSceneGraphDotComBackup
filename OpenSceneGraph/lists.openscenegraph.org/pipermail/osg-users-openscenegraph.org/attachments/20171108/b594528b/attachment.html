@@ -1,0 +1,84 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Hi&nbsp;Romulo, &lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;You&nbsp;can&nbsp;use&nbsp;TangentSpaceGenerator&nbsp;to&nbsp;get&nbsp;the&nbsp;values&nbsp;of&nbsp;the&nbsp;T&nbsp;B&nbsp;and&nbsp;N.&nbsp;Here&nbsp;you&nbsp;have&nbsp;a&nbsp;code&nbsp;example: &lt;a&nbsp;href=&quot;https://github.com/sketchfab/osg/blob/5d35b2a2d55e92b4c736ea5edcd9eeedf9ea6786/src/osgPlugins/gles/TangentSpaceVisitor.cpp#L46&quot;&gt;https://github.com/sketchfab/osg/blob/5d35b2a2d55e92b4c736ea5edcd9eeedf9ea6786/src/osgPlugins/gles/TangentSpaceVisitor.cpp#L46&lt;/a&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Cheers. &lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;2017-11-07&nbsp;21:48&nbsp;GMT+01:00&nbsp;Rômulo&nbsp;Cerqueira&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:romulogcerqueira@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;romulogcerqueira@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;have&nbsp;used&nbsp;normal&nbsp;mapping&nbsp;using&nbsp;GLSL&nbsp;and&nbsp;OSG&nbsp;for&nbsp;my&nbsp;application&nbsp;(an&nbsp;imaging&nbsp;sonar&nbsp;simulation)&nbsp;and&nbsp;I&nbsp;got&nbsp;problems&nbsp;by&nbsp;calculating&nbsp;the&nbsp;TBN&nbsp;matrix&nbsp;on&nbsp;shaders.&nbsp;The&nbsp;normal&nbsp;vectors&nbsp;contain&nbsp;lower&nbsp;resolution&nbsp;on&nbsp;border&nbsp;in&nbsp;comparison&nbsp;with&nbsp;the&nbsp;center&nbsp;of&nbsp;image.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Follows&nbsp;my&nbsp;vertex&nbsp;code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+#version&nbsp;130&lt;br&gt;<br>
+&lt;br&gt;<br>
+out&nbsp;vec3&nbsp;pos;&lt;br&gt;<br>
+out&nbsp;vec3&nbsp;normal;&lt;br&gt;<br>
+out&nbsp;mat3&nbsp;TBN;&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;main()&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp;pos&nbsp;=&nbsp;(gl_ModelViewMatrix&nbsp;*&nbsp;gl_Vertex).xyz;&lt;br&gt;<br>
+ &nbsp; &nbsp;normal&nbsp;=&nbsp;gl_NormalMatrix&nbsp;*&nbsp;gl_Normal.xyz;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;vec3&nbsp;n&nbsp;=&nbsp;normalize(normal);&lt;br&gt;<br>
+ &nbsp; &nbsp;vec3&nbsp;t&nbsp;=&nbsp;normalize(cross(normal,&nbsp;vec3(-1,0,0)));&lt;br&gt;<br>
+ &nbsp; &nbsp;vec3&nbsp;b&nbsp;=&nbsp;cross(t,&nbsp;n)&nbsp;+&nbsp;cross(n,&nbsp;t);&lt;br&gt;<br>
+ &nbsp; &nbsp;TBN&nbsp;=&nbsp;transpose(mat3(t,b,n));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;gl_Position&nbsp;=&nbsp;gl_ModelViewProjectionMatrix&nbsp;*&nbsp;gl_Vertex;&lt;br&gt;<br>
+ &nbsp; &nbsp;gl_TexCoord[0]&nbsp;=&nbsp;gl_MultiTexCoord0;&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Part&nbsp;of&nbsp;my&nbsp;fragment&nbsp;code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+#version&nbsp;130&lt;br&gt;<br>
+&lt;br&gt;<br>
+in&nbsp;vec3&nbsp;pos;&lt;br&gt;<br>
+in&nbsp;vec3&nbsp;normal;&lt;br&gt;<br>
+in&nbsp;mat3&nbsp;TBN;&lt;br&gt;<br>
+uniform&nbsp;sampler2D&nbsp;normalTexture;&lt;br&gt;<br>
+&lt;br&gt;<br>
+void&nbsp;main()&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp;vec3&nbsp;newNormal&nbsp;=&nbsp;(texture2D(normalTexture,&nbsp;gl_TexCoord[0].st).rgb&nbsp;*&nbsp;2.0&nbsp;-&nbsp;1)&nbsp;*&nbsp;TBN;&lt;br&gt;<br>
+ &nbsp; &nbsp;newNormal&nbsp;=&nbsp;normalize(newNormal);&lt;br&gt;<br>
+...&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;resulting&nbsp;figure&nbsp;is&nbsp;attached.&lt;br&gt;<br>
+&lt;br&gt;<br>
+How&nbsp;can&nbsp;I&nbsp;calculate&nbsp;the&nbsp;TBN&nbsp;matrix&nbsp;to&nbsp;compute&nbsp;the&nbsp;normal&nbsp;mapping&nbsp;properly?&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thanks&nbsp;in&nbsp;advance,&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+...&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Rômulo[/img]&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=72324#72324&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.&lt;wbr&gt;org/viewtopic.php?p=72324#&lt;wbr&gt;72324&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Attachments:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org//files/screenshot_from_2017_11_06_23_00_48_832.png&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.&lt;wbr&gt;org//files/screenshot_from_&lt;wbr&gt;2017_11_06_23_00_48_832.png&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_signature&quot;&nbsp;data-smartmail=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Jordi&nbsp;Torres&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+
+</tt>

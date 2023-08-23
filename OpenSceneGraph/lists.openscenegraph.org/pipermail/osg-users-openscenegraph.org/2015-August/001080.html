@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] update slave camera with frame scheme ON_DEMAND
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20update%20slave%20camera%20with%20frame%20scheme%20ON_DEMAND&In-Reply-To=%3CCAFN7Y%2BWGCr1TTm17_V3AvWpByBtKrGUC-5RUySsi822ysocDMg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001078.html">
+   <LINK REL="Next"  HREF="001081.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] update slave camera with frame scheme ON_DEMAND</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20update%20slave%20camera%20with%20frame%20scheme%20ON_DEMAND&In-Reply-To=%3CCAFN7Y%2BWGCr1TTm17_V3AvWpByBtKrGUC-5RUySsi822ysocDMg%40mail.gmail.com%3E"
+       TITLE="[osg-users] update slave camera with frame scheme ON_DEMAND">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Aug  5 08:01:06 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001078.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+        <LI>Next message: <A HREF="001081.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1080">[ date ]</a>
+              <a href="thread.html#1080">[ thread ]</a>
+              <a href="subject.html#1080">[ subject ]</a>
+              <a href="author.html#1080">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Gianni,
+
+I'm looking at OSG-3.4 and the setting of the master Camera from the
+CameraManipulator that happens after running the update traversals of the
+scene and slave Camera's, so I presume you are looking at an older rev of
+the OSG.
+
+This doesn't change my suggestion though.
+
+Robert.
+
+On 5 August 2015 at 15:25, Gianni Ambrosio &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">g.ambrosio+osg at gmail.com</A>&gt; wrote:
+
+&gt;<i> Thank you Robert for the explanation.
+</I>&gt;<i>
+</I>&gt;<i> Please don't blame me if I have a couple of questions.
+</I>&gt;<i>
+</I>&gt;<i> First of all, debugging the updateTraversal() implementation it seems the
+</I>&gt;<i> AxesCameraUpdateCallback is called twice: one in
+</I>&gt;<i>
+</I>&gt;<i> scene-&gt;updateSceneGraph(*_updateVisitor);
+</I>&gt;<i>
+</I>&gt;<i> and the second time in
+</I>&gt;<i>
+</I>&gt;<i> camera-&gt;accept(*_updateVisitor);
+</I>&gt;<i>
+</I>&gt;<i> I guess this is an expected behavior.
+</I>&gt;<i>
+</I>&gt;<i> Second, you say &quot;The master Camera's value can depend upon values in the
+</I>&gt;<i> scene graph&quot;. But isn't the scene updated in updateSceneGraph call? While
+</I>&gt;<i> the slave cameras are updated in a couple of following for loops? I mean,
+</I>&gt;<i> couldn't the main camera view matrix be updated, I agree after the
+</I>&gt;<i> updateSceneGraph() call, but before the slave cameras? Or at least move the
+</I>&gt;<i> slave cameras with &quot;_useMastersSceneData=false&quot; after the main camera?
+</I>&gt;<i> Something like:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>         if (view-&gt;getCameraManipulator())
+</I>&gt;<i>         {
+</I>&gt;<i>             view-&gt;setFusionDistance(
+</I>&gt;<i> view-&gt;getCameraManipulator()-&gt;getFusionDistanceMode(),
+</I>&gt;<i>
+</I>&gt;<i> view-&gt;getCameraManipulator()-&gt;getFusionDistanceValue() );
+</I>&gt;<i>
+</I>&gt;<i>             view-&gt;getCamera()-&gt;setViewMatrix(
+</I>&gt;<i> view-&gt;getCameraManipulator()-&gt;getInverseMatrix());
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>          // Do UpdateTraversal for slaves with their own subgraph
+</I>&gt;<i>          for(unsigned int i=0; i&lt;view-&gt;getNumSlaves(); ++i)
+</I>&gt;<i>          {
+</I>&gt;<i>                osg::View::Slave&amp; slave = view-&gt;getSlave(i);
+</I>&gt;<i>                osg::Camera* camera = slave._camera.get();
+</I>&gt;<i>                if(camera &amp;&amp; !slave._useMastersSceneData)
+</I>&gt;<i>                {
+</I>&gt;<i>                   camera-&gt;accept(*_updateVisitor);
+</I>&gt;<i>                }
+</I>&gt;<i>          }
+</I>&gt;<i>
+</I>&gt;<i>         view-&gt;updateSlaves();
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Regards,
+</I>&gt;<i> Gianni
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic9976-2.php?p=64631#64631">http://forum.openscenegraph.org/viewtopic.php?p=64631#64631</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150805/f3f375a8/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150805/f3f375a8/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001078.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+	<LI>Next message: <A HREF="001081.html">[osg-users] update slave camera with frame scheme ON_DEMAND
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1080">[ date ]</a>
+              <a href="thread.html#1080">[ thread ]</a>
+              <a href="subject.html#1080">[ subject ]</a>
+              <a href="author.html#1080">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

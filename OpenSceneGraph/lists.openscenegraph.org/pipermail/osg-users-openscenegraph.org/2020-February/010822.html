@@ -1,0 +1,144 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] LineSegmentIntersector and MODEL Frame
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LineSegmentIntersector%20and%20MODEL%20Frame&In-Reply-To=%3Cmailman.67941.1580753596.7169.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010821.html">
+   <LINK REL="Next"  HREF="010823.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] LineSegmentIntersector and MODEL Frame</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20LineSegmentIntersector%20and%20MODEL%20Frame&In-Reply-To=%3Cmailman.67941.1580753596.7169.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] LineSegmentIntersector and MODEL Frame">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Mon Feb  3 10:13:07 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010821.html">[osg-users] LineSegmentIntersector and MODEL Frame
+</A></li>
+        <LI>Next message (by thread): <A HREF="010823.html">[osg-users] Cannot render and load OBJ when using QOpenGLWidget with osgViewer::GraphicsWindowEmbedded on OSG 3.5.6 rc2 and 3.6.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10822">[ date ]</a>
+              <a href="thread.html#10822">[ thread ]</a>
+              <a href="subject.html#10822">[ subject ]</a>
+              <a href="author.html#10822">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I found the problem, and it was mine. It helps if I attach my root node to 
+the scene BEFORE I try to insect with it. ;)
+
+On Monday, February 3, 2020 at 1:04:10 PM UTC-5, Nonsanity wrote:
+&gt;<i>
+</I>&gt;<i> Thanks. I had thought to apply the visitor to the scene, but GetScene() 
+</I>&gt;<i> didn't have Accept(). With your confirmation that using the scene was 
+</I>&gt;<i> correct, I found that viewer.getSceneData()-&gt;accept( iv ) did exist.
+</I>&gt;<i>
+</I>&gt;<i> However, calling that line just results in a segfault. The rest of the 
+</I>&gt;<i> code is the same as before. I'm going to search to see if I'm doing 
+</I>&gt;<i> something obviously wrong, but in case I got the above line incorrect, I 
+</I>&gt;<i> wanted to post my failed results here for further comment.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Monday, February 3, 2020 at 3:06:33 AM UTC-5, OpenSceneGraph Users 
+</I>&gt;<i> wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi Chris,
+</I>&gt;&gt;<i> I guess you want the scene to accept the IntersectionVisitor, not the 
+</I>&gt;&gt;<i> camera.
+</I>&gt;&gt;<i> Laurens.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On Sat, Feb 1, 2020 at 1:18 PM OpenSceneGraph Users &lt;
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at lists.openscenegraph.org</A>&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I have a scene built with a few objects loaded, the most pertinent one 
+</I>&gt;&gt;&gt;<i> being a large plane surface centered at the origin. I want to cast a ray 
+</I>&gt;&gt;&gt;<i> from a particular point at a particular angle inside the scene and get a 
+</I>&gt;&gt;&gt;<i> list of everything it intersects&#8212;both the point of intersection and the 
+</I>&gt;&gt;&gt;<i> Node object. Most examples of using intersectors involve picking from the 
+</I>&gt;&gt;&gt;<i> window, so I haven't seen exactly what I wanted. But from what I've read, 
+</I>&gt;&gt;&gt;<i> the following should at least be close:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>     Vec3d start( 0.0, 0.0, 100.0 );
+</I>&gt;&gt;&gt;<i>     Vec3d end( 0.0, 0.0, -100.0 );
+</I>&gt;&gt;&gt;<i>     ref_ptr&lt;LineSegmentIntersector&gt; intsec = new LineSegmentIntersector( 
+</I>&gt;&gt;&gt;<i> Intersector::MODEL, start, end );
+</I>&gt;&gt;&gt;<i>     IntersectionVisitor iv( intsec.get() );
+</I>&gt;&gt;&gt;<i>     viewer.getCamera()-&gt;accept( iv );
+</I>&gt;&gt;&gt;<i>     cout &lt;&lt; intsec-&gt;containsIntersections() &lt;&lt; endl;
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> My start and end points in this snippet are well above and well below 
+</I>&gt;&gt;&gt;<i> the surface object. So that plane object should definitely be intersected 
+</I>&gt;&gt;&gt;<i> by a line running between them. However the containsIntersections function 
+</I>&gt;&gt;&gt;<i> always returns false.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Immediately after making this preliminary test pick, the program calls 
+</I>&gt;&gt;&gt;<i> viewer.run() so I know everything is arranged as expected in the scene. So 
+</I>&gt;&gt;&gt;<i> my guess is that I'm missunderstanding how the visitor works. Perhaps the 
+</I>&gt;&gt;&gt;<i> accept() function is not what I should be using to execute the intersector?
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>  ~ Chris
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> -- 
+</I>&gt;&gt;&gt;<i> You received this message because you are subscribed to the Google 
+</I>&gt;&gt;&gt;<i> Groups &quot;OpenSceneGraph Users&quot; group.
+</I>&gt;&gt;&gt;<i> To unsubscribe from this group and stop receiving emails from it, send 
+</I>&gt;&gt;&gt;<i> an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at googlegroups.com.</A>
+</I>&gt;&gt;&gt;<i> To view this discussion on the web visit 
+</I>&gt;&gt;&gt;<i> <A HREF="https://groups.google.com/d/msgid/osg-users/58d20034-cb65-4bef-937f-f85a1fa92030%40googlegroups.com">https://groups.google.com/d/msgid/osg-users/58d20034-cb65-4bef-937f-f85a1fa92030%40googlegroups.com</A> 
+</I>&gt;&gt;&gt;<i> &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/58d20034-cb65-4bef-937f-f85a1fa92030%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/58d20034-cb65-4bef-937f-f85a1fa92030%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt;
+</I>&gt;&gt;&gt;<i> .
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/c000c686-2aa4-410f-902d-33e95248450c%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/c000c686-2aa4-410f-902d-33e95248450c%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200203/fdfaadd7/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200203/fdfaadd7/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010821.html">[osg-users] LineSegmentIntersector and MODEL Frame
+</A></li>
+	<LI>Next message (by thread): <A HREF="010823.html">[osg-users] Cannot render and load OBJ when using QOpenGLWidget with osgViewer::GraphicsWindowEmbedded on OSG 3.5.6 rc2 and 3.6.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10822">[ date ]</a>
+              <a href="thread.html#10822">[ thread ]</a>
+              <a href="subject.html#10822">[ subject ]</a>
+              <a href="author.html#10822">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

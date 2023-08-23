@@ -1,0 +1,194 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Pragmatic shader - a new #pragma directive proposition
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20-%20a%20new%20%23pragma%20directive%20proposition&In-Reply-To=%3C5697556B.2000405%40ib-caddy.si%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271963.html">
+   <LINK REL="Next"  HREF="271971.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Pragmatic shader - a new #pragma directive proposition</H1>
+<!--htdig_noindex-->
+    <B>Robert Milharcic</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20-%20a%20new%20%23pragma%20directive%20proposition&In-Reply-To=%3C5697556B.2000405%40ib-caddy.si%3E"
+       TITLE="[osg-users] Pragmatic shader - a new #pragma directive proposition">robert.milharcic at ib-caddy.si
+       </A><BR>
+    <I>Wed Jan 13 23:59:39 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271963.html">[osg-users] Creator/OpenFlight (.flt) Extended Materials pipeline	question
+</A></li>
+        <LI>Next message: <A HREF="271971.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271969">[ date ]</a>
+              <a href="thread.html#271969">[ thread ]</a>
+              <a href="subject.html#271969">[ subject ]</a>
+              <a href="author.html#271969">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+Hi all,
+
+With the pragmatic shader one could implement multiple lights and other repetitive constructs like this:
+
+-- start of shader code --
+#pragma import_defines ( LIGHTING, LIGHT0, LIGHT1 )
+
+#ifdef LIGHTING
+   #ifdef LIGHT0
+uniform vec4 u_LightColor0;
+   #endif
+   #ifdef LIGHT1
+uniform vec4 u_LightColor1;
+   #endif
+
+varying vec4 basecolor;
+
+void light( in vec4 lightColor, inout vec4 color );
+#endif
+
+void main(void)
+{
+     basecolor = gl_Color;
+
+#ifdef LIGHTING
+   #ifdef LIGHT0
+     light( u_LightColor0, basecolor);
+   #endif
+   #ifdef LIGHT1
+     light( u_LightColor1, basecolor);
+   #endif
+#endif
+
+     gl_Position   = gl_ModelViewProjectionMatrix * gl_Vertex;
+}
+-- end of shader code --
+
+... and to enable both lights:
+
+stateset-&gt;setDefine(&quot;LIGHTING&quot;);
+stateset-&gt;setDefine(&quot;LIGHT0&quot;);
+stateset-&gt;setDefine(&quot;LIGHT1&quot;);
+
+The problem with this approach is that nobody really knows in advance how many more lights will be needed. Moreover, the shader can get heavily bloated when more and more lights are added. As a solution I would like to propose a new #pragma construct:
+
+#pragma repeat_begin( DEFINE_IDENTIFIER${SubstitutionParameter} )
+(shader code block)
+#pragma repeat_end()
+
+... and the shader code supporting arbitrary number of lights would then look like this:
+
+-- start of shader code --
+#pragma import_defines ( LIGHTING, LIGHT${Member} )
+
+#ifdef LIGHTING
+#pragma repeat_begin( LIGHT${Member} )
+uniform vec4 u_LightColor${Member};
+#pragma repeat_end()
+
+varying vec4 basecolor;
+
+void light( in vec4 lightColor, inout vec4 color );
+#endif
+
+void main(void)
+{
+     basecolor = gl_Color;
+
+#ifdef LIGHTING
+#pragma repeat_begin( LIGHT${Member} )
+     light( u_LightColor${Member}, basecolor);
+#pragma repeat_end()
+#endif
+
+     gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+}
+-- end of shader code --
+
+... where ${Member} is a substitution parameter and LIGHT is define identifier. Then with:
+
+stateset-&gt;setDefine(&quot;LIGHTING&quot;);
+stateset-&gt;setDefine(&quot;LIGHT${0}&quot;);
+stateset-&gt;setDefine(&quot;LIGHT${1}&quot;);
+stateset-&gt;setDefine(&quot;LIGHT${5}&quot;);
+
+... where ${0}, ${1}, ${5} are substitution values, osg would produce following shader code:
+
+-- start of shader code --
+#define LIGHTING
+#define LIGHT0
+#define LIGHT1
+#define LIGHT5
+
+#ifdef LIGHTING
+uniform vec4 u_LightColor0;
+uniform vec4 u_LightColor1;
+uniform vec4 u_LightColor5;
+
+varying vec4 basecolor;
+
+void light( in vec4 lightColor, inout vec4 color );
+#endif
+
+void main(void)
+{
+     basecolor = gl_Color;
+
+#ifdef LIGHTING
+     light( u_LightColor0, basecolor);
+     light( u_LightColor1, basecolor);
+     light( u_LightColor5, basecolor);
+#endif
+
+     gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+}
+-- end of shader code --
+
+Before I do any coding I'd like to know if proposed solution would be of any use to the osg community? Or maybe there is a better way? I'm currently solving these kinds of problems with uniform arrays, but unfortunately, the uniform array has its own max number of elements and the management code of such approach tend to be complicated...
+
+Cheers,
+Robert Milharcic
+
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271963.html">[osg-users] Creator/OpenFlight (.flt) Extended Materials pipeline	question
+</A></li>
+	<LI>Next message: <A HREF="271971.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271969">[ date ]</a>
+              <a href="thread.html#271969">[ thread ]</a>
+              <a href="subject.html#271969">[ subject ]</a>
+              <a href="author.html#271969">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

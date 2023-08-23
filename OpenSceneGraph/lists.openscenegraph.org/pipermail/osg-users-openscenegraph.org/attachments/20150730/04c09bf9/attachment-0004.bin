@@ -1,0 +1,47 @@
+#include "ventana.h"
+
+osg::Camera* ventana::createCamera(int x, int y, int w, int h)
+{
+	osg::ref_ptr<osg::GraphicsContext::Traits> traits = new osg::GraphicsContext::Traits;
+	traits->x = x;
+	traits->y = y;
+	traits->width = w;
+	traits->height = h;
+	traits->doubleBuffer = true;
+	traits->windowName = "Funcion de Ventana";
+	traits->windowDecoration = true;
+
+	osg::ref_ptr<osg::GraphicsContext> gc = osg::GraphicsContext::createGraphicsContext(traits.get());
+
+	osg::ref_ptr<osg::Camera> camera = new osg::Camera;
+	camera->setGraphicsContext(gc.get());
+	camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
+	return camera.release();
+
+}
+
+osgViewer::Viewer* ventana::crearMultipleVentana(int numeroColumnas, int numeroFilas)
+{
+	int totalWidth = 1024, totalHeight = 768;
+
+	osgViewer::Viewer viewer;
+
+	int tileWidth = totalWidth / numeroColumnas;
+	int tileHeight = totalHeight / numeroFilas;
+
+	//Cremos una instancia de la nueva clase para llamar a la funcion para crear la ventana
+	ventana* myVentana = new ventana();
+
+	for (int i = 0; i<numeroFilas; ++i)
+	{
+		for (int j = 0; j<numeroColumnas; ++j)
+		{
+			osg::Camera* camera = myVentana->createCamera(tileWidth*j, totalHeight - tileHeight*(i + 1), tileWidth - 1, tileHeight - 1);
+			osg::Matrix projOffset = osg::Matrix::scale(numeroColumnas, numeroFilas, 1.0) * osg::Matrix::translate(numeroColumnas - 1 - 2 * j, numeroFilas - 1 - 2 * i, 0.0);
+			viewer.addSlave(camera, projOffset, osg::Matrix(), true);
+		}
+	}
+
+	return &viewer;
+
+}

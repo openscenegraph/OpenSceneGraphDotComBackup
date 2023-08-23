@@ -1,0 +1,211 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Volume rendering issues...
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20rendering%20issues...&In-Reply-To=%3C1532521225.m2f.74384%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008764.html">
+   <LINK REL="Next"  HREF="008772.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Volume rendering issues...</H1>
+<!--htdig_noindex-->
+    <B>Tom Williamson</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20rendering%20issues...&In-Reply-To=%3C1532521225.m2f.74384%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Volume rendering issues...">tom.williamson at rmit.edu.au
+       </A><BR>
+    <I>Wed Jul 25 05:20:25 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008764.html">[osg-users] Twenty one (21) days till the OpenScenegrapg BOF in Vancouver
+</A></li>
+        <LI>Next message (by thread): <A HREF="008772.html">[osg-users] Volume rendering issues...
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8770">[ date ]</a>
+              <a href="thread.html#8770">[ thread ]</a>
+              <a href="subject.html#8770">[ subject ]</a>
+              <a href="author.html#8770">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi gang,
+
+Thanks for all the work on OSG, is rad. I'm currently having a problem with the rendering of a volume, here's what I'm trying to do:
+- I'm using ITK to read a NIFTI file, (segmentation of a bone). The file contains zeros (background) and ones (object), format is unsigned short. 
+- I am then normalizing/scaling this and converting it to an osg::Image.
+- I am then attempting to convert this to an osgVolume and display an iso-surface, or at this stage any kind of volume rendering.
+- All the reading, conversion etc. seems to work okay, but I'm getting a read access violation on line 408 of Texture3d.cpp (specifically:Exception thrown at 0x00007FFE64D576B0 (ig9icd64.dll) in RobotSimulation.exe: 0xC0000005: Access violation reading location 0x000002F5732EE070.)
+
+I'm pretty sure I'm just forgetting something very obvious, but if anyone could point out what it is that I'm doing wrong that would be much appreciated. I've put a cut down example of the code below (pretty rough).
+I know that the data is definitely in the osg::image object (wrote it to file, calculated min and max), so I don't necessarily think the conversion is the problem (though could very well be wrong). I'm on a Windows 10 laptop, with a built in Intel graphics card (Intel HD Graphics 620, drivers are up to date), opengl is version 4.5.
+Thanks very much for the help, let me know if you need any other info. Cheers,
+Tom
+
+PS: I'm happy to provide some example data if needed, but I guess this would be more or less the same for any data loaded through ITK and converted to OSG.
+PPS: I've left the code as normal text, it looked somewhat unreadable in the preview, so sorry about that.
+
+[code]
+osg::ref_ptr&lt;osgVolume::Volume&gt; getOsgVolume(std::string filename)
+{
+	osg::ref_ptr&lt;osg::Image&gt; osgImage = new osg::Image();
+	itk::NiftiImageIOFactory::RegisterOneFactory();
+	itk::ImageIOBase::Pointer imageIO = itk::ImageIOFactory::CreateImageIO(filename.c_str(), itk::ImageIOFactory::ReadMode);
+	imageIO-&gt;SetFileName(filename);
+	imageIO-&gt;ReadImageInformation();
+	osg::ref_ptr&lt;osgVolume::Volume&gt; volume = new osgVolume::Volume;
+
+	std::cout &lt;&lt; &quot;numDimensions: &quot; &lt;&lt; imageIO-&gt;GetNumberOfDimensions() &lt;&lt; std::endl;
+	std::cout &lt;&lt; &quot;component type: &quot; &lt;&lt; imageIO-&gt;GetComponentTypeAsString(imageIO-&gt;GetComponentType()) &lt;&lt; std::endl;
+	std::cout &lt;&lt; &quot;pixel type: &quot; &lt;&lt; imageIO-&gt;GetPixelTypeAsString(imageIO-&gt;GetPixelType()) &lt;&lt; std::endl;
+
+	if (imageIO-&gt;GetNumberOfDimensions() == 3) {
+		typedef itk::Image&lt;unsigned short, 3&gt;  imType;
+		typedef itk::ImageFileReader&lt;imType&gt; imTypeReader;
+
+		imTypeReader::Pointer imageReader = imTypeReader::New();
+		imageReader-&gt;SetFileName(imageIO-&gt;GetFileName());
+		imageReader-&gt;Update();
+
+		imType::RegionType region;
+		imType::IndexType start;
+		imType::SizeType size;
+
+		for (int i = 0; i &lt; imageIO-&gt;GetNumberOfDimensions(); ++i) {
+			start[i] = 0;
+			size[i] = imageIO-&gt;GetDimensions(i);
+		}
+
+		region.SetSize(size);
+		region.SetIndex(start);
+		typedef itk::MultiplyImageFilter&lt; imType&gt; miType;
+		miType::Pointer mif = miType::New();
+		mif-&gt;SetInput(imageReader-&gt;GetOutput());
+		mif-&gt;SetConstant(pow(2, 16) - 1);
+		mif-&gt;Update();
+		imType::Pointer itkImage = mif-&gt;GetOutput();
+		region = itkImage-&gt;GetBufferedRegion();
+		size = region.GetSize();
+		start = region.GetIndex();
+
+		unsigned int width = size[0];
+		unsigned int height = size[1];
+		unsigned int depth = size[2];
+
+		osg::RefMatrix* matrix = new osg::RefMatrix;
+
+		std::cout &lt;&lt; &quot;width = &quot; &lt;&lt; width &lt;&lt; &quot; height = &quot; &lt;&lt; height &lt;&lt; &quot; depth = &quot; &lt;&lt; depth &lt;&lt; std::endl;
+		for (unsigned int i = 0; i&lt;3; ++i)
+		{
+			(*matrix)(i, i) = itkImage-&gt;GetSpacing()[i];
+		}
+
+		osgImage-&gt;setImage(width, height, depth, GL_LUMINANCE16, GL_LUMINANCE, GL_UNSIGNED_SHORT, (BYTE*)itkImage-&gt;GetBufferPointer(), osg::Image::NO_DELETE, 1, width);
+
+		// Setup the transfer function
+		osg::ref_ptr&lt;osg::TransferFunction1D&gt; transferFunction = new osg::TransferFunction1D;
+		transferFunction-&gt;setColor(0.0, osg::Vec4(1.0, 0.0, 0.0, 0.0));
+		transferFunction-&gt;setColor(0.5, osg::Vec4(1.0, 1.0, 0.0, 0.5));
+		transferFunction-&gt;setColor(1.0, osg::Vec4(0.0, 0.0, 1.0, 1.0));
+
+		// Setup the volume
+		osgVolume::ImageDetails* details = new osgVolume::ImageDetails;
+		details-&gt;setMatrix(matrix);
+		osgImage-&gt;setUserData(details);
+		matrix-&gt;preMult(osg::Matrix::scale(double(osgImage-&gt;s()), double(osgImage-&gt;t()), double(osgImage-&gt;r())));
+		osg::ref_ptr&lt;osgVolume::VolumeTile&gt; tile = new osgVolume::VolumeTile;
+		volume-&gt;addChild(tile.get());
+		osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer = new osgVolume::ImageLayer(osgImage.get());
+		layer-&gt;setLocator(new osgVolume::Locator(*matrix));
+		tile-&gt;setLocator(new osgVolume::Locator(*matrix));
+		tile-&gt;setLayer(layer.get());
+
+		// Rest of this is setting up the volume rendering...
+		float alphaFunc = 0.02f;
+
+		osgVolume::AlphaFuncProperty* ap = new osgVolume::AlphaFuncProperty(alphaFunc);
+		osgVolume::IsoSurfaceProperty* isop = new osgVolume::IsoSurfaceProperty(alphaFunc);
+		osgVolume::SampleDensityProperty* sd = new osgVolume::SampleDensityProperty(0.5f);
+		osgVolume::SampleDensityWhenMovingProperty* sdwm = new osgVolume::SampleDensityWhenMovingProperty(0.1);
+		osgVolume::SampleRatioProperty* sr = new osgVolume::SampleRatioProperty(1.0f);
+		osgVolume::SampleRatioWhenMovingProperty* srwm = new osgVolume::SampleRatioWhenMovingProperty(0.1);
+		osgVolume::TransparencyProperty* tp = new osgVolume::TransparencyProperty(1.0);
+		osgVolume::TransferFunctionProperty* tfp = new osgVolume::TransferFunctionProperty(transferFunction.get());
+		osgVolume::CompositeProperty* cp = new osgVolume::CompositeProperty;
+		cp-&gt;addProperty(sr);
+		cp-&gt;addProperty(tp);
+		cp-&gt;addProperty(isop);
+		cp-&gt;addProperty(sdwm);
+		cp-&gt;addProperty(tfp);
+
+		layer-&gt;addProperty(cp);
+		tile-&gt;setVolumeTechnique(new osgVolume::MultipassTechnique);
+
+	}
+	std::cout &lt;&lt; &quot;Valid: &quot; &lt;&lt; volume.valid() &lt;&lt; std::endl;
+	return volume;
+
+}
+[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopice867.php?p=74384#74384">http://forum.openscenegraph.org/viewtopic.php?p=74384#74384</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008764.html">[osg-users] Twenty one (21) days till the OpenScenegrapg BOF in Vancouver
+</A></li>
+	<LI>Next message (by thread): <A HREF="008772.html">[osg-users] Volume rendering issues...
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8770">[ date ]</a>
+              <a href="thread.html#8770">[ thread ]</a>
+              <a href="subject.html#8770">[ subject ]</a>
+              <a href="author.html#8770">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

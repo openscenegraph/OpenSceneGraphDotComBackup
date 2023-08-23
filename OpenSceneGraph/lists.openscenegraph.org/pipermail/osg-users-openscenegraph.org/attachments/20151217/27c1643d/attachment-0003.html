@@ -1,0 +1,83 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Dario,&lt;br&gt;&lt;br&gt;&lt;/div&gt;The&nbsp;stack&nbsp;trace&nbsp;suggests&nbsp;a&nbsp;problem&nbsp;with&nbsp;the&nbsp;parent&nbsp;list. &nbsp;The&nbsp;code&nbsp;you&#39;ve&nbsp;supplied&nbsp;itself&nbsp;in&nbsp;principle&nbsp;looks&nbsp;OK,&nbsp;although&nbsp;generally&nbsp;when&nbsp;doing&nbsp;this&nbsp;type&nbsp;of&nbsp;work&nbsp;I&nbsp;don&#39;t&nbsp;use&nbsp;callbacks,&nbsp;instead&nbsp;placing&nbsp;the&nbsp;sync&nbsp;in&nbsp;a&nbsp;separate&nbsp;call&nbsp;in&nbsp;in&nbsp;the&nbsp;viewer&#39;s&nbsp;frame&nbsp;-&nbsp;i.e.&nbsp;how&nbsp;the&nbsp;DatabasePager&nbsp;works. &nbsp;One&nbsp;can&nbsp;use&nbsp;an&nbsp;viewer&nbsp;UpdateOperation&nbsp;for&nbsp;this&nbsp;type&nbsp;of&nbsp;scene&nbsp;graph&nbsp;sync&nbsp;work.&lt;br&gt;&lt;br&gt;&lt;/div&gt;W.r.t&nbsp;the&nbsp;parent&nbsp;list&nbsp;adjustment&nbsp;causing&nbsp;a&nbsp;race&nbsp;condition. &nbsp;At&nbsp;least&nbsp;in&nbsp;last&nbsp;few&nbsp;releases&nbsp;of&nbsp;the&nbsp;OSG&nbsp;there&nbsp;has&nbsp;been&nbsp;a&nbsp;mutex&nbsp;to&nbsp;protect&nbsp;access&nbsp;add/remove&nbsp;from&nbsp;the&nbsp;parent&nbsp;list. &nbsp;Which&nbsp;version&nbsp;of&nbsp;the&nbsp;OSG&nbsp;are&nbsp;you&nbsp;using? &nbsp;Check&nbsp;to&nbsp;see&nbsp;whether&nbsp;it&#39;s&nbsp;got&nbsp;the&nbsp;appropriate&nbsp;mutex&nbsp;code&nbsp;in&nbsp;the&nbsp;Node::addParent()/removeParent().&lt;br&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;17&nbsp;December&nbsp;2015&nbsp;at&nbsp;16:56,&nbsp;Dario&nbsp;Minieri&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:paradox@cheapnet.it&quot;&nbsp;target=&quot;_blank&quot;&gt;paradox@cheapnet.it&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;have&nbsp;a&nbsp;system&nbsp;which&nbsp;use&nbsp;an&nbsp;UpdateCallback&nbsp;for&nbsp;every&nbsp;node&nbsp;which&nbsp;can&nbsp;be&nbsp;modified&nbsp;(adding&nbsp;or&nbsp;removing&nbsp;his&nbsp;children). &nbsp;Sometime&nbsp;I&nbsp;have&nbsp;segmentation&nbsp;fault&nbsp;inside&nbsp;the&nbsp;callback,&nbsp;like&nbsp;this&nbsp;one:&lt;br&gt;<br>
+&lt;br&gt;<br>
+#0 &nbsp;0x00007ffff4b02cc9&nbsp;in&nbsp;__GI_raise&nbsp;(sig=sig@entry=6)&nbsp;at&nbsp;../nptl/sysdeps/unix/sysv/linux/raise.c:56&lt;br&gt;<br>
+#1 &nbsp;0x00007ffff4b060d8&nbsp;in&nbsp;__GI_abort&nbsp;()&nbsp;at&nbsp;abort.c:89&lt;br&gt;<br>
+#2 &nbsp;0x00007ffff5107535&nbsp;in&nbsp;__gnu_cxx::__verbose_terminate_handler()&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libstdc++.so.6&lt;br&gt;<br>
+#3 &nbsp;0x00007ffff51056d6&nbsp;in&nbsp;??&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libstdc++.so.6&lt;br&gt;<br>
+#4 &nbsp;0x00007ffff5105703&nbsp;in&nbsp;std::terminate()&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libstdc++.so.6&lt;br&gt;<br>
+#5 &nbsp;0x00007ffff5105922&nbsp;in&nbsp;__cxa_throw&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libstdc++.so.6&lt;br&gt;<br>
+#6 &nbsp;0x00007ffff5105e0d&nbsp;in&nbsp;operator&nbsp;new(unsigned&nbsp;long)&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libstdc++.so.6&lt;br&gt;<br>
+#7 &nbsp;0x00007ffff0e83ac6&nbsp;in&nbsp;std::vector&lt;osg::Group*,&nbsp;std::allocator&lt;osg::Group*&gt;&nbsp;&gt;::_M_insert_aux(__gnu_cxx::__normal_iterator&lt;osg::Group**,&nbsp;std::vector&lt;osg::Group*,&nbsp;std::allocator&lt;osg::Group*&gt;&nbsp;&gt;&nbsp;&gt;,&nbsp;osg::Group*&nbsp;const&amp;)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosg.so.100&lt;br&gt;<br>
+#8 &nbsp;0x00007ffff0e83266&nbsp;in&nbsp;osg::Node::addParent(osg::Group*)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosg.so.100&lt;br&gt;<br>
+#9 &nbsp;0x00007ffff0e14bad&nbsp;in&nbsp;osg::Group::insertChild(unsigned&nbsp;int,&nbsp;osg::Node*)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosg.so.100&lt;br&gt;<br>
+#10&nbsp;0x00007ffff488501f&nbsp;in&nbsp;AlterTreeNodeCallback::operator()(osg::Node*,&nbsp;osg::NodeVisitor*)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libSimWorld.so&lt;br&gt;<br>
+#11&nbsp;0x00007ffff0e150b2&nbsp;in&nbsp;osg::Group::accept(osg::NodeVisitor&amp;)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosg.so.100&lt;br&gt;<br>
+#12&nbsp;0x00007ffff0e13af3&nbsp;in&nbsp;osg::Group::traverse(osg::NodeVisitor&amp;)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosg.so.100&lt;br&gt;<br>
+#13&nbsp;0x00007ffff0e150b2&nbsp;in&nbsp;osg::Group::accept(osg::NodeVisitor&amp;)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosg.so.100&lt;br&gt;<br>
+#14&nbsp;0x00007ffff0e13af3&nbsp;in&nbsp;osg::Group::traverse(osg::NodeVisitor&amp;)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosg.so.100&lt;br&gt;<br>
+#15&nbsp;0x00007ffff0e150b2&nbsp;in&nbsp;osg::Group::accept(osg::NodeVisitor&amp;)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosg.so.100&lt;br&gt;<br>
+#16&nbsp;0x00007fffeff514a1&nbsp;in&nbsp;osgViewer::Viewer::updateTraversal()&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosgViewer.so.100&lt;br&gt;<br>
+#17&nbsp;0x00007fffeff5b685&nbsp;in&nbsp;osgViewer::ViewerBase::frame(double)&nbsp;()&nbsp;from&nbsp;/usr/local/lib/libosgViewer.so.100&lt;br&gt;<br>
+#18&nbsp;0x00007ffff04356e4&nbsp;in&nbsp;QGLWidget::glDraw()&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libQt5OpenGL.so.5&lt;br&gt;<br>
+#19&nbsp;0x00007ffff04326f9&nbsp;in&nbsp;QGLWidget::paintEvent(QPaintEvent*)&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libQt5OpenGL.so.5&lt;br&gt;<br>
+#20&nbsp;0x00007ffff5521302&nbsp;in&nbsp;QWidget::event(QEvent*)&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5&lt;br&gt;<br>
+#21&nbsp;0x00007ffff54e5c8c&nbsp;in&nbsp;QApplicationPrivate::notify_helper(QObject*,&nbsp;QEvent*)&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5&lt;br&gt;<br>
+#22&nbsp;0x00007ffff54eae56&nbsp;in&nbsp;QApplication::notify(QObject*,&nbsp;QEvent*)&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5&lt;br&gt;<br>
+#23&nbsp;0x00007ffff6488c2d&nbsp;in&nbsp;QCoreApplication::notifyInternal(QObject*,&nbsp;QEvent*)&nbsp;()&nbsp;from&nbsp;/usr/lib/x86_64-linux-gnu/libQt5Core.so.5&lt;br&gt;<br>
+#24&nbsp;0x00007ffff551bbea&nbsp;in&nbsp;QWidgetPrivate::drawWidget(QPaintDevice*,&nbsp;QRegion&nbsp;const&amp;,&nbsp;QPoint&nbsp;const&amp;,&nbsp;int,&nbsp;QPainter*,&nbsp;QWidgetBackingStore*)&nbsp;()&lt;br&gt;<br>
+ &nbsp; from&nbsp;/usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5&lt;br&gt;<br>
+&lt;br&gt;<br>
+Adding&nbsp;(insertChild)&nbsp;some&nbsp;new&nbsp;node&nbsp;at&nbsp;runtime,&nbsp;show&nbsp;the&nbsp;problem.&nbsp;This&nbsp;happens&nbsp;especially&nbsp;when&nbsp;I&nbsp;made&nbsp;some&nbsp;remove&nbsp;and&nbsp;insert&nbsp;in&nbsp;short&nbsp;time.&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;callback&nbsp;is&nbsp;something&nbsp;like&nbsp;this:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+void&nbsp;AlterCallback::operator()(Node*&nbsp;p_node,&nbsp;NodeVisitor*&nbsp;p_nv)&nbsp;{&lt;br&gt;<br>
+ &nbsp;if&nbsp;(p_node&nbsp;!=&nbsp;NULL)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp;Group*&nbsp;p_group&nbsp;=&nbsp;p_node-&gt;asGroup();&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(p_group&nbsp;!=&nbsp;NULL)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;while&nbsp;(m_add_nodes.size()&nbsp;&gt;&nbsp;0)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Node*&nbsp;l_node&nbsp;=&nbsp;(Node*)m_add_nodes.popFront();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;p_group-&gt;addChild(l_node);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;while&nbsp;(m_remove_nodes.size()&nbsp;&gt;&nbsp;0)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Node*&nbsp;l_node&nbsp;=&nbsp;(Node*)m_remove_nodes.popFront();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;p_group-&gt;removeChild(l_node);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;traverse(p_node,&nbsp;p_nv);&lt;br&gt;<br>
+ &nbsp;}&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+m_add_nodes&nbsp;and&nbsp;m_remove_nodes&nbsp;are&nbsp;thread-safe&nbsp;structures&nbsp;which&nbsp;holds&nbsp;the&nbsp;list&nbsp;of&nbsp;nodes&nbsp;(pointers)&nbsp;to&nbsp;add&nbsp;and&nbsp;remove.&lt;br&gt;<br>
+&lt;br&gt;<br>
+This&nbsp;is&nbsp;a&nbsp;good&nbsp;way&nbsp;to&nbsp;alter&nbsp;the&nbsp;tree&nbsp;at&nbsp;runtime?&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Dario&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=65891#65891&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=65891#65891&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

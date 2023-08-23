@@ -1,0 +1,121 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;br&gt;Maybe&nbsp;you&nbsp;forgot&nbsp;to&nbsp;add&nbsp;the&nbsp;camera&nbsp;to&nbsp;the&nbsp;main&nbsp;scene&nbsp;graph?&lt;br&gt;&lt;/div&gt;&lt;br&gt;An&nbsp;addChild()&nbsp;into&nbsp;the&nbsp;scene&nbsp;graph&nbsp;root&nbsp;should&nbsp;do&nbsp;the&nbsp;trick.&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;2015-04-14&nbsp;15:16&nbsp;GMT+02:00&nbsp;Andreas&nbsp;Schreiber&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:ayss@online.de&quot;&nbsp;target=&quot;_blank&quot;&gt;ayss@online.de&lt;/a&gt;&gt;&lt;/span&gt;:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&#39;m&nbsp;trying&nbsp;to&nbsp;generate&nbsp;a&nbsp;texture&nbsp;with&nbsp;a&nbsp;rtt-camera,&nbsp;so&nbsp;I&nbsp;can&nbsp;use&nbsp;this&nbsp;texture&nbsp;later&nbsp;in&nbsp;my&nbsp;main&nbsp;scene.&lt;br&gt;<br>
+To&nbsp;verify&nbsp;if&nbsp;the&nbsp;texture&nbsp;is&nbsp;correct&nbsp;I&#39;m&nbsp;trying&nbsp;to&nbsp;put&nbsp;the&nbsp;texture&nbsp;on&nbsp;a&nbsp;quad&nbsp;in&nbsp;my&nbsp;main&nbsp;scene.&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;use&nbsp;the&nbsp;following&nbsp;method&nbsp;for&nbsp;the&nbsp;rtt-camera,&nbsp;the&nbsp;red&nbsp;clearColor&nbsp;I&nbsp;used&nbsp;to&nbsp;test&nbsp;what&nbsp;the&nbsp;camera&nbsp;renders,&nbsp;but&nbsp;it&nbsp;did&nbsp;not&nbsp;help&nbsp;me&nbsp;out.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+osg::Camera&nbsp;*createRTTCamera(osg::Camera::BufferComponent&nbsp;buffer,&nbsp;osg::Texture&nbsp;*tex,&nbsp;bool&nbsp;isAbsolute)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;osg::ref_ptr&lt;osg::Camera&gt;&nbsp;camera&nbsp;=&nbsp;new&nbsp;osg::Camera;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::Vec4f&nbsp;textureStartColor&nbsp;=&nbsp;osg::Vec4f(1.0,&nbsp;0.0,&nbsp;0.0,&nbsp;0.0);&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;setClearColor(textureStartColor);&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT&nbsp;|&nbsp;GL_DEPTH_BUFFER_BIT);&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);&lt;br&gt;<br>
+ &nbsp; &nbsp;camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(tex)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;tex-&gt;setFilter(osg::Texture2D::MIN_FILTER,&nbsp;osg::Texture2D::LINEAR);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;tex-&gt;setFilter(osg::Texture2D::MAG_FILTER,&nbsp;osg::Texture2D::LINEAR);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;camera-&gt;setViewport(0,&nbsp;0,&nbsp;tex-&gt;getTextureWidth(),&nbsp;tex-&gt;getTextureHeight());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;camera-&gt;attach(buffer,&nbsp;tex);&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(isAbsolute)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;camera-&gt;setProjectionMatrix(osg::Matrix::ortho2D(0.0,&nbsp;1.0,&nbsp;0.0,&nbsp;1.0));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;camera-&gt;setViewMatrix(osg::Matrix::identity());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;osg::Vec3&nbsp;corner&nbsp;=&nbsp;osg::Vec3();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;camera-&gt;addChild(createScreenQuad(1.0f,&nbsp;1.0f,&nbsp;1,&nbsp;corner));&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;return&nbsp;camera.release();&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+In&nbsp;the&nbsp;main&nbsp;part&nbsp;I&nbsp;do&nbsp;the&nbsp;following:&lt;br&gt;<br>
+&lt;br&gt;<br>
+1.&nbsp;I&nbsp;initialize&nbsp;the&nbsp;global&nbsp;texture2D&nbsp;variable&nbsp;with&nbsp;an&nbsp;image&lt;br&gt;<br>
+&lt;br&gt;<br>
+2.&nbsp;Create&nbsp;the&nbsp;rrt&nbsp;camera&nbsp;with&nbsp;color_buffer,&nbsp;the&nbsp;texture&nbsp;(which&nbsp;is&nbsp;global),&nbsp;and&nbsp;1&nbsp;for&nbsp;absolute&lt;br&gt;<br>
+&lt;br&gt;<br>
+3.&nbsp;load&nbsp;geometry&lt;br&gt;<br>
+&lt;br&gt;<br>
+4. &nbsp; &nbsp; &nbsp;Setup&nbsp;Light,&nbsp;here&nbsp;an&nbsp;example&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+osg::ref_ptr&lt;osg::LightSource&gt;&nbsp;sunLight&nbsp;=&nbsp;new&nbsp;osg::LightSource();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;sunLight.get()-&gt;setLight(createLightSpot(osg::Vec4(0,&nbsp;1,&nbsp;0,&nbsp;0),&nbsp;osg::Vec4(0,&nbsp;1,&nbsp;0,&nbsp;1)));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;sunLight.get()-&gt;setReferenceFrame(osg::LightSource::ABSOLUTE_RF);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;sunLight.get()-&gt;setLocalStateSetModes(osg::StateAttribute::ON);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+5.&nbsp;Add&nbsp;the&nbsp;light&nbsp;and&nbsp;the&nbsp;geometry&nbsp;to&nbsp;the&nbsp;rtt&nbsp;camera&lt;br&gt;<br>
+6.&nbsp;Add&nbsp;the&nbsp;light&nbsp;and&nbsp;the&nbsp;geometry&nbsp;to&nbsp;the&nbsp;main&nbsp;scene&lt;br&gt;<br>
+&lt;br&gt;<br>
+Now&nbsp;there&nbsp;should&nbsp;be&nbsp;the&nbsp;scene&nbsp;on&nbsp;the&nbsp;quad&nbsp;geometry&nbsp;which&nbsp;I&nbsp;generated,&nbsp;but&nbsp;this&nbsp;is&nbsp;always&nbsp;rendered&nbsp;with&nbsp;the&nbsp;color&nbsp;of&nbsp;the&nbsp;light&nbsp;and&nbsp;nothing&nbsp;else&nbsp;on&nbsp;it.&lt;br&gt;<br>
+It&nbsp;isn&#39;t&nbsp;even&nbsp;a&nbsp;mix&nbsp;of&nbsp;the&nbsp;light&nbsp;color&nbsp;and&nbsp;the&nbsp;clear&nbsp;color&nbsp;of&nbsp;the&nbsp;rtt&nbsp;camera,&nbsp;its&nbsp;just&nbsp;the&nbsp;light&nbsp;color.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Here&nbsp;is&nbsp;my&nbsp;quad&nbsp;generation&nbsp;as&nbsp;well:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Geode&gt;&nbsp;planeRTT&nbsp;=&nbsp;new&nbsp;osg::Geode();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Geometry&gt;&nbsp;geometry&nbsp;=&nbsp;new&nbsp;osg::Geometry();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;planeRTT-&gt;addDrawable(geometry);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Vec3Array&gt;&nbsp;vertexArray&nbsp;=&nbsp;new&nbsp;osg::Vec3Array();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vertexArray-&gt;push_back(osg::Vec3(1,&nbsp;-0.25,&nbsp;-1));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vertexArray-&gt;push_back(osg::Vec3(1,&nbsp;0.75,&nbsp;-1));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vertexArray-&gt;push_back(osg::Vec3(1,&nbsp;0.75,&nbsp;1));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;vertexArray-&gt;push_back(osg::Vec3(1,&nbsp;-0.25,&nbsp;1));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;setVertexArray(vertexArray);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Vec4Array&gt;&nbsp;colorArray&nbsp;=&nbsp;new&nbsp;osg::Vec4Array();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;colorArray-&gt;push_back(osg::Vec4(1.0f,&nbsp;1.0f,&nbsp;1.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;setColorArray(colorArray);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Vec2Array&gt;&nbsp;texCoordArray&nbsp;=&nbsp;new&nbsp;osg::Vec2Array();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texCoordArray-&gt;push_back(osg::Vec2(0.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texCoordArray-&gt;push_back(osg::Vec2(1.0f,&nbsp;0.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texCoordArray-&gt;push_back(osg::Vec2(1.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;texCoordArray-&gt;push_back(osg::Vec2(0.0f,&nbsp;1.0f));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;setTexCoordArray(0,&nbsp;texCoordArray);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;geometry-&gt;addPrimitiveSet(new&nbsp;osg::DrawArrays(GL_TRIANGLE_FAN,&nbsp;0,&nbsp;4));&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;planeRTT.get()-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,&nbsp;rttTexture.get(),&nbsp;osg::StateAttribute::ON);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Did&nbsp;I&nbsp;miss&nbsp;something&nbsp;or&nbsp;did&nbsp;I&nbsp;mixed&nbsp;up&nbsp;some&nbsp;order?!&lt;br&gt;<br>
+Would&nbsp;be&nbsp;grateful&nbsp;for&nbsp;any&nbsp;help!&lt;br&gt;<br>
+&lt;br&gt;<br>
+...&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Andreas&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=63381#63381&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=63381#63381&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

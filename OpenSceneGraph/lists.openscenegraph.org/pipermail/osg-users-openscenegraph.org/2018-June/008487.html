@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Announcement%3A%20VulkanSceneGraph%20and%0A%20SceneGraphTestBed%21&In-Reply-To=%3CCAFN7Y%2BVHhdVop0cH0vEU0v0cG74ZVyUQbce8wE1pZNcCB3rX%2Bg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008486.html">
+   <LINK REL="Next"  HREF="008491.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Announcement%3A%20VulkanSceneGraph%20and%0A%20SceneGraphTestBed%21&In-Reply-To=%3CCAFN7Y%2BVHhdVop0cH0vEU0v0cG74ZVyUQbce8wE1pZNcCB3rX%2Bg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Jun 21 02:35:47 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008486.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+        <LI>Next message (by thread): <A HREF="008491.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8487">[ date ]</a>
+              <a href="thread.html#8487">[ thread ]</a>
+              <a href="subject.html#8487">[ subject ]</a>
+              <a href="author.html#8487">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Tim,
+
+On Thu, 21 Jun 2018 at 08:25, Tim Moore &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">timoore33 at gmail.com</A>&gt; wrote:
+
+&gt;<i> Before you move on, the big advantage of std::shared_ptr over intrusive
+</I>&gt;<i> reference counting is that support for weak pointers is rock solid. In the
+</I>&gt;<i> intrusive model, you can't implement thread-safe weak pointers without an
+</I>&gt;<i> auxiliary data structure, which complicates the implementation a lot. I
+</I>&gt;<i> know that one historic OSG performance win for  osg::ref_ptr  was the
+</I>&gt;<i> ability to not do the reference counting if it isn't needed, but with
+</I>&gt;<i> atomic increment / decrement implemented everywhere, do you think there is
+</I>&gt;<i> really much performance advantage for intrusive counting? Also,
+</I>&gt;<i> std::make_shared&lt;&gt;() allocates the shared_ptr control block in the same
+</I>&gt;<i> memory allocation as the shared object, so there need not be a memory
+</I>&gt;<i> fragmentation hit for using shared_ptr.
+</I>&gt;<i>
+</I>&gt;&gt;<i>
+</I>The big advantage of intrusive reference counting is that the ref_ptr&lt;&gt;
+holds a pointer to the actual object that you want to access, it's a single
+jump. shared_ptr&lt;&gt; is literary a pointer to a shared pointer (which is a
+reference counted object) to a the actual object that you want to access,
+it's two pointers, two objects vs one pointer and one object.  Scene graphs
+are predominately memory bandwidth limited so this extra level of
+indirection is not even close to as efficient as intrusive reference
+counting.  The only advantage that shared_ptr&lt;&gt; has is that it works with
+any type, but with a scene graph the types are mostly all under our control
+there is no cost in complexity of having intrusive reference counting, just
+stick it into the base class that most classes use anyway and your job is
+done.
+
+So... as my aim where possible is to make the VulkanSceneGraph more
+efficient than the OpenSceneGraph I can't just put chains around my ankles
+by adopting shared_ptr&lt;&gt;, instead I will acknowledge where the
+OpenSceneGraph already does something well and following this approach,
+albeit in a modern C++ way.
+
+For the thread safe observer_ptr&lt;&gt; you do need a separate auxiliary object,
+just like the OSG, so in my prototyping this is already what I have done.
+I already have an vsg::Auxiliary object that is created when required, this
+Auxiliary object is for more than just supporting observer_ptr&lt;&gt; though, it
+also stores optional extra user data.  Doing this shrinks the base
+vsg::Object/Node classes and improves memory utilization, providing a
+measurable gain in construction, destruction and traversal of the scene
+graph over what can be done with the OSG.
+
+When adopting new features of C++ you have to understand what is happening
+under the hood, for software that is performance critical like a scene
+graph you have to take the time to make sure there aren't hidden
+performance costs are, if there is a cost then you have to be really sure
+that this cost is worth the value it provides.  shared_ptr&lt;&gt;/weak_ptr&lt;&gt;
+don't cut it for the core scene graph.  There are plenty of other modern
+C++ features that are really neat and just make life easier without a cost,
+you'll see this sprinkled everywhere in the VulkanSceneGraph.
+
+Cheers,
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180621/6494911c/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180621/6494911c/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008486.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+	<LI>Next message (by thread): <A HREF="008491.html">[osg-users] Announcement: VulkanSceneGraph and SceneGraphTestBed!
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8487">[ date ]</a>
+              <a href="thread.html#8487">[ thread ]</a>
+              <a href="subject.html#8487">[ subject ]</a>
+              <a href="author.html#8487">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

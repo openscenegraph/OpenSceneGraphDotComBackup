@@ -1,0 +1,166 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20What%20wrong%20with%20my%20%22SubloadCallback%22%20derived%20class%3F&In-Reply-To=%3C1458745824.m2f.66611%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002584.html">
+   <LINK REL="Next"  HREF="002594.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?</H1>
+<!--htdig_noindex-->
+    <B>Zheng Li</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20What%20wrong%20with%20my%20%22SubloadCallback%22%20derived%20class%3F&In-Reply-To=%3C1458745824.m2f.66611%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?">908835930 at qq.com
+       </A><BR>
+    <I>Wed Mar 23 08:10:24 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002584.html">[osg-users] [3rdparty] What wrong with my &quot;SubloadCallback&quot;	derived class?
+</A></li>
+        <LI>Next message: <A HREF="002594.html">[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278808">[ date ]</a>
+              <a href="thread.html#278808">[ thread ]</a>
+              <a href="subject.html#278808">[ subject ]</a>
+              <a href="author.html#278808">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I wrote a &quot;SubloadCallback&quot; derived class and attach it to a texture2D object to update image dynamically,but unfortunately the texture image can not be updated,the texture always show a piece of white;below is my code,what wrong happened to it?
+
+void main()
+{
+	// the class to update texture image dynamically;
+	class UpdateTextureCallback : public osg::Texture2D::SubloadCallback
+	{
+	public:
+		osg::ref_ptr&lt;osg::Image&gt; _image;
+		SIZE m_szVideo;
+
+	public:
+		UpdateTextureCallback(int vwidth,int vheight) 
+		{
+			m_szVideo.cx = vwidth;
+			m_szVideo.cy = vheight;
+			_image = osgDB::readImageFile(&quot;C:\\test.jpg&quot;);
+			assert(_image-&gt;valid());
+			_image-&gt;scaleImage(vwidth,vheight,_image-&gt;r());
+		};
+
+		virtual ~UpdateTextureCallback()
+		{
+			_image = NULL;
+		};
+
+		virtual void load(const osg::Texture2D&amp; texture,osg::State&amp; state) const
+		{
+			glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,m_szVideo.cx,m_szVideo.cy,0,GL_BGRA_EXT,GL_UNSIGNED_BYTE,NULL);
+		};
+
+		virtual void subload(const osg::Texture2D&amp; texture,osg::State&amp; state) const
+		{
+			readImageFromDevice(_image);
+			glTexSubImage2D(GL_TEXTURE_2D,0,0,0,_image-&gt;s(),_image-&gt;t(),_image-&gt;getPixelFormat(),_image-&gt;getDataType(),_image-&gt;getDataPointer());
+		};
+	};
+
+	const int VideoWidth = 3840;
+	const int VideoHeight = 2160;
+	osg::ref_ptr&lt;osg::Texture2D&gt; texVideo = new osg::Texture2D();
+	texVideo-&gt;setResizeNonPowerOfTwoHint(false);
+	texVideo-&gt;setTextureSize(VideoWidth,VideoHeight);
+	texVideo-&gt;setInternalFormat(GL_RGBA);
+	texVideo-&gt;setSubloadCallback(new UpdateTextureCallback(VideoWidth,VideoHeight));
+	
+	osg::ref_ptr&lt;osg::Geode&gt; quad = new osg::Geode();
+	quad-&gt;addDrawable(createDrawable_Quad());
+	quad-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes(0,texVideo.get());
+
+	osg::ref_ptr&lt;osgViewer::Viewer&gt; viewer = new osgViewer::Viewer();
+	viewer-&gt;realize();
+	viewer-&gt;getCamera()-&gt;setAllowEventFocus(false);
+	viewer-&gt;getCamera()-&gt;setProjectionMatrixAsOrtho2D(0,1,0,1);
+	viewer-&gt;getCamera()-&gt;setViewMatrix(osg::Matrix::identity());
+	viewer-&gt;setSceneData( quad );
+	viewer-&gt;run();
+}
+
+osg::Geometry * createDrawable_Quad(float alpha=1.0f)
+{
+	osg::ref_ptr&lt;osg::Vec2Array&gt; vertices = new osg::Vec2Array;
+	vertices-&gt;push_back( osg::Vec2(0,0) );
+	vertices-&gt;push_back( osg::Vec2(0,1) );
+	vertices-&gt;push_back( osg::Vec2(1,1) );
+	vertices-&gt;push_back( osg::Vec2(1,0) );
+
+	osg::ref_ptr&lt;osg::Vec2Array&gt; texcoords = new osg::Vec2Array;
+	texcoords-&gt;push_back( osg::Vec2(0.0f, 0.0f) );
+	texcoords-&gt;push_back( osg::Vec2(0.0f, 1.0f) );
+	texcoords-&gt;push_back( osg::Vec2(1.0f, 1.0f) );
+	texcoords-&gt;push_back( osg::Vec2(1.0f, 0.0f) );
+
+	osg::ref_ptr&lt;osg::Vec4Array&gt; colors = new osg::Vec4Array();
+	colors-&gt;push_back(osg::Vec4(1.0f,1.0f,1.0f,alpha));
+
+	osg::ref_ptr&lt;osg::Geometry&gt; quad = new osg::Geometry;
+	quad-&gt;setVertexArray( vertices.get() );
+	quad-&gt;setColorArray(colors.get());
+	quad-&gt;setColorBinding( osg::Geometry::BIND_OVERALL );
+	quad-&gt;setTexCoordArray( 0, texcoords.get() );
+	quad-&gt;addPrimitiveSet( new osg::DrawArrays(GL_QUADS, 0, 4) );
+	return quad.release();
+}
+ 
+
+Thank you!
+
+Cheers,
+Zheng
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic94f5-2.php?p=66611#66611">http://forum.openscenegraph.org/viewtopic.php?p=66611#66611</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002584.html">[osg-users] [3rdparty] What wrong with my &quot;SubloadCallback&quot;	derived class?
+</A></li>
+	<LI>Next message: <A HREF="002594.html">[osg-users] What wrong with my &quot;SubloadCallback&quot; derived class?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278808">[ date ]</a>
+              <a href="thread.html#278808">[ thread ]</a>
+              <a href="subject.html#278808">[ subject ]</a>
+              <a href="author.html#278808">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

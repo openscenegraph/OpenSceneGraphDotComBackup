@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Prevention of near plane culling while moving camera
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Prevention%20of%20near%20plane%20culling%20while%20moving%20camera&In-Reply-To=%3CCAFN7Y%2BWxW-m_Bqhrfh2cwxAvghes3z7pkNx3BqzJnX5mdPCaOA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007813.html">
+   <LINK REL="Next"  HREF="007818.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Prevention of near plane culling while moving camera</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Prevention%20of%20near%20plane%20culling%20while%20moving%20camera&In-Reply-To=%3CCAFN7Y%2BWxW-m_Bqhrfh2cwxAvghes3z7pkNx3BqzJnX5mdPCaOA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Prevention of near plane culling while moving camera">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Mar 10 05:01:04 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007813.html">[osg-users] Prevention of near plane culling while moving camera
+</A></li>
+        <LI>Next message (by thread): <A HREF="007818.html">[osg-users] Prevention of near plane culling while moving camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7816">[ date ]</a>
+              <a href="thread.html#7816">[ thread ]</a>
+              <a href="subject.html#7816">[ subject ]</a>
+              <a href="author.html#7816">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Hartwig,
+
+By default the OSG automatically adjust the near and far planes on
+each new frame, so I'm surprised you are trying to do this yourself.
+The controls for this can be found in include/osg/CullSettings:
+
+        enum ComputeNearFarMode
+        {
+            DO_NOT_COMPUTE_NEAR_FAR = 0,
+            COMPUTE_NEAR_FAR_USING_BOUNDING_VOLUMES,
+            COMPUTE_NEAR_FAR_USING_PRIMITIVES,
+            COMPUTE_NEAR_USING_PRIMITIVES
+        };
+
+        void setComputeNearFarMode(ComputeNearFarMode cnfm) {
+_computeNearFar=cnfm; applyMaskAction(COMPUTE_NEAR_FAR_MODE); }
+        ComputeNearFarMode getComputeNearFarMode() const { return
+_computeNearFar;}
+
+osg::Camera subclasses from osg::CullSettings so you use this
+directly.  The default is COMPUTE_NEAR_FAR_USING_BOUNDING_VOLUMES.
+
+Another area I think is useful to clarify is that there is difference
+between culling and clipping:
+
+    Culling is done by the scene graph during the cull traversal and
+is done be testing the view frustum against the bounding sphere's of
+nodes in the scene.
+
+    Clipping is done by the GPU during rasterization of primitives,
+this is where the near/far values affect the result, so clipping
+happens at a per fragment basis.
+
+If whole objects disappear at once when they shouldn't be then this is
+likely an issue with Culling, most likely due to a bounding volume for
+a subgraph being incorrect for some reason.  Using vertex shaders to
+move objects might be the cause this issue.  Using
+Drawable::setInitBound() or better a
+Drawable::ComputeBoundingBoxCallback to provide the dimensions that
+the drawable will have once the vertex shader is taken into account.
+
+If objects get clipping out fragment by fragment then it's an issue of
+near or far plane clipping.  Again it can be caused by bounding volume
+issues as the the OSG compute near/far code needs valid bounding
+volume sizes to do it's compute work.  However, the near plane can
+only be pulled in so far before the near/far ratio grows too high to
+cause depth precision problems. so has to be clamped. The
+osg::CullSettings::setNearFar() ratio can be adjusted to make this
+clamping more or less conservative.   The default ratio is 0.0005.
+
+If you have a scene with a massive near/far range (think space sims)
+then it be necessary to use a non linear depth buffer or depth
+portioning.
+
+Robert.
+
+
+Robert
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007813.html">[osg-users] Prevention of near plane culling while moving camera
+</A></li>
+	<LI>Next message (by thread): <A HREF="007818.html">[osg-users] Prevention of near plane culling while moving camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7816">[ date ]</a>
+              <a href="thread.html#7816">[ thread ]</a>
+              <a href="subject.html#7816">[ subject ]</a>
+              <a href="author.html#7816">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

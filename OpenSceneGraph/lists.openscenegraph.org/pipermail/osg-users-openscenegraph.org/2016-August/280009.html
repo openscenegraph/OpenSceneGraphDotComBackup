@@ -1,0 +1,155 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] hook osg into other window
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20hook%20osg%20into%20other%20window&In-Reply-To=%3Ce7aa47a0-312f-0bf5-7e24-efffe558ee01%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003787.html">
+   <LINK REL="Next"  HREF="003790.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] hook osg into other window</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20hook%20osg%20into%20other%20window&In-Reply-To=%3Ce7aa47a0-312f-0bf5-7e24-efffe558ee01%40gmx.de%3E"
+       TITLE="[osg-users] hook osg into other window">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Mon Aug  1 01:25:03 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003787.html">[osg-users] Error with reading .obj file
+</A></li>
+        <LI>Next message: <A HREF="003790.html">[osg-users] hook osg into other window
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280009">[ date ]</a>
+              <a href="thread.html#280009">[ thread ]</a>
+              <a href="subject.html#280009">[ subject ]</a>
+              <a href="author.html#280009">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Han
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> Here is my problem.
+</I>&gt;<i>
+</I>&gt;<i> I am writing a plugin for a 3D modeling software , sketchup, and going to draw some 3D things into the OpenGL context. But it does not have any Api for customizing the rendering. So I have to hook my rendering stuffs into its render loop, which I do not have access.
+</I>Hasn't Sketchup some sort of plugin mechanism to allow for custom rendering?
+&gt;<i>
+</I>&gt;<i> I can get the Windows handle HWND of the top window, maybe from that I can track to which window is doing rendering and the OpenGL context.
+</I>&gt;<i>
+</I>&gt;<i> So here is my question,
+</I>&gt;<i> 1. If I get the HWND of the rendering window, can I draw additional things into it? Even if I do not have the access to the render loop, and start my own loop.
+</I>You can in general obtain the window handle and setup the OSG viewer 
+associated to it. I've attached some snippet which should illustrate this.
+I think you need to obtain some control over rendering order to make 
+this work.
+
+
+osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new 
+osg::GraphicsContext::Traits;
+     RECT rect;
+     auto hwnd = HWND(window_handle);
+     if (!GetWindowRect(hwnd, &amp;rect))
+     {
+         std::cout &lt;&lt; &quot;Error getting window rect from handle. Aborting&quot; 
+&lt;&lt; std::endl;
+         return false;
+     }
+     //TODO: get  other traits from external  window handle:
+     traits-&gt;x = 0;
+     traits-&gt;y = 0;
+     traits-&gt;width = rect.right - rect.left;
+     traits-&gt;height = rect.bottom - rect.top;
+     traits-&gt;windowDecoration = false;
+     traits-&gt;doubleBuffer = true;
+     traits-&gt;inheritedWindowData = new 
+osgViewer::GraphicsWindowWin32::WindowData(hwnd);
+     traits-&gt;supportsResize = true;
+     traits-&gt;sampleBuffers = mConfig.mNumSamples &gt; 0 ? 1: 0;
+     traits-&gt;samples = mConfig.mNumSamples;
+     traits-&gt;depth = mConfig.mDepthBits;
+
+
+     osg::ref_ptr&lt;osg::GraphicsContext&gt; gc = 
+osg::GraphicsContext::createGraphicsContext( traits.get() );
+     if (gc)
+     {
+         osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera;
+         camera-&gt;setGraphicsContext(gc);
+         camera-&gt;setViewport(new osg::Viewport(0,0, traits-&gt;width, 
+traits-&gt;height));
+         camera-&gt;setProjectionMatrixAsPerspective(30.0, 
+double(traits-&gt;width/ traits-&gt;height), 1.0, 1000.0);
+         mMainViewer-&gt;setCamera(camera);
+         camera-&gt;getOrCreateStateSet()-&gt;setGlobalDefaults();
+
+     }
+     else
+     {
+         std::cout &lt;&lt; &quot;Error creating context from traits&quot; &lt;&lt; std::endl;
+         return false;
+     }
+
+&gt;<i> 2. Another strategy, create another window and OpenGL context, that is overlaid on to existing window, but the overlay is transparent and do not interact with user.The new context only retrieves matrix from the existing one.
+</I>You can give it try if the first method fails. But you will have to make 
+sure to resize/transform the overlay window according to the &quot;parent&quot;s 
+transforms.
+
+Cheers
+Sebastian
+&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Han
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic95bb.php?p=68226#68226">http://forum.openscenegraph.org/viewtopic.php?p=68226#68226</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003787.html">[osg-users] Error with reading .obj file
+</A></li>
+	<LI>Next message: <A HREF="003790.html">[osg-users] hook osg into other window
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280009">[ date ]</a>
+              <a href="thread.html#280009">[ thread ]</a>
+              <a href="subject.html#280009">[ subject ]</a>
+              <a href="author.html#280009">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,119 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG_TEXTURE_POOL_SIZE issue
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG_TEXTURE_POOL_SIZE%20issue&In-Reply-To=%3CCAFN7Y%2BXLC%3DE%3DagC7-V%2Bu--588xJzjkQN2Fyfxdh226cdwJSy9w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280630.html">
+   <LINK REL="Next"  HREF="004409.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG_TEXTURE_POOL_SIZE issue</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG_TEXTURE_POOL_SIZE%20issue&In-Reply-To=%3CCAFN7Y%2BXLC%3DE%3DagC7-V%2Bu--588xJzjkQN2Fyfxdh226cdwJSy9w%40mail.gmail.com%3E"
+       TITLE="[osg-users] OSG_TEXTURE_POOL_SIZE issue">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sun Oct  9 00:31:24 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280630.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+        <LI>Next message: <A HREF="004409.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4408">[ date ]</a>
+              <a href="thread.html#4408">[ thread ]</a>
+              <a href="subject.html#4408">[ subject ]</a>
+              <a href="author.html#4408">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Wojtek,
+
+When I implemented the texture pool it never occurred to me that
+textures in the pool might be assigned to FBO's and not be suitable
+for reallocation. This is an oversight in it's design.
+
+&gt;<i>From the description it sounds like the texture pool scheme needs an
+</I>ability to not place texture's assigned with FBO's into the pool, or
+at least mark them as unsuitable for reuse.  Perhaps a flag in
+osg::Texture might be appropriate to declare whether this Texture is
+suitable for reuse or not.
+
+Robert.
+
+
+
+On 8 October 2016 at 23:16, Wojciech Lewandowski
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">w.p.lewandowski at gmail.com</A>&gt; wrote:
+&gt;<i> Hi, Robert,
+</I>&gt;<i>
+</I>&gt;<i> I believe we encountered an issue (bug?) related to maxTexturePoolSize
+</I>&gt;<i> handling. Our application is osgEarth + few high res overlays. We set
+</I>&gt;<i> OSG_TEXTURE_POOL_SIZE = 350 MB. It was recommended to us as one of env vars
+</I>&gt;<i> to let osgEarth perform optimally. Overlays are rendered as RTT cameras (FBO
+</I>&gt;<i> + 4K x4K texture2D attachments).  Overlay textures are not refreshed every
+</I>&gt;<i> frame. They are refreshed when some inputs change but this does not happen
+</I>&gt;<i> every frame.  And apparently thats the problem with maxTexturePoolSize. When
+</I>&gt;<i> we pass the texture limit and create new overlay texture, one of currently
+</I>&gt;<i> used overlay texture GL objects gets stolen. Suddenly new overlay uses that
+</I>&gt;<i> old GL texture object but old overlay texture is reset, its texture object
+</I>&gt;<i> is gone and scene looks bad.
+</I>&gt;<i>
+</I>&gt;<i> I have isolated this issue to handling of maxTexturePoolSize limit in
+</I>&gt;<i> TextureObjectSet::takeOrGenerate(Texture* texture). I believe I understand
+</I>&gt;<i> that this policy may work with Textures which have Images attached. Even if
+</I>&gt;<i> such texture has its GL object reset it may allocate or reuse new one and
+</I>&gt;<i> reload the data from Image when its applied again. But there is no such
+</I>&gt;<i> chance for texture which was dynamically rendered in FBO (and in fact still
+</I>&gt;<i> attached to that FBO). In our app there is a multitude of textures with
+</I>&gt;<i> images associated. Their GL objects can be safely &quot;borrowed&quot; if  memory
+</I>&gt;<i> limit is passed. But non of them is taken and unfortunately we are hit
+</I>&gt;<i> exactly where it hurts the most: in our FBO overlays.
+</I>&gt;<i>
+</I>&gt;<i> So my question is: Is this a bug or we missed some flag to prevent texture
+</I>&gt;<i> from scraping in TextureObjectSet::takeOrGenerate ?
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Wojtek Lewandowski
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280630.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+	<LI>Next message: <A HREF="004409.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4408">[ date ]</a>
+              <a href="thread.html#4408">[ thread ]</a>
+              <a href="subject.html#4408">[ subject ]</a>
+              <a href="author.html#4408">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

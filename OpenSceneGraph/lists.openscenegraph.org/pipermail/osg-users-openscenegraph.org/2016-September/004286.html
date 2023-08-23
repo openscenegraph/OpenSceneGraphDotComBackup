@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] SingleThreaded leading to whole application just running on one core
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3CCAFN7Y%2BUkQk9TdnwRyVYoHSj%2BerCMnSGcsVkQM7xCT45reNgi-g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004278.html">
+   <LINK REL="Next"  HREF="004296.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] SingleThreaded leading to whole application just running on one core</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3CCAFN7Y%2BUkQk9TdnwRyVYoHSj%2BerCMnSGcsVkQM7xCT45reNgi-g%40mail.gmail.com%3E"
+       TITLE="[osg-users] SingleThreaded leading to whole application just running on one core">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Sep 27 03:29:24 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004278.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+        <LI>Next message: <A HREF="004296.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4286">[ date ]</a>
+              <a href="thread.html#4286">[ thread ]</a>
+              <a href="subject.html#4286">[ subject ]</a>
+              <a href="author.html#4286">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+I have refined the affinity support in OpenThreads further introducing
+an OpenThreads::Affinity class that stores a set of CPU core numbers
+that the affinity should be set for, this is then used as input when
+setting the the native threading API's CPU affinity mask.
+
+The Affinity class can be set up with simply constructors or adding
+the CPU numbers one by one.  Since the new class wraps up various ways
+of setting up the affinity there isn't any need for having multiple
+function/methods that handle different parameters, it will also scale
+to any number of CPUs that you have on your system, so if you have
+something crazy like 4096 cores in your system then it'll handle it
+just fine.
+
+The class looks like:
+
+/**
+ *  @class Affinity
+ *  @brief  Simple container for specifying which CPU a thread should
+have affinity with.
+ *  An empty Affinity.activeCPUs/default constructed Affinity
+signifies that a thread should not have any specific affinity and be
+able to run on all available CPUs.
+ */
+class Affinity
+{
+public:
+
+    Affinity() {}
+
+    Affinity(unsigned int cpuNumber) { activeCPUs.insert(cpuNumber); }
+
+    Affinity(unsigned int cpuNumber, unsigned int cpuCount) {
+while(cpuCount&gt;0) { activeCPUs.insert(cpuNumber++); --cpuCount; } }
+
+    Affinity(const Affinity&amp; rhs) : activeCPUs(rhs.activeCPUs) {}
+
+    Affinity&amp; operator = (const Affinity&amp; rhs) { if (&amp;rhs!=this) {
+activeCPUs = rhs.activeCPUs; } return *this; }
+
+
+    /** add a specfied cpu core from the list to have affinity to. */
+    void add(unsigned int cpuNmber) { activeCPUs.insert(cpuNmber); }
+
+    /** remove a specfied cpu core from the list to have affinity to. */
+    void remove(unsigned int cpuNmber) { activeCPUs.erase(cpuNmber); }
+
+    /** return true if affinity has been provided for specific CPU cores.*/
+    operator bool () const { return !activeCPUs.empty(); }
+
+    typedef std::set&lt;unsigned int&gt; ActiveCPUs;
+
+    /** Set of CPUs that a thread should have affinity to.*/
+    ActiveCPUs activeCPUs;
+};
+
+I have implemented this for pthreads so far, this afternoon I'll boot
+into Windows and implement support for it.  The changes are checked
+into the openthreads_affinity_mask branch.
+
+I have also modified the thread test code previous posted in this
+thread so it illustrates/tests the new API, file attached.  The
+relevant part are:
+
+        if (arguments.read(&quot;--reset&quot;))
+        {
+            OpenThreads::SetProcessorAffinityOfCurrentThread(OpenThreads::Affinity());
+        }
+
+        unsigned int cpuNumber, cpuCount;
+        if (arguments.read(&quot;--cpus&quot;, cpuNumber, cpuCount))
+        {
+            OpenThreads::SetProcessorAffinityOfCurrentThread(OpenThreads::Affinity(cpuNumber,
+cpuCount));
+        }
+
+        if (arguments.read(&quot;--cpu&quot;, cpuNumber))
+        {
+            OpenThreads::SetProcessorAffinityOfCurrentThread(cpuNumber);
+        }
+
+Note the old usage of just passing a uint for the cpuNumber to
+SetProcessorAffinityOfCurrentThread() still works as its that to the
+constructors in Affinity so old OSG/OpenThreads that set affinity to
+specific core will still work just fine.
+
+For users that are having problem when using C++11 threads that are
+set up after the OSG's viewer is realized and sets the affinity to a
+specific core , you can use the default constructed Affinity() shown
+in the --reset branch above as this will effectively disable the
+affinity (empty is affinity is no affinity) and allow the threads to
+run on all cores.
+
+However, for graphics performance reasons I'd recommend against not
+setting affinity for you additional threads.  The right way to manage
+threading in a graphics application is to make sure the thread that
+runs the frame loop and runs any graphics thread run on with defined
+affinity to prevent the thread jumping cores and breaking CPU cache
+and pushing up bandwdith load on memory.  Scene graph traversals
+primarily CPU cache and bandwidth limited so it's crucial for
+performance.   This means that it's important that scene graph threads
+have affinity assigned to them, but it's also important that your
+other threads that are doing work don't get dropped on the same cores
+as the ones handling the scene graph otherwise the sharing of cores
+with multiple threads we create competition for cache and bandwidth,
+which would reduced performance and increase the likelyhood of frame
+drops.
+
+The way to avoid your own threads from interferring with the main
+scene graph threads would be to allocated your additional threads to
+cores that don't overlap.  So for an application running on iCoe7 that
+has core 0 and 1 dedicated to scene graph traversal/rendering, anuse
+something like:
+
+   OpenThreads::SetProcessorAffinityOfCurrentThread(OpenThreads::Affinity(2,
+6));
+
+Then set up your threads so they all run on core 2,3,4,5,6,7.  After
+you have set up all your threads and they are running then you'll need
+to reset the main thread affinity before running the frame loop so the
+OSG viewer's thread are left running on the correct cores.
+
+Then set up your threads so they all run on core 2,3,4,5,6,7.  After
+you have set up all your threads and they are running then you'll need
+to reset the main thread affinity before running the frame loop so the
+OSG viewer's thread are left running on the correct cores:
+
+    OpenThreads::SetProcessorAffinityOfCurrentThread(0);
+
+If you set up all your additional threads before the OSG sets up it's
+threads then you'll not need this last step as the osgViewer will set
+up the affinity for you.
+
+Robert.
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: main.cpp
+Type: text/x-c++src
+Size: 2672 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160927/d4f7cbbf/attachment-0003.cpp">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160927/d4f7cbbf/attachment-0003.cpp</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004278.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+	<LI>Next message: <A HREF="004296.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4286">[ date ]</a>
+              <a href="thread.html#4286">[ thread ]</a>
+              <a href="subject.html#4286">[ subject ]</a>
+              <a href="author.html#4286">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

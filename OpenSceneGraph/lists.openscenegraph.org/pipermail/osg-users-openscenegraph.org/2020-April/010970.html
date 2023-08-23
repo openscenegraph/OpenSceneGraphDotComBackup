@@ -1,0 +1,259 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Edit%203D%20%28osgt%29%20model%20to%20add%20DOFTransform%20and%0A%20perform%20%22node%22%20rotation&In-Reply-To=%3Cmailman.84650.1587207176.7169.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010964.html">
+   <LINK REL="Next"  HREF="010972.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Edit%203D%20%28osgt%29%20model%20to%20add%20DOFTransform%20and%0A%20perform%20%22node%22%20rotation&In-Reply-To=%3Cmailman.84650.1587207176.7169.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Sat Apr 18 03:52:45 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010964.html">[osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+</A></li>
+        <LI>Next message (by thread): <A HREF="010972.html">[osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10970">[ date ]</a>
+              <a href="thread.html#10970">[ thread ]</a>
+              <a href="subject.html#10970">[ subject ]</a>
+              <a href="author.html#10970">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, 
+
+ 
+
+you&#8217;re on the right track. Issue 1 stems from the fact, that you are not removing the original group or at least the childs you&#8217;re re-parenting (which still has references to your nodes).
+
+Concerning issue 2. If the parent is a transform, you obviously need to take this into account. PAT has a setPivotPoint IIRC, but another option is to structure your scenegraph as follows:
+
+ 
+
+Group -&gt; OrginalTransform/Parent -&gt; YourNewPAT -&gt; Geometry1 &#8230; GeometryN
+
+ 
+
+So leave the transform an put your PAT inbetween. That should solve the offset. If you&#8217;re still struggeling with this, maybe supply a minimal osgt.
+
+ 
+
+Cheers 
+Sebastian 
+
+ 
+
+From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; On Behalf Of OpenSceneGraph Users
+Sent: Samstag, 18. April 2020 01:38
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at googlegroups.com</A>&gt;
+Subject: Re: [osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+
+ 
+
+Sebastian
+
+ 
+
+Thank you for your patience and guidance. Programmatically definitely makes sense and I did look into that a short while back. I was initially looking at PositionAttitudeTransform. Now revisiting that approach, I understand why I started to look in another direction. Here is the dilemma I've come across. All is good until I try to assign a parent to the Transform 
+
+ 
+
+hive::display::FindNamedNodeVisitor fnnv(&quot;Main_Hub&quot;);
+
+scene-&gt;accept(fnnv);
+
+osg::ref_ptr &lt;osg::PositionAttitudeTransform&gt; autoTrans = new osg:: PositionAttitudeTransform();
+
+ 
+
+//puts node and all children under transform
+
+autoTrans-&gt;addChild(fnnv.getFoundNode());
+
+ 
+
+//set the parent (this doesn&#8217;t seem completely right to me, but may be)
+
+fnnv.getFoundNode()-&gt;getParent(0)-&gt;addChild(autoTrans);
+
+ 
+
+issue 1) at this point it appears to create a duplicate object (node and children) of the &#8220;Main_Hub&#8221; group; 
+
+issue 2) when I attempt rotation of the object it seems to be around the origin of the model instead of the previous &#8220;pivot pilot&#8221;
+
+ 
+
+I seem to be missing how to squeeze that transform between the parent and child appropriately.
+
+ 
+
+Jeremy
+
+
+On Thursday, April 16, 2020 at 9:41:55 AM UTC-4, OpenSceneGraph Users wrote:
+
+Hi Jeremy, 
+
+ 
+
+Yes programmatically. You simply create a  Transform, DOFTransform, whatever and set all the children of the original Group as childs of the new one (transforms, as you surely know are groups too).
+
+Lastly you want to want to set the parent as well. I haven&#8217;t used OSG in a while, but this pattern for sure works. 
+
+If you have more questions fell free to ask.
+
+ 
+
+Cheers 
+
+Sebastian 
+
+ 
+
+From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-user... at lists.openscenegraph.org</A> &lt;javascript:&gt; &gt; On Behalf Of OpenSceneGraph Users
+Sent: Donnerstag, 16. April 2020 14:36
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at googlegroups.com</A> &lt;javascript:&gt; &gt;
+Subject: Re: [osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+
+ 
+
+Sebastian, I've used the nodevisitor to find the node by name, the node just happens to be a osg::group. Could you explain what you mean by &quot;replace them with a DOF-Transform&quot;? I'm optimistic that you mean programmatically. My current approach is to replace it manually in the osgt file.
+
+ 
+
+Thanks
+
+Jeremy
+
+On Thursday, April 16, 2020 at 7:14:18 AM UTC-4, OpenSceneGraph Users wrote:
+
+Hi Jeremy, 
+
+ 
+
+As your geometry-parts are usually under a transform /group you can use a NodeVisitor to collect those (Find the nodes by name) and replace them with a DOF-Transform. 
+
+You could of course also mess with the osgt-files, but that would be a last resort. 
+
+ 
+
+Cheers
+
+Sebastian 
+
+ 
+
+From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-user... at lists.openscenegraph.org</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-user... at lists.openscenegraph.org</A>&gt; &gt; On Behalf Of OpenSceneGraph Users
+Sent: Mittwoch, 15. April 2020 21:54
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at googlegroups.com</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at googlegroups.com</A>&gt; &gt;
+Subject: [osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+
+ 
+
+First off, I hope everyone is staying sane and healthy during this pandemic.
+
+ 
+
+I&#8217;m working with a collection of 3D models that have come from a variety of different source but are now all in osgb format. For several of the models I&#8217;d like to grab a &#8220;node&#8221; and apply rotation.
+
+ 
+
+As I&#8217;m working through my understanding of the approach, I&#8217;ve created a simple application that loads the model, traverses the scene, returns a pointer to the &#8220;node&#8221;, casts to a DOFTransform and manipulate the &#8220;node&#8221; (DOFTransform). Snippet:
+
+FindNamedNodeVisitor fnnv(&quot;turret&quot;);
+
+scene-&gt;accept(fnnv);
+
+osg::ref_ptr&lt;osgSim::DOFTransform&gt; dofTrans = new osgSim::DOFTransform();
+
+dofTrans = dynamic_cast&lt;osgSim::DOFTransform*&gt;(fnnv.getFoundNode()-&gt;asTransform());
+
+if(dofTrans != NULL)
+
+                                //manipulate (rotate)   
+
+ 
+
+This approach works for the tank.osg model. Now I&#8217;m trying to apply this approach to a different model (helicopter for example). When I access the &#8220;node&#8221; of interest, &#8220;Main_Hub&#8221; which is an osg::Group I obviously can&#8217;t cast that to a osgSim::DOFTransform. I&#8217;m trying to get an understand of how I can change the model, now in osgt (readable) format, to a structure that can be used. I&#8217;ve been using the tank.osg as a guide and attempted to recreate a similar structure in the helicopter.osgt. I&#8217;m trying to take logical stabs in the dark, in the helicopter model I&#8217;ve attempted to simply renamed the &#8220;node&#8221; of interest from an osg::Group to osgSim::DOFTransform. The model still displays correctly, but the cast to osgSim::DOFTransform returns NULL. I thought there may be some required variables at are needed as part of the osgSim::DOFTransform structure, so I began adding currentHPR, currentTranslate, and currentScale and continued to add more bringing it in line with the tank.osg example. Through all the attempts I still getting NULL when casting.
+
+ 
+
+I&#8217;m looking for any guidance/suggestions/lessons learned on how to properly do this.
+
+ 
+
+Thanks in advance
+
+ 
+
+Jeremy
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com</A>&gt; .
+To view this discussion on the web visit  &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/cbb4b132-24a7-4e75-b10f-7474c1a99378%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/cbb4b132-24a7-4e75-b10f-7474c1a99378%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt; <A HREF="https://groups.google.com/d/msgid/osg-users/cbb4b132-24a7-4e75-b10f-7474c1a99378%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/cbb4b132-24a7-4e75-b10f-7474c1a99378%40googlegroups.com.</A>
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-... at googlegroups.com</A> &lt;javascript:&gt; .
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/5fcaac09-655d-44f9-bf97-47eee2a19b97%40googlegroups.com">https://groups.google.com/d/msgid/osg-users/5fcaac09-655d-44f9-bf97-47eee2a19b97%40googlegroups.com</A> &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/5fcaac09-655d-44f9-bf97-47eee2a19b97%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/5fcaac09-655d-44f9-bf97-47eee2a19b97%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt; .
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com</A> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com</A>&gt; .
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/4fe387e2-619f-48b5-8b8d-d99b1c28198d%40googlegroups.com">https://groups.google.com/d/msgid/osg-users/4fe387e2-619f-48b5-8b8d-d99b1c28198d%40googlegroups.com</A> &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/4fe387e2-619f-48b5-8b8d-d99b1c28198d%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/4fe387e2-619f-48b5-8b8d-d99b1c28198d%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt; .
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200418/8a791aee/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200418/8a791aee/attachment.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: smime.p7s
+Type: application/pkcs7-signature
+Size: 5593 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200418/8a791aee/attachment.bin">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200418/8a791aee/attachment.bin</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010964.html">[osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+</A></li>
+	<LI>Next message (by thread): <A HREF="010972.html">[osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10970">[ date ]</a>
+              <a href="thread.html#10970">[ thread ]</a>
+              <a href="subject.html#10970">[ subject ]</a>
+              <a href="author.html#10970">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

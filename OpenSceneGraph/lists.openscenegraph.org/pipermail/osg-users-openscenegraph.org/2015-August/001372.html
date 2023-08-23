@@ -1,0 +1,122 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Adding custom updater to the Viewer
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Adding%20custom%20updater%20to%20the%20Viewer&In-Reply-To=%3CCAFN7Y%2BXfh4F2oMgdXOaUEgYpY5j1qA5Yohc%3DAj56Pv76hzjHpg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001370.html">
+   <LINK REL="Next"  HREF="277587.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Adding custom updater to the Viewer</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Adding%20custom%20updater%20to%20the%20Viewer&In-Reply-To=%3CCAFN7Y%2BXfh4F2oMgdXOaUEgYpY5j1qA5Yohc%3DAj56Pv76hzjHpg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Adding custom updater to the Viewer">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Aug 31 00:16:20 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001370.html">[osg-users] Adding custom updater to the Viewer
+</A></li>
+        <LI>Next message: <A HREF="277587.html">[osg-users] Drawing the bounding sphere of a camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1372">[ date ]</a>
+              <a href="thread.html#1372">[ thread ]</a>
+              <a href="subject.html#1372">[ subject ]</a>
+              <a href="author.html#1372">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Sam,
+
+On 28 August 2015 at 19:04, sam &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">brkopac at gmail.com</A>&gt; wrote:
+
+&gt;<i> In my application class I'm currently inheriting the osg::Viewer and doing
+</I>&gt;<i> my own run function. It is basically a copy paste of the osg::Viewer
+</I>&gt;<i> function just so I can add my own custom &quot;update&quot; code for networking,
+</I>&gt;<i> entities, etc... Is there a way in osg I can do that without having to do
+</I>&gt;<i> this override?
+</I>&gt;<i>
+</I>
+The Viewer::run() method is just a convenience function that essential just
+wraps up:
+
+  viewer.realize();
+
+  while(!viewer.done())
+  {
+     viewer.advance();
+     viewer.eventTraversal();
+     viewer.updateTraversal();
+     viewer.renderingTraversals();
+  }
+
+In you own application you could just use this code and then insert the
+updates in this main loop without the need for sub-classing.
+
+However, if you did want to use subclassing, then Viewer::updateTraversal()
+is a virtual method so you can override just this method rather than
+Viewer::run(), you could then just add your updates to it i.e:
+
+  MyViewer::updateTraversal()
+  {
+     // my update code here
+     Viewer::updateTraversal(); // let the standard update traversal do
+it's stuff
+     // any more update code here if you want it..
+  }
+
+Another approach you can take is to subclass from osg::Operation to create
+a operation that you can do on the viewer to get called during the update
+ie.
+
+   viewer.addUpdateOperation(new MyOperartion());
+
+Or... use scene graph update callbacks.
+
+You can mix and match these approaches too if you so wish.  There are lots
+of different ways each with their own sweet spot for the type of operation
+that you want to do, what is best all depends upon your application needs -
+the OSG is used in many different types of applications so can't dictate a
+single approach to updating, instead leaves the door open for you to
+customize to own needs.
+
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150831/127bd701/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150831/127bd701/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001370.html">[osg-users] Adding custom updater to the Viewer
+</A></li>
+	<LI>Next message: <A HREF="277587.html">[osg-users] Drawing the bounding sphere of a camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1372">[ date ]</a>
+              <a href="thread.html#1372">[ thread ]</a>
+              <a href="subject.html#1372">[ subject ]</a>
+              <a href="author.html#1372">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Stereo View and makeLookAt()
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Stereo%20View%20and%20makeLookAt%28%29&In-Reply-To=%3CCAFN7Y%2BVYH6ipcVNh_tDYCZSVnT%2BPbjpd88_uL5N%2B4Szg4YoQ7w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280611.html">
+   <LINK REL="Next"  HREF="004392.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Stereo View and makeLookAt()</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Stereo%20View%20and%20makeLookAt%28%29&In-Reply-To=%3CCAFN7Y%2BVYH6ipcVNh_tDYCZSVnT%2BPbjpd88_uL5N%2B4Szg4YoQ7w%40mail.gmail.com%3E"
+       TITLE="[osg-users] Stereo View and makeLookAt()">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Oct  6 09:04:21 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280611.html">[osg-users] Stereo View and makeLookAt()
+</A></li>
+        <LI>Next message: <A HREF="004392.html">[osg-users] Stereo View and makeLookAt()
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4389">[ date ]</a>
+              <a href="thread.html#4389">[ thread ]</a>
+              <a href="subject.html#4389">[ subject ]</a>
+              <a href="author.html#4389">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Andreas,
+
+Is there a reason why you are using SceneView?  This class hasn't been
+a preferred end user class since around OSG-1.0...  Personally I'd
+recommend user osgViewer, it's interface is much more suitable for
+putting together flexible viewers.
+
+As for mixing and matching ways of setting the view matrix while still
+supporting the built in support stereo, well this all depends upon how
+you go about it.  Normally you'd simply modify the viewer's master
+Camera's view matrix anyhow you want and then the stereo will work
+behind the scenes for you.  The built in Camera manipulators also set
+the FusionDistanceValue automatically, this helps set the effective
+convergence point of the left and right eyes, perhaps this is what the
+difference relative to your case.
+
+One thing to be aware is that certain types of camera manipulators
+favour scaling the FusionDistance to the distance between the eye
+point and center of rotation, the trackball is good example of this,
+while others like the drive or flight manipulators have a fixed
+FusionDistance that one should set to the distance between the eye and
+display system to get a proper 1:1 scaling of the virtual world to
+real world.
+
+Robert.
+
+Robert.
+
+On 6 October 2016 at 16:16, Andreas Goebel &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">a-goebel at gmx.de</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> to set up my view matrix I use a very simple approach with makeLookAt().
+</I>&gt;<i>
+</I>&gt;<i> Like this:
+</I>&gt;<i>
+</I>&gt;<i>         centerPos = osg::Vec3(0,0,0);
+</I>&gt;<i>         osg::Vec3 viewPos(
+</I>&gt;<i>         cos(viewElev) * sin(viewRot),
+</I>&gt;<i>         cos(viewElev) * cos(viewRot),
+</I>&gt;<i>         sin(viewElev));
+</I>&gt;<i>         osg::Vec3 up;
+</I>&gt;<i>         if ( (viewElev &gt; -1.0*osg::PI_2) &amp;&amp; (viewElev &lt; osg::PI_2) )
+</I>&gt;<i>             up = osg::Z_AXIS;
+</I>&gt;<i>         else
+</I>&gt;<i>             up = osg::Z_AXIS*-1.0;
+</I>&gt;<i>         osg::Matrixd look;
+</I>&gt;<i>         viewPos *= 10.0;
+</I>&gt;<i>         look.makeLookAt(viewPos, centerPos, up);
+</I>&gt;<i>         sceneView-&gt;setViewMatrix(look);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Recently I&#180;ve discovered that in stereo mode all my objects are behind
+</I>&gt;<i> the screen, whereas when I use an osgviewer, for example, it&#180;s possible
+</I>&gt;<i> to pull objects before the screen.
+</I>&gt;<i>
+</I>&gt;<i> I think that usually objects before (0,0,0) appear before the screen.
+</I>&gt;<i>
+</I>&gt;<i> Is it generally impossible to set up the view matrix with makeLookAt in
+</I>&gt;<i> connection with stereo (I use the osg builtin stereo features)?
+</I>&gt;<i>
+</I>&gt;<i> If so, what route should I take? I manipulate view rotation and view
+</I>&gt;<i> elevation with the mouse.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i>
+</I>&gt;<i> Andreas
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280611.html">[osg-users] Stereo View and makeLookAt()
+</A></li>
+	<LI>Next message: <A HREF="004392.html">[osg-users] Stereo View and makeLookAt()
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4389">[ date ]</a>
+              <a href="thread.html#4389">[ thread ]</a>
+              <a href="subject.html#4389">[ subject ]</a>
+              <a href="author.html#4389">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,252 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Setting view matrix seems to lag behind on frame
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Setting%20view%20matrix%20seems%20to%20lag%20behind%20on%20frame&In-Reply-To=%3C565DC3C4.9090600%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   
+   <LINK REL="Next"  HREF="002104.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Setting view matrix seems to lag behind on frame</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Setting%20view%20matrix%20seems%20to%20lag%20behind%20on%20frame&In-Reply-To=%3C565DC3C4.9090600%40gmx.de%3E"
+       TITLE="[osg-users] Setting view matrix seems to lag behind on frame">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Tue Dec  1 07:59:00 PST 2015</I>
+    <P><UL>
+        
+        <LI>Next message: <A HREF="002104.html">[osg-users] Setting view matrix seems to lag behind on frame
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278326">[ date ]</a>
+              <a href="thread.html#278326">[ thread ]</a>
+              <a href="subject.html#278326">[ subject ]</a>
+              <a href="author.html#278326">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+I've attached a small example, where I try to set the view matrix in a 
+way, the camera always faces a certain direction.
+Unfortunately it seems, the view matrix I supply is applied one frame 
+too late.
+
+(The camera should always face the geometry, so there should be a cross 
+made of blue and a green line)
+
+Is there something wrong with the way I supply the view matrix?
+
+Cheers
+Sebastian
+-------------- next part --------------
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osg/Array&gt;
+#include &lt;osgGA/CameraManipulator&gt;
+#include &lt;osgGA/TrackballManipulator&gt;
+#include &lt;osg/Drawable&gt;
+#include &lt;osg/LineWidth&gt;
+
+
+
+class SetCameraManipulator : public osgGA::CameraManipulator
+{
+public:
+	SetCameraManipulator() 
+		: osgGA::CameraManipulator()
+	{
+	}
+
+	void setByMatrix( const osg::Matrixd&amp; matrix )			
+	{
+		mMatrix  = matrix;
+	}
+
+	void setByInverseMatrix( const osg::Matrixd&amp; matrix )	
+	{ 
+		setByMatrix( osg::Matrixd::inverse(matrix) );
+	}
+
+	osg::Matrixd getMatrix() const			
+	{ 
+		return mMatrix;
+	}
+
+	osg::Matrixd getInverseMatrix() const
+	{ 
+		return osg::Matrixd::inverse(mMatrix);
+	} 
+
+	bool handle( const osgGA::GUIEventAdapter&amp; ea,osgGA::GUIActionAdapter&amp; aa )
+	{
+		return false;
+	}
+
+	void computePosition( const osg::Vec3&amp; eye,const osg::Vec3&amp; center,const osg::Vec3&amp; up )
+	{
+		//empty
+	}
+
+private:
+	osg::Matrixd mMatrix;
+};
+
+
+osg::Vec3 findPerpendicular(const osg::Vec3&amp; v)
+{
+	osg::Vec3 p1(v.z(), v.z(), -v.x()-v.y());
+	osg::Vec3 p2(-v.y()-v.z(), v.x(), v.x());
+	if (osg::equivalent(p2.length(), 0))
+	{
+		p1.normalize();
+		return p1;
+	}
+	p2.normalize();
+	return p2;
+}
+
+
+
+
+osg::ref_ptr&lt;osg::Geode&gt; createCross()
+{
+	osg::ref_ptr&lt;osg::Geode&gt; normal_vis = new osg::Geode;
+	osg::Vec3Array* vec3_array = new osg::Vec3Array(6);
+	(*vec3_array)[0] = osg::Vec3(0,0,0);
+	(*vec3_array)[1] = osg::Vec3(0,0,1);
+	(*vec3_array)[2] = osg::Vec3(0,-1,1);
+	(*vec3_array)[3] = osg::Vec3(0,1,1);
+	(*vec3_array)[4] = osg::Vec3(-1,0,1);
+	(*vec3_array)[5] = osg::Vec3(1,0,1);
+	osg::Vec4Array* col_array = new osg::Vec4Array(6);
+	(*col_array)[0] = osg::Vec4(1,0,0,1);
+	(*col_array)[1] = osg::Vec4(1,0,0,1);
+	(*col_array)[2] = osg::Vec4(0,1,0,1);
+	(*col_array)[3] = osg::Vec4(0,1,0,1);
+	(*col_array)[4] = osg::Vec4(0,0,1,1);
+	(*col_array)[5] = osg::Vec4(0,0,1,1);
+	osg::Geometry* mesh_geometry = new osg::Geometry;
+	normal_vis-&gt;addDrawable(mesh_geometry);
+	mesh_geometry-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES, 0, 6));
+	mesh_geometry-&gt;setVertexArray(vec3_array);
+	mesh_geometry-&gt;setColorArray(col_array, osg::Array::BIND_PER_VERTEX);
+	mesh_geometry-&gt;setUseVertexBufferObjects(true);	
+	normal_vis-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(new osg::LineWidth(5));
+	normal_vis-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+	return normal_vis;
+}
+/// retrieve a random vector in the unit cube. 
+osg::Vec3 randomVec()
+{
+	return osg::Vec3(static_cast&lt;float&gt;(rand()) / RAND_MAX, static_cast&lt;float&gt;(rand()) / RAND_MAX, static_cast&lt;float&gt;(rand()) /RAND_MAX);
+}
+
+int main(int argc, char** argv)
+{
+	osgViewer::Viewer viewer;
+	
+	viewer.setUpViewInWindow(110,110,256,256,0);
+	
+	osg::Group* root = new osg::Group;
+	viewer.setSceneData(root);
+
+	osg::ref_ptr&lt;osg::Geode&gt; normal_vis = createCross();
+	root-&gt;addChild(normal_vis);
+	///set out matrix-camera manipulator
+	SetCameraManipulator* scm = new SetCameraManipulator;
+	viewer.setCameraManipulator(scm);
+	//viewer.setCameraManipulator(new osgGA::TrackballManipulator);
+	viewer.getCamera()-&gt;setProjectionMatrixAsPerspective(45.0,1,0.01, 1000.0);
+
+
+	std::vector&lt;osg::Vec3&gt; random_points;
+	std::vector&lt;osg::Vec3&gt; random_normals;
+	
+	for (unsigned int i = 0; i &lt; 100; ++i)
+	{
+		random_points.push_back(randomVec());
+		osg::Vec3d normal = randomVec();
+		normal.normalize();
+		random_normals.push_back(normal);
+	}
+
+	osg::Matrix mat;
+
+	viewer.realize();
+	while (!viewer.done())
+	{
+	
+		for(unsigned int i = 0; i &lt; random_points.size(); ++i)
+		{
+			osg::Vec3d normal = random_normals[i];
+			osg::Vec3d pos	  = random_points[i];
+				
+				
+			osg::Vec3 perp = findPerpendicular(normal);
+
+			//set the camera manipulator to look at the pos with the given direction
+			mat.makeLookAt(pos + normal * 2, pos, perp);
+			scm-&gt;setByInverseMatrix(mat);
+			//viewer.getCamera()-&gt;setViewMatrixAsLookAt(pos, pos + normal, perp);
+				
+			//update the normal;
+			osg::Vec3Array* vec3_array = dynamic_cast&lt;osg::Vec3Array*&gt;(normal_vis-&gt;getDrawable(0)-&gt;asGeometry()-&gt;getVertexArray());
+			(*vec3_array)[0] = pos;
+			(*vec3_array)[1] = pos + normal;
+
+			(*vec3_array)[2] = pos  + perp;
+			(*vec3_array)[3] = pos  - perp;
+				
+			osg::Vec3 cross = (perp ^ normal);
+			(*vec3_array)[4] = pos + cross;
+			(*vec3_array)[5] = pos - cross;
+				
+			vec3_array-&gt;dirty();
+			normal_vis-&gt;dirtyBound();
+			
+				
+			//if we do this, we get the correct view every like 2 frames
+			//with only one frame call, we seem to lag behind. I.e. the view matrix is applied the frame after the current-
+			viewer.frame();
+			viewer.frame();
+			
+		}
+		
+	}
+}
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	
+	<LI>Next message: <A HREF="002104.html">[osg-users] Setting view matrix seems to lag behind on frame
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278326">[ date ]</a>
+              <a href="thread.html#278326">[ thread ]</a>
+              <a href="subject.html#278326">[ subject ]</a>
+              <a href="author.html#278326">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

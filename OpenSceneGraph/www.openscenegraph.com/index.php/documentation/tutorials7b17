@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- generator="Joomla! - Open Source Content Management" -->
+<feed xmlns="http://www.w3.org/2005/Atom"  xml:lang="en-gb">
+	<title type="text">Tutorials</title>
+	<subtitle type="text">Project website for OpenSceneGraph</subtitle>
+	<link rel="alternate" type="text/html" href="https://www.openscenegraph.com"/>
+	<id>https://www.openscenegraph.com/index.php/documentation/tutorials</id>
+	<updated>2023-08-23T00:51:14+00:00</updated>
+	<author>
+		<name>OpenSceneGraph</name>
+		<email>robert@openscenegraph.com</email>
+	</author>
+	<generator uri="https://www.joomla.org">Joomla! - Open Source Content Management</generator>
+	<link rel="self" type="application/atom+xml" href="https://www.openscenegraph.com/index.php/documentation/tutorials?format=feed&amp;type=atom"/>
+	<entry>
+		<title>Analysing a Scenegraph</title>
+		<link rel="alternate" type="text/html" href="https://www.openscenegraph.com/index.php/documentation/tutorials/72-analysing-a-scenegraph"/>
+		<published>2012-10-02T23:51:41+00:00</published>
+		<updated>2012-10-02T23:51:41+00:00</updated>
+		<id>https://www.openscenegraph.com/index.php/documentation/tutorials/72-analysing-a-scenegraph</id>
+		<author>
+			<name>openscenegraph</name>
+			<email>jtorresfabra@gmail.com</email>
+		</author>
+		<summary type="html">&lt;div id=&quot;content&quot; class=&quot;wiki&quot;&gt;
+&lt;div class=&quot;wikipage searchable&quot;&gt;Once a scenegraph is loaded you may wish to analyse the in memory tree of nodes. Ideally you would use a nodevisitor, but here is a simple piece of C++ code that works:
+&lt;pre class=&quot;wiki&quot;&gt; void analyseGeode(osg::Geode *geode);
+
+void analysePrimSet(osg::PrimitiveSet*prset, const osg::Vec3Array *verts);
+
+void analyse(osg::Node *nd) {
+	/// here you have found a group.
+    osg::Geode *geode = dynamic_cast&amp;lt;osg::Geode *&amp;gt; (nd);
+	if (geode) { // analyse the geode. If it isnt a geode the dynamic cast gives NULL.
+		analyseGeode(geode);
+	} else {
+		osg::Group *gp = dynamic_cast&amp;lt;osg::Group *&amp;gt; (nd);
+		if (gp) {
+			osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Group &quot;&amp;lt;&amp;lt;  gp-&amp;gt;getName() &amp;lt;&amp;lt;std::endl;
+			for (unsigned int ic=0; ic&amp;lt;gp-&amp;gt;getNumChildren(); ic++) {
+				analyse(gp-&amp;gt;getChild(ic));
+			}
+		} else {
+			osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Unknown node &quot;&amp;lt;&amp;lt;  nd &amp;lt;&amp;lt;std::endl;
+		}
+	}
+}
+// divide the geode into its drawables and primitivesets:
+
+void analyseGeode(osg::Geode *geode) {
+    for (unsigned int i=0; i&amp;lt;geode-&amp;gt;getNumDrawables(); i++) {
+		osg::Drawable *drawable=geode-&amp;gt;getDrawable(i);
+		osg::Geometry *geom=dynamic_cast&amp;lt;osg::Geometry *&amp;gt; (drawable);
+		for (unsigned int ipr=0; ipr&amp;lt;geom-&amp;gt;getNumPrimitiveSets(); ipr++) {
+			osg::PrimitiveSet* prset=geom-&amp;gt;getPrimitiveSet(ipr);
+			osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Primitive Set &quot;&amp;lt;&amp;lt; ipr &amp;lt;&amp;lt; std::endl;
+			analysePrimSet(prset, dynamic_cast&amp;lt;const osg::Vec3Array*&amp;gt;(geom-&amp;gt;getVertexArray()));
+		}
+    }
+}
+
+void analysePrimSet(osg::PrimitiveSet*prset, const osg::Vec3Array *verts) {
+	unsigned int ic;
+	unsigned int i2;
+	unsigned int nprim=0;
+	osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Prim set type &quot;&amp;lt;&amp;lt; prset-&amp;gt;getMode() &amp;lt;&amp;lt; std::endl;
+	for (ic=0; ic&amp;lt;prset-&amp;gt;getNumIndices(); ic++) { // NB the vertices are held in the drawable -
+		osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;vertex &quot;&amp;lt;&amp;lt; ic &amp;lt;&amp;lt; &quot; is index &quot;&amp;lt;&amp;lt;prset-&amp;gt;index(ic) &amp;lt;&amp;lt; &quot; at &quot; &amp;lt;&amp;lt;
+			(* verts)[prset-&amp;gt;index(ic)].x() &amp;lt;&amp;lt; &quot;,&quot; &amp;lt;&amp;lt;
+			(* verts)[prset-&amp;gt;index(ic)].y() &amp;lt;&amp;lt; &quot;,&quot; &amp;lt;&amp;lt; 
+			(* verts)[prset-&amp;gt;index(ic)].z() &amp;lt;&amp;lt; std::endl;
+    }
+	// you might want to handle each type of primset differently: such as:
+	switch (prset-&amp;gt;getMode()) {
+	case osg::PrimitiveSet::TRIANGLES: // get vertices of triangle
+		osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Triangles &quot;&amp;lt;&amp;lt; nprim &amp;lt;&amp;lt; &quot; is index &quot;&amp;lt;&amp;lt;prset-&amp;gt;index(ic) &amp;lt;&amp;lt; std::endl;
+		for (i2=0; i2&amp;lt;prset-&amp;gt;getNumIndices()-2; i2+=3) {
+		}
+	break;
+	case osg::PrimitiveSet::TRIANGLE_STRIP: // look up how tristrips are coded
+	break;
+	// etc for all the primitive types you expect. EG quads, quadstrips lines line loops....
+	}
+}
+&lt;/pre&gt;
+&lt;p&gt;This code can be inserted into (say) osgviewer.cpp, and called thus:&lt;/p&gt;
+&lt;pre class=&quot;wiki&quot;&gt;analyse(loadedModel.get());
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;</summary>
+		<content type="html">&lt;div id=&quot;content&quot; class=&quot;wiki&quot;&gt;
+&lt;div class=&quot;wikipage searchable&quot;&gt;Once a scenegraph is loaded you may wish to analyse the in memory tree of nodes. Ideally you would use a nodevisitor, but here is a simple piece of C++ code that works:
+&lt;pre class=&quot;wiki&quot;&gt; void analyseGeode(osg::Geode *geode);
+
+void analysePrimSet(osg::PrimitiveSet*prset, const osg::Vec3Array *verts);
+
+void analyse(osg::Node *nd) {
+	/// here you have found a group.
+    osg::Geode *geode = dynamic_cast&amp;lt;osg::Geode *&amp;gt; (nd);
+	if (geode) { // analyse the geode. If it isnt a geode the dynamic cast gives NULL.
+		analyseGeode(geode);
+	} else {
+		osg::Group *gp = dynamic_cast&amp;lt;osg::Group *&amp;gt; (nd);
+		if (gp) {
+			osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Group &quot;&amp;lt;&amp;lt;  gp-&amp;gt;getName() &amp;lt;&amp;lt;std::endl;
+			for (unsigned int ic=0; ic&amp;lt;gp-&amp;gt;getNumChildren(); ic++) {
+				analyse(gp-&amp;gt;getChild(ic));
+			}
+		} else {
+			osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Unknown node &quot;&amp;lt;&amp;lt;  nd &amp;lt;&amp;lt;std::endl;
+		}
+	}
+}
+// divide the geode into its drawables and primitivesets:
+
+void analyseGeode(osg::Geode *geode) {
+    for (unsigned int i=0; i&amp;lt;geode-&amp;gt;getNumDrawables(); i++) {
+		osg::Drawable *drawable=geode-&amp;gt;getDrawable(i);
+		osg::Geometry *geom=dynamic_cast&amp;lt;osg::Geometry *&amp;gt; (drawable);
+		for (unsigned int ipr=0; ipr&amp;lt;geom-&amp;gt;getNumPrimitiveSets(); ipr++) {
+			osg::PrimitiveSet* prset=geom-&amp;gt;getPrimitiveSet(ipr);
+			osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Primitive Set &quot;&amp;lt;&amp;lt; ipr &amp;lt;&amp;lt; std::endl;
+			analysePrimSet(prset, dynamic_cast&amp;lt;const osg::Vec3Array*&amp;gt;(geom-&amp;gt;getVertexArray()));
+		}
+    }
+}
+
+void analysePrimSet(osg::PrimitiveSet*prset, const osg::Vec3Array *verts) {
+	unsigned int ic;
+	unsigned int i2;
+	unsigned int nprim=0;
+	osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Prim set type &quot;&amp;lt;&amp;lt; prset-&amp;gt;getMode() &amp;lt;&amp;lt; std::endl;
+	for (ic=0; ic&amp;lt;prset-&amp;gt;getNumIndices(); ic++) { // NB the vertices are held in the drawable -
+		osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;vertex &quot;&amp;lt;&amp;lt; ic &amp;lt;&amp;lt; &quot; is index &quot;&amp;lt;&amp;lt;prset-&amp;gt;index(ic) &amp;lt;&amp;lt; &quot; at &quot; &amp;lt;&amp;lt;
+			(* verts)[prset-&amp;gt;index(ic)].x() &amp;lt;&amp;lt; &quot;,&quot; &amp;lt;&amp;lt;
+			(* verts)[prset-&amp;gt;index(ic)].y() &amp;lt;&amp;lt; &quot;,&quot; &amp;lt;&amp;lt; 
+			(* verts)[prset-&amp;gt;index(ic)].z() &amp;lt;&amp;lt; std::endl;
+    }
+	// you might want to handle each type of primset differently: such as:
+	switch (prset-&amp;gt;getMode()) {
+	case osg::PrimitiveSet::TRIANGLES: // get vertices of triangle
+		osg::notify(osg::WARN) &amp;lt;&amp;lt; &quot;Triangles &quot;&amp;lt;&amp;lt; nprim &amp;lt;&amp;lt; &quot; is index &quot;&amp;lt;&amp;lt;prset-&amp;gt;index(ic) &amp;lt;&amp;lt; std::endl;
+		for (i2=0; i2&amp;lt;prset-&amp;gt;getNumIndices()-2; i2+=3) {
+		}
+	break;
+	case osg::PrimitiveSet::TRIANGLE_STRIP: // look up how tristrips are coded
+	break;
+	// etc for all the primitive types you expect. EG quads, quadstrips lines line loops....
+	}
+}
+&lt;/pre&gt;
+&lt;p&gt;This code can be inserted into (say) osgviewer.cpp, and called thus:&lt;/p&gt;
+&lt;pre class=&quot;wiki&quot;&gt;analyse(loadedModel.get());
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;</content>
+		<category term="Tutorials" />
+	</entry>
+</feed>

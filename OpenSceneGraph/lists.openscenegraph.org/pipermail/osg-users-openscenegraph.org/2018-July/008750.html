@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Model(s) load ~10 times longer in 3.6.x than 3.4.x series in osgviewer (and my in-house software)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Model%28s%29%20load%20%7E10%20times%20longer%20in%203.6.x%20than%203.4.x%0A%20series%20in%20osgviewer%20%28and%20my%20in-house%20software%29&In-Reply-To=%3CCAFN7Y%2BX-81qfv1g8x7CVX5zgfsyZfbKwzy4Y4su0fNswJYrZpQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008748.html">
+   <LINK REL="Next"  HREF="008751.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Model(s) load ~10 times longer in 3.6.x than 3.4.x series in osgviewer (and my in-house software)</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Model%28s%29%20load%20%7E10%20times%20longer%20in%203.6.x%20than%203.4.x%0A%20series%20in%20osgviewer%20%28and%20my%20in-house%20software%29&In-Reply-To=%3CCAFN7Y%2BX-81qfv1g8x7CVX5zgfsyZfbKwzy4Y4su0fNswJYrZpQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Model(s) load ~10 times longer in 3.6.x than 3.4.x series in osgviewer (and my in-house software)">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Jul 20 00:26:58 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008748.html">[osg-users] Model(s) load ~10 times longer in 3.6.x than 3.4.x series in osgviewer (and my in-house software)
+</A></li>
+        <LI>Next message (by thread): <A HREF="008751.html">[osg-users] Model(s) load ~10 times longer in 3.6.x than 3.4.x series in osgviewer (and my in-house software)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8750">[ date ]</a>
+              <a href="thread.html#8750">[ thread ]</a>
+              <a href="subject.html#8750">[ subject ]</a>
+              <a href="author.html#8750">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi James,
+
+The checks are needed in Geometry,cpp and Drawable.cpp, if you've
+changed these you will likely be breaking something else.  You might
+not be see any issues yet, and might not ever, but as I don't know
+exactly what you've changed I can't say.  All I can say it's not
+really fixing the problem, it's fixing a symptom and likely to have
+un-intended consequences.
+
+As I said previous the problem is the obj plugin loading meshes with a
+single triangle per PrimitiveSet.  This is the absolutely worst/least
+efficient way to create a mesh in the OSG and OpenGL.  If you want an
+example of how not to do things this would be a classic example.
+Expecting the OSG to patch up a bad scene graph after it's been
+creating is only hiding where the problem is.
+
+Trust me, the problem is the obj plugin, this needs fixing.
+
+Robert.
+
+
+On Thu, 19 Jul 2018 at 22:48, James Davis &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">davisjamesf at gmail.com</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> After changing two files, I have ive files loading very fast AND osgconv converting obj files to osg and ive files very fast.
+</I>&gt;<i>
+</I>&gt;<i> You'll have to forgive my lack of understanding a lot of the internals of OSG.  The code I changed was due to noticing where bottle necks (for loops) were occurring when loading .ive files in my program.   Once I changed the code and created new libraries, I tested them on the osgconv with speed success.
+</I>&gt;<i>
+</I>&gt;<i> The code I changed was NOT in the obj plugin but in the osg library itself.  I changed a few lines to previous changes compared to 3.4.1.  Note that I did attempt at trying to use the 3.4.1 obj plugin, but quickly found it was not the problem.
+</I>&gt;<i>
+</I>&gt;<i> The two files I changed were Geometry.cpp and Drawable.cpp, and I'll need some help understanding why my changes really made a difference.
+</I>&gt;<i>
+</I>&gt;<i> When I would 'break' in my debugger when loading an ive file, most of the time the process ended up on a for loop in Geometry.cpp (line 582) in the getOrCreateElementBufferObject method.   The callstack was Geometry::read, Geometry::addPrimitiveSet, Geometry::addElementBufferObjectRequired.
+</I>&gt;<i>
+</I>&gt;<i> I decided to make the change line 28 to #if 1 and add back all the if conditions of _useVertexBufferObjects.   This fixed the load .ive issue but still did not fix the osgconv.   I had to change Drawable.cpp line 229 to #if 1 to make _userVertecBufferObjects = false.
+</I>&gt;<i>
+</I>&gt;<i> Can someone take a look at the impact _useVertexBufferObjects has on certain files being loaded.  It seems a check needs to be before the for loop of traversing through the drawElementList if it really doesn't need to be called.
+</I>&gt;<i>
+</I>&gt;<i> Thanks!
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic350b.php?p=74366#74366">http://forum.openscenegraph.org/viewtopic.php?p=74366#74366</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008748.html">[osg-users] Model(s) load ~10 times longer in 3.6.x than 3.4.x series in osgviewer (and my in-house software)
+</A></li>
+	<LI>Next message (by thread): <A HREF="008751.html">[osg-users] Model(s) load ~10 times longer in 3.6.x than 3.4.x series in osgviewer (and my in-house software)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8750">[ date ]</a>
+              <a href="thread.html#8750">[ thread ]</a>
+              <a href="subject.html#8750">[ subject ]</a>
+              <a href="author.html#8750">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

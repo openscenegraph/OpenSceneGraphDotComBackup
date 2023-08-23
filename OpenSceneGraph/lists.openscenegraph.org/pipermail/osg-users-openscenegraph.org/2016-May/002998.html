@@ -1,0 +1,173 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Using multiples texture for a geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20multiples%20texture%20for%20a%20geometry&In-Reply-To=%3CCAFN7Y%2BUdt8AMh3H9oiGxQbjZ9N0yf6PFs%2BAZBNkd-5Gx5OQCjQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002997.html">
+   <LINK REL="Next"  HREF="003000.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Using multiples texture for a geometry</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20multiples%20texture%20for%20a%20geometry&In-Reply-To=%3CCAFN7Y%2BUdt8AMh3H9oiGxQbjZ9N0yf6PFs%2BAZBNkd-5Gx5OQCjQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Using multiples texture for a geometry">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu May  5 00:49:58 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002997.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+        <LI>Next message: <A HREF="003000.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2998">[ date ]</a>
+              <a href="thread.html#2998">[ thread ]</a>
+              <a href="subject.html#2998">[ subject ]</a>
+              <a href="author.html#2998">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Florian,
+
+State inheritance won't typically cause problems like you describe.
+
+My recommendation is start aftresh and create a minimal testbed example
+purely for the purpose of building up a scene graph with the geometry and
+state that will give the result you want.  This testbed should contain
+nothing extra, no clever ways of building stuff, just direct creation
+osg::Geometry all the the arrays and primitives, osg::StateSet,
+osg::Texture etc. Keep it simple.  Just with single texturing, then add the
+second texture unit.
+
+WIth such a small little testbed it should be possible for you to see what
+is going on, and give you space to just learn the basic OSG classes and how
+to use without complications of mapping it to something more complicated,
+then when you are happy compare the scene graph you've generated with what
+your original code was outputting.
+
+On the review of the scene graph front it's use to write the scene graph
+out to .osgt form so you can review the actual scene graph you've created
+rather than what you think you've created.
+
+Robert.
+
+On 4 May 2016 at 22:03, Florian GOLESTIN &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">florian.golestin at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> I tried without the SmoothingVisitor but it does not change anything.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> However during my tests today I put a &quot;Axes&quot; object (the axes.osgt model
+</I>&gt;<i> from the OpenSceneGraph examples) and some part of the texture on the block
+</I>&gt;<i> below the object just appeared but really dark.
+</I>&gt;<i> So it it make me think that it's not a texture problem but maybe a light
+</I>&gt;<i> problem.
+</I>&gt;<i>
+</I>&gt;<i> I've tried then to use a full ambiant light:
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> osg::ref_ptr&lt;osg::Node&gt; createLightSource( unsigned int num,
+</I>&gt;<i>                               const osg::Vec3&amp; trans,
+</I>&gt;<i>                               const osg::Vec4&amp; color )
+</I>&gt;<i> {
+</I>&gt;<i>   osg::ref_ptr&lt;osg::Light&gt; light = new osg::Light;
+</I>&gt;<i>   light-&gt;setLightNum( num );
+</I>&gt;<i>   light-&gt;setDiffuse( color );
+</I>&gt;<i>
+</I>&gt;<i>   /* full scene lightened: */
+</I>&gt;<i>   light-&gt;setAmbient(osg::Vec4(1.0,1.0,1.0,1.0));
+</I>&gt;<i>   light-&gt;setSpecular(osg::Vec4(1,1,1,1));  // some examples don't have
+</I>&gt;<i> this one
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>   light-&gt;setPosition( osg::Vec4(0.0f, 0.0f, 0.0f, 1.0f) );
+</I>&gt;<i>   osg::ref_ptr&lt;osg::LightSource&gt; lightSource = new
+</I>&gt;<i>     osg::LightSource;
+</I>&gt;<i>   lightSource-&gt;setLight( light );
+</I>&gt;<i>   osg::ref_ptr&lt;osg::MatrixTransform&gt; sourceTrans = new
+</I>&gt;<i> osg::MatrixTransform;
+</I>&gt;<i>   sourceTrans-&gt;setMatrix( osg::Matrix::translate(trans) );
+</I>&gt;<i>   sourceTrans-&gt;addChild( lightSource.get() );
+</I>&gt;<i>   return sourceTrans;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> int     main(int argc, char **argv)
+</I>&gt;<i> {
+</I>&gt;<i>   osg::ArgumentParser arguments(&amp;argc,argv);
+</I>&gt;<i>
+</I>&gt;<i>   osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+</I>&gt;<i>
+</I>&gt;<i>   root-&gt;addChild(createLightSource(0, osg::Vec3(0, -2.0, 0),
+</I>&gt;<i> osg::Vec4(1.0, 1.0, 1.0, 1.0)));
+</I>&gt;<i>   root-&gt;addChild(createLightSource(1, osg::Vec3(0, -16.0, 10.0),
+</I>&gt;<i> osg::Vec4(1.0, 1.0, 1.0, 1.0)));
+</I>&gt;<i>
+</I>&gt;<i>   root-&gt;getOrCreateStateSet()-&gt;setMode( GL_LIGHT0, osg::StateAttribute::ON
+</I>&gt;<i> );
+</I>&gt;<i>   root-&gt;getOrCreateStateSet()-&gt;setMode( GL_LIGHT1, osg::StateAttribute::ON
+</I>&gt;<i> );
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Now the texture appears but are really dark such as there is no light.
+</I>&gt;<i>
+</I>&gt;<i> Is it something related to states and inheritance?
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i> Florian
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic0c1d-2.php?p=67051#67051">http://forum.openscenegraph.org/viewtopic.php?p=67051#67051</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160505/20a09d0a/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160505/20a09d0a/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002997.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+	<LI>Next message: <A HREF="003000.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2998">[ date ]</a>
+              <a href="thread.html#2998">[ thread ]</a>
+              <a href="subject.html#2998">[ subject ]</a>
+              <a href="author.html#2998">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

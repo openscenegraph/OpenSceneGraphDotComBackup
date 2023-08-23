@@ -1,0 +1,146 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [CubeMap with mipmaps] About loading IBL
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BCubeMap%20with%20mipmaps%5D%20About%20loading%20IBL&In-Reply-To=%3CCAFN7Y%2BXHFOb9Jde14AntJoMy4j58W27RgAXK3mDHP7zshw0MaA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007143.html">
+   <LINK REL="Next"  HREF="007167.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [CubeMap with mipmaps] About loading IBL</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BCubeMap%20with%20mipmaps%5D%20About%20loading%20IBL&In-Reply-To=%3CCAFN7Y%2BXHFOb9Jde14AntJoMy4j58W27RgAXK3mDHP7zshw0MaA%40mail.gmail.com%3E"
+       TITLE="[osg-users] [CubeMap with mipmaps] About loading IBL">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Nov  6 00:53:31 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007143.html">[osg-users] [CubeMap with mipmaps] About loading IBL
+</A></li>
+        <LI>Next message (by thread): <A HREF="007167.html">[osg-users] Osg 3.4.1 - Tutorial 12 Fails on Mac OSX Sierra - Framebuffer problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7154">[ date ]</a>
+              <a href="thread.html#7154">[ thread ]</a>
+              <a href="subject.html#7154">[ subject ]</a>
+              <a href="author.html#7154">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Julien,
+
+The code is osg/Texture.cpp has been written a long time ago so in
+theory should have been exposed to testing for many years so I am
+surprised the change you have found that works is required, and I'm
+not confident the change you suggest won't break things.  Given how
+long Texture.cpp has been around it sounds like you are using a usage
+case/hardware/driver combination that hasn't been tested out before.
+Given this it could be errant OSG code or a driver issue, if the later
+the workaround could well cause problems elsewhere.  The only way to
+tease this out would be to have a test case that can be tried on
+different systems.
+
+Unfortunately I don't have any cubemap mipmapped test cases myself,
+could you provide one?
+
+Robert.
+
+On 4 November 2017 at 15:34, Julien Valentin &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">julienvalentin51 at gmail.com</A>&gt; wrote:
+&gt;<i> Hi all
+</I>&gt;<i> So debugging all the night i notice the problem seams to ome from osg/Texture.cpp line 2303:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>      glTexSubImage2D( target, k,
+</I>&gt;<i>                             0, 0,
+</I>&gt;<i>                             width, height,
+</I>&gt;<i>                             (GLenum)image-&gt;getPixelFormat(),
+</I>&gt;<i>                             (GLenum)image-&gt;getDataType(),
+</I>&gt;<i>                             dataPtr + image-&gt;getMipmapOffset(k));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> This code seams not to do its job...Replacing It with
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>                     glTexImage2D( target, k, _internalFormat,
+</I>&gt;<i>                         width, height, _borderWidth,
+</I>&gt;<i>                         (GLenum)image-&gt;getPixelFormat(),
+</I>&gt;<i>                         (GLenum)image-&gt;getDataType(),
+</I>&gt;<i> dataPtr + image-&gt;getMipmapOffset(k));
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> seams to make it works.
+</I>&gt;<i> @Robert
+</I>&gt;<i> Is this fix valid enought to make a pr?
+</I>&gt;<i>
+</I>&gt;<i> Cheers
+</I>&gt;<i> Good WE
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> mp3butcher wrote:
+</I>&gt;&gt;<i> Hi all
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm trying to load an IBL cubemap with lod but once I'm trying to set mipmapdata for log2(pow2size)+1 levels (and so override hardware mipmap generation) the cubemap appears black (even the first level that i actually validated with the autoHWMipMapGeneration(minfilter=miplinear) /: ?! )..
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Any leads?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thank you!
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Cheers,
+</I>&gt;&gt;<i> Julien
+</I>&gt;<i> [/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopica67a.php?p=72305#72305">http://forum.openscenegraph.org/viewtopic.php?p=72305#72305</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007143.html">[osg-users] [CubeMap with mipmaps] About loading IBL
+</A></li>
+	<LI>Next message (by thread): <A HREF="007167.html">[osg-users] Osg 3.4.1 - Tutorial 12 Fails on Mac OSX Sierra - Framebuffer problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7154">[ date ]</a>
+              <a href="thread.html#7154">[ thread ]</a>
+              <a href="subject.html#7154">[ subject ]</a>
+              <a href="author.html#7154">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] VBO Bug with 3.6.1 and Normal Arrays
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAFN7Y%2BW6a3nDT%3Dem1gYSzC4B6BjM3JaG4Tmefd2CC1K3LFr_Qw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008317.html">
+   <LINK REL="Next"  HREF="008322.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] VBO Bug with 3.6.1 and Normal Arrays</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAFN7Y%2BW6a3nDT%3Dem1gYSzC4B6BjM3JaG4Tmefd2CC1K3LFr_Qw%40mail.gmail.com%3E"
+       TITLE="[osg-users] VBO Bug with 3.6.1 and Normal Arrays">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Jun  1 08:51:22 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008317.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+        <LI>Next message (by thread): <A HREF="008322.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8321">[ date ]</a>
+              <a href="thread.html#8321">[ thread ]</a>
+              <a href="subject.html#8321">[ subject ]</a>
+              <a href="author.html#8321">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Dan,
+
+Thanks for the explanation and example to reproduce the bug... Guess
+it looks like we'll need to make 3.6.2 rather sooner than I was
+hoping, it'll be one a month at this rate...
+
+Robert.
+
+On 1 June 2018 at 16:01, Daniel Emminizer, Code 5773
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dan.emminizer at nrl.navy.mil</A>&gt; wrote:
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> Oops -- I sent this earlier today but apparently to the bounces list; that explains the confusion on GitHub -- my mistake.  This was supposedly sent right before I posted the PR.  Here's the original text:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I think I found a bug in 3.6.1.  I am loading a FLT model and it's causing a crash in my application to draw it.  The same model does not crash in OSG 3.4.  I think I've finally tracked down the cause and have a candidate solution too.
+</I>&gt;<i>
+</I>&gt;<i> A few weeks back I saw a similar crash in my own code, and figured it was due to incorrect usage of the binding flags on osg::Array.  Much of our code was using osg::Geometry::setNormalBinding() (and related methods).  During debugging, I was able to determine my normals were crashing in 3.6, and the problem went away when I used the osg::Array(osg::Array::Binding) signature -- i.e. assigning a binding on construction.  At the time I thought it was something I was doing wrong and moved on.
+</I>&gt;<i>
+</I>&gt;<i> The problem showed up again earlier this week but not in my code, and not manifesting in exactly the same way.  Here's the run-down of what's going on:
+</I>&gt;<i>
+</I>&gt;<i> - Loading FLT model
+</I>&gt;<i> - FLT model loads a face, which has vertices, textures, and normals
+</I>&gt;<i> - FLT uses getOrCreateNormalArray(), which allocates an array (BIND_UNDEFINED) and sets it on the geometry
+</I>&gt;<i> - Geometry::addVertexBufferObjectIfRequired() is called on the normals, but nothing done due to BIND_UNDEFINED
+</I>&gt;<i> - FLT later sets normals to BIND_PER_VERTEX appropriately, which is a direct set and does not do anything to the Geometry's VBOs
+</I>&gt;<i> - First frame starts to render
+</I>&gt;<i> - Geometry::drawVAImpl calls vas-&gt;setNormalArray()
+</I>&gt;<i> - VertexArrayState::setArray() calls new_array-&gt;getOrCreateGLBufferObject(), which returns 0.  This is the first major problem.
+</I>&gt;<i> - Because vbo is NULL, unbindindVertexBufferObject() is called, leading to GL_ARRAY_BUFFER to go to 0
+</I>&gt;<i> - vad-&gt;enable_and_dispatch() gets called and does glVertexAttribPointer() with a non-NULL data ptr, which is a GL error because array buffer is 0
+</I>&gt;<i>
+</I>&gt;<i> Unwinding the error:
+</I>&gt;<i> - enable_and_dispatch() shouldn't be called if ptr is non-NULL and no GL_ARRAY_BUFFER is 0
+</I>&gt;<i> - GL_ARRAY_BUFFER is set to 0 because there is no VBO set up for the normal array
+</I>&gt;<i> - There is no normal array because the only place it seems to be created is in setNormalArray(), which fails because at that time, it is BIND_UNDEFINED
+</I>&gt;<i> - Binding gets swapped from BIND_UNDEFINED to BIND_PER_VERTEX after setNormalArray(), leading to the error
+</I>&gt;<i>
+</I>&gt;<i> There are several possible solutions I can see.  You can probably see more:
+</I>&gt;<i> 1) Change FLT plugin to assign array binding per vertex on construction of array.  Seems poor because invariably this bug is crashing other code -- maybe it's the cause of the DXF that Brian Hutchison reported earlier this week?
+</I>&gt;<i> 2) Update Array::setBinding() to create the VBO if needed.  I do not know if this is possible nor how to do it.
+</I>&gt;<i> 3) &quot;Lazily&quot; detect this issue somewhere in the rendering calls and create VBO there if necessary
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> PR 554 was an attempt at approach #3 but I agree with your assessment on GitHub.  It does not solve the problem in all cases.
+</I>&gt;<i>
+</I>&gt;<i> Attached is a demo of the problem that generates a console warning.  More complex scenes can cause crashes.  The red triangle has the problem, but the green one does not.
+</I>&gt;<i>
+</I>&gt;<i>  - Dan
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I></PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008317.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+	<LI>Next message (by thread): <A HREF="008322.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8321">[ date ]</a>
+              <a href="thread.html#8321">[ thread ]</a>
+              <a href="subject.html#8321">[ subject ]</a>
+              <a href="author.html#8321">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

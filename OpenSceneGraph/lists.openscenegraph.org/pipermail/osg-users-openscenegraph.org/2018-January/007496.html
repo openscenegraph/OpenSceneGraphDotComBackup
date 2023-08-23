@@ -1,0 +1,238 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgUtil::IntersectionVisitor eats all the memory
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgUtil%3A%3AIntersectionVisitor%20eats%20all%20the%20memory&In-Reply-To=%3CCAO-%2Bzim%2BvjgmFtxohYKiYMZSQpwWX0yLAAfW7QpO8aGD1YN9Yg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007495.html">
+   <LINK REL="Next"  HREF="007502.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgUtil::IntersectionVisitor eats all the memory</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgUtil%3A%3AIntersectionVisitor%20eats%20all%20the%20memory&In-Reply-To=%3CCAO-%2Bzim%2BvjgmFtxohYKiYMZSQpwWX0yLAAfW7QpO8aGD1YN9Yg%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgUtil::IntersectionVisitor eats all the memory">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Tue Jan  9 04:31:39 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007495.html">[osg-users] osgUtil::IntersectionVisitor eats all the memory
+</A></li>
+        <LI>Next message (by thread): <A HREF="007502.html">[osg-users] osgUtil::IntersectionVisitor eats all the memory
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7496">[ date ]</a>
+              <a href="thread.html#7496">[ thread ]</a>
+              <a href="subject.html#7496">[ subject ]</a>
+              <a href="author.html#7496">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks Robert,
+
+no circular reference since I am displaying that database in the viewer
+nicely. Here is the struct (a bit odd but it is as is):
+
+Group
+|<i>
+</I>PagedLOD PagedLOD PagedLOD .... dozen of these
+|<i>
+</I>Quadtree (similar to VPB generated subtiles)
+
+I was thinking the visitor is reading all of these by reading all of these
+PagedLODs without taking the account the range from the eyepoint. So while
+debuging I tried this:
+
+struct MyIntersectionVisitor : public osgUtil::IntersectionVisitor
+{
+MyIntersectionVisitor(float range)
+:<i> IntersectionVisitor()
+</I>, _range(range)
+{
+}
+
+virtual void apply(osg::PagedLOD&amp; plod)
+{
+if (getDistanceFromEyePoint(plod.getCenter(), true) &lt; _range)
+{
+osgUtil::IntersectionVisitor::apply(plod);
+}
+}
+
+protected:
+float _range;
+};
+
+but no luck. Is there a way to  flush all the pending and loaded nodes from
+the DatabasePager?
+
+On Tue, Jan 9, 2018 at 1:23 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Nick,
+</I>&gt;<i>
+</I>&gt;<i> This is really something you'd want to use a debug for - just run it
+</I>&gt;<i> and break the app before anything untoward happens.
+</I>&gt;<i>
+</I>&gt;<i> The code itself looks quite benign on a first reading, the only thing
+</I>&gt;<i> I can think of that might cause a memory issue would be if your scene
+</I>&gt;<i> graph had a circular reference in it so the traversal ends up in an
+</I>&gt;<i> infinite loop.
+</I>&gt;<i>
+</I>&gt;<i> Robert
+</I>&gt;<i>
+</I>&gt;<i> On 9 January 2018 at 12:12, Trajce Nikolov NICK
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; hi Robert, Community,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I have the following code in a loop against very large quadtree based
+</I>&gt;<i> &gt; database. And this code is eating all the memory, progressively and then
+</I>&gt;<i> the
+</I>&gt;<i> &gt; system kills it . Any clue?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Thanks a lot
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; osg::ref_ptr&lt;osgUtil::LineSegmentIntersector&gt; picker;
+</I>&gt;<i> &gt; osg::ref_ptr&lt;osgUtil::IntersectionVisitor&gt; iv;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; osg::Vec3d getHOT(const osg::Vec3d&amp; position, osgViewer::CompositeViewer&amp;
+</I>&gt;<i> &gt; viewer, osg::Vec3&amp; normal, bool&amp; valid)
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt;     osg::Vec3d result;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; osg::EllipsoidModel em;
+</I>&gt;<i> &gt; osg::Vec3d up = em.computeLocalUpVector(position.x(), position.y(),
+</I>&gt;<i> &gt; position.z());
+</I>&gt;<i> &gt; up.normalize();
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; osg::Vec3d s = position + up * 100;
+</I>&gt;<i> &gt;     osg::Vec3d e = osg::Vec3d(0, 0, 0);
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     if (viewer.getView(0)-&gt;getSceneData())
+</I>&gt;<i> &gt;     {
+</I>&gt;<i> &gt; #if 1
+</I>&gt;<i> &gt; if (!picker.valid())
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt; picker = new osgUtil::LineSegmentIntersector(s,e);
+</I>&gt;<i> &gt; iv = new  MyIntersectionVisitor(RANGE);
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; picker-&gt;setStart(s);
+</I>&gt;<i> &gt; picker-&gt;setEnd(e);
+</I>&gt;<i> &gt; picker-&gt;getIntersections().clear();
+</I>&gt;<i> &gt; iv-&gt;setIntersector(picker);
+</I>&gt;<i> &gt; iv-&gt;reset();
+</I>&gt;<i> &gt; iv-&gt;setUseKdTreeWhenAvailable(false);
+</I>&gt;<i> &gt; //iv-&gt;setLODSelectionMode(osgUtil::IntersectionVisitor::
+</I>&gt;<i> USE_EYE_POINT_FOR_LOD_LEVEL_SELECTION);
+</I>&gt;<i> &gt; viewer.getView(0)-&gt;getSceneData()-&gt;accept(*iv);
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; if (picker-&gt;containsIntersections())
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt; osgUtil::LineSegmentIntersector::Intersections           hitList =
+</I>&gt;<i> &gt; picker-&gt;getIntersections();
+</I>&gt;<i> &gt; osgUtil::LineSegmentIntersector::Intersections::iterator hit =
+</I>&gt;<i> &gt; hitList.begin();
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; result = hit-&gt;getWorldIntersectPoint();
+</I>&gt;<i> &gt; normal = hit-&gt;getWorldIntersectNormal();
+</I>&gt;<i> &gt; valid = true;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; return result;
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; #endif
+</I>&gt;<i> &gt;     }
+</I>&gt;<i> &gt; valid = false;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;     return result;
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; --
+</I>&gt;<i> &gt; trajce nikolov nick
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-</A>
+</I>&gt;<i> openscenegraph.org
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180109/d52da903/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180109/d52da903/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007495.html">[osg-users] osgUtil::IntersectionVisitor eats all the memory
+</A></li>
+	<LI>Next message (by thread): <A HREF="007502.html">[osg-users] osgUtil::IntersectionVisitor eats all the memory
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7496">[ date ]</a>
+              <a href="thread.html#7496">[ thread ]</a>
+              <a href="subject.html#7496">[ subject ]</a>
+              <a href="author.html#7496">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

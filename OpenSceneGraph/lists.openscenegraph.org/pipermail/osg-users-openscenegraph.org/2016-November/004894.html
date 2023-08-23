@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Deferring loading in an DB ReaderWriter plugin
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deferring%20loading%20in%20an%20DB%20ReaderWriter%20plugin&In-Reply-To=%3CCAFN7Y%2BXYWPBKMH6qSHXiVQxepr7b03E8CEtaRd26PhLhcUBMkQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="281116.html">
+   <LINK REL="Next"  HREF="281121.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Deferring loading in an DB ReaderWriter plugin</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Deferring%20loading%20in%20an%20DB%20ReaderWriter%20plugin&In-Reply-To=%3CCAFN7Y%2BXYWPBKMH6qSHXiVQxepr7b03E8CEtaRd26PhLhcUBMkQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Deferring loading in an DB ReaderWriter plugin">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Nov 19 04:03:12 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="281116.html">[osg-users] Deferring loading in an DB ReaderWriter plugin
+</A></li>
+        <LI>Next message: <A HREF="281121.html">[osg-users] Rendering 3d Model using osgEarth.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4894">[ date ]</a>
+              <a href="thread.html#4894">[ thread ]</a>
+              <a href="subject.html#4894">[ subject ]</a>
+              <a href="author.html#4894">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi James,
+
+I'm afraid this particular usage case isn't common enough to have
+support directly in the core OSG.
+
+You can probably leverage existing component to get some way to doing
+what you want.
+
+The first issue is that most plugins are self contained, you just give
+them a file to load and then go off and load it and then return it,
+without any interaction during the loading process.
+
+A subset of the plugins support reading from ostream rather than just
+only files, in which case there is the possibility to implement your
+own streambuffer based ostream that you manage the loading, this might
+give you the load level ability to manage the loading process.  If you
+want to add in internet access into the mix then you'd need to use
+something like libcurl in a similar fashion to how the OSG's libcurl
+plugin implements things - it utilizes the streambuffer approach.
+
+At a high level the OSG has a ProxyNode class that can be used as a
+placeholder as it has a filename handle.  Perhaps you could write your
+own osgDB::ReadFileCallback that you assign to the osgDB::Registry to
+intercept all read calls and then pass back a ProxyNode when you want
+pause loading.
+
+To get things working well I think it'll require a bit of very careful
+desgin/implementation to make sure that threading works reliably and
+the state of the scene graph is managed robustly.
+
+Robert.
+
+
+
+On 18 November 2016 at 20:02, James Turner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">zakalawe at mac.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I&#8217;m looking for some advice on deferring / stalling a DB read request for a period of time and then resuming it. (Or some equivalent) This is for a download-on-demand thing - inside the readNode() implementation I can detect that a given set of files needs to be downloaded, which may take many seconds depending on the user&#8217;s Internet connection. The download system is already separately threaded, but I need a way to suspend the request (or simulate the same) and then resume it / resubmit it.
+</I>&gt;<i>
+</I>&gt;<i> I can imagine various solutions, eg returning a placeholder node and then when my download completes, re-running the load but passing in some special info including the placeholder as the parent. But I can also guess that this scenario is common enough to have some more explicit support in osgDB.
+</I>&gt;<i>
+</I>&gt;<i> I can also imagine the Pager / Database &#8217;s internal load queue must basically do what I need, if I could manipulate it directly. (Cancel the current item, stash it somewhere and resubmit when some condition occurs) But I&#8217;ve not seen any examples of doing that (I am going to look for them now).
+</I>&gt;<i>
+</I>&gt;<i> So, any advice or thoughts are much appreciated.
+</I>&gt;<i>
+</I>&gt;<i> Kind regards,
+</I>&gt;<i> James
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="281116.html">[osg-users] Deferring loading in an DB ReaderWriter plugin
+</A></li>
+	<LI>Next message: <A HREF="281121.html">[osg-users] Rendering 3d Model using osgEarth.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4894">[ date ]</a>
+              <a href="thread.html#4894">[ thread ]</a>
+              <a href="subject.html#4894">[ subject ]</a>
+              <a href="author.html#4894">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

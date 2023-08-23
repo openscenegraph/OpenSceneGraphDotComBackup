@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Left handed scene
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Left%20handed%20scene&In-Reply-To=%3CAMSPR04MB456031352EA29BDFDC2746BC6050%40AMSPR04MB456.eurprd04.prod.outlook.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003805.html">
+   <LINK REL="Next"  HREF="003814.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Left handed scene</H1>
+<!--htdig_noindex-->
+    <B>Antoine Rennuit</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Left%20handed%20scene&In-Reply-To=%3CAMSPR04MB456031352EA29BDFDC2746BC6050%40AMSPR04MB456.eurprd04.prod.outlook.com%3E"
+       TITLE="[osg-users] Left handed scene">antoinerennuit at hotmail.com
+       </A><BR>
+    <I>Tue Aug  2 05:36:06 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003805.html">[osg-users] OSG SIGGRAPH was a TOTALLY Massively Success
+</A></li>
+        <LI>Next message: <A HREF="003814.html">[osg-users] Left handed scene
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3806">[ date ]</a>
+              <a href="thread.html#3806">[ thread ]</a>
+              <a href="subject.html#3806">[ subject ]</a>
+              <a href="author.html#3806">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+
+I have a QtWidget app which I am converting to QtQuick. My app works well with QtWidget but after transitioning to QtQuick I have observed that the whole scene is now left handed: not only the geometry is left handed (the z axis is down when it should be up - check joined file) but also the TrackballManipulator behavior (e.g. when I pan up with the mouse the scene goes down, and it's the same opposite reaction for rotate).
+
+
+I do not understand where this is coming from. I was able to easily put the geometry back right handed using a scale -1 on Z but I should not have to do that and this does not solve the TrackballManipulator behavior.
+
+
+I have used <A HREF="https://bitbucket.org/leon_manukyan/qtquick2osgitem">https://bitbucket.org/leon_manukyan/qtquick2osgitem</A> as a starting point and my code does the following:
+
+
+I have a RendererImpl class, created by an OsgItem and which is responsible for maintaining the osgViewer::Viewer and the osgViewer::GraphicsWindow, here is its init method:
+
+
+void RendererImpl::init()
+{
+    m_sceneRoot = new osg::Group();
+
+    m_viewer = new osgViewer::Viewer;
+    m_viewer-&gt;setThreadingModel(osgViewer::ViewerBase::SingleThreaded);
+    m_viewer-&gt;setSceneData(m_sceneRoot);
+    m_viewer-&gt;setCameraManipulator(new osgGA::TrackballManipulator);
+    m_viewer-&gt;getCameraManipulator()-&gt;setHomePosition(osg::Vec3d(4.0, -4.0, 2.0), osg::Vec3d(0.0, 0.0, 1.0), osg::Vec3d(0.0, 0.0, 1.0));
+    m_viewer-&gt;home();
+
+    m_sceneRoot-&gt;addChild(setupLight());
+    m_sceneRoot-&gt;addChild(setupGrid(6.0f, 2.0f));
+
+    m_window = new FrameBufferWindow(this);
+    updateSize();
+
+    osg::Camera* camera = m_viewer-&gt;getCamera();
+    camera-&gt;setGraphicsContext( m_window.get() );
+
+    camera-&gt;setClearColor( osg::Vec4(0.2, 0.2, 0.6, 1.0) );
+}
+
+
+And its update method on window size change:
+
+
+void RendererImpl::updateSize()
+{
+    m_window-&gt;getEventQueue()-&gt;windowResize(0, 0, osgItem().width(), osgItem().height() );
+    m_window-&gt;resized(0, 0, osgItem().width(), osgItem().height());
+
+    osg::Camera&amp; camera = *m_viewer-&gt;getCamera();
+    const osg::GraphicsContext::Traits&amp; t = *m_window-&gt;getTraits();
+    camera.setViewport( 0, 0, t.width, t.height );
+    double aspectRatio = t.height ? (double)t.width / (double)t.height : 1.0;
+    camera.setProjectionMatrixAsPerspective(30.0f, aspectRatio, 1.0f, 10000.0f );
+}
+
+
+And I have an item which streams the events to the window, e.g.:
+
+
+void OsgItem::mouseMoveEvent(QMouseEvent *event)
+{
+    m_renderer-&gt;m_window-&gt;getEventQueue()-&gt;mouseMotion(event-&gt;x(), event-&gt;y());
+
+    update();
+}
+
+
+Does anyone have an idea of what is wrong in my code? I have looked for days and I am stuck!
+
+
+Thanks,
+
+
+Antoine.
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160802/b6196c1b/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160802/b6196c1b/attachment-0003.htm</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: Screenshot from 2016-08-02 14:25:53.png
+Type: image/png
+Size: 7972 bytes
+Desc: Screenshot from 2016-08-02 14:25:53.png
+URL: &lt;<A HREF="../attachments/20160802/b6196c1b/attachment-0003.png">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160802/b6196c1b/attachment-0003.png</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003805.html">[osg-users] OSG SIGGRAPH was a TOTALLY Massively Success
+</A></li>
+	<LI>Next message: <A HREF="003814.html">[osg-users] Left handed scene
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3806">[ date ]</a>
+              <a href="thread.html#3806">[ thread ]</a>
+              <a href="subject.html#3806">[ subject ]</a>
+              <a href="author.html#3806">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Loading from directory, not file
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Loading%20from%20directory%2C%20not%20file&In-Reply-To=%3CF30BBFF4-4FF9-4EA0-B353-A518DF72818C%40fosslib.net%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000810.html">
+   <LINK REL="Next"  HREF="277035.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Loading from directory, not file</H1>
+<!--htdig_noindex-->
+    <B>Aaron Andersen</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Loading%20from%20directory%2C%20not%20file&In-Reply-To=%3CF30BBFF4-4FF9-4EA0-B353-A518DF72818C%40fosslib.net%3E"
+       TITLE="[osg-users] Loading from directory, not file">aaron at fosslib.net
+       </A><BR>
+    <I>Wed Jul 15 04:35:57 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000810.html">[osg-users] Loading from directory, not file
+</A></li>
+        <LI>Next message: <A HREF="277035.html">[osg-users] Color Bar (or lut, lookup table) with non-scalar colours
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#811">[ date ]</a>
+              <a href="thread.html#811">[ thread ]</a>
+              <a href="subject.html#811">[ subject ]</a>
+              <a href="author.html#811">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Thank you for your answer. That certainly cleared up how to make my loader work with a native file system directory. My code now works as expected!
+
+I do have some questions about osg and virtual file systems, though. I noticed in the osg source code some files relating to zip and archive support which sounds great. Given the ReaderWriter interface has a read method which accepts an fstream it seems pretty straight forward that any ReaderWriter implementation implementing fstream methods will just work even if the file is in a zip file. That's fantastic, but it does leave me wondering what is the standard way for me to implement my ReaderWriter which requires the ability to look at a directory and read multiple files from that directory such that my ReaderWriter will &quot;just work&quot; even if the directory is virtual, like in a zip file?
+
+Again, thank you kindly for any help you or anyone else may be able to provide.
+
+Aaron
+
+On July 15, 2015 3:26:26 AM EDT, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt; wrote:
+&gt;<i>Hi Aaron,
+</I>&gt;<i>
+</I>&gt;<i>The ReaderWriter mechanism is built around the Chain-Of-Responsibility
+</I>&gt;<i>pattern so it's actually up to the ReaderWriter implementation to
+</I>&gt;<i>decide
+</I>&gt;<i>what files it can handle, you don't even need an file extension, or for
+</I>&gt;<i>the
+</I>&gt;<i>filename to even be an actual file or path name - this allows one to
+</I>&gt;<i>implement various psuedo loaders that various different things such as
+</I>&gt;<i>pre-processing of loaded models or paging.
+</I>&gt;<i>
+</I>&gt;<i>The only place that the extensions are stricktly checked is when
+</I>&gt;<i>initially
+</I>&gt;<i>loading the plugins - if no plugin that has already been loaded can
+</I>&gt;<i>handle
+</I>&gt;<i>a particle read*File() request then osgDB::Registry checks the
+</I>&gt;<i>extension
+</I>&gt;<i>and loads the plugin associated with that plugin.  In the case of
+</I>&gt;<i>psuedo
+</I>&gt;<i>plugin the filename won't be mapping directly to a file system file so
+</I>&gt;<i>the
+</I>&gt;<i>one either pre-loads these plugins, or append a .myplugin to filename
+</I>&gt;<i>and
+</I>&gt;<i>then strip the &quot;.myplugin&quot; inside the the ReaderWriter.  The .rot,
+</I>&gt;<i>.trans,
+</I>&gt;<i>.scale, .curl, .gdal plugins are all examples of plugins that use this
+</I>&gt;<i>approach.
+</I>&gt;<i>
+</I>&gt;<i>In your case I'd recommend supporting both these approproaches -
+</I>&gt;<i>support
+</I>&gt;<i>the dummy extension that maps to your plugin name as well as support
+</I>&gt;<i>usage
+</I>&gt;<i>without the extension.
+</I>&gt;<i>
+</I>&gt;<i>Robert.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>On 15 July 2015 at 00:01, Aaron Andersen &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">aaron at fosslib.net</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> I will preface this by saying I'm quite new to open scene graph, so
+</I>&gt;<i>if I'm
+</I>&gt;&gt;<i> missing something obvious please forgive me.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I have a node/scene format I would like to implement in open scene
+</I>&gt;<i>graph.
+</I>&gt;&gt;<i> The data for the format is encapsulated in multiple files within a
+</I>&gt;&gt;<i> directory, not within a single file.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> How can I make a reader writer for a directory as opposed to a file?
+</I>&gt;<i>The
+</I>&gt;&gt;<i> ReaderWriter api is geared toward files (supportedExtension) and this
+</I>&gt;<i>is
+</I>&gt;&gt;<i> leaving me a little confused.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Any help or guidance would be greatly appreciated.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thank you,
+</I>&gt;&gt;<i> Aaron
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i><A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>------------------------------------------------------------------------
+</I>&gt;<i>
+</I>&gt;<i>_______________________________________________
+</I>&gt;<i>osg-users mailing list
+</I>&gt;<i><A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i><A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150715/bc7968e7/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150715/bc7968e7/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000810.html">[osg-users] Loading from directory, not file
+</A></li>
+	<LI>Next message: <A HREF="277035.html">[osg-users] Color Bar (or lut, lookup table) with non-scalar colours
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#811">[ date ]</a>
+              <a href="thread.html#811">[ thread ]</a>
+              <a href="subject.html#811">[ subject ]</a>
+              <a href="author.html#811">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

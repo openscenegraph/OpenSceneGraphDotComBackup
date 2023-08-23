@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] OSG_TEXTURE_POOL_SIZE issue
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG_TEXTURE_POOL_SIZE%20issue&In-Reply-To=%3CCAHhtjQY0XhReb7pnMRFxk96aODxQf5vgkHe36jJ_Jks22RVF9g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004411.html">
+   <LINK REL="Next"  HREF="280636.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] OSG_TEXTURE_POOL_SIZE issue</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20OSG_TEXTURE_POOL_SIZE%20issue&In-Reply-To=%3CCAHhtjQY0XhReb7pnMRFxk96aODxQf5vgkHe36jJ_Jks22RVF9g%40mail.gmail.com%3E"
+       TITLE="[osg-users] OSG_TEXTURE_POOL_SIZE issue">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Sun Oct  9 14:10:22 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004411.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+        <LI>Next message: <A HREF="280636.html">[osg-users] Correct creation of the terrain
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4412">[ date ]</a>
+              <a href="thread.html#4412">[ thread ]</a>
+              <a href="subject.html#4412">[ subject ]</a>
+              <a href="author.html#4412">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Here is the repro code. I made it as simple as I could. Please note that it
+only shows the core of the problem. One may argue that with this limit I
+set here in example, we have no room for last RTT texture anyway. But the
+problem will show up too if I increase the TEX_POOL limit to store 3 RTT
+textures, but will initially fill the memory with other textures (with
+images of different resolution or format). Once memory size of these
+initial textures + newly added RTT passes TEXTURE_POOL_SIZE, the problem
+will show up when one of the RTTs is added later...
+
+Cheers,
+Wojtek
+
+2016-10-09 20:17 GMT+02:00 Wojciech Lewandowski &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">w.p.lewandowski at gmail.com</A>&gt;:
+
+&gt;<i> Could you modify one to OSG examples to illustrate the problem so
+</I>&gt;&gt;<i> others can reproduce it.  I have paged databases to test against, but
+</I>&gt;&gt;<i> not the particular FBO usage that you are using along with it.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Ok. I'll try to make a repro. I do believe however that in our case we do
+</I>&gt;<i> not attach images to FBO but empty textures. And those textures are
+</I>&gt;<i> scraped. I wrote 'I believe' because its not all my code, maybe someone
+</I>&gt;<i> attached images somewhere to debug. I will double check  and include this
+</I>&gt;<i> case in repro if its true.
+</I>&gt;<i>
+</I>&gt;<i> Wojtek
+</I>&gt;<i>
+</I>&gt;<i> 2016-10-09 14:47 GMT+02:00 Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;:
+</I>&gt;<i>
+</I>&gt;&gt;<i> On 9 October 2016 at 11:27, Wojciech Lewandowski
+</I>&gt;&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">w.p.lewandowski at gmail.com</A>&gt; wrote:
+</I>&gt;&gt;<i> &gt; Hi, Robert. Thanks for quick response.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;&gt; Perhaps a flag in osg::Texture might be appropriate to declare whether
+</I>&gt;&gt;<i> &gt;&gt; this Texture is
+</I>&gt;&gt;<i> &gt;&gt; suitable for reuse or not.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Perhaps. However, I have the feeling that this flag would be equivalent
+</I>&gt;&gt;<i> to
+</I>&gt;&gt;<i> &gt; checking if (image != NULL) in current 3.5.5 OSG code base context. I
+</I>&gt;&gt;<i> don't
+</I>&gt;&gt;<i> &gt; see how already assigned and active image-less texture coud survive such
+</I>&gt;&gt;<i> &gt; Take operation without a callback (or similar mechanism) to let texture
+</I>&gt;&gt;<i> &gt; owner refresh it before apply.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> In design of the texture pool assumes that if the image is NULL then
+</I>&gt;&gt;<i> the texture can't be taken.  If this isn't being upheld then it looks
+</I>&gt;&gt;<i> like a bug.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> &gt; Considering need for supporting multiple
+</I>&gt;&gt;<i> &gt; contexts and fact that such refresh callback would require action in
+</I>&gt;&gt;<i> draw
+</I>&gt;&gt;<i> &gt; stage, I see this postulate (for a refresh callback) as hard to
+</I>&gt;&gt;<i> implement
+</I>&gt;&gt;<i> &gt; and probably not used by users in practice. So I conclude that (image !=
+</I>&gt;&gt;<i> &gt; NULL) is probably a sufficient check for now ;-). Did I skip some use
+</I>&gt;&gt;<i> case ?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> One case would be people assigning an osg::Image to textures that are
+</I>&gt;&gt;<i> assigned to an FBO.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> FYI, I'm just quickly checking posts, I'm not working at a dev
+</I>&gt;&gt;<i> computer so I can't review code or spend long things deeply about a
+</I>&gt;&gt;<i> topic. so my response are really preliminary :-)
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Could you modify one to OSG examples to illustrate the problem so
+</I>&gt;&gt;<i> others can reproduce it.  I have paged databases to test against, but
+</I>&gt;&gt;<i> not the particular FBO usage that you are using along with it.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161009/88c27cd2/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161009/88c27cd2/attachment-0003.htm</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: texture_pool_repro.cpp
+Type: text/x-c++src
+Size: 2819 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20161009/88c27cd2/attachment-0003.cpp">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161009/88c27cd2/attachment-0003.cpp</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004411.html">[osg-users] OSG_TEXTURE_POOL_SIZE issue
+</A></li>
+	<LI>Next message: <A HREF="280636.html">[osg-users] Correct creation of the terrain
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4412">[ date ]</a>
+              <a href="thread.html#4412">[ thread ]</a>
+              <a href="subject.html#4412">[ subject ]</a>
+              <a href="author.html#4412">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

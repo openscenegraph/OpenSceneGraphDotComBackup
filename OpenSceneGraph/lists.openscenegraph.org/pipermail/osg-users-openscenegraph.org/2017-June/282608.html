@@ -1,0 +1,368 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Fwd: Strange osgShadow appearance of multiple models self-shadowing under a point light
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Fwd%3A%20Strange%20osgShadow%20appearance%20of%20multiple%20models%0A%20self-shadowing%20under%20a%20point%20light&In-Reply-To=%3CCAG6QC9LNzfnuqY6cqVFnmJajk18HAYyDGvja%3DuiqXZdt%3DWQzvg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006384.html">
+   <LINK REL="Next"  HREF="006389.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Fwd: Strange osgShadow appearance of multiple models self-shadowing under a point light</H1>
+<!--htdig_noindex-->
+    <B>Bris Li</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Fwd%3A%20Strange%20osgShadow%20appearance%20of%20multiple%20models%0A%20self-shadowing%20under%20a%20point%20light&In-Reply-To=%3CCAG6QC9LNzfnuqY6cqVFnmJajk18HAYyDGvja%3DuiqXZdt%3DWQzvg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Fwd: Strange osgShadow appearance of multiple models self-shadowing under a point light">tqjxlm at gmail.com
+       </A><BR>
+    <I>Tue Jun 27 09:14:53 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006384.html">[osg-users] Failed to build openscenegraph on Alpine
+</A></li>
+        <LI>Next message: <A HREF="006389.html">[osg-users] Fwd: Strange osgShadow appearance of multiple models self-shadowing under a point light
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282608">[ date ]</a>
+              <a href="thread.html#282608">[ thread ]</a>
+              <a href="subject.html#282608">[ subject ]</a>
+              <a href="author.html#282608">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+It's a problem with osgShadow.
+I hava a scene with multiple pagedLOD models bundled in a group. The models
+are tiles of a city, and each tile is a single model (buildings are not
+separeted with terrain).
+I uses the code in the osgShadow example for shadowing, and put a point
+light in _shadowedScene. The models shadow on themselves.
+
+As the attached image shows, the shadow result is partially correct. In
+some particular angle range from the light source, the correct shadow is
+casted. But in the other range, shadow is not cast correctly, but some
+strange shadows appear which I guess is casted from the model at the other
+side.
+Also, if I put the light on one side of the building, the other side of it
+is still lit, no shadow showing.
+I have tried different shadow implementations, but the results remain
+almost the same.
+
+I can't figure out what is happening since the shadow is just 'partially'
+abnormal. Stuck here for days.
+
+Thanks.
+
+Regards,
+tqjxlm.
+
+osg version 3.4.0.
+code:
+------------------------------------------------------------
+------------------------------------------------------------
+---------------------------------------------
+*Shadow*
+ // arguments
+ char* argv[] = {
+&quot;--vdsm&quot;,
+&quot;--positionalLight&quot;,
+&quot;--ortho&quot;,
+&quot;--parallel-split&quot;,
+&quot;--num-sm&quot;,
+&quot;4&quot;,
+&quot;--cascaded&quot;
+};
+
+int argc = sizeof(argv) / sizeof(argv[0]);
+
+// use an ArgumentParser object to manage the program arguments
+osg::ArgumentParser arguments(&amp;argc, argv);
+
+// get the viewer
+osgViewer::View&amp; viewer = getViewer();
+
+// init shadowed scene
+_shadowedScene = new osgShadow::ShadowedScene;
+osgShadow::ShadowSettings* settings = _shadowedScene-&gt;getShadowSettings();
+settings-&gt;setReceivesShadowTraversalMask(ReceivesShadowTraversalMask);
+settings-&gt;setCastsShadowTraversalMask(CastsShadowTraversalMask);
+
+double distance;
+if (arguments.read(&quot;--max-shadow-distance&quot;, distance))
+{
+settings-&gt;setMaximumShadowMapDistance(distance);
+}
+
+// choose shadow map implementation
+osg::ref_ptr&lt;osgShadow::MinimalShadowMap&gt; msm = NULL;
+if (arguments.read(&quot;--no-shadows&quot;))
+{
+OSG_NOTICE &lt;&lt; &quot;Not using a ShadowTechnique&quot; &lt;&lt; std::endl;
+_shadowedScene-&gt;setShadowTechnique(0);
+}
+else if (arguments.read(&quot;--stsm&quot;))
+{
+osg::ref_ptr&lt;osgShadow::StandardShadowMap&gt; st = new
+osgShadow::StandardShadowMap;
+_shadowedScene-&gt;setShadowTechnique(st.get());
+}
+else if (arguments.read(&quot;--pssm&quot;))
+{
+int mapcount = 3;
+while (arguments.read(&quot;--mapcount&quot;, mapcount));
+osg::ref_ptr&lt;osgShadow::ParallelSplitShadowMap&gt; pssm = new
+osgShadow::ParallelSplitShadowMap(NULL, mapcount);
+
+int mapres = 1024;
+while (arguments.read(&quot;--mapres&quot;, mapres))
+pssm-&gt;setTextureResolution(mapres);
+
+while (arguments.read(&quot;--debug-color&quot;)) { pssm-&gt;setDebugColorOn(); }
+
+
+int minNearSplit = 0;
+while (arguments.read(&quot;--minNearSplit&quot;, minNearSplit))
+if (minNearSplit &gt; 0) {
+pssm-&gt;setMinNearDistanceForSplits(minNearSplit);
+}
+
+int maxfardist = 0;
+while (arguments.read(&quot;--maxFarDist&quot;, maxfardist))
+if (maxfardist &gt; 0) {
+pssm-&gt;setMaxFarDistance(maxfardist);
+std::cout &lt;&lt; &quot;ParallelSplitShadowMap : setMaxFarDistance(&quot; &lt;&lt; maxfardist &lt;&lt;
+&quot;)&quot; &lt;&lt; std::endl;
+}
+
+int moveVCamFactor = 0;
+while (arguments.read(&quot;--moveVCamFactor&quot;, moveVCamFactor))
+if (maxfardist &gt; 0) {
+pssm-&gt;setMoveVCamBehindRCamFactor(moveVCamFactor);
+}
+
+double polyoffsetfactor = pssm-&gt;getPolygonOffset().x();
+double polyoffsetunit = pssm-&gt;getPolygonOffset().y();
+while (arguments.read(&quot;--PolyOffset-Factor&quot;, polyoffsetfactor));
+while (arguments.read(&quot;--PolyOffset-Unit&quot;, polyoffsetunit));
+pssm-&gt;setPolygonOffset(osg::Vec2(polyoffsetfactor, polyoffsetunit));
+
+_shadowedScene-&gt;setShadowTechnique(pssm.get());
+}
+else if (arguments.read(&quot;--ssm&quot;))
+{
+osg::ref_ptr&lt;osgShadow::SoftShadowMap&gt; sm = new osgShadow::SoftShadowMap;
+_shadowedScene-&gt;setShadowTechnique(sm.get());
+}
+else if (arguments.read(&quot;--vdsm&quot;))
+{
+while (arguments.read(&quot;--debugHUD&quot;)) settings-&gt;setDebugDraw(true);
+if (arguments.read(&quot;--persp&quot;)) settings-&gt;setShadowMapProjecti
+onHint(osgShadow::ShadowSettings::PERSPECTIVE_SHADOW_MAP);
+if (arguments.read(&quot;--ortho&quot;)) settings-&gt;setShadowMapProjecti
+onHint(osgShadow::ShadowSettings::ORTHOGRAPHIC_SHADOW_MAP);
+
+unsigned int unit = 1;
+if (arguments.read(&quot;--unit&quot;, unit)) settings-&gt;setBaseShadowTexture
+Unit(unit);
+
+double n = 0.0;
+if (arguments.read(&quot;-n&quot;, n)) settings-&gt;setMinimumShadowMapNearFarRatio(n);
+
+unsigned int numShadowMaps;
+if (arguments.read(&quot;--num-sm&quot;, numShadowMaps))
+settings-&gt;setNumShadowMapsPerLight(numShadowMaps);
+
+if (arguments.read(&quot;--parallel-split&quot;) || arguments.read(&quot;--ps&quot;))
+settings-&gt;setMultipleShadowMapHint(osgShadow::ShadowSettings::PARALLEL_
+SPLIT);
+if (arguments.read(&quot;--cascaded&quot;)) settings-&gt;setMultipleShadowMap
+Hint(osgShadow::ShadowSettings::CASCADED);
+
+
+int mapres = 1024;
+while (arguments.read(&quot;--mapres&quot;, mapres))
+settings-&gt;setTextureSize(osg::Vec2s(mapres, mapres));
+
+osg::ref_ptr&lt;osgShadow::ViewDependentShadowMap&gt; vdsm = new
+osgShadow::ViewDependentShadowMap;
+_shadowedScene-&gt;setShadowTechnique(vdsm.get());
+}
+else if (arguments.read(&quot;--lispsm&quot;))
+{
+if (arguments.read(&quot;--ViewBounds&quot;))
+msm = new osgShadow::LightSpacePerspectiveShadowMapVB;
+else if (arguments.read(&quot;--CullBounds&quot;))
+msm = new osgShadow::LightSpacePerspectiveShadowMapCB;
+else // if( arguments.read( &quot;--DrawBounds&quot; ) ) // default
+msm = new osgShadow::LightSpacePerspectiveShadowMapDB;
+}
+else if (arguments.read(&quot;--msm&quot;))
+{
+if (arguments.read(&quot;--ViewBounds&quot;))
+msm = new osgShadow::MinimalShadowMap;
+else if (arguments.read(&quot;--CullBounds&quot;))
+msm = new osgShadow::MinimalCullBoundsShadowMap;
+else // if( arguments.read( &quot;--DrawBounds&quot; ) ) // default
+msm = new osgShadow::MinimalDrawBoundsShadowMap;
+}
+else /* if (arguments.read(&quot;--sm&quot;)) */
+{
+osg::ref_ptr&lt;osgShadow::ShadowMap&gt; sm = new osgShadow::ShadowMap;
+_shadowedScene-&gt;setShadowTechnique(sm.get());
+
+int mapres = 1024;
+while (arguments.read(&quot;--mapres&quot;, mapres))
+sm-&gt;setTextureSize(osg::Vec2s(mapres, mapres));
+}
+
+if (msm)// Set common MSM &amp; LISPSM arguments
+{
+_shadowedScene-&gt;setShadowTechnique(msm.get());
+while (arguments.read(&quot;--debugHUD&quot;)) msm-&gt;setDebugDraw(true);
+
+float minLightMargin = 10.f;
+float maxFarPlane = 0;
+unsigned int texSize = 1024;
+unsigned int baseTexUnit = 0;
+unsigned int shadowTexUnit = 1;
+
+while (arguments.read(&quot;--moveVCamFactor&quot;, minLightMargin));
+while (arguments.read(&quot;--minLightMargin&quot;, minLightMargin));
+while (arguments.read(&quot;--maxFarDist&quot;, maxFarPlane));
+while (arguments.read(&quot;--mapres&quot;, texSize));
+while (arguments.read(&quot;--baseTextureUnit&quot;, baseTexUnit));
+while (arguments.read(&quot;--shadowTextureUnit&quot;, shadowTexUnit));
+
+msm-&gt;setMinLightMargin(minLightMargin);
+msm-&gt;setMaxFarPlane(maxFarPlane);
+msm-&gt;setTextureSize(osg::Vec2s(texSize, texSize));
+msm-&gt;setShadowTextureCoordIndex(shadowTexUnit);
+msm-&gt;setShadowTextureUnit(shadowTexUnit);
+msm-&gt;setBaseTextureCoordIndex(baseTexUnit);
+msm-&gt;setBaseTextureUnit(baseTexUnit);
+}
+
+// init light
+osg::Vec4 lightpos(0.0, 0.0, 1, 0.0);
+bool spotlight = false;
+while (arguments.read(&quot;--positionalLight&quot;)) { lightpos.set(0.5, 0.5, 1.5,
+1.0); }
+while (arguments.read(&quot;--directionalLight&quot;)) { lightpos.set(0.0, 0.0, 1,
+0.0); }
+while (arguments.read(&quot;--spotLight&quot;)) { lightpos.set(0.5, 0.5, 1.5, 1.0);
+spotlight = true; }
+
+ // set light position, create a light ball for visualization
+osg::ref_ptr&lt;osg::Geode&gt; coord = createIndicator(_intersectedPoint);
+_lsIndicator = dynamic_cast&lt;osg::ShapeDrawable*&gt;(coord-&gt;getDrawable(0));
+_worldRoot-&gt;addChild(coord);
+
+_ls = new osg::LightSource;
+_ls-&gt;getLight()-&gt;setPosition(lightpos);
+ _ls-&gt;getLight()-&gt;setAmbient(osg::Vec4(0.7, 0.7, 0.7, 1.0));
+ _ls-&gt;getLight()-&gt;setDiffuse(osg::Vec4(0.8, 0.8, 0.8, 1.0));
+
+// set shadowed model
+_model = _loadedModels;
+ _nodeMask = _model-&gt;getNodeMask();
+_model-&gt;setNodeMask(_nodeMask | CastsShadowTraversalMask |
+ReceivesShadowTraversalMask);
+
+_shadowedScene-&gt;addChild(_model.get());
+_shadowedScene-&gt;addChild(_ls.get());
+
+ _root-&gt;addChild(_shadowedScene);
+------------------------------------------------------------
+------------------------------------------------------------
+---------------------------------------------
+*View initialization*
+osg::StateSet* state = _root-&gt;getOrCreateStateSet();
+state-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::ON);
+
+osg::ref_ptr&lt;osgViewer::View&gt; view = new osgViewer::View;
+
+osg::Camera* camera = view-&gt;getCamera();
+camera-&gt;setGraphicsContext( gw );
+
+const osg::GraphicsContext::Traits* traits = gw-&gt;getTraits();
+
+camera-&gt;setClearColor( osg::Vec4(1.0, 1.0, 1.0, 1.0) );
+camera-&gt;setViewport( new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height)
+);
+camera-&gt;setProjectionMatrixAsPerspective(
+30.0f, static_cast&lt;double&gt;(traits-&gt;width)/static_cast&lt;double&gt;(traits-&gt;height),
+0.1f, 100000.0f );
+camera-&gt;setComputeNearFarMode(osg::Camera::COMPUTE_NEAR_FAR_
+USING_BOUNDING_VOLUMES);
+camera-&gt;setNearFarRatio(0.000002);
+GLuint buffer = gw-&gt;getTraits()-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+camera-&gt;setReadBuffer(buffer);
+camera-&gt;setDrawBuffer(buffer);
+
+view-&gt;setSceneData( scene );
+view-&gt;addEventHandler(new osgViewer::StatsHandler);
+view-&gt;addEventHandler(new osgViewer::ThreadingHandler);
+view-&gt;addEventHandler(new osgViewer::WindowSizeHandler);
+view-&gt;addEventHandler(new osgViewer::LODScaleHandler);
+------------------------------------------------------------
+------------------------------------------------------------
+---------------------------------------------
+
+And the screen shots:
+
+Strange shadow on a square.
+
+
+
+No shadow of the flag.
+
+
+
+Change light position, flag is shadowed correctly.
+
+
+
+Light on a build wall.
+
+
+
+The back side should not be lit.
+
+
+&#8203;
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170628/6f01bb52/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170628/6f01bb52/attachment-0001.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006384.html">[osg-users] Failed to build openscenegraph on Alpine
+</A></li>
+	<LI>Next message: <A HREF="006389.html">[osg-users] Fwd: Strange osgShadow appearance of multiple models self-shadowing under a point light
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282608">[ date ]</a>
+              <a href="thread.html#282608">[ thread ]</a>
+              <a href="subject.html#282608">[ subject ]</a>
+              <a href="author.html#282608">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

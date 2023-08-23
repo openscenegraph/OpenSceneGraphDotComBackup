@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Stereo View and makeLookAt()
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Stereo%20View%20and%20makeLookAt%28%29&In-Reply-To=%3C57F6954C.2070008%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004389.html">
+   <LINK REL="Next"  HREF="280619.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Stereo View and makeLookAt()</H1>
+<!--htdig_noindex-->
+    <B>Andreas Goebel</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Stereo%20View%20and%20makeLookAt%28%29&In-Reply-To=%3C57F6954C.2070008%40gmx.de%3E"
+       TITLE="[osg-users] Stereo View and makeLookAt()">a-goebel at gmx.de
+       </A><BR>
+    <I>Thu Oct  6 11:17:48 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004389.html">[osg-users] Stereo View and makeLookAt()
+</A></li>
+        <LI>Next message: <A HREF="280619.html">[osg-users] Looking for best practice about Shader and memory	management
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4392">[ date ]</a>
+              <a href="thread.html#4392">[ thread ]</a>
+              <a href="subject.html#4392">[ subject ]</a>
+              <a href="author.html#4392">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+thanks for your answer.
+
+The reason I&#180;m using sceneview is that I started with my application
+when Producer was still around, which was very complicated to integrate
+into GUI applications.
+
+As this worked and my users got used to the way the scene was
+manipulated, I stayed with it. But I&#180;m starting to use osgViewer, for
+secondary views on the same scene, a viewer window is opened. For my
+main window, I haven&#180;t made the switch yet. There is a lot of
+gui-interaction to be taken care of (for instance, menus or dialogs or
+tooltips on top of the openGL window) which won&#180;t work out of the box
+with osgViewer, as osgViewer isn&#180;t happy when it&#180;s not updated
+permamently. At least this was the case when I last tried.
+
+Setting the fusion distance manually improved my situation quite a lot,
+thank you for the hint! I liked the way the trackball manipulator
+handles this, so I&#180;ll probably try to set it to work like this.
+
+Thanks for your help,
+
+Andreas
+
+Am 06.10.2016 um 18:04 schrieb Robert Osfield:
+&gt;<i> Hi Andreas,
+</I>&gt;<i>
+</I>&gt;<i> Is there a reason why you are using SceneView?  This class hasn't been
+</I>&gt;<i> a preferred end user class since around OSG-1.0...  Personally I'd
+</I>&gt;<i> recommend user osgViewer, it's interface is much more suitable for
+</I>&gt;<i> putting together flexible viewers.
+</I>&gt;<i>
+</I>&gt;<i> As for mixing and matching ways of setting the view matrix while still
+</I>&gt;<i> supporting the built in support stereo, well this all depends upon how
+</I>&gt;<i> you go about it.  Normally you'd simply modify the viewer's master
+</I>&gt;<i> Camera's view matrix anyhow you want and then the stereo will work
+</I>&gt;<i> behind the scenes for you.  The built in Camera manipulators also set
+</I>&gt;<i> the FusionDistanceValue automatically, this helps set the effective
+</I>&gt;<i> convergence point of the left and right eyes, perhaps this is what the
+</I>&gt;<i> difference relative to your case.
+</I>&gt;<i>
+</I>&gt;<i> One thing to be aware is that certain types of camera manipulators
+</I>&gt;<i> favour scaling the FusionDistance to the distance between the eye
+</I>&gt;<i> point and center of rotation, the trackball is good example of this,
+</I>&gt;<i> while others like the drive or flight manipulators have a fixed
+</I>&gt;<i> FusionDistance that one should set to the distance between the eye and
+</I>&gt;<i> display system to get a proper 1:1 scaling of the virtual world to
+</I>&gt;<i> real world.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 6 October 2016 at 16:16, Andreas Goebel &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">a-goebel at gmx.de</A>&gt; wrote:
+</I>&gt;&gt;<i> Hi,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> to set up my view matrix I use a very simple approach with makeLookAt().
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Like this:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>         centerPos = osg::Vec3(0,0,0);
+</I>&gt;&gt;<i>         osg::Vec3 viewPos(
+</I>&gt;&gt;<i>         cos(viewElev) * sin(viewRot),
+</I>&gt;&gt;<i>         cos(viewElev) * cos(viewRot),
+</I>&gt;&gt;<i>         sin(viewElev));
+</I>&gt;&gt;<i>         osg::Vec3 up;
+</I>&gt;&gt;<i>         if ( (viewElev &gt; -1.0*osg::PI_2) &amp;&amp; (viewElev &lt; osg::PI_2) )
+</I>&gt;&gt;<i>             up = osg::Z_AXIS;
+</I>&gt;&gt;<i>         else
+</I>&gt;&gt;<i>             up = osg::Z_AXIS*-1.0;
+</I>&gt;&gt;<i>         osg::Matrixd look;
+</I>&gt;&gt;<i>         viewPos *= 10.0;
+</I>&gt;&gt;<i>         look.makeLookAt(viewPos, centerPos, up);
+</I>&gt;&gt;<i>         sceneView-&gt;setViewMatrix(look);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Recently I&#180;ve discovered that in stereo mode all my objects are behind
+</I>&gt;&gt;<i> the screen, whereas when I use an osgviewer, for example, it&#180;s possible
+</I>&gt;&gt;<i> to pull objects before the screen.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I think that usually objects before (0,0,0) appear before the screen.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Is it generally impossible to set up the view matrix with makeLookAt in
+</I>&gt;&gt;<i> connection with stereo (I use the osg builtin stereo features)?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> If so, what route should I take? I manipulate view rotation and view
+</I>&gt;&gt;<i> elevation with the mouse.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thanks,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Andreas
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004389.html">[osg-users] Stereo View and makeLookAt()
+</A></li>
+	<LI>Next message: <A HREF="280619.html">[osg-users] Looking for best practice about Shader and memory	management
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4392">[ date ]</a>
+              <a href="thread.html#4392">[ thread ]</a>
+              <a href="subject.html#4392">[ subject ]</a>
+              <a href="author.html#4392">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

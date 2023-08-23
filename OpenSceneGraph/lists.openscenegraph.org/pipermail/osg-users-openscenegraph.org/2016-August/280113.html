@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Crash on exit (graphics thread removing camera)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20on%20exit%20%28graphics%20thread%20removing%20camera%29&In-Reply-To=%3C1471197735.m2f.68367%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280105.html">
+   <LINK REL="Next"  HREF="003892.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Crash on exit (graphics thread removing camera)</H1>
+<!--htdig_noindex-->
+    <B>Jannik Heller</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20on%20exit%20%28graphics%20thread%20removing%20camera%29&In-Reply-To=%3C1471197735.m2f.68367%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Crash on exit (graphics thread removing camera)">scrawl at baseoftrash.de
+       </A><BR>
+    <I>Sun Aug 14 11:02:15 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280105.html">[osg-users] multiple input with osgwidgets
+</A></li>
+        <LI>Next message: <A HREF="003892.html">[osg-users] Crash on exit (graphics thread removing camera)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280113">[ date ]</a>
+              <a href="thread.html#280113">[ thread ]</a>
+              <a href="subject.html#280113">[ subject ]</a>
+              <a href="author.html#280113">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I just noticed a semi-random crash on exit in my application that seems to point to a design issue in OSG.
+
+In theory a crash can happen when you remove a previously used camera from the scene graph, then modify something in the subgraph of that camera (e.g. remove a node's child).
+
+The race condition comes from the clearReferencesToDependentCameras() call in the graphics thread. If the graphics thread held the last reference to that camera, then the camera will be deleted *from the graphics thread*. The camera destructor indirectly includes a call to releaseGLObjects() on the camera's sub graph. The releaseGLObjects() will crash if the sub graph is currently being modified by the main thread.
+
+Due to the race condition involved the crash is highly random so it's hard to make a reproducible example.
+
+I suspect we haven't noticed this crash in the past because clearReferencesToDependentCameras() used to be broken (see commit b5a3a580762ffbeb615d73ddff732f5e8fe487b7 ).
+
+Here's a stack trace:
+
+
+Code:
+
+Thread 2 (Thread 0x7f322525c700 (LWP 12096)):
+#0  0x00007f3232957ed9 in __libc_waitpid (pid=12105, stat_loc=0x7f322525b58c, options=0) at ../sysdeps/unix/sysv/linux/waitpid.c:40
+        resultvar = 12105
+        oldtype = 0
+#1  0x00000000009a758e in crash_catcher (signum=11, siginfo=&lt;optimized out&gt;, context=&lt;optimized out&gt;) at /home/scrawl/Dev/openmw/apps/openmw/crashcatcher.cpp:274
+        status = 0
+        dbg_pid = 12105
+        fd = {24, 25}
+#2  &lt;signal handler called&gt;
+No locals.
+#3  0x0000000000000000 in ?? ()
+No symbol table info available.
+#4  0x00007f3236a03dd3 in osg::Group::releaseGLObjects(osg::State*) const () from /home/scrawl/Dev/osg/build/install/lib64/libosg.so.145
+No symbol table info available.
+#5  0x00007f3236a03dd3 in osg::Group::releaseGLObjects(osg::State*) const () from /home/scrawl/Dev/osg/build/install/lib64/libosg.so.145
+No symbol table info available.
+#6  0x00007f3236a03dd3 in osg::Group::releaseGLObjects(osg::State*) const () from /home/scrawl/Dev/osg/build/install/lib64/libosg.so.145
+No symbol table info available.
+#7  0x00007f32369fd365 in osg::GraphicsContext::removeCamera(osg::Camera*) () from /home/scrawl/Dev/osg/build/install/lib64/libosg.so.145
+No symbol table info available.
+#8  0x00007f323699d0ef in osg::Camera::~Camera() () from /home/scrawl/Dev/osg/build/install/lib64/libosg.so.145
+No symbol table info available.
+#9  0x00007f323699d629 in osg::Camera::~Camera() () from /home/scrawl/Dev/osg/build/install/lib64/libosg.so.145
+No symbol table info available.
+#10 0x00007f323615ca01 in osgUtil::RenderStage::clearReferencesToDependentCameras() () from /home/scrawl/Dev/osg/build/install/lib64/libosgUtil.so.145
+No symbol table info available.
+#11 0x00007f3236168fa5 in osgUtil::SceneView::clearReferencesToDependentCameras() () from /home/scrawl/Dev/osg/build/install/lib64/libosgUtil.so.145
+No symbol table info available.
+#12 0x00007f3235a357d9 in osgViewer::Renderer::draw() () from /home/scrawl/Dev/osg/build/install/lib64/libosgViewer.so.145
+No symbol table info available.
+#13 0x00007f32369fed19 in osg::GraphicsContext::runOperations() () from /home/scrawl/Dev/osg/build/install/lib64/libosg.so.145
+No symbol table info available.
+#14 0x00007f3236a83b7a in osg::OperationThread::run() () from /home/scrawl/Dev/osg/build/install/lib64/libosg.so.145
+No symbol table info available.
+#15 0x00007f3236a01418 in osg::GraphicsThread::run() () from /home/scrawl/Dev/osg/build/install/lib64/libosg.so.145
+No symbol table info available.
+#16 0x00007f323666f8e5 in OpenThreads::ThreadPrivateActions::StartThread(void*) () from /home/scrawl/Dev/osg/build/install/lib64/libOpenThreads.so.20
+No symbol table info available.
+
+
+
+
+If I had to suggest a fix I'd suggest that the clear/collateReferencesToDependentCameras mechanism needs to be re-designed in a way that it's impossible for the graphics thread to delete the camera.
+
+Thank you!
+
+Cheers,
+Jannik
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2bed.php?p=68367#68367">http://forum.openscenegraph.org/viewtopic.php?p=68367#68367</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280105.html">[osg-users] multiple input with osgwidgets
+</A></li>
+	<LI>Next message: <A HREF="003892.html">[osg-users] Crash on exit (graphics thread removing camera)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280113">[ date ]</a>
+              <a href="thread.html#280113">[ thread ]</a>
+              <a href="subject.html#280113">[ subject ]</a>
+              <a href="author.html#280113">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

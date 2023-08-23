@@ -1,0 +1,181 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How do I move a Texture in an model of Openflight format (.flt) in the UV direction?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20do%20I%20move%20a%20Texture%20in%20an%20model%20of%20Openflight%0A%20format%20%28.flt%29%20in%20the%20UV%20direction%3F&In-Reply-To=%3CCAG7xrZdzUkOVc37vaNzCPd5Eh%3DN2n0QgCFuQvxu0sMKeXGD2%2BQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010409.html">
+   <LINK REL="Next"  HREF="010412.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How do I move a Texture in an model of Openflight format (.flt) in the UV direction?</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20do%20I%20move%20a%20Texture%20in%20an%20model%20of%20Openflight%0A%20format%20%28.flt%29%20in%20the%20UV%20direction%3F&In-Reply-To=%3CCAG7xrZdzUkOVc37vaNzCPd5Eh%3DN2n0QgCFuQvxu0sMKeXGD2%2BQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] How do I move a Texture in an model of Openflight format (.flt) in the UV direction?">l.voerman at rug.nl
+       </A><BR>
+    <I>Tue Sep 17 00:18:09 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010409.html">[osg-users] How do I move a Texture in an model of Openflight format (.flt) in the UV direction?
+</A></li>
+        <LI>Next message (by thread): <A HREF="010412.html">[osg-users] How do I move a Texture in an model of Openflight format (.flt) in the UV direction?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10411">[ date ]</a>
+              <a href="thread.html#10411">[ thread ]</a>
+              <a href="subject.html#10411">[ subject ]</a>
+              <a href="author.html#10411">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Dae,
+add
+_coord-&gt;dirty()
+after modification.
+Laurens.
+
+On Tue, Sep 17, 2019 at 3:16 AM Dae Woo Ryu &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osgforum at tevs.eu</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> As shown in the code below,
+</I>&gt;<i> I get the geometry information from the model of Openflight(.flt) format
+</I>&gt;<i> and move the coordinates of the vertices.
+</I>&gt;<i> But the texture doesn't move.
+</I>&gt;<i> How can I move a texture?
+</I>&gt;<i>
+</I>&gt;<i> **main**
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i> osg::ref_ptr&lt;osg::Node&gt; model = osgDB::readNodeFile(&quot;test/env_cloud.flt&quot;);
+</I>&gt;<i>
+</I>&gt;<i> coneUpdateVisitor coneV;
+</I>&gt;<i> model-&gt;accept(coneV);
+</I>&gt;<i>
+</I>&gt;<i> scene-&gt;addChild(model);
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> **visitor**
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> class coneUpdateVisitor : public osg::NodeVisitor
+</I>&gt;<i> {
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> void apply(osg::Geode&amp; geode)
+</I>&gt;<i> {
+</I>&gt;<i>         for (unsigned int i = 0; i&lt;geode.getNumDrawables(); ++i)
+</I>&gt;<i>         {
+</I>&gt;<i>         scene-&gt;setUpdateCallback(new
+</I>&gt;<i> coneUpdateCallback(geode.getDrawable(i)-&gt;asGeometry()));
+</I>&gt;<i>         }
+</I>&gt;<i> }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> **callback**
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> class coneUpdateCallback : public osg::NodeCallback
+</I>&gt;<i> {
+</I>&gt;<i> ...
+</I>&gt;<i> _geom-&gt;setUseDisplayList(false);
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> virtual void operator()(osg::Node*, osg::NodeVisitor* nv)
+</I>&gt;<i> {
+</I>&gt;<i>         if (nv-&gt;getFrameStamp())
+</I>&gt;<i>         {
+</I>&gt;<i>                 _coord =
+</I>&gt;<i> dynamic_cast&lt;osg::Vec2Array*&gt;(_geom-&gt;getTexCoordArray(0));
+</I>&gt;<i>
+</I>&gt;<i>                 for (unsigned int u = 0; u &lt; _coord-&gt;size(); u++)
+</I>&gt;<i>                 {
+</I>&gt;<i>                         _coord-&gt;at(u).x() += 0.01f;
+</I>&gt;<i>                 }
+</I>&gt;<i>
+</I>&gt;<i>         }
+</I>&gt;<i> }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Dae
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic984c.php?p=76684#76684">http://forum.openscenegraph.org/viewtopic.php?p=76684#76684</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190917/ee257ea9/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190917/ee257ea9/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010409.html">[osg-users] How do I move a Texture in an model of Openflight format (.flt) in the UV direction?
+</A></li>
+	<LI>Next message (by thread): <A HREF="010412.html">[osg-users] How do I move a Texture in an model of Openflight format (.flt) in the UV direction?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10411">[ date ]</a>
+              <a href="thread.html#10411">[ thread ]</a>
+              <a href="subject.html#10411">[ subject ]</a>
+              <a href="author.html#10411">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

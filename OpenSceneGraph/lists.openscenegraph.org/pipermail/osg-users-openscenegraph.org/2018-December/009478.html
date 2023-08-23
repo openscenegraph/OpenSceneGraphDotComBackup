@@ -1,0 +1,269 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText crash with multiple Viewers
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20crash%20with%20multiple%20Viewers&In-Reply-To=%3CCAGYwD3BYHJPDt5YsGeqFSrkxmmeBxkPz%2BAV%3D9qsx%2ByzgdCsYRw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009477.html">
+   <LINK REL="Next"  HREF="009479.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText crash with multiple Viewers</H1>
+<!--htdig_noindex-->
+    <B>Ravi Mathur</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20crash%20with%20multiple%20Viewers&In-Reply-To=%3CCAGYwD3BYHJPDt5YsGeqFSrkxmmeBxkPz%2BAV%3D9qsx%2ByzgdCsYRw%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgText crash with multiple Viewers">ravidavi at utexas.edu
+       </A><BR>
+    <I>Wed Dec 19 10:22:20 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009477.html">[osg-users] osgText crash with multiple Viewers
+</A></li>
+        <LI>Next message (by thread): <A HREF="009479.html">[osg-users] Precipitation problems
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9478">[ date ]</a>
+              <a href="thread.html#9478">[ thread ]</a>
+              <a href="subject.html#9478">[ subject ]</a>
+              <a href="author.html#9478">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>OK I created a small standalone program that shows the crash (attached).
+
+To trigger the crash:
+
+   1. Run debug version of osgmultiwindowtesttext. It will open 2 windows
+   (Viewers) that contain text &quot;Scene1&quot; and &quot;Scene2&quot;
+   2. Close one window -&gt; it might crash. If it crashes, see debug info
+   3. If it doesn't crash, then close the other window -&gt; 2 new windows
+   will be created -&gt; go back to step 2
+
+You may have to repeat step 2 many times (20 or more) before you see the
+crash. The crash happens if the closed Viewer is destroyed while the open
+Viewer is in the render stage for the Text.
+
+During debug, the thread for the Viewer being destroyed will likely be in
+the ~Camera() destructor. Meanwhile, the thread for the active Viewer will
+be in its rendering traversal, at State::apply() for the Text's Program.
+See my initial post for the codepath that ends up triggering the crash.
+
+As I said before, I'm running on Win10, Nvidia GTX 980 (latest drivers),
+Visual Studio 2013, OpenSceneGraph-3.6 branch (although it happens with
+3.6.3 tag also).
+
+I'm perfectly happy if the conclusion ends up being &quot;don't destroy a Viewer
+while another one is running&quot;. It's easy for me to pause all active Viewers
+while destroying one.
+
+Thanks,
+Ravi
+
+On Tue, Dec 18, 2018 at 2:28 PM Ravi Mathur &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ravidavi at utexas.edu</A>&gt; wrote:
+
+&gt;<i> Hi Robert, yes I'm working on a standalone test program now. Multithreaded
+</I>&gt;<i> crashes are often hard to reproduce in a vacuum, but as soon as I have
+</I>&gt;<i> something I'll post here.
+</I>&gt;<i>
+</I>&gt;<i> I'm running on Win10, Nvidia GTX 980 (latest drivers), Visual Studio 2013,
+</I>&gt;<i> OpenSceneGraph-3.6 branch.
+</I>&gt;<i>
+</I>&gt;<i> Ravi
+</I>&gt;<i>
+</I>&gt;<i> On Tue, Dec 18, 2018 at 4:24 AM Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi Ravi,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> My guess is that the new text implementation isn't the cause of the
+</I>&gt;&gt;<i> crash, only it's the straw that broke the camels back, and actually there
+</I>&gt;&gt;<i> is an underlying limitation with the OSG w..r.t you specific usage case.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Could you create a small test program that reproduces the crash.  Details
+</I>&gt;&gt;<i> on your OS/dev tools/hardware will be useful too.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Cheers.
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On Tue, 18 Dec 2018 at 08:50, Ravi Mathur &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ravidavi at utexas.edu</A>&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Hello all,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I'm seeing a crash on the OpenSceneGraph-3.6 branch that occurs when I
+</I>&gt;&gt;&gt;<i> have two CompositeViewers that contain Text objects in their scenes. My
+</I>&gt;&gt;&gt;<i> simplified scenario is this:
+</I>&gt;&gt;&gt;<i> - 2 CompositeViewers, each in singlethreaded mode, but being run at the
+</I>&gt;&gt;&gt;<i> same time in separate threads (via OpenThreads::Thread wrappers)
+</I>&gt;&gt;&gt;<i> - The viewers do not share scenes or contexts, and each has a single
+</I>&gt;&gt;&gt;<i> Text object as its scene
+</I>&gt;&gt;&gt;<i> - Each viewer is destroyed immediately after its run() loop returns
+</I>&gt;&gt;&gt;<i> (needed for my application)
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Both viewers animate just fine in their own windows. The crash happens
+</I>&gt;&gt;&gt;<i> if one viewer is being destroyed while the other is actively rendering.
+</I>&gt;&gt;&gt;<i> Note that it only seems to crash if there are Text objects in each scene,
+</I>&gt;&gt;&gt;<i> and did not crash with the old (pre-3.6) Text implementation.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Is this usage model ok in the first place? Robert, I read your post in
+</I>&gt;&gt;&gt;<i> this recent thread
+</I>&gt;&gt;&gt;<i> &lt;<A HREF="../../../../forum.openscenegraph.org/viewtopicec70.php?t=16844">http://forum.openscenegraph.org/viewtopic.php?t=16844</A>&gt; in which you
+</I>&gt;&gt;&gt;<i> advise against manually destroying viewers. Should I assume that I was just
+</I>&gt;&gt;&gt;<i> lucky in getting away with this until now? The new Text implementation
+</I>&gt;&gt;&gt;<i> seems to be the only thing that triggers the crash.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> In case anybody is interested, the crash happens due to this sequence of
+</I>&gt;&gt;&gt;<i> calls:
+</I>&gt;&gt;&gt;<i> - ~CompositeViewer() calls GraphicsContext::close(), which deletes its
+</I>&gt;&gt;&gt;<i> State
+</I>&gt;&gt;&gt;<i> - ~CompositeViewer() then destroys its osgViewer::View, which in turn
+</I>&gt;&gt;&gt;<i> destroys its Camera
+</I>&gt;&gt;&gt;<i> - ~Camera() eventually calls osgText::releaseGLObjects() with a null
+</I>&gt;&gt;&gt;<i> State.
+</I>&gt;&gt;&gt;<i> - osgText::releaseGLObjects(null) deletes text-related objects
+</I>&gt;&gt;&gt;<i> (Programs) on ALL contexts
+</I>&gt;&gt;&gt;<i> - The other CompositeViewer, which is actively rendering its Text on
+</I>&gt;&gt;&gt;<i> another context, crashes with an access violation since its Text-related
+</I>&gt;&gt;&gt;<i> Programs were just deleted.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Thanks,
+</I>&gt;&gt;&gt;<i> Ravi
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20181219/02cfbd75/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20181219/02cfbd75/attachment.html</A>&gt;
+-------------- next part --------------
+#include &lt;OpenThreads/Thread&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osgText/Text&gt;
+#include &lt;osgViewer/Viewer&gt;
+
+class ThreadedViewer : public OpenThreads::Thread
+{
+public:
+  ThreadedViewer(osg::Node* scene)
+  {
+    // Set up Viewer
+    _viewer = new osgViewer::Viewer;
+    _viewer-&gt;setSceneData(scene);
+
+    // Name camera so it's easier to identify during debug
+    _viewer-&gt;getCamera()-&gt;setName(&quot;Master camera for &quot; + scene-&gt;getName());
+  }
+
+  /** Inherited from OpenThreads::Thread. Called on thread launch. */
+  virtual void run()
+  {
+    _viewer-&gt;setUpViewInWindow(200, 200, 640, 480);
+
+    // Set up processor affinity for render and database threads
+    // First let OSG configure affinity
+    _viewer-&gt;configureAffinity();
+
+    // Set up singlethreaded mode and ensure that viewers can operate
+    // on any core. NOTE: I know this is not optimal for rendering, but
+    // here it's just for test purposes. Allowing simultaneous viewers
+    // to operate on different cores increases their performance and
+    // increases the likelihood that the crash conditions will be met.
+    _viewer-&gt;setProcessorAffinity(OpenThreads::Affinity());
+    _viewer-&gt;setUseConfigureAffinity(false);
+    _viewer-&gt;setThreadingModel(osgViewer::ViewerBase::SingleThreaded);   
+    
+    // Run viewer
+    _viewer-&gt;run();
+
+    // Force viewer to delete
+    // This can crash OTHER viewers that are in their rendering stage
+    _viewer = nullptr;
+  }
+
+protected:
+  osg::ref_ptr&lt;osgViewer::Viewer&gt; _viewer;
+};
+
+osg::Node* createScene(const std::string&amp; name)
+{
+  // Create text
+  osgText::Text* text = new osgText::Text;
+  text-&gt;setDataVariance(osg::Object::DYNAMIC);
+  text-&gt;setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+  text-&gt;setAxisAlignment(osgText::Text::SCREEN);
+  text-&gt;setFontResolution(20, 20);
+  text-&gt;setCharacterSize(20);
+  text-&gt;setFont(&quot;arial.ttf&quot;);
+  text-&gt;setText(name);
+
+  // Geode to hold the geometry
+  osg::Geode* geode = new osg::Geode();
+  geode-&gt;addDrawable(text);
+  geode-&gt;setName(name);
+  osg::StateSet *stateset = geode-&gt;getOrCreateStateSet();
+  stateset-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+  return geode;
+}
+
+int main(int argc, char** argv)
+{
+  // Parse user inputs
+  osg::ArgumentParser arguments(&amp;argc, argv);
+
+  while (true)
+  {
+    OSG_NOTICE &lt;&lt; &quot;Creating 2 threaded viewers. Close both windows to create 2 more.&quot; &lt;&lt; std::endl;
+    ThreadedViewer viewer1(createScene(&quot;Scene1&quot;));
+    ThreadedViewer viewer2(createScene(&quot;Scene2&quot;));
+
+    viewer1.startThread();
+    viewer2.startThread();
+
+    viewer1.join();
+    viewer2.join();
+  }
+
+  return 0;
+}
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009477.html">[osg-users] osgText crash with multiple Viewers
+</A></li>
+	<LI>Next message (by thread): <A HREF="009479.html">[osg-users] Precipitation problems
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9478">[ date ]</a>
+              <a href="thread.html#9478">[ thread ]</a>
+              <a href="subject.html#9478">[ subject ]</a>
+              <a href="author.html#9478">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

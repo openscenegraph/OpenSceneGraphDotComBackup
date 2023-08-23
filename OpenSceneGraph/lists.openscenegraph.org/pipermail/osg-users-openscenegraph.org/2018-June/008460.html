@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] VBO Bug with 3.6.1 and Normal Arrays
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAFN7Y%2BXouA%2BTeoPgp6K9JjHf-5eibTB_DkMiCU4wYeMXxiUkVA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008437.html">
+   <LINK REL="Next"  HREF="008461.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] VBO Bug with 3.6.1 and Normal Arrays</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAFN7Y%2BXouA%2BTeoPgp6K9JjHf-5eibTB_DkMiCU4wYeMXxiUkVA%40mail.gmail.com%3E"
+       TITLE="[osg-users] VBO Bug with 3.6.1 and Normal Arrays">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Jun 13 04:45:06 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008437.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+        <LI>Next message (by thread): <A HREF="008461.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8460">[ date ]</a>
+              <a href="thread.html#8460">[ thread ]</a>
+              <a href="subject.html#8460">[ subject ]</a>
+              <a href="author.html#8460">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Dan et. al,
+
+I have had another look into this issue, looked at Dan's workaround
+and used Dan's test example to see investigate what might be going on.
+I have checked in a fix:
+
+     <A HREF="https://github.com/openscenegraph/OpenSceneGraph/commit/673292b995115c6ca9a3cc82c26e05023f504774">https://github.com/openscenegraph/OpenSceneGraph/commit/673292b995115c6ca9a3cc82c26e05023f504774</A>
+
+This allows the test example to work correctly in all different
+combinations with the realizer operation on/off etc.
+
+What I believe is the problem is that the the VertexArrayState object
+gets initialized by the realizer operation and uses the
+State::getUseVertexAttributeAliasing() that was current at the time of
+the realizer operation, then code then calls
+State::setUseVertexAttributeAliasing() afterwards to a different
+value, so the rest of the OSG assumes that is now the current value
+but the global VertexArrayState is still set up against the original
+value so is passing using GL vertex array settings that are
+inconsistent with the shaders.
+
+The solution is simple reassign the VertexArrayState for each call to
+State::setUseVertexAttributeAliasing().
+
+I have only tested with Dan's test program, there is chance that other
+usage cases might tease out the issue in a different way, fingers
+crossed the just solves all these issue.
+
+Could users who've seen issues with the arrays being used correctly
+update to the head of the OpenSceneGraph-3.6 branch and let me know
+how you get on.
+
+If this all works fine then we can start looking at a release of 3.6.2
+this month.
+
+Cheers,
+Robert.
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008437.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+	<LI>Next message (by thread): <A HREF="008461.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8460">[ date ]</a>
+              <a href="thread.html#8460">[ thread ]</a>
+              <a href="subject.html#8460">[ subject ]</a>
+              <a href="author.html#8460">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

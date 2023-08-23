@@ -1,0 +1,160 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] &#12304;NEWBIE&#12305;Question about osg::MatrixTransform::getMatrix().getTrans() and getRotate()
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%3D%3Futf-8%3Fb%3F44CQTkVXQklF44CRUXVlc3Rpb24gYWJvdXQgb3Nn%3F%3D%0A%09%3D%3Futf-8%3Fb%3FOjpNYXRyaXhUcmFuc2Zvcm06OmdldE1hdHJpeCgpLmdldFRyYW5zKCkg%3F%3D%0A%09%3D%3Futf-8%3Fq%3Fand_getRotate%3D28%3D29%3F%3D&In-Reply-To=%3CCAHhtjQYm0A10ff5EN-UV2XVcHxLwn9NT55N6x2Nc9vaYT7uvQg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="282419.html">
+   <LINK REL="Next"  HREF="006199.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] &#12304;NEWBIE&#12305;Question about osg::MatrixTransform::getMatrix().getTrans() and getRotate()</H1>
+<!--htdig_noindex-->
+    <B>Wojciech Lewandowski</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%3D%3Futf-8%3Fb%3F44CQTkVXQklF44CRUXVlc3Rpb24gYWJvdXQgb3Nn%3F%3D%0A%09%3D%3Futf-8%3Fb%3FOjpNYXRyaXhUcmFuc2Zvcm06OmdldE1hdHJpeCgpLmdldFRyYW5zKCkg%3F%3D%0A%09%3D%3Futf-8%3Fq%3Fand_getRotate%3D28%3D29%3F%3D&In-Reply-To=%3CCAHhtjQYm0A10ff5EN-UV2XVcHxLwn9NT55N6x2Nc9vaYT7uvQg%40mail.gmail.com%3E"
+       TITLE="[osg-users] &#12304;NEWBIE&#12305;Question about osg::MatrixTransform::getMatrix().getTrans() and getRotate()">w.p.lewandowski at gmail.com
+       </A><BR>
+    <I>Fri May  5 06:17:51 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="282419.html">&#227;&#128;&#144;NEWBIE&#227;&#128;&#145;Question about osg::MatrixTransform::getMatrix().getTrans() and getRotate()
+</A></li>
+        <LI>Next message: <A HREF="006199.html">&#227;&#128;&#144;NEWBIE&#227;&#128;&#145;Question about osg::MatrixTransform::getMatrix().getTrans() and getRotate()
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6197">[ date ]</a>
+              <a href="thread.html#6197">[ thread ]</a>
+              <a href="subject.html#6197">[ subject ]</a>
+              <a href="author.html#6197">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Jiechang,
+
+Few observations:
+
+1. You write you want rotation around Y axis (0,1,0). But you rotate around
+Z axis (0,0,1). Btw there are osg::X_AXIS = (1,0,0) , osg::Y_AXIS =
+(0,1,0), osg::Z_AXIS = (0,0,1) constants defined in OSG which you may
+directly.
+2. What is the origin variable in your example ? This is probably the other
+matrix which you premultiply and it influences your results.
+3. Values stored in quaternion fields are rather non intuitive. I suggest
+you just make simpler experiment. Set quaternion variable directly with
+osg::Quat quat( Angle, Axis ). For example as osg::Quat quat( osg::PI_4,
+osg::Z_AXIS) as you do in your example. And then examine under debugger
+what constructor does and whats actually stored on 4 fields of Quat. Those
+numbers won't be the same as the ones you passed to constructor. And thats
+correct. You will find a plenty of info on Quaternions on the web. Look for
+them if you need to learn more.
+4. This line probably has wrong order of transformations --&gt;
+model1-&gt;setMatrix(origin*osg::Matrix::translate(-Center)*
+osg::Matrix::rotate(osg::DegreesToRadians(45.0), 0, 0,
+1)*osg::Matrix::translate(Center));
+I suppose you rather want to make it like this --&gt; model1-&gt;setMatrix(osg::
+Matrix::translate(-Center)*osg::Matrix::rotate(osg::DegreesToRadians(45.0),
+0, 0, 1)*osg::Matrix::translate(Center)*origin);
+Reason for this is OSG uses row major matrices, so if you want to transform
+vertex by matrix you do it like this: result = vert * matrix. Thus your
+origin transform should be multiplied as last transform.
+
+Hope this helps,
+Wojtek Lewandowski
+
+
+2017-05-05 13:54 GMT+02:00 Jiechang Guo &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osgforum at tevs.eu</A>&gt;:
+
+&gt;<i> Hi,
+</I>&gt;<i>      I'm a newbie and not good at math.
+</I>&gt;<i>      Please....
+</I>&gt;<i>      I'm so confused with osg::MatrixTransform::getMatrix().getTrans()
+</I>&gt;<i> and getRotate().
+</I>&gt;<i>      I use the code below to rotate an object around y axis about 45
+</I>&gt;<i> degrees.
+</I>&gt;<i>
+</I>&gt;<i> model1-&gt;setMatrix(origin*osg::Matrix::rotate(osg::DegreesToRadians(45.0),
+</I>&gt;<i> 0, 0, 1));
+</I>&gt;<i>
+</I>&gt;<i>       I want to get the rotation of the model, so I used the function to
+</I>&gt;<i> get a quat:
+</I>&gt;<i>
+</I>&gt;<i> osg::Quat rotation = model1-&gt;getMatrix().getRotate();
+</I>&gt;<i>
+</I>&gt;<i>       I thought the rotation should be like (0.7853982,0,0,1)&#12290;but the
+</I>&gt;<i> result is(0,0,0.382683,0,92388).
+</I>&gt;<i>       I've checked the source code of OSG, and I cann't get any
+</I>&gt;<i> inspriation from it.
+</I>&gt;<i>       Another case, I thought I should move the object to its center and
+</I>&gt;<i> do rotate then move it back (according to some book or paper). The code is
+</I>&gt;<i> below.
+</I>&gt;<i>
+</I>&gt;<i> osg::Vec3 Center = model1-&gt;getBound().center();
+</I>&gt;<i> model1-&gt;setMatrix(origin*osg::Matrix::translate(-Center)*
+</I>&gt;<i> osg::Matrix::rotate(osg::DegreesToRadians(45.0), 0, 0,
+</I>&gt;<i> 1)*osg::Matrix::translate(Center));
+</I>&gt;<i>
+</I>&gt;<i> The object is on the same position and rotation as the first case.
+</I>&gt;<i>        I try to get the rotation, I get more confused..
+</I>&gt;<i>        I thought I didn't change the position of the model, the tranlation
+</I>&gt;<i> I get
+</I>&gt;<i>
+</I>&gt;<i> osg::Vec3 translation = model1-&gt;getMatrix().getTrans();
+</I>&gt;<i>
+</I>&gt;<i> should be (0,0,0) but (-168.184,-141.218, 0) and the rotation is just like
+</I>&gt;<i> the first case.
+</I>&gt;<i>        Could you please help me to figure out why I got those results?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Jiechang
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicc894.php?p=70883#70883">http://forum.openscenegraph.org/viewtopic.php?p=70883#70883</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170505/39cce7c8/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170505/39cce7c8/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="282419.html">&#227;&#128;&#144;NEWBIE&#227;&#128;&#145;Question about osg::MatrixTransform::getMatrix().getTrans() and getRotate()
+</A></li>
+	<LI>Next message: <A HREF="006199.html">&#227;&#128;&#144;NEWBIE&#227;&#128;&#145;Question about osg::MatrixTransform::getMatrix().getTrans() and getRotate()
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6197">[ date ]</a>
+              <a href="thread.html#6197">[ thread ]</a>
+              <a href="subject.html#6197">[ subject ]</a>
+              <a href="author.html#6197">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

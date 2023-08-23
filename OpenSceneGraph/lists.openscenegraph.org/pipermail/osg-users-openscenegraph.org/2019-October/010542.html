@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgViewer GraphicsWindowX11 Event Handling
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgViewer%20GraphicsWindowX11%20Event%20Handling&In-Reply-To=%3C1570829020.m2f.76821%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010536.html">
+   <LINK REL="Next"  HREF="010543.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgViewer GraphicsWindowX11 Event Handling</H1>
+<!--htdig_noindex-->
+    <B>Eric Stancliff</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgViewer%20GraphicsWindowX11%20Event%20Handling&In-Reply-To=%3C1570829020.m2f.76821%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osgViewer GraphicsWindowX11 Event Handling">ericstancliff at yahoo.com
+       </A><BR>
+    <I>Fri Oct 11 14:23:40 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010536.html">[osg-users] I have a question about the shading properties of the 3d model(Openflight Format).
+</A></li>
+        <LI>Next message (by thread): <A HREF="010543.html">[osg-users] Problem reading unclamped float values and non-standard internal formats PBO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10542">[ date ]</a>
+              <a href="thread.html#10542">[ thread ]</a>
+              <a href="subject.html#10542">[ subject ]</a>
+              <a href="author.html#10542">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I finally figured this issue out!  I kept coming back to it with no luck, but I finally figured out that Qt was capturing all my events before the viewer had the chance to intercept them.  The below code works perfectly!
+
+
+Code:
+
+#include &lt;QWidget&gt; //must include before any x11
+
+#ifdef WIN32
+
+#include &lt;QWidget&gt;
+#include &lt;osgViewer/api/Win32/GraphicsWindowWin32&gt;
+#define OSG_PLATFORM_WINDOW osgViewer::GraphicsWindowWin32
+#define WINDOW_HANDLE HWND
+#else
+#include &lt;osgViewer/api/X11/GraphicsWindowX11&gt;
+#define OSG_PLATFORM_WINDOW osgViewer::GraphicsWindowX11
+#define WINDOW_HANDLE Window
+#include &lt;X11/extensions/XInput2.h&gt;
+#include &lt;QtX11Extras/QX11Info&gt;
+#endif
+
+
+osg::GraphicsContext::Traits* createWindowTraits(QWidget* OwningWidget)
+{
+    auto traits = new osg::GraphicsContext::Traits();
+    traits-&gt;x = OwningWidget-&gt;x();
+    traits-&gt;y = OwningWidget-&gt;y();
+    traits-&gt;width = OwningWidget-&gt;size().width();
+    traits-&gt;height = OwningWidget-&gt;size().height();
+    traits-&gt;doubleBuffer = true;
+    if (OwningWidget)
+    {
+        OSG_PLATFORM_WINDOW::WindowData* data = new OSG_PLATFORM_WINDOW::WindowData(OwningWidget-&gt;winId());
+        traits-&gt;inheritedWindowData = data;
+    }
+    return traits;
+}
+
+void setOwningWidgetOnGraphicsContext(QWidget* widget, osg::GraphicsContext* context)
+{
+#ifdef __GNUC__
+    auto bmwindow = dynamic_cast&lt;osgViewer::GraphicsWindowX11*&gt;(context);
+    //Clear the event mask.  We don't want Qt stealing our events, let OSG have them
+    XSetWindowAttributes swatt;
+    swatt.event_mask =  0;
+    XChangeWindowAttributes(QX11Info::display(), widget-&gt;winId(), CWEventMask, &amp;swatt);
+
+    //XI2 Mouse Events
+    int n;
+    XIEventMask *xi_masks = XIGetSelectedEvents( QX11Info::display(), widget-&gt;winId(), &amp;n );
+    if( xi_masks != nullptr )
+    {
+        for( int i = 0; i &lt; n; i++ )
+            if( xi_masks[i].mask_len &gt;= 1 )
+            {
+                xi_masks[i].mask[0] &amp;= ~XI_ButtonPressMask;
+                xi_masks[i].mask[0] &amp;= ~XI_ButtonReleaseMask;
+                xi_masks[i].mask[0] &amp;= ~XI_MotionMask;
+            }
+
+        XISelectEvents(  QX11Info::display(), widget-&gt;winId(), xi_masks, n );
+        XFree( xi_masks );
+    }
+
+    //Now subscribe for ourselves
+
+    XSelectInput( bmwindow-&gt;getEventDisplay(), widget-&gt;winId(), ExposureMask | StructureNotifyMask |
+                  KeyPressMask | KeyReleaseMask |
+                  PointerMotionMask | ButtonPressMask | ButtonReleaseMask |
+                  KeymapStateMask | FocusChangeMask | EnterWindowMask );
+
+
+    XFlush( bmwindow-&gt;getEventDisplay() );
+    XSync( bmwindow-&gt;getEventDisplay(), 0 );
+#endif
+}
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic8099.php?p=76821#76821">http://forum.openscenegraph.org/viewtopic.php?p=76821#76821</A>
+
+
+
+
+
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010536.html">[osg-users] I have a question about the shading properties of the 3d model(Openflight Format).
+</A></li>
+	<LI>Next message (by thread): <A HREF="010543.html">[osg-users] Problem reading unclamped float values and non-standard internal formats PBO
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10542">[ date ]</a>
+              <a href="thread.html#10542">[ thread ]</a>
+              <a href="subject.html#10542">[ subject ]</a>
+              <a href="author.html#10542">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

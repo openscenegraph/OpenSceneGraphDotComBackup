@@ -1,0 +1,45 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;HI&nbsp;Clement,&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Good&nbsp;investigation. &nbsp;This&nbsp;suggested&nbsp;workaround&nbsp;would&nbsp;sure&nbsp;be&nbsp;cleaner&nbsp;than&nbsp;my&nbsp;approach&nbsp;of&nbsp;toggling&nbsp;between&nbsp;float&nbsp;and&nbsp;int&nbsp;types. &nbsp;The&nbsp;only&nbsp;problem&nbsp;with&nbsp;it&nbsp;would&nbsp;be&nbsp;how&nbsp;widely&nbsp;the&nbsp;isnan&nbsp;is&nbsp;supported. &nbsp;I&#39;ve&nbsp;done&nbsp;a&nbsp;quick&nbsp;internet&nbsp;search&nbsp;and&nbsp;haven&#39;t&nbsp;come&nbsp;up&nbsp;with&nbsp;a&nbsp;clear&nbsp;answer,&nbsp;it&nbsp;would&nbsp;seem&nbsp;there&nbsp;are&nbsp;systems&nbsp;that&nbsp;don&#39;t&nbsp;support&nbsp;it.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Robert.&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;11&nbsp;August&nbsp;2015&nbsp;at&nbsp;06:51,&nbsp;&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:Clement.Chu@csiro.au&quot;&nbsp;target=&quot;_blank&quot;&gt;Clement.Chu@csiro.au&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;Robert,&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; Finally,&nbsp;I&nbsp;found&nbsp;out&nbsp;where&nbsp;causes&nbsp;the&nbsp;crash&nbsp;problem. &nbsp;The&nbsp;problem&nbsp;is&nbsp;not&nbsp;related&nbsp;to&nbsp;the&nbsp;type&nbsp;casting. &nbsp;See&nbsp;the&nbsp;source&nbsp;code&nbsp;below:&lt;br&gt;<br>
+&lt;br&gt;<br>
+float&nbsp;num_iterations&nbsp;=&nbsp;ceil(length((te-t0).xyz)/SampleDensityValue);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; The&nbsp;problem&nbsp;is&nbsp;the&nbsp;value&nbsp;of&nbsp;num_iterations&nbsp;is&nbsp;a&nbsp;NaN&nbsp;float&nbsp;value&nbsp;(not&nbsp;a&nbsp;number),&nbsp;so&nbsp;that&nbsp;why&nbsp;it&nbsp;makes&nbsp;an&nbsp;infinite&nbsp;running&nbsp;in&nbsp;the&nbsp;loop&nbsp;and&nbsp;then&nbsp;crashed. &nbsp;I&nbsp;think&nbsp;the&nbsp;problem&nbsp;is&nbsp;on&nbsp;the&nbsp;method&nbsp;length(). &nbsp;In&nbsp;some&nbsp;condition&nbsp;(different&nbsp;values&nbsp;of&nbsp;t0&nbsp;and&nbsp;te)&nbsp;makes&nbsp;the&nbsp;method&nbsp;length()&nbsp;to&nbsp;return&nbsp;a&nbsp;NaN&nbsp;value. &nbsp;I&nbsp;added&nbsp;a&nbsp;line&nbsp;of&nbsp;code&nbsp;to&nbsp;check&nbsp;variable&nbsp;num_iterations.&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;if&nbsp;(isnan(num_iterations))&nbsp;num_iterations&nbsp;=&nbsp;2.0;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp;So&nbsp;far&nbsp;it&nbsp;works&nbsp;on&nbsp;both&nbsp;nvidia&nbsp;and&nbsp;intel&nbsp;cards.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Regards,&lt;br&gt;<br>
+Clement&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+________________________________________&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;From:&nbsp;osg-users&nbsp;[&lt;a&nbsp;href=&quot;mailto:osg-users-bounces@lists.openscenegraph.org&quot;&gt;osg-users-bounces@lists.openscenegraph.org&lt;/a&gt;]&nbsp;on&nbsp;behalf&nbsp;of&nbsp;Robert&nbsp;Osfield&nbsp;[&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;]&lt;br&gt;<br>
+&lt;/span&gt;Sent:&nbsp;Monday,&nbsp;10&nbsp;August&nbsp;2015&nbsp;17:42&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;im&nbsp;HOEnZb&quot;&gt;To:&nbsp;OpenSceneGraph&nbsp;Users&lt;br&gt;<br>
+Subject:&nbsp;Re:&nbsp;[osg-users]&nbsp;Volume&nbsp;image&nbsp;crash&nbsp;on&nbsp;the&nbsp;latest&nbsp;version&nbsp;of&nbsp;Nvidia &nbsp; &nbsp; driver&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt;&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;Hi&nbsp;Clement,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;have&nbsp;been&nbsp;looking&nbsp;GLSL&nbsp;for&nbsp;what&nbsp;might&nbsp;help&nbsp;us&nbsp;determine&nbsp;when&nbsp;to&nbsp;use&nbsp;float&nbsp;vs&nbsp;ints. &nbsp;The&nbsp;follow&nbsp;info&nbsp;might&nbsp;be&nbsp;useful:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &lt;a&nbsp;href=&quot;https://github.com/mattdesl/lwjgl-basics/wiki/GLSL-Versions&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;https://github.com/mattdesl/lwjgl-basics/wiki/GLSL-Versions&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+Perhaps&nbsp;we&nbsp;should&nbsp;just&nbsp;add&nbsp;a&nbsp;#version&nbsp;130&nbsp;(OpenGL&nbsp;Version&nbsp;&gt;=&nbsp;3.0)&nbsp;to&nbsp;the&nbsp;top&nbsp;of&nbsp;the&nbsp;fragment&nbsp;shaders&nbsp;to&nbsp;make&nbsp;sure&nbsp;they&nbsp;support&nbsp;ints. &nbsp;This&nbsp;may&nbsp;mean&nbsp;that&nbsp;the&nbsp;Intel&nbsp;driver&nbsp;fails&nbsp;though.&lt;br&gt;<br>
+&lt;br&gt;<br>
+What&nbsp;Intel&nbsp;hardware,&nbsp;drivers&nbsp;and&nbsp;OpenGL&nbsp;version&nbsp;support&nbsp;by&nbsp;the&nbsp;drivers&nbsp;do&nbsp;you&nbsp;have&nbsp;on&nbsp;your&nbsp;system?&lt;br&gt;<br>
+&lt;br&gt;<br>
+Robert.&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

@@ -1,0 +1,144 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] freetype build support on Windows
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20freetype%20build%20support%20on%20Windows&In-Reply-To=%3CCAFN7Y%2BWpMrxBHaDHr1VN4-YsZzjSYNAax3%3Dmcg-P1RjZW3dA9w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003176.html">
+   <LINK REL="Next"  HREF="003188.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] freetype build support on Windows</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20freetype%20build%20support%20on%20Windows&In-Reply-To=%3CCAFN7Y%2BWpMrxBHaDHr1VN4-YsZzjSYNAax3%3Dmcg-P1RjZW3dA9w%40mail.gmail.com%3E"
+       TITLE="[osg-users] freetype build support on Windows">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Jun  2 05:21:50 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003176.html">[osg-users] freetype build support on Windows
+</A></li>
+        <LI>Next message: <A HREF="003188.html">[osg-users] freetype build support on Windows
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3177">[ date ]</a>
+              <a href="thread.html#3177">[ thread ]</a>
+              <a href="subject.html#3177">[ subject ]</a>
+              <a href="author.html#3177">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Stuart,
+
+The PNG link in freetype is something we can't hardwire into the OSG's
+freetype plugin as it will break the build for those who use freetype
+without PNG and don't have png available.
+
+Could you check the CMake FindFreetype.cmake to see if it has any var
+for additional libraries that are required, I'd hope that something
+like this will be picked up automatically so we can use this rather
+than jump through hoops to handle and edge case like using Freetype
+with PNG.
+
+On the warnings front, please post them for discussion.  I currently
+don't see any warnings when building under Windows, but I have VS2013
+installed so this might be the difference.
+
+In general I'd like to clean up warnings, but we have be careful as
+fixing warnings can introduce bugs as well as fix bugs.  In most cases
+fixing warnings doesn't fix actual bugs, so any risk of introducing
+bugs has to be warranted and double checked to avoid this risk.  And
+yes on a number of occasions bugs have been introduced by warning
+fixes, we have been burnt even when taking care.
+
+In cases where the compiler is just generating warnings that are not
+helpful and are too intrusive to fix I feel can be warranted to simply
+disable the warning.
+
+Robert.
+
+
+On 2 June 2016 at 12:55, Stuart Mentzer &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osgforum at tevs.eu</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> robertosfield wrote:
+</I>&gt;&gt;<i> Could you please try a build with the latest that I've checked in and
+</I>&gt;&gt;<i> see what happens.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Trying with Visual C++ 2015...
+</I>&gt;<i>
+</I>&gt;<i> I've been enabling PNG support in my freetype lib build (-DWITH_PNG=ON) and this causes unresolved png symbols when linking osgdb_freetype.dll since I'm enabling PNG support :
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> [ 94%] Linking CXX shared module osgdb_freetype.dll
+</I>&gt;<i> freetype.lib(sfnt.c.obj) : error LNK2019: unresolved external symbol png_create_read_struct referenced in function Load_SBit_Png
+</I>&gt;<i> freetype.lib(sfnt.c.obj) : error LNK2019: unresolved external symbol png_set_longjmp_fn referenced in function Load_SBit_Png
+</I>&gt;<i> ...
+</I>&gt;<i> osgdb_freetype.dll : fatal error LNK1120: 23 unresolved externals
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> This is why I made that PNG change in my submission code. I don't know if we want/need to support PNG in freetype for OSG purposes but for now I'll try again with it disabled and let you know what happens.
+</I>&gt;<i>
+</I>&gt;<i> BTW I also see a lot of base class initialization warnings:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> C:\Projects\OSG\OpenSceneGraph\include\osg/OperationThread(80): warning C4589: Constructor of abstract class 'osg::Operation' ignores initializer for virtual base class 'osg::Referenced'
+</I>&gt;<i> C:\Projects\OSG\OpenSceneGraph\include\osg/OperationThread(80): note: virtual base classes are only initialized by the most-derived type
+</I>&gt;<i> C:\Projects\OSG\OpenSceneGraph\include\osg/OperationThread(84): warning C4589: Constructor of abstract class 'osg::Operation' ignores initializer for virtual base class 'osg::Referenced'
+</I>&gt;<i> C:\Projects\OSG\OpenSceneGraph\include\osg/OperationThread(84): note: virtual base classes are only initialized by the most-derived type
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> There were other warnings that may be meaningful when I built 3.4.0. If it would be helpful to work towards reducing them I'm willing to give it some time.
+</I>&gt;<i>
+</I>&gt;<i> Stuart
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic1af5.php?p=67347#67347">http://forum.openscenegraph.org/viewtopic.php?p=67347#67347</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003176.html">[osg-users] freetype build support on Windows
+</A></li>
+	<LI>Next message: <A HREF="003188.html">[osg-users] freetype build support on Windows
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3177">[ date ]</a>
+              <a href="thread.html#3177">[ thread ]</a>
+              <a href="subject.html#3177">[ subject ]</a>
+              <a href="author.html#3177">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

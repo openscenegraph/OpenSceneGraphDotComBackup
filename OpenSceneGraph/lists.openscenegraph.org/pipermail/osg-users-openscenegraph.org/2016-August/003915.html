@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Crash on exit (graphics thread removing camera)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20on%20exit%20%28graphics%20thread%20removing%20camera%29&In-Reply-To=%3CCAFN7Y%2BVhaHVqvPe_wM84PYuWr3ExnWCuqbLb%2BPrsfvSPy1jpqA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003913.html">
+   <LINK REL="Next"  HREF="280114.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Crash on exit (graphics thread removing camera)</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20on%20exit%20%28graphics%20thread%20removing%20camera%29&In-Reply-To=%3CCAFN7Y%2BVhaHVqvPe_wM84PYuWr3ExnWCuqbLb%2BPrsfvSPy1jpqA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Crash on exit (graphics thread removing camera)">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Aug 16 11:09:03 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003913.html">[osg-users] Crash on exit (graphics thread removing camera)
+</A></li>
+        <LI>Next message: <A HREF="280114.html">[osg-users] [About VertexArrayObject Branch] FeedBack and Insight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3915">[ date ]</a>
+              <a href="thread.html#3915">[ thread ]</a>
+              <a href="subject.html#3915">[ subject ]</a>
+              <a href="author.html#3915">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Jannik,
+
+On 16 August 2016 at 17:44, Jannik Heller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">scrawl at baseoftrash.de</A>&gt; wrote:
+&gt;<i> I don't need to remove it during runtime, I remove it on exit. Obviously it's a good idea to remove stuff on exit to avoid memory leaks. You *could* just leave your scene as it is and let OSG clean it up when the viewer exits - but I like to follow the principle of: whoever creates an object should be responsible for removing it ;)
+</I>
+The OSG uses smart pointers within the viewer and scene graph so there
+is no need to manually track memory management, it'll clean things up
+for you.
+
+
+&gt;&gt;<i> Also something that seems a bit odd - why an in scene graph Camera has
+</I>&gt;&gt;<i> a GraphicsContext assigned to it. Normally in scene graph Camera
+</I>&gt;&gt;<i> don't have an GraphicsContext, instead inherit the GraphicsContext
+</I>&gt;&gt;<i> from the viewer's Camera. If Camera needs it's own
+</I>&gt;&gt;<i> GraphicsContext/Window then would typically best done by having a
+</I>&gt;&gt;<i> Camera at the Viewer level rather than in the scene graph. Again I
+</I>&gt;&gt;<i> don't know why you've gone for the approach you have, all I can say it
+</I>&gt;&gt;<i> might not be appropriate.
+</I>&gt;<i>
+</I>&gt;<i> I assigned the same GraphicsContext that I'm using for the window. I thought that would be equivalent to just leaving the GraphicsContext as NULL and letting it inherit, I didn't realize there might be side effects to explicitely setting the GraphicsContext.
+</I>
+The side effects are only appearing because you are mixing in lots of
+other things as well - i.e. threading, removing objects before the
+drawing thread has completed, sharing subgraphs.
+
+As a general design you should avoid assigning the GraphicsContext for
+in scene graph Camera's as it limits how reusable the scene graph is,
+you are looking high levels parts of the application with lower levels
+in the scene graph rather than leaving then loosely coupled.  Scene
+graphs like the OSG are built to enable loose coupling as this
+provides much greater flexibility i.e. you can alter the viewer
+configuration and the scene graph independently.  A lot of work has
+gone into this part of the design of the OSG, you can still break it
+if you wish as the design is so flexible, mostly this is fine, but in
+your case you've added extra complexity for no functionality gain and
+found a way to break things that would have otherwise work perfectly
+had you gone the straight fordward route.
+
+&gt;<i> Thanks for this note, now I have a better understanding of what Camera::setGraphicsContext actually does :)
+</I>&gt;<i>
+</I>&gt;<i> So I guess we have at least 3 different workarounds then:
+</I>&gt;<i>
+</I>&gt;<i> - Leave the camera's GraphicsContext as NULL
+</I>&gt;<i> - Remove the Camera's children before removing the Camera
+</I>&gt;<i> - Wait for the graphics thread to finish (i.e. stop viewer threading) before removing the camera
+</I>
+Frankly we are talking about workarounds, we are talking about fixing
+the way you are setting up your application and scene graph to keep it
+nicely decoupled.  Simply don't assign the graphics context to the
+Camera and don't remove elements in the scene graph that you don't
+need to.  The OSG will do the right thing for you, just trust it.
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003913.html">[osg-users] Crash on exit (graphics thread removing camera)
+</A></li>
+	<LI>Next message: <A HREF="280114.html">[osg-users] [About VertexArrayObject Branch] FeedBack and Insight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3915">[ date ]</a>
+              <a href="thread.html#3915">[ thread ]</a>
+              <a href="subject.html#3915">[ subject ]</a>
+              <a href="author.html#3915">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

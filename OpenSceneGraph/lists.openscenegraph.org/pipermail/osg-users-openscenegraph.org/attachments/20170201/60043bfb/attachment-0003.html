@@ -1,0 +1,143 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Thanks&nbsp;Sebastian!&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;I&nbsp;will&nbsp;write&nbsp;you&nbsp;off-list&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;Wed,&nbsp;Feb&nbsp;1,&nbsp;2017&nbsp;at&nbsp;12:36&nbsp;PM,&nbsp;Sebastian&nbsp;Messerschmidt&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:sebastian.messerschmidt@gmx.de&quot;&nbsp;target=&quot;_blank&quot;&gt;sebastian.messerschmidt@gmx.de&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi&nbsp;Trajce,&lt;br&gt;<br>
+&lt;br&gt;<br>
+based&nbsp;on&nbsp;Euler&nbsp;with&nbsp;optional&nbsp;smoothing&nbsp;(to&nbsp;avoid&nbsp;jaggy&nbsp;movement),&nbsp;this&nbsp;algorithm&nbsp;will&nbsp;adapt&nbsp;a&nbsp;local&nbsp;pose&nbsp;conserving&nbsp;heading.&nbsp;The&nbsp;smoothing&nbsp;part&nbsp;is&nbsp;mainly&nbsp;to&nbsp;get&nbsp;a&nbsp;smooth&nbsp;transition&nbsp;between&nbsp;adjacend&nbsp;terrain&nbsp;normals.&nbsp;Sorry&nbsp;for&nbsp;the&nbsp;cluttered&nbsp;code.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;code&gt;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;IN: &nbsp; &nbsp; gmtl::Vec3d&nbsp;local_normal;&nbsp;gmtl::EulerAngleXZYd &nbsp;orientation;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//extract&nbsp;heading&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;const&nbsp;gmtl::Quatd&nbsp;quat &nbsp;=&nbsp;gmtl::make&lt;gmtl::Quatd&gt;(orient&lt;wbr&gt;ation);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;gmtl::Vec3d&nbsp;heading&nbsp;=&nbsp;gmtl::xform(heading,&nbsp;quat,&nbsp;gmtl::Vec3d(0.0,1.0,0.0));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//project&nbsp;heading&nbsp;to&nbsp;plane&nbsp;and&nbsp;normalize&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;heading&nbsp;=&nbsp;gmtl::makeNormal(gmtl::Vec3d(h&lt;wbr&gt;eading[0],&nbsp;heading[1],&nbsp;0.0));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;get&nbsp;a&nbsp;vector&nbsp;perpendicular&nbsp;to&nbsp;projected&nbsp;heading&nbsp;and&nbsp;the&nbsp;normal&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;const&nbsp;gmtl::Vec3d&nbsp;perpendicular&nbsp;=&nbsp;gmtl::makeCross(local_normal,&nbsp;heading);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;const&nbsp;gmtl::Vec3d&nbsp;perpendicular_2&nbsp;=&nbsp;gmtl::makeCross(perpendicular,&nbsp;local_normal);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;//&nbsp;construct&nbsp;a&nbsp;new&nbsp;orientation&nbsp;leaving&nbsp;the&nbsp;heading&nbsp;untouched&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;orientation&nbsp;=&nbsp;gmtl::EulerAngleZXYd &nbsp; &nbsp; &nbsp;(&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;orientation[0]&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;,gmtl::Math::aSin(perpendicula&lt;wbr&gt;r_2[2])&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;,gmtl::Math::aTan2(perpendicul&lt;wbr&gt;ar[2],&nbsp;local_normal[2])&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(smooth_factor&nbsp;&lt;&nbsp;1.0)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;gmtl::Quatd&nbsp;target_quat&nbsp;=&nbsp;gmtl::makeRot&lt;gmtl::Quatd&gt;(ori&lt;wbr&gt;entation);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;target_quat&nbsp;=&nbsp;gmtl::slerp(target_quat,&nbsp;smooth_factor,&nbsp;quat,&nbsp;target_quat);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;orientation&nbsp;=&nbsp;gmtl::makeRot&lt;gmtl::EulerAngle&lt;wbr&gt;ZXYd&gt;(gmtl::makeRot&lt;gmtl::&lt;wbr&gt;Matrix44d&gt;(target_quat));&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;/code&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers&lt;br&gt;<br>
+Sebastian&lt;br&gt;<br>
+&lt;br&gt;<br>
+P.S.&nbsp;If&nbsp;you&nbsp;got&nbsp;further&nbsp;questions,&nbsp;simply&nbsp;drop&nbsp;me&nbsp;a&nbsp;private&nbsp;message/email.&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Am&nbsp;2/1/2017&nbsp;um&nbsp;11:27&nbsp;AM&nbsp;schrieb&nbsp;Trajce&nbsp;Nikolov&nbsp;NICK:&lt;br&gt;<br>
+&lt;/span&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;&lt;span&nbsp;class=&quot;&quot;&gt;<br>
+Hi&nbsp;Sebastian,&lt;br&gt;<br>
+&lt;br&gt;<br>
+the&nbsp;code&nbsp;will&nbsp;be&nbsp;welcome.&nbsp;I&nbsp;was&nbsp;expecting&nbsp;that&nbsp;the&nbsp;proper&nbsp;way&nbsp;is&nbsp;to&nbsp;go&lt;br&gt;<br>
+through&nbsp;Eulers&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thanks&nbsp;a&nbsp;lot!&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+On&nbsp;Wed,&nbsp;Feb&nbsp;1,&nbsp;2017&nbsp;at&nbsp;9:48&nbsp;AM,&nbsp;Sebastian&nbsp;Messerschmidt&lt;br&gt;&lt;/span&gt;<br>
+&lt;&lt;a&nbsp;href=&quot;mailto:sebastian.messerschmidt@gmx.de&quot;&nbsp;target=&quot;_blank&quot;&gt;sebastian.messerschmidt@gmx.d&lt;wbr&gt;e&lt;/a&gt;&nbsp;&lt;mailto:&lt;a&nbsp;href=&quot;mailto:sebastian.messerschmidt@gmx.de&quot;&nbsp;target=&quot;_blank&quot;&gt;sebastian.messerschmid&lt;wbr&gt;t@gmx.de&lt;/a&gt;&gt;&gt;&lt;div&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+wrote:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;Hi&nbsp;Trajce,&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;Did&nbsp;I&nbsp;miss&nbsp;the&nbsp;question&nbsp;:-)&nbsp;If&nbsp;it&nbsp;is&nbsp;working:&nbsp;fine.&nbsp;:-)&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;In&nbsp;general&nbsp;you&nbsp;are&nbsp;extracting&nbsp;the&nbsp;heading&nbsp;I&nbsp;guess&nbsp;(with&nbsp;the&lt;br&gt;<br>
+ &nbsp; &nbsp;modelOrientation)&nbsp;and&nbsp;put&nbsp;it&nbsp;on&nbsp;top&nbsp;the&nbsp;tilted&nbsp;normal,&nbsp;which&nbsp;will&lt;br&gt;<br>
+ &nbsp; &nbsp;put&nbsp;you&nbsp;on&nbsp;in&nbsp;this&nbsp;pose.&nbsp;The&nbsp;problem&nbsp;might&nbsp;be,&nbsp;that&nbsp;you&nbsp;introduce&lt;br&gt;<br>
+ &nbsp; &nbsp;unwanted&nbsp;roll&nbsp;with&nbsp;this.&nbsp;I&nbsp;can&nbsp;give&nbsp;you&nbsp;some&nbsp;code&nbsp;(not&nbsp;based&nbsp;on&nbsp;OSG,&lt;br&gt;<br>
+ &nbsp; &nbsp;but&nbsp;you&#39;ll&nbsp;get&nbsp;the&nbsp;idea)&nbsp;adapting&nbsp;a&nbsp;EulerAngle&nbsp;pose&nbsp;to&nbsp;a&nbsp;terrain&lt;br&gt;<br>
+ &nbsp; &nbsp;normal&nbsp;using&nbsp;a&nbsp;local&nbsp;tangent&nbsp;plane.&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;Cheers&lt;br&gt;<br>
+ &nbsp; &nbsp;Sebastian&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Hi&nbsp;community,&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;this&nbsp;is&nbsp;sort&nbsp;of&nbsp;easy&nbsp;math&nbsp;question&nbsp;(btw,&nbsp;I&nbsp;missed&nbsp;that&nbsp;part&nbsp;in&nbsp;my&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;classes&nbsp;;-)&nbsp;)&nbsp;I&nbsp;want&nbsp;to&nbsp;check&nbsp;it&nbsp;with&nbsp;you.&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;It&nbsp;is&nbsp;about&nbsp;node&nbsp;following&nbsp;terrain.&nbsp;my&nbsp;node&nbsp;is&nbsp;MatrixTransform&nbsp;and&nbsp;I&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;have&nbsp;to&nbsp;set&nbsp;it&nbsp;in&nbsp;world&nbsp;coordinates.&nbsp;The&nbsp;node&nbsp;has&nbsp;it&#39;s&nbsp;own&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;rotation&nbsp;and&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;I&nbsp;just&nbsp;need&nbsp;to&nbsp;take&nbsp;the&nbsp;terrain&nbsp;normal&nbsp;into&nbsp;account.&nbsp;Here&nbsp;is&nbsp;the&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;pseudocode&nbsp;that&nbsp;produces&nbsp;some&nbsp;acceptable&nbsp;results&nbsp;(not&nbsp;sure&nbsp;if&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;they&nbsp;are&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;correct&nbsp;though,&nbsp;thus&nbsp;asking&nbsp;you&nbsp;for&nbsp;hints)&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Vec3&nbsp;terrainNormal;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Quat&nbsp;terrainOrientation;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;terrainOrientation.makeRotate(&lt;wbr&gt;Vec3(0,0,1),&nbsp;terrainNormal);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Quat&nbsp;modelOrientation;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;modelOrientation.makeRotate(Ve&lt;wbr&gt;c3(0,1,0),&nbsp;whatever);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Quat&nbsp;q;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;q&nbsp;=&nbsp;terrainOrientation&nbsp;*&nbsp;modelOrientation;&nbsp;//&nbsp;not&nbsp;sure&nbsp;about&nbsp;this&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;MatrixTransform&nbsp;mxt&nbsp;=&nbsp;...&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;mxt-&gt;setMatrix(Matrixd:;rotate&lt;wbr&gt;(q)&nbsp;*&nbsp;...);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Any&nbsp;hints?&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Thanks&nbsp;a&nbsp;bunch&nbsp;as&nbsp;always!&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Nick&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;--&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;trajce&nbsp;nikolov&nbsp;nick&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph&lt;wbr&gt;.org&lt;/a&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;&lt;mailto:&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.opensc&lt;wbr&gt;enegraph.org&lt;/a&gt;&gt;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.or&lt;wbr&gt;g/listinfo.cgi/osg-users-opens&lt;wbr&gt;cenegraph.org&lt;/a&gt;&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;&lt;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.o&lt;wbr&gt;rg/listinfo.cgi/osg-users-open&lt;wbr&gt;scenegraph.org&lt;/a&gt;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+ &nbsp; &nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+ &nbsp; &nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph&lt;wbr&gt;.org&lt;/a&gt;&lt;br&gt;&lt;/span&gt;<br>
+ &nbsp; &nbsp;&lt;mailto:&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.opensc&lt;wbr&gt;enegraph.org&lt;/a&gt;&gt;&lt;br&gt;<br>
+ &nbsp; &nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.or&lt;wbr&gt;g/listinfo.cgi/osg-users-opens&lt;wbr&gt;cenegraph.org&lt;/a&gt;&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+ &nbsp; &nbsp;&lt;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.o&lt;wbr&gt;rg/listinfo.cgi/osg-users-open&lt;wbr&gt;scenegraph.org&lt;/a&gt;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+--&lt;br&gt;<br>
+trajce&nbsp;nikolov&nbsp;nick&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph&lt;wbr&gt;.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.or&lt;wbr&gt;g/listinfo.cgi/osg-users-opens&lt;wbr&gt;cenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;/span&gt;&lt;/blockquote&gt;&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph&lt;wbr&gt;.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.or&lt;wbr&gt;g/listinfo.cgi/osg-users-opens&lt;wbr&gt;cenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_signature&quot;&nbsp;data-smartmail=&quot;gmail_signature&quot;&gt;trajce&nbsp;nikolov&nbsp;nick&lt;br&gt;&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+
+</tt>

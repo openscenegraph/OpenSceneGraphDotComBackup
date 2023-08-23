@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgQt aspect ratio issue when inside QMainWindow
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20aspect%20ratio%20issue%20when%20inside%20QMainWindow&In-Reply-To=%3Cmailman.72420.1582637522.7168.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010870.html">
+   <LINK REL="Next"  HREF="010872.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgQt aspect ratio issue when inside QMainWindow</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20aspect%20ratio%20issue%20when%20inside%20QMainWindow&In-Reply-To=%3Cmailman.72420.1582637522.7168.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] osgQt aspect ratio issue when inside QMainWindow">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Tue Feb 25 05:32:00 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010870.html">[osg-users] osgQt aspect ratio issue when inside QMainWindow
+</A></li>
+        <LI>Next message (by thread): <A HREF="010872.html">[osg-users]  Best practices for dealing with complex scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10871">[ date ]</a>
+              <a href="thread.html#10871">[ thread ]</a>
+              <a href="subject.html#10871">[ subject ]</a>
+              <a href="author.html#10871">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Mohamed,
+thank you for your reply. Actually, the methods initializeGL, resizeGL 
+and paintGL are not virtual and are already implemented inside the 
+osgQOpenGLWidget class.
+Probably there's some function inside these methods that is called only 
+once, probably at window initialization, or that is effective only the at 
+the first time.
+I am currently reading the code but I am not an expert on OpenSceneGraph 
+and I can't figure out what's missing (i.e. why window resize causes just 
+an image stretch).
+
+
+Il giorno luned&#236; 24 febbraio 2020 14:14:53 UTC+1, mohamed selim ha scritto:
+&gt;<i>
+</I>&gt;<i> Hi Angelo,
+</I>&gt;<i>
+</I>&gt;<i> I believe you should handle from the osgQOpenGLWidget virtual methods, 
+</I>&gt;<i> which should be something like virtual void resizeGL( int width, int 
+</I>&gt;<i> height ); 
+</I>&gt;<i> As it's expected it should be called whenever there's a change in the 
+</I>&gt;<i> widget size. From there you would be able to call osgViewer::GraphicsWindowEmbedded 
+</I>&gt;<i> resized method as 
+</I>&gt;<i> well as camera's necessary adjustment for the new size and most important 
+</I>&gt;<i> the aspect ration for this new size.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Thursday, February 20, 2020 at 3:12:43 PM UTC+1, Angelo Emanuele 
+</I>&gt;<i> Fiorilla wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi,
+</I>&gt;&gt;<i> I am trying to put an osgQOpenGLWidget inside a QMainWindow. I managed to 
+</I>&gt;&gt;<i> made it quite easily but the resulting image is stretched and I cannot 
+</I>&gt;&gt;<i> change its aspect ratio to made it right (the cow.osg is really stretched).
+</I>&gt;&gt;<i> Can you help me, please? I have been struggling with this few lines of 
+</I>&gt;&gt;<i> code for 5 days now.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I can provide source code as follows...
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Thank you so much
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> #include &quot;mainwindow.h&quot;
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> MainWindow::MainWindow(QWidget *parent)
+</I>&gt;&gt;<i>         : QMainWindow(parent)
+</I>&gt;&gt;<i> {
+</I>&gt;&gt;<i>     QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+</I>&gt;&gt;<i>     format.setVersion(2, 0);
+</I>&gt;&gt;<i>     format.setProfile(QSurfaceFormat::CompatibilityProfile);
+</I>&gt;&gt;<i>     format.setRenderableType(QSurfaceFormat::OpenGL);
+</I>&gt;&gt;<i>     format.setOption(QSurfaceFormat::DebugContext);
+</I>&gt;&gt;<i>     format.setDepthBufferSize(24);
+</I>&gt;&gt;<i>     format.setSamples(8);
+</I>&gt;&gt;<i>     format.setStencilBufferSize(8);
+</I>&gt;&gt;<i>     format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+</I>&gt;&gt;<i>     QSurfaceFormat::setDefaultFormat(format);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     osgWidget = new osgQOpenGLWidget(this);
+</I>&gt;&gt;<i>     QObject::connect(osgWidget, &amp;osgQOpenGLWidget::initialized, this, &amp;MainWindow::setupOsgView);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     setCentralWidget(osgWidget);
+</I>&gt;&gt;<i>     osgWidget-&gt;show();
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> void MainWindow::setupOsgView() {
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     osgWidget-&gt;getOsgViewer()-&gt;setCameraManipulator(new osgGA::TerrainManipulator());
+</I>&gt;&gt;<i>     osgWidget-&gt;getOsgViewer()-&gt;addEventHandler(new osgGA::StateSetManipulator(osgWidget-&gt;getOsgViewer()-&gt;getCamera()-&gt;getOrCreateStateSet()));
+</I>&gt;&gt;<i>     osgWidget-&gt;getOsgViewer()-&gt;addEventHandler(new osgViewer::ThreadingHandler);
+</I>&gt;&gt;<i>     osgWidget-&gt;getOsgViewer()-&gt;addEventHandler(new osgViewer::WindowSizeHandler);
+</I>&gt;&gt;<i>     osgWidget-&gt;getOsgViewer()-&gt;addEventHandler(new osgViewer::StatsHandler);
+</I>&gt;&gt;<i>     osgWidget-&gt;getOsgViewer()-&gt;addEventHandler(new osgViewer::RecordCameraPathHandler);
+</I>&gt;&gt;<i>     osgWidget-&gt;getOsgViewer()-&gt;addEventHandler(new osgViewer::LODScaleHandler);
+</I>&gt;&gt;<i>     osgWidget-&gt;getOsgViewer()-&gt;addEventHandler(new osgViewer::ScreenCaptureHandler);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     osg::ref_ptr&lt;osg::Node&gt; loadedModel = osgDB::readRefNodeFile(&quot;cow.osg&quot;);
+</I>&gt;&gt;<i>     if(!loadedModel) {
+</I>&gt;&gt;<i>         std::cout &lt;&lt; &quot;No data loaded&quot; &lt;&lt; std::endl;
+</I>&gt;&gt;<i>     }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     osgUtil::Optimizer optimizer;
+</I>&gt;&gt;<i>     optimizer.optimize(loadedModel);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>     osgWidget-&gt;getOsgViewer()-&gt;setSceneData(loadedModel);
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> MainWindow::~MainWindow()
+</I>&gt;&gt;<i> {
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> }
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/3dddce23-89d9-4b0f-b8c7-bd9e429ef36e%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/3dddce23-89d9-4b0f-b8c7-bd9e429ef36e%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200225/03944926/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200225/03944926/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010870.html">[osg-users] osgQt aspect ratio issue when inside QMainWindow
+</A></li>
+	<LI>Next message (by thread): <A HREF="010872.html">[osg-users]  Best practices for dealing with complex scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10871">[ date ]</a>
+              <a href="thread.html#10871">[ thread ]</a>
+              <a href="subject.html#10871">[ subject ]</a>
+              <a href="author.html#10871">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

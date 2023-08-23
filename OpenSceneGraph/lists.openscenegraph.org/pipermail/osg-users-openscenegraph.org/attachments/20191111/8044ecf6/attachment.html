@@ -1,0 +1,46 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Han,&lt;div&gt;Yes,&nbsp;you&nbsp;will&nbsp;need&nbsp;to&nbsp;use&nbsp;shaders.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Attach&nbsp;your&nbsp;MRT&nbsp;(multiple-render-target)&nbsp;textures,&nbsp;like&nbsp;you&nbsp;are&nbsp;doing:&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;40px;border:none;padding:0px&quot;&gt;&lt;div&gt;rtt-&gt;attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER0),&nbsp;colorTex);&lt;/div&gt;&lt;div&gt;rtt-&gt;attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER1),&nbsp;normalTex);&lt;/div&gt;&lt;div&gt;rtt-&gt;attach(osg::Camera::BufferComponent(osg::Camera::COLOR_BUFFER2),&nbsp;depthTex);&lt;/div&gt;&lt;/blockquote&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Then&nbsp;in&nbsp;your&nbsp;fragment&nbsp;shader,&nbsp;make&nbsp;an&nbsp;output&nbsp;corresponding&nbsp;to&nbsp;each&nbsp;buffer&nbsp;attachment:&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;40px;border:none;padding:0px&quot;&gt;&lt;div&gt;in&nbsp;vec3&nbsp;normal;&lt;/div&gt;&lt;div&gt;in&nbsp;vec4&nbsp;color;&lt;/div&gt;&lt;div&gt;...&lt;/div&gt;&lt;div&gt;layout(location=0)&nbsp;out&nbsp;vec4&nbsp;gcolor;&lt;/div&gt;&lt;div&gt;layout(location=1)&nbsp;out&nbsp;vec4&nbsp;gnormal;&lt;/div&gt;&lt;div&gt;layout(location=2)&nbsp;out&nbsp;vec4&nbsp;gdepth;&lt;/div&gt;&lt;div&gt;...&lt;/div&gt;&lt;div&gt;gcolor&nbsp;=&nbsp;color;&lt;/div&gt;&lt;div&gt;gnormal&nbsp;=&nbsp;vec4((normal+1.0)/2.0,&nbsp;1.0);&lt;/div&gt;&lt;div&gt;gdepth&nbsp;=&nbsp;vec4(gl_FragCoord.z,&nbsp;1.0);&lt;/div&gt;&lt;/blockquote&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Notice&nbsp;that&nbsp;you&nbsp;will&nbsp;need&nbsp;to&nbsp;normalize&nbsp;the&nbsp;&quot;normal&quot;&nbsp;value&nbsp;so&nbsp;it&#39;s&nbsp;between&nbsp;[0..1].&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Hope&nbsp;this&nbsp;helps!&lt;/div&gt;&lt;div&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_signature&quot;&nbsp;data-smartmail=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;Glenn&nbsp;Waldron&nbsp;/&nbsp;osgEarth&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Mon,&nbsp;Nov&nbsp;11,&nbsp;2019&nbsp;at&nbsp;4:20&nbsp;AM&nbsp;Han&nbsp;Hu&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:huhan8807@gmail.com&quot;&gt;huhan8807@gmail.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;would&nbsp;like&nbsp;to&nbsp;do&nbsp;offscreen&nbsp;rendering&nbsp;of&nbsp;a&nbsp;mesh.&lt;br&gt;<br>
+Currently,&nbsp;I&nbsp;have&nbsp;suceeded&nbsp;to&nbsp;do&nbsp;this&nbsp;for&nbsp;both&nbsp;the&nbsp;color&nbsp;(RGB)&nbsp;and&nbsp;depth&nbsp;data&nbsp;using&nbsp;the&nbsp;built-in&nbsp;functions&nbsp;as&nbsp;below.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Image&gt;&nbsp;rttImage&nbsp;=&nbsp;new&nbsp;osg::Image;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;osg::ref_ptr&lt;osg::Image&gt;&nbsp;depthImage&nbsp;=&nbsp;new&nbsp;osg::Image;&lt;br&gt;<br>
+&lt;br&gt;<br>
+camera-&gt;attach(osg::Camera::COLOR_BUFFER,&nbsp;rttImage.get());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;camera-&gt;attach(osg::Camera::DEPTH_BUFFER,&nbsp;depthImage.get());&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;rttImage-&gt;allocateImage(ATInfo.width,&nbsp;ATInfo.height,&nbsp;1,&nbsp;GL_RGB,&nbsp;GL_UNSIGNED_BYTE);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;depthImage-&gt;allocateImage(ATInfo.width,&nbsp;ATInfo.height,&nbsp;1,&nbsp;GL_DEPTH_COMPONENT,&nbsp;GL_FLOAT);&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+But&nbsp;I&nbsp;also&nbsp;need&nbsp;to&nbsp;render&nbsp;the&nbsp;normal&nbsp;vectors&nbsp;to&nbsp;images&nbsp;too.&nbsp;I&nbsp;have&nbsp;googled&nbsp;this&nbsp;topic&nbsp;using&nbsp;native&nbsp;opengl,&nbsp;it&nbsp;seems&nbsp;that&nbsp;I&nbsp;have&nbsp;to&nbsp;write&nbsp;shaders&nbsp;for&nbsp;it.&nbsp;But&nbsp;my&nbsp;mesh&nbsp;are&nbsp;defined&nbsp;using&nbsp;the&nbsp;osgb&nbsp;plugin&nbsp;format,&nbsp;so&nbsp;I&nbsp;must&nbsp;implement&nbsp;in&nbsp;the&nbsp;osg.&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;would&nbsp;like&nbsp;to&nbsp;know,&nbsp;is&nbsp;there&nbsp;an&nbsp;approach&nbsp;to&nbsp;do&nbsp;this&nbsp;in&nbsp;osg?&nbsp;Thanks!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+Han&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=76892#76892&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=76892#76892&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;<br>
+
+</tt>

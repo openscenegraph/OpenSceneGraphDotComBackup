@@ -1,0 +1,311 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] different materials for a geometry and highlight
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20different%20materials%20for%20a%20geometry%20and%20highlight&In-Reply-To=%3C526853de-b01f-8c2b-e3ca-63ef661ab915%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004318.html">
+   <LINK REL="Next"  HREF="004330.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] different materials for a geometry and highlight</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20different%20materials%20for%20a%20geometry%20and%20highlight&In-Reply-To=%3C526853de-b01f-8c2b-e3ca-63ef661ab915%40gmx.de%3E"
+       TITLE="[osg-users] different materials for a geometry and highlight">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Wed Sep 28 08:34:17 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004318.html">[osg-users] different materials for a geometry and highlight
+</A></li>
+        <LI>Next message: <A HREF="004330.html">[osg-users] different materials for a geometry and highlight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4319">[ date ]</a>
+              <a href="thread.html#4319">[ thread ]</a>
+              <a href="subject.html#4319">[ subject ]</a>
+              <a href="author.html#4319">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+There you go:
+
+The example without vertex sharing.
+
+
+&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Am 9/28/2016 um 4:57 PM schrieb Gianni Ambrosio:
+</I>&gt;&gt;<i> Hi Sebastian,
+</I>&gt;&gt;<i> I would like to adopt you solution if possible but I was not able to 
+</I>&gt;&gt;<i> implement with textures the same behaviour of the example I did with 
+</I>&gt;&gt;<i> primitive sets.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I know that on windows the example crashes in debug mode because of 
+</I>&gt;&gt;<i> an assertion inside Microsoft implementaition of std::vector. It's a 
+</I>&gt;&gt;<i> matter of  _ITERATOR_DEBUG_LEVEL. In release mode it works fine. Just 
+</I>&gt;&gt;<i> to explain the reason. Anyway the movie should not crash :D
+</I>&gt;<i> Movie is working ;)  But if it is giving you an assertion in debug and 
+</I>&gt;<i> works in release mode it simply means you're using undefined behavior. 
+</I>&gt;<i> You should never rely on something like this.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> So, do you think it would be possible to implement the same behaviour 
+</I>&gt;&gt;<i> with textures?
+</I>&gt;<i> Not directly. If you really need to tag individual triangles it isn't 
+</I>&gt;<i> doable with a simple texture. In this case my next approach actually 
+</I>&gt;<i> would include using vertex colors and some shader to draw flat colored 
+</I>&gt;<i> triangles based on the provoking vertex.
+</I>&gt;<i> The problem that makes this non-trivial is simply due to the vertex 
+</I>&gt;<i> sharing. If you duplicate the vertices (or at least some of them) it 
+</I>&gt;<i> is solveable without fancy tricks in 5 minutes, but depending on the 
+</I>&gt;<i> number of triangles in your road this might not be an option.
+</I>&gt;<i> So how many triangles will be in your road?
+</I>&gt;<i>
+</I>&gt;<i> Cheers
+</I>&gt;<i> Sebastian
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Regards,
+</I>&gt;&gt;<i> Gianni
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> ------------------
+</I>&gt;&gt;<i> Read this topic online here:
+</I>&gt;&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicd428.php?p=68814#68814">http://forum.openscenegraph.org/viewtopic.php?p=68814#68814</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A> 
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-------------- next part --------------
+
+#include &lt;osg/Geometry&gt;
+#include &lt;osg/Geode&gt;
+#include &lt;osg/MatrixTransform&gt;
+#include &lt;osg/PolygonOffset&gt;
+
+#include &lt;osgViewer/CompositeViewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+#include &lt;osgGA/MultiTouchTrackballManipulator&gt;
+#include &lt;osg/PolygonMode&gt;
+#include &lt;osg/LineWidth&gt;
+#include &lt;osg/ShadeModel&gt;
+
+#include &lt;osgGA/StateSetManipulator&gt;
+#include &lt;osgDB/ReadFile&gt;
+
+//#include &lt;osgQt/GraphicsWindowQt&gt;
+
+#include &lt;iostream&gt;
+const unsigned int DIMENSION = 64;
+
+class SelectModelHandler : public osgGA::GUIEventHandler
+{
+public:
+	SelectModelHandler()
+		: _selector(0), currentPrimitiveSetIndex(0), _root(0), _image(0)
+	{}
+
+	virtual bool handle(const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; aa)
+	{
+
+		if (ea.getEventType() == osgGA::GUIEventAdapter::RELEASE &amp;&amp;
+			ea.getButton() == osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON &amp;&amp;
+			ea.getModKeyMask() &amp; osgGA::GUIEventAdapter::MODKEY_CTRL)
+		{
+			osgViewer::View* viewer = dynamic_cast&lt;osgViewer::View*&gt;(&amp;aa);
+			if (viewer)
+			{
+				osg::ref_ptr&lt;osgUtil::LineSegmentIntersector&gt; intersector = new osgUtil::LineSegmentIntersector(osgUtil::Intersector::WINDOW, ea.getX(), ea.getY());
+				osgUtil::IntersectionVisitor iv(intersector.get());
+				osg::Camera* camera = viewer-&gt;getCamera();
+				camera-&gt;accept(iv);
+
+				if (intersector-&gt;containsIntersections())
+				{
+					osgUtil::LineSegmentIntersector::Intersection result = *(intersector-&gt;getIntersections().begin());
+					doUserOperationsColor(result);
+				}
+			}
+		}
+
+		return false;
+	}
+
+	virtual void doUserOperations(osgUtil::LineSegmentIntersector::Intersection&amp; result)
+	{
+
+		osg::Geometry* geom = dynamic_cast&lt;osg::Geometry*&gt;(result.drawable.get());
+		osg::Vec3 tc;
+		//the result seems slightly off 
+		osg::Texture* tex = result.getTextureLookUp(tc);
+		if (tex &amp;&amp; tex-&gt;getImage(0))
+		{
+			tex-&gt;getImage(0)-&gt;setColor(osg::Vec4d(1, 1, 1, 1), tc);
+			tex-&gt;getImage(0)-&gt;dirty();
+			tex-&gt;dirtyTextureObject();
+		}
+	
+	}
+
+
+	virtual void doUserOperationsColor(osgUtil::LineSegmentIntersector::Intersection&amp; result)
+	{
+
+		osg::Geometry* geom = dynamic_cast&lt;osg::Geometry*&gt;(result.drawable.get());
+		osg::Vec4Array&amp; color = dynamic_cast&lt;osg::Vec4Array&amp;&gt;(*geom-&gt;getColorArray());
+		color[result.indexList[0]] = osg::Vec4(1, 0, 0, 1);
+		color[result.indexList[1]] = osg::Vec4(1, 0, 0, 1);
+		color[result.indexList[2]] = osg::Vec4(1, 0, 0, 1);
+		geom-&gt;dirtyDisplayList();
+		color.dirty();
+		
+		
+		
+
+	}
+protected:
+	osg::ref_ptr&lt;osg::Geometry&gt; _selector;
+	unsigned int currentPrimitiveSetIndex;
+	osg::ref_ptr&lt;osg::Group&gt; _root;
+	osg::ref_ptr&lt;osg::Image&gt; _image;
+};
+osg::Vec3Array* buildVertices() {
+	osg::Vec3Array* vertices = new osg::Vec3Array;
+	vertices-&gt;push_back(osg::Vec3(0, 0, 0));
+	vertices-&gt;push_back(osg::Vec3(10, 0, 0));
+	vertices-&gt;push_back(osg::Vec3(10, 10, 0));
+	
+	vertices-&gt;push_back(osg::Vec3(0, 10, 0));
+	vertices-&gt;push_back(osg::Vec3(20, 0, 0));
+	vertices-&gt;push_back(osg::Vec3(20, 10, 0));
+	vertices-&gt;push_back(osg::Vec3(20, 20, 0));
+	vertices-&gt;push_back(osg::Vec3(10, 20, 0));
+	vertices-&gt;push_back(osg::Vec3(0, 20, 0));
+	return vertices;
+}
+
+osg::Vec3Array* buildVertices(unsigned int num_rows) 
+{
+	float length = 1.0;
+	osg::Vec3Array* vertices = new osg::Vec3Array;
+	for (unsigned int j = 0; j &lt; num_rows; ++j)
+	{
+		for (unsigned int i = 0; i &lt; num_rows; ++i)
+		{
+			
+			vertices-&gt;push_back(osg::Vec3(i * length, j *length, 0.0));
+			vertices-&gt;push_back(osg::Vec3((i+1) * length, j *length, 0.0));
+			vertices-&gt;push_back(osg::Vec3((i) * length, (j+1) *length, 0.0));
+						
+			vertices-&gt;push_back(osg::Vec3((i + 1) * length, j *length, 0.0));
+			vertices-&gt;push_back(osg::Vec3((i + 1) * length, (j+1) *length, 0.0));
+			vertices-&gt;push_back(osg::Vec3(i* length, (j + 1) * length, 0.0));
+
+		}
+	}
+	return vertices;
+}
+
+osg::DrawElementsUInt* buildElements(unsigned int num_rows)
+{
+	osg::DrawElementsUInt* element = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES);
+	for (unsigned int i = 0; i &lt; (num_rows) *(num_rows) * 6; ++i)
+	{
+		element-&gt;push_back(i);
+	}
+	
+	return element;
+}
+
+osg::Vec4Array* buildColors(unsigned int num_rows) {
+	osg::Vec4Array* colors = new osg::Vec4Array(num_rows *num_rows * 6);
+	std::fill(std::begin(*colors), std::end(*colors), osg::Vec4(0.50f, 0.5f, 0.5f, 1.0f));
+	
+	
+
+	return colors;
+}
+
+osg::Geometry* buildGeometry() {
+	osg::Geometry* geometry = new osg::Geometry;
+	geometry-&gt;setDataVariance(osg::Object::DYNAMIC);
+	geometry-&gt;setVertexArray(buildVertices(255));
+	geometry-&gt;setColorArray(buildColors(255), osg::Array::BIND_PER_VERTEX);
+
+	geometry-&gt;addPrimitiveSet(buildElements(255));
+
+	return geometry;
+}
+
+osg::Node* createScene() {
+	osg::Geode* geode = new osg::Geode;
+	geode-&gt;addDrawable(buildGeometry());
+	return geode;
+}
+
+int main(int argc, char** argv)
+{
+	osg::ArgumentParser arguments(&amp;argc, argv);
+
+	osgViewer::Viewer viewer(arguments);
+	viewer.setUpViewInWindow(0, 0, 1000, 1000);
+	osg::ref_ptr&lt;osg::Group&gt; root = new osg::Group;
+	root-&gt;addChild(createScene());
+	
+	root-&gt;getOrCreateStateSet()-&gt;setAttribute(new osg::ShadeModel(osg::ShadeModel::FLAT));
+	osg::ref_ptr&lt;SelectModelHandler&gt; selector = new SelectModelHandler;
+	viewer.setSceneData(root);
+	viewer.addEventHandler(selector.get());
+	viewer.setCameraManipulator(new osgGA::TrackballManipulator);
+
+	// add the window size toggle handler
+	viewer.addEventHandler(new osgViewer::WindowSizeHandler);
+	viewer.addEventHandler(new osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()));
+	viewer.run();
+}
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004318.html">[osg-users] different materials for a geometry and highlight
+</A></li>
+	<LI>Next message: <A HREF="004330.html">[osg-users] different materials for a geometry and highlight
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4319">[ date ]</a>
+              <a href="thread.html#4319">[ thread ]</a>
+              <a href="subject.html#4319">[ subject ]</a>
+              <a href="author.html#4319">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

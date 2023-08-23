@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Possible bug in dev version:no call to initializeExtensionProcs for embedded window
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Possible%20bug%20in%20dev%20version%3Ano%20call%20to%0A%20initializeExtensionProcs%20for%20embedded%20window&In-Reply-To=%3CCAFVQEu2SkRU5iKFagT3oLy4eFD0eM6ToNda2yTgUjSM_zmEBvQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000017.html">
+   <LINK REL="Next"  HREF="276236.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Possible bug in dev version:no call to initializeExtensionProcs for embedded window</H1>
+<!--htdig_noindex-->
+    <B>Sergey Kurdakov</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Possible%20bug%20in%20dev%20version%3Ano%20call%20to%0A%20initializeExtensionProcs%20for%20embedded%20window&In-Reply-To=%3CCAFVQEu2SkRU5iKFagT3oLy4eFD0eM6ToNda2yTgUjSM_zmEBvQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Possible bug in dev version:no call to initializeExtensionProcs for embedded window">sergey.forum at gmail.com
+       </A><BR>
+    <I>Wed Apr  8 09:02:47 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000017.html">[osg-users] Possible bug in dev version:no call to initializeExtensionProcs for embedded window
+</A></li>
+        <LI>Next message: <A HREF="276236.html">[osg-users] Uning Virtual Planet Builder in MS Windows!
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#18">[ date ]</a>
+              <a href="thread.html#18">[ thread ]</a>
+              <a href="subject.html#18">[ subject ]</a>
+              <a href="author.html#18">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+ I tracked my error.
+
+my osg is a port of osg to emscripten, so no switch of contexts happens,
+for that matter to reduce workload I commented in
+
+void ViewerBase::renderingTraversals()
+
+line
+makeCurrent(*itr);
+
+in
+
+for(itr = contexts.begin();
+        itr != contexts.end() &amp;&amp; !_done;
+        ++itr)
+    {
+        if (!((*itr)-&gt;getGraphicsThread()) &amp;&amp; (*itr)-&gt;valid())
+        {
+            doneMakeCurrentInThisThread = true;
+            makeCurrent(*itr);
+            (*itr)-&gt;runOperations();
+        }
+    }
+
+that was fine for older version of osg, never version initializes
+extensions in a first call to makeCurrent(*itr);
+
+ now I uncommented this line in my code but keep porting other things in
+new version of osg though.
+
+so there is nothing wrong with osg at all - that was just an artifact of my
+port and different behavior to init extensions, sorry for wrong call.
+
+Regards
+Sergey
+
+On Tue, Apr 7, 2015 at 2:50 PM, Sergey Kurdakov &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sergey.forum at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> with osg it works ok, but I try to find a source of the bug then will
+</I>&gt;<i> report ( or will write and example where it can be tracked in stock osg )
+</I>&gt;<i>
+</I>&gt;<i> Regards
+</I>&gt;<i> Sergey
+</I>&gt;<i>
+</I>&gt;<i> On Tue, Apr 7, 2015 at 12:37 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi Sergey,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> It sounds like a bug to me.  I haven't tried replicating it but will have
+</I>&gt;&gt;<i> a bash this morning.  Can you recreate the problem with an OSG example?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> At a first guess I think the solution would be for the
+</I>&gt;&gt;<i> GraphicsWindowEmbedded::relaizeImplemention() to do the
+</I>&gt;&gt;<i> State::initializeExtensionProcs().
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150408/e7a5c11d/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150408/e7a5c11d/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000017.html">[osg-users] Possible bug in dev version:no call to initializeExtensionProcs for embedded window
+</A></li>
+	<LI>Next message: <A HREF="276236.html">[osg-users] Uning Virtual Planet Builder in MS Windows!
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#18">[ date ]</a>
+              <a href="thread.html#18">[ thread ]</a>
+              <a href="subject.html#18">[ subject ]</a>
+              <a href="author.html#18">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

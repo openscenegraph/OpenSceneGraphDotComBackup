@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] RayIntersector with KdTree causes a crash
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RayIntersector%20with%20KdTree%20causes%20a%20crash&In-Reply-To=%3C1536044806.m2f.74635%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009005.html">
+   <LINK REL="Next"  HREF="009008.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] RayIntersector with KdTree causes a crash</H1>
+<!--htdig_noindex-->
+    <B>Ale Maro</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20RayIntersector%20with%20KdTree%20causes%20a%20crash&In-Reply-To=%3C1536044806.m2f.74635%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] RayIntersector with KdTree causes a crash">sasha71 at teletu.it
+       </A><BR>
+    <I>Tue Sep  4 00:06:47 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009005.html">[osg-users] RayIntersector with KdTree causes a crash
+</A></li>
+        <LI>Next message (by thread): <A HREF="009008.html">[osg-users] RayIntersector with KdTree causes a crash
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9007">[ date ]</a>
+              <a href="thread.html#9007">[ thread ]</a>
+              <a href="subject.html#9007">[ subject ]</a>
+              <a href="author.html#9007">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+
+I attached the stack trace for the modified osgPick example.
+
+We analyzed the LineSegmentIntersector::intersect code (see below) and we saw that if we build KDTree AND the transofmation matrix has negative scale then &quot;geometry-&gt;getVertexArray()&quot; returns an empty array and &quot;settings._vertices&quot; becomes empty.
+In debug an assert stops the execution (see stack trace), in release the execution continue but the geometry is not shown
+
+
+Code:
+
+void LineSegmentIntersector::intersect(osgUtil::IntersectionVisitor&amp; iv, osg::Drawable* drawable,
+                                       const osg::Vec3d&amp; s, const osg::Vec3d&amp; e)
+{
+    if (reachedLimit()) return;
+
+    LineSegmentIntersectorUtils::Settings settings;
+    settings._lineSegIntersector = this;
+    settings._iv = &iv;
+    settings._drawable = drawable;
+    settings._limitOneIntersection = (_intersectionLimit == LIMIT_ONE_PER_DRAWABLE || _intersectionLimit == LIMIT_ONE);
+
+    osg::Geometry* geometry = drawable-&gt;asGeometry();
+    if (geometry)
+    {
+        settings._vertices = dynamic_cast&lt;osg::Vec3Array*&gt;(geometry-&gt;getVertexArray());
+    }
+
+
+
+
+
+
+Cheers,
+Ale
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic987b.php?p=74635#74635">http://forum.openscenegraph.org/viewtopic.php?p=74635#74635</A>
+
+
+
+
+Attachments: 
+<A HREF="../../../../forum.openscenegraph.org/files/stacktrace_370.txt">http://forum.openscenegraph.org//files/stacktrace_370.txt</A>
+
+
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009005.html">[osg-users] RayIntersector with KdTree causes a crash
+</A></li>
+	<LI>Next message (by thread): <A HREF="009008.html">[osg-users] RayIntersector with KdTree causes a crash
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9007">[ date ]</a>
+              <a href="thread.html#9007">[ thread ]</a>
+              <a href="subject.html#9007">[ subject ]</a>
+              <a href="author.html#9007">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

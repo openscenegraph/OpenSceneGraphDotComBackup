@@ -1,0 +1,318 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Changes in osgVolume from 3.0 to 3.4
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changes%20in%20osgVolume%20from%203.0%20to%203.4&In-Reply-To=%3CCAHKmQh_9myaZbhNh07FytPhRD8fFXWsbTopAub4zbmx5Er1CxQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002345.html">
+   <LINK REL="Next"  HREF="002349.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Changes in osgVolume from 3.0 to 3.4</H1>
+<!--htdig_noindex-->
+    <B>Alex Taylor</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Changes%20in%20osgVolume%20from%203.0%20to%203.4&In-Reply-To=%3CCAHKmQh_9myaZbhNh07FytPhRD8fFXWsbTopAub4zbmx5Er1CxQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Changes in osgVolume from 3.0 to 3.4">alextaylor at gmail.com
+       </A><BR>
+    <I>Thu Feb 11 12:47:52 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002345.html">[osg-users]  Changes in osgVolume from 3.0 to 3.4
+</A></li>
+        <LI>Next message: <A HREF="002349.html">[osg-users] Changes in osgVolume from 3.0 to 3.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2346">[ date ]</a>
+              <a href="thread.html#2346">[ thread ]</a>
+              <a href="subject.html#2346">[ subject ]</a>
+              <a href="author.html#2346">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Also, if it matters, I found that I can get the rendering I'd expect if I
+explicitly set the BlendFunc in the special case of Isosurface:
+
+  if (volumeProperties.useIsosurface){
+            stateset-&gt;setAttribute(new osg::BlendFunc(GL_ONE, GL_ZERO),
+osg::StateAttribute::ON);
+   }
+
+I'm not sure why I need to do this in OSG 3.4 when I didn't in OSG 3.0,
+probably another issue with the viewer or something on my end.
+
+- Alex
+
+
+
+On Thu, Feb 11, 2016 at 2:49 PM Alex Taylor &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">alextaylor at gmail.com</A>&gt; wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> Thanks so much, the thread you referenced, &quot;osgViewer/Renderer ctor
+</I>&gt;<i> set wrong defaults for SceneView&quot; has mostly resolved the blending issues
+</I>&gt;<i> I was having. I now call:
+</I>&gt;<i>
+</I>&gt;<i>         osg::ref_ptr&lt;osg::StateSet&gt; stateSet =
+</I>&gt;<i> osgCamera-&gt;getOrCreateStateSet();
+</I>&gt;<i>         stateSet-&gt;setGlobalDefaults();
+</I>&gt;<i>
+</I>&gt;<i> When setting up my Camera. Things *mostly* look good now. I am still
+</I>&gt;<i> having one lingering problem with the way my isosurfaces are rendering with
+</I>&gt;<i> RayTracedTechnique as a result of the OSG 3.4 upgrade from OSG 3.0. I'm
+</I>&gt;<i> using RayTracedTechnique with the default shaders used by
+</I>&gt;<i> RayTracedTechnique, no hardcoded shaders paths or anything like that.
+</I>&gt;<i>
+</I>&gt;<i>         if (volumeProperties.volumeTechnique ==
+</I>&gt;<i> VolumeTechnique::RayTraced){
+</I>&gt;<i>             osg::ref_ptr&lt;osgVolume::RayTracedTechnique&gt; rayTraced = new
+</I>&gt;<i> osgVolume::RayTracedTechnique();
+</I>&gt;<i>             tile-&gt;setVolumeTechnique(rayTraced.get());
+</I>&gt;<i>             osg::ref_ptr&lt;osg::FrontFace&gt; frontFace(new
+</I>&gt;<i> osg::FrontFace(osg::FrontFace::CLOCKWISE));
+</I>&gt;<i>             stateset-&gt;setAttribute(frontFace.get(),
+</I>&gt;<i> osg::StateAttribute::PROTECTED);
+</I>&gt;<i>
+</I>&gt;<i>         } else if (volumeProperties.volumeTechnique ==
+</I>&gt;<i> VolumeTechnique::FixedFunction) {
+</I>&gt;<i>             tile-&gt;setVolumeTechnique(new
+</I>&gt;<i> osgVolume::FixedFunctionTechnique());
+</I>&gt;<i>             stateset-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF |
+</I>&gt;<i> osg::StateAttribute::OVERRIDE);
+</I>&gt;<i>         } else {
+</I>&gt;<i>             throw hg::PropertyException(&quot;VolumeTechnique&quot;);
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         layer-&gt;addProperty(new
+</I>&gt;<i> osgVolume::TransferFunctionProperty(volumeProperties.transferFunction.get()));
+</I>&gt;<i>         layer-&gt;addProperty(new
+</I>&gt;<i> osgVolume::AlphaFuncProperty(volumeProperties.alphaFunc));
+</I>&gt;<i>         layer-&gt;addProperty(new
+</I>&gt;<i> osgVolume::SampleDensityProperty(volumeProperties.sampleDensity));
+</I>&gt;<i>         layer-&gt;addProperty(new
+</I>&gt;<i> osgVolume::SampleDensityWhenMovingProperty(volumeProperties.sampleDensityWhenMoving));
+</I>&gt;<i>         if (volumeProperties.useLighting) layer-&gt;addProperty(new
+</I>&gt;<i> osgVolume::LightingProperty);
+</I>&gt;<i>         if (volumeProperties.useIsosurface) layer-&gt;addProperty(new
+</I>&gt;<i> osgVolume::IsoSurfaceProperty(volumeProperties.alphaFunc));
+</I>&gt;<i>         if (volumeProperties.useMaximumIntensityProjection)
+</I>&gt;<i> layer-&gt;addProperty(new osgVolume::MaximumIntensityProjectionProperty());
+</I>&gt;<i>
+</I>&gt;<i> Attached is what I see for isosurfaces in OSG 3.4 vs. OSG 3.0. The OSG 3.4
+</I>&gt;<i> isosurfaces are rendering very &quot;washed out&quot; looking. I suspect I'm still
+</I>&gt;<i> having some sort of Blending issue with the Isosurface specifically. Any
+</I>&gt;<i> thoughts on what that might be happening?
+</I>&gt;<i>
+</I>&gt;<i> Either way, I have really appreciated your help.
+</I>&gt;<i>
+</I>&gt;<i> - Alex
+</I>&gt;<i> &#8203;
+</I>&gt;<i> ________________________________________
+</I>&gt;<i> From: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; on behalf of
+</I>&gt;<i> Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> Sent: Thursday, February 4, 2016 6:43 AM
+</I>&gt;<i> To: OpenSceneGraph Users
+</I>&gt;<i>
+</I>&gt;<i> Subject: Re: [osg-users] Changes in osgVolume from 3.0 to 3.4
+</I>&gt;<i>
+</I>&gt;<i> Hi Alex,
+</I>&gt;<i>
+</I>&gt;<i> The blending difference might be down to a bug fix elsewhere in the
+</I>&gt;<i> OSG.  Have a look at yesterdays discussion &quot;osgViewer/Renderer ctor
+</I>&gt;<i> set wrong defaults for SceneView&quot;, in particular my replies that
+</I>&gt;<i> explain how a bug fix (in OSG-3.2 onwards) to the way that global
+</I>&gt;<i> State is managed reveals a deficiency in the viewer set up.
+</I>&gt;<i>
+</I>&gt;<i> As the light direction issue, the new way is more general purpose, the
+</I>&gt;<i> old behaviour isn't required, the old shaders aren't maintained.  If
+</I>&gt;<i> you want the old shaders and uniform set up you'll need to write these
+</I>&gt;<i> yourself, or just adopt the new approach and have your viewer
+</I>&gt;<i> manipulate the main light source using the viewer's Light or an
+</I>&gt;<i> osg::LightSource placed in the scene.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> osg-users
+</I>&gt;<i> x
+</I>&gt;<i>
+</I>&gt;<i> On 3 February 2016 at 21:11, Alex Taylor &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">alextaylor at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Robert,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Thanks. There are two main culprits the behavior change I was seeing. The
+</I>&gt;<i> &gt; first is that for some reason, between OSG 3.0 and 3.4, I now need to
+</I>&gt;<i> &gt; explicitly set a BlendFunc. With the exception of MIP, it looks like the
+</I>&gt;<i> &gt; rest of osgVolume just renders with a default BlendFunc and doesn't
+</I>&gt;<i> &gt; explictly set anything.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I found that by setting
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;  stateset-&gt;setAttribute(new osg::BlendFunc(GL_SRC_ALPHA,
+</I>&gt;<i> &gt; GL_ONE_MINUS_SRC_ALPHA), osg::StateAttribute::ON);
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; There is a second issue I want to ask about:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; It looks to me there was a change to the shaders I'm using regarding the
+</I>&gt;<i> &gt; position of the light source between OSG 3.0 and OSG 3.4:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="https://github.com/openscenegraph/osg/commit/4525ec49a386b48608fdb3107033a1c915d928e6">https://github.com/openscenegraph/osg/commit/4525ec49a386b48608fdb3107033a1c915d928e6</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The change is to honor the lightDirection from GL_LIGHT0 rather than use
+</I>&gt;<i> the
+</I>&gt;<i> &gt; eye direction as the direction of the light source.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; If I wanted to get the old behavior of using the eyeDirection, is there
+</I>&gt;<i> an
+</I>&gt;<i> &gt; easy way to go about that?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Thanks,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Alex
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; On Thu, Jan 28, 2016 at 3:16 PM Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; wrote:
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Hi Alex,
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; There were quite a few improvements to osgVolume between OSG-3.0 and
+</I>&gt;<i> &gt;&gt; OSG-3.4, both in shaders and the introduction of the new
+</I>&gt;<i> MultiPassTechnique.
+</I>&gt;<i> &gt;&gt; One thing to look at with your own setup is that you aren't picking up
+</I>&gt;<i> on
+</I>&gt;<i> &gt;&gt; old
+</I>&gt;<i> &gt;&gt;  shaders such as by having your own path to old shaders.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; It's quite a while since I did the work on osgVolume, around two years,
+</I>&gt;<i> so
+</I>&gt;<i> &gt;&gt; won't be able to be specific without viewing code and being able to
+</I>&gt;<i> &gt;&gt; reproduce the problems you are seeing first hand.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Robert.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; On 28 January 2016 at 15:25, Alex Taylor &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">alextaylor at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; Hi,
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; I'm working on upgrading the OSG version used in the product I work on.
+</I>&gt;<i> &gt;&gt;&gt; When OSG is upgraded with the same client code, I'm noticing
+</I>&gt;<i> differences is
+</I>&gt;<i> &gt;&gt;&gt; the way my volumes are rendered with all of the rendering algorithms
+</I>&gt;<i> that I
+</I>&gt;<i> &gt;&gt;&gt; can't explain. I've fixed the parameters I'm using to define the
+</I>&gt;<i> osgVolume
+</I>&gt;<i> &gt;&gt;&gt; in both versions, so it can't be a matter of picking up a different
+</I>&gt;<i> default
+</I>&gt;<i> &gt;&gt;&gt; option for a parameter.
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; OSG 3.4 Fixed Function
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; OSG 3.0 Fixed Function
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; OSG 3.4 Ray Traced Lit
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; OSG 3.0 Ray Traced Lit
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; OSG 3.4 Isosurface
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; OSG 3.0 Isosurface
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; In the Ray Traced cases, I'm using the properties:
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; AlphaFunc = 0.02;
+</I>&gt;<i> &gt;&gt;&gt; SampleDensity = 0.005;
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; I'm using setting the TransferFunctionProperty, so I'm using the
+</I>&gt;<i> shaders
+</I>&gt;<i> &gt;&gt;&gt; to do the alpha/color mapping.
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; For the FixedFunctionTechnique, I'm using AlphaFunc = 0.02, and using
+</I>&gt;<i> the
+</I>&gt;<i> &gt;&gt;&gt; applyTransferFunction function to obtain an RGBA mapped osg::Image
+</I>&gt;<i> buffer.
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; It's very possible that the upgrade to 3.4 has changed something else
+</I>&gt;<i> in
+</I>&gt;<i> &gt;&gt;&gt; my overall use of OSG elsewhere in the pipeline, unrelated to
+</I>&gt;<i> osgVolume,
+</I>&gt;<i> &gt;&gt;&gt; that is causing this issue. That said, I thought i'd ask if visually
+</I>&gt;<i> anyone
+</I>&gt;<i> &gt;&gt;&gt; has a guess it what might have changed between osg 3.0 and osg 3.4 that
+</I>&gt;<i> &gt;&gt;&gt; might explain these visual differences.
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; Thanks for your help,
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; Alex
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;&gt; _______________________________________________
+</I>&gt;<i> &gt;&gt;&gt; osg-users mailing list
+</I>&gt;<i> &gt;&gt;&gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt;&gt;
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; _______________________________________________
+</I>&gt;<i> &gt;&gt; osg-users mailing list
+</I>&gt;<i> &gt;&gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160211/dcb514d7/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160211/dcb514d7/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002345.html">[osg-users]  Changes in osgVolume from 3.0 to 3.4
+</A></li>
+	<LI>Next message: <A HREF="002349.html">[osg-users] Changes in osgVolume from 3.0 to 3.4
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2346">[ date ]</a>
+              <a href="thread.html#2346">[ thread ]</a>
+              <a href="subject.html#2346">[ subject ]</a>
+              <a href="author.html#2346">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

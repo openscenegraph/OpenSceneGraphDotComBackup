@@ -1,0 +1,182 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] AnimationPath + AnimationPathCallback
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20AnimationPath%20%2B%20AnimationPathCallback&In-Reply-To=%3C1429811055.m2f.63519%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000198.html">
+   <LINK REL="Next"  HREF="000199.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] AnimationPath + AnimationPathCallback</H1>
+<!--htdig_noindex-->
+    <B>Georg Gast</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20AnimationPath%20%2B%20AnimationPathCallback&In-Reply-To=%3C1429811055.m2f.63519%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] AnimationPath + AnimationPathCallback">schorsch_76 at gmx.de
+       </A><BR>
+    <I>Thu Apr 23 10:44:15 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000198.html">[osg-users] osgText::Text::GlyphQuads change in the recent	versions
+</A></li>
+        <LI>Next message: <A HREF="000199.html">[osg-users] AnimationPath + AnimationPathCallback
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276423">[ date ]</a>
+              <a href="thread.html#276423">[ thread ]</a>
+              <a href="subject.html#276423">[ subject ]</a>
+              <a href="author.html#276423">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+right now i try to move to different objects in my scene. I attached a own AnimamationPathCallback to 2 MatrixTransform Nodes in my scene.
+
+My goal is, that both nodes move independently but each should notify me, when it animation is finished.
+
+Here is my callback
+
+Code:
+
+// create the update callback
+struct Notify : osg::AnimationPathCallback
+{
+    Notify(osg::AnimationPath* p, bool&amp; animation_done)
+    : osg::AnimationPathCallback(p) , m_animation_done(animation_done) {}
+
+    virtual void operator()(osg::Node*  node,
+                            osg::NodeVisitor*  nv)
+    {
+        osg::AnimationPathCallback::operator()(node,nv);
+        if (m_animation_done)
+            return;
+            
+        osg::MatrixTransform* p_mt =
+            dynamic_cast&lt;osg::MatrixTransform*&gt;(node);
+        if (p_mt)
+        {
+            auto p_down = dynamic_cast&lt;Notify*&gt;(p_mt-&gt;getUpdateCallback());
+            if (p_down == this)
+            {
+                auto p_path = getAnimationPath();
+                double current_time = getAnimationTime();
+                double max_time = p_path-&gt;getLastTime();
+
+                if (current_time &gt;= max_time)
+                {
+                    m_animation_done = true;
+                }
+            }
+        }
+    }
+
+    bool&amp; m_animation_done;
+};
+
+
+
+
+This callback works when only one is attached to a node in the scene. When i attach two of them, with different animation path, just the one of them gets updated. In fact, i bought both OpenSceneGraph Books, but i could not find a hint why this should not happen.
+
+This way i start the animations ....
+
+
+Code:
+
+void update_controller::start_animation(const std::vector&lt;int&gt;&amp; animation, bool&amp; animation_done)
+{
+    animation_done = false;
+    
+    osg::ref_ptr&lt;osg::AnimationPath&gt; p_path =
+        new osg::AnimationPath;
+
+    // only one shot
+    p_path-&gt;setLoopMode(osg::AnimationPath::NO_LOOPING);
+
+    // define the control points
+    assert(animation.size() &gt;= 2);
+    static const osg::Vec3 delta_z( 0, 0, 1 );
+    
+    size_t p = 0; float time = 0.0f;
+    osg::AnimationPath::ControlPoint cp(m_all_pos[animation[p]]);
+    p_path-&gt;insert(time, cp); time+= 0.1f;
+    
+    cp = osg::AnimationPath::ControlPoint(m_all_pos[animation[p]] - delta_z);
+    p_path-&gt;insert(time, cp); time+= 0.1f;
+    p++;
+    assert(p == 1);
+    
+    while (p &lt; animation.size()-1)
+    {
+        cp = osg::AnimationPath::ControlPoint(m_all_pos[animation[p]] - delta_z);
+        p_path-&gt;insert(time, cp); time+= 0.1f;
+        p++;
+    }
+
+    cp = osg::AnimationPath::ControlPoint(m_all_pos[animation[p]]);
+    p_path-&gt;insert(time, cp); time+= 0.1f;
+
+    osg::ref_ptr&lt;Notify&gt; p_animation_cb =
+        new Notify(p_path.get(), animation_done );
+
+    // set this callback to the desired pins matrix
+    assert(m_id_player_pin != -1);
+    assert(m_pins[m_id_player_pin] != nullptr);
+    m_pins[m_id_player_pin]-&gt;setUpdateCallback(p_animation_cb.get());    
+}
+
+
+
+
+I guess, it is just a small thing. This is my first OSG project and in fact it is my first problem, which i cant solve by reading the books .... :(
+
+Thank you!
+
+Cheers,
+Georg
+
+P.S.: I dont know why the forum shows my &quot;4 space tabs&quot; as ??? I replaced my &quot;\t&quot; by four spaces in my editor ....  :?
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicdb5b.php?p=63519#63519">http://forum.openscenegraph.org/viewtopic.php?p=63519#63519</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000198.html">[osg-users] osgText::Text::GlyphQuads change in the recent	versions
+</A></li>
+	<LI>Next message: <A HREF="000199.html">[osg-users] AnimationPath + AnimationPathCallback
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276423">[ date ]</a>
+              <a href="thread.html#276423">[ thread ]</a>
+              <a href="subject.html#276423">[ subject ]</a>
+              <a href="author.html#276423">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

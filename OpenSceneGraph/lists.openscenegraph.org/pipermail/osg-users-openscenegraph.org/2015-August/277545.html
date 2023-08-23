@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Preprocessing Viewer
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Preprocessing%20Viewer&In-Reply-To=%3C1440500342.m2f.64889%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001326.html">
+   <LINK REL="Next"  HREF="001323.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Preprocessing Viewer</H1>
+<!--htdig_noindex-->
+    <B>Michael May</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Preprocessing%20Viewer&In-Reply-To=%3C1440500342.m2f.64889%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Preprocessing Viewer">michael_beham at gmx.net
+       </A><BR>
+    <I>Tue Aug 25 03:59:02 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001326.html">[osg-users] osgviewer texture maps lost
+</A></li>
+        <LI>Next message: <A HREF="001323.html">[osg-users] Preprocessing Viewer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277545">[ date ]</a>
+              <a href="thread.html#277545">[ thread ]</a>
+              <a href="subject.html#277545">[ subject ]</a>
+              <a href="author.html#277545">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I want to add a pre-processing step for rendering several environment maps. The environment maps are used for rendering the scene later. 
+How does it work?
+
+Using multiple (composite)viewers does not work. So, I create a view for preprocessing. The view is then rendered using frame(). 
+After render the preprocess view, I remove it and create the view for rendering the scene. Note, both views has several camera slaves.
+
+
+Code:
+
+//Scene Loading, creating cameras, and so on
+...
+osg::ArgumentParser psr(&amp;argc, argv);
+osgViewer::CompositeViewer* viewer2 = new osgViewer::CompositeViewer(psr);
+
+osgViewer::View* view2 = new osgViewer::View();
+view2-&gt;setCamera(m_camera2);
+view2-&gt;setSceneData( scene_obj);
+scene_manager-&gt;createPreprocess(graphic_context, view2); //Creates camera slaves for pre-processing
+viewer2-&gt;addView(view2);
+viewer2-&gt;frame();
+viewer2-&gt;removeView(view2);
+
+osgViewer::View* view = new osgViewer::View();
+view-&gt;setCamera(m_camera);
+view-&gt;setSceneData( scene_obj);
+
+scene_manager-&gt;setSlaveCameras(view, graphic_context); //creates camera slaves for scene rendering
+
+//Add Event Handler and so on... 
+...
+
+while(!viewer2-&gt;done()) 
+{
+if(!view-&gt;getCameraManipulator() &amp;&amp; view-&gt;getCamera()-&gt;getAllowEventFocus())
+view-&gt;setCameraManipulator(new osgGA::TrackballManipulator());	    
+viewer2-&gt;setReleaseContextAtEndOfFrameHint(false);
+if(_firstFrame)
+{
+view-&gt;init();
+if(!viewer2-&gt;isRealized())
+viewer2-&gt;realize();
+
+_firstFrame = false;
+}
+
+viewer2-&gt;advance(USE_REFERENCE_TIME);   			
+viewer2-&gt;eventTraversal();
+viewer2-&gt;updateTraversal();
+viewer2-&gt;renderingTraversals();
+}
+
+
+
+
+
+
+This technique works, but the frame-rate decreses dramatically. 
+Does anybody have an idea?
+
+Thank you!
+
+Cheers,
+Michael
+
+I am using Osg 3.4 rc-2 with GL3.0 profile. 
+Code:
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic8ad7.php?p=64889#64889">http://forum.openscenegraph.org/viewtopic.php?p=64889#64889</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001326.html">[osg-users] osgviewer texture maps lost
+</A></li>
+	<LI>Next message: <A HREF="001323.html">[osg-users] Preprocessing Viewer
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277545">[ date ]</a>
+              <a href="thread.html#277545">[ thread ]</a>
+              <a href="subject.html#277545">[ subject ]</a>
+              <a href="author.html#277545">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

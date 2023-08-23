@@ -1,0 +1,237 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How to disable Antialiasing of an osg::Text
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20disable%20Antialiasing%20of%20an%20osg%3A%3AText&In-Reply-To=%3C1489511242.m2f.70488%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005775.html">
+   <LINK REL="Next"  HREF="005849.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How to disable Antialiasing of an osg::Text</H1>
+<!--htdig_noindex-->
+    <B>Lv Qing</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20to%20disable%20Antialiasing%20of%20an%20osg%3A%3AText&In-Reply-To=%3C1489511242.m2f.70488%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] How to disable Antialiasing of an osg::Text">donlvqing at msn.com
+       </A><BR>
+    <I>Tue Mar 14 10:07:22 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005775.html">[osg-users] How to disable Antialiasing of an osg::Text
+</A></li>
+        <LI>Next message: <A HREF="005849.html">[osg-users] How to disable Antialiasing of an osg::Text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5848">[ date ]</a>
+              <a href="thread.html#5848">[ thread ]</a>
+              <a href="subject.html#5848">[ subject ]</a>
+              <a href="author.html#5848">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+Thx Robert!
+ 
+   I use one of osgEarth fuction to rendering my text.
+
+
+
+Code:
+
+
+osg::ref_ptr&lt;osgText::Text&gt; PowerPlaceNode::createPlaceNodeTextDrawable(const std::string&amp; text,
+		const TextSymbol* symbol, const osg::Vec3&amp; positionOffset)
+{
+	osg::ref_ptr &lt; osgText::Text &gt; t = new osgText::Text();
+	osgText::String::Encoding text_encoding = osgText::String::ENCODING_UNDEFINED;
+	if (symbol &amp;&amp; symbol-&gt;encoding().isSet())
+	{
+		switch (symbol-&gt;encoding().value())
+		{
+		case TextSymbol::ENCODING_ASCII:
+			text_encoding = osgText::String::ENCODING_ASCII;
+			break;
+		case TextSymbol::ENCODING_UTF8:
+			text_encoding = osgText::String::ENCODING_UTF8;
+			break;
+		case TextSymbol::ENCODING_UTF16:
+			text_encoding = osgText::String::ENCODING_UTF16;
+			break;
+		case TextSymbol::ENCODING_UTF32:
+			text_encoding = osgText::String::ENCODING_UTF32;
+			break;
+		default:
+			text_encoding = osgText::String::ENCODING_UTF8;
+			break;   //editby lvqing 20140509
+		}
+	}
+
+	t-&gt;setText(text, osgText::String::ENCODING_UTF8);
+
+
+	if (symbol &amp;&amp; symbol-&gt;pixelOffset().isSet())
+	{
+		t-&gt;setPosition(
+				osg::Vec3(positionOffset.x() + symbol-&gt;pixelOffset()-&gt;x(),
+						positionOffset.y() + symbol-&gt;pixelOffset()-&gt;y(), positionOffset.z()));
+	}
+	else
+	{
+		t-&gt;setPosition(positionOffset);
+	}
+
+	osgText::Font* font = 0L;
+	if (symbol &amp;&amp; symbol-&gt;font().isSet())
+	{
+		font = osgText::readFontFile(*symbol-&gt;font()); // read font*/
+	}
+
+	t-&gt;setFontResolution(256,256);
+
+	t-&gt;setAutoRotateToScreen(false);
+	t-&gt;setCharacterSizeMode(osgText::Text::OBJECT_COORDS);
+
+	if (symbol != NULL)
+	{
+		if (symbol-&gt;size() != NULL)
+		{
+			t-&gt;setCharacterSize( symbol &amp;&amp; symbol-&gt;size().isSet() ? *symbol-&gt;size() : 20.0f );
+		}
+		else
+		{
+			t-&gt;setCharacterSize( 20.0f );
+		}
+	}
+
+	if (!font)
+		font = Registry::instance()-&gt;getDefaultFont();
+	if (font)
+	{
+		t-&gt;setFont(font);
+	}
+
+	t-&gt;setColor(symbol &amp;&amp; symbol-&gt;fill().isSet() ? symbol-&gt;fill()-&gt;color() : Color::White);
+
+	if (symbol)
+	{
+		// they're the same enum.
+		osgText::Text::AlignmentType at = (osgText::Text::AlignmentType) symbol-&gt;alignment().value();
+		t-&gt;setAlignment(at);
+	}
+
+	if (symbol &amp;&amp; symbol-&gt;halo().isSet())
+	{
+		t-&gt;setBackdropColor(symbol-&gt;halo()-&gt;color());
+		t-&gt;setBackdropType(osgText::Text::OUTLINE);
+
+		if (symbol-&gt;haloOffset() != NULL)
+		{
+			if (symbol-&gt;haloOffset().isSet())
+			{
+				t-&gt;setBackdropOffset(*symbol-&gt;haloOffset(), *symbol-&gt;haloOffset());
+			}
+		}
+	}
+	else if (!symbol)
+	{
+		// if no symbol at all is provided, default to using a black halo.
+		t-&gt;setBackdropColor(osg::Vec4(.3, .3, .3, 1));
+		t-&gt;setBackdropType(osgText::Text::OUTLINE);
+	}
+
+	// this disables the default rendering bin set by osgText::Font. Necessary if we're
+	// going to do decluttering.
+	// TODO: verify that it's still OK to share the font stateset (think so) or does it
+	// need to be marked DYNAMIC
+	if (t-&gt;getStateSet())
+		t-&gt;getStateSet()-&gt;setRenderBinToInherit();
+	//osg::StateSet* stateSet = new osg::StateSet();
+	//t-&gt;setStateSet( stateSet );
+
+
+//#if 0 // OBE: the decluttering bin is now set higher up (in OrthoNode)
+
+	osg::StateSet* stateSet = t-&gt;getOrCreateStateSet();
+
+	if ( symbol &amp;&amp; symbol-&gt;declutter().isSet() )
+	{
+		Decluttering::setEnabled( stateSet, *symbol-&gt;declutter() );
+	}
+	else
+	{
+	//	stateSet-&gt;setRenderBinToInherit();
+		stateSet-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+	}
+
+	t-&gt;setStateSet( stateSet );
+
+
+
+
+#if 0 // OBE: shadergenerator now takes care of all this
+	// add the static &quot;isText=true&quot; uniform; this is a hint for the annotation shaders
+	// if they get installed.
+	static osg::ref_ptr&lt;osg::Uniform&gt; s_isTextUniform = new osg::Uniform(osg::Uniform::BOOL, UNIFORM_IS_TEXT());
+	s_isTextUniform-&gt;set( true );
+	stateSet-&gt;addUniform( s_isTextUniform.get() );
+#endif
+
+	return t;
+}
+
+
+
+
+
+
+
+... 
+
+Thank you!
+
+Cheers,
+Lv
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopica88c.php?p=70488#70488">http://forum.openscenegraph.org/viewtopic.php?p=70488#70488</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005775.html">[osg-users] How to disable Antialiasing of an osg::Text
+</A></li>
+	<LI>Next message: <A HREF="005849.html">[osg-users] How to disable Antialiasing of an osg::Text
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5848">[ date ]</a>
+              <a href="thread.html#5848">[ thread ]</a>
+              <a href="subject.html#5848">[ subject ]</a>
+              <a href="author.html#5848">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,180 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] writeNode after readNode makes the osgb model much bigger size
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20writeNode%20after%20readNode%20makes%20the%20osgb%20model%20much%0A%20bigger%20size&In-Reply-To=%3C1515789768.m2f.72746%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007562.html">
+   <LINK REL="Next"  HREF="007552.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] writeNode after readNode makes the osgb model much bigger size</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20writeNode%20after%20readNode%20makes%20the%20osgb%20model%20much%0A%20bigger%20size&In-Reply-To=%3C1515789768.m2f.72746%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] writeNode after readNode makes the osgb model much bigger size">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Fri Jan 12 12:42:48 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007562.html">[osg-users] Same vertices selected multiple times
+</A></li>
+        <LI>Next message (by thread): <A HREF="007552.html">[osg-users] writeNode after readNode makes the osgb model much bigger size
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7543">[ date ]</a>
+              <a href="thread.html#7543">[ thread ]</a>
+              <a href="subject.html#7543">[ subject ]</a>
+              <a href="author.html#7543">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Tangrijing
+
+You may use osgDB::writeNode(*node, &#8220;456.osgb.zip&#8221;,options);
+or try store Images as external compressed ive
+
+Cheers
+
+
+jane_rita wrote:
+&gt;<i> Hi,
+</I>&gt;<i> 
+</I>&gt;<i> I read 123.osgb file to a node, and then write it to 456.osgb ,however,the 456.osgb has a 10 times bigger size than 123.osgb. My code is here:
+</I>&gt;<i> 
+</I>&gt;<i> osg::ref_ptr&lt;osg::Node&gt; node = osgDB::readRefNodeFile(123.osgb);
+</I>&gt;<i> 
+</I>&gt;<i> osg::ref_ptr&lt;osgDB::ReaderWriter::Options&gt; options = new osgDB::ReaderWriter::Options;
+</I>&gt;<i> options-&gt;setOptionString(&quot;WriteImageHint=IncludeData&quot;);
+</I>&gt;<i> 
+</I>&gt;<i> osgDB::ReaderWriter::WriteResult result = osgDB::Registry::instance()-&gt;writeNode(*node, &#8220;456.osgb&#8221;,options);
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> I than use a  texure compress method cited from osgconv.cpp, the result is still 2 times bigger size than the original file.
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> void MyNodeVisitor::compress()
+</I>&gt;<i> {
+</I>&gt;<i>         MyGraphicsContext context;
+</I>&gt;<i>         if (!context.valid())
+</I>&gt;<i>         {
+</I>&gt;<i>                 osg::notify(osg::NOTICE) &lt;&lt; &quot;Error: Unable to create graphis context, problem with running osgViewer-&quot; &lt;&lt; osgViewerGetVersion() &lt;&lt; &quot;, cannot run compression.&quot; &lt;&lt; std::endl;
+</I>&gt;<i>                 return;
+</I>&gt;<i>         }
+</I>&gt;<i> 
+</I>&gt;<i>         osg::ref_ptr&lt;osg::State&gt; state = new osg::State;
+</I>&gt;<i>         state-&gt;initializeExtensionProcs();
+</I>&gt;<i> 
+</I>&gt;<i>         for (TextureSet::iterator itr = _textureSet.begin();
+</I>&gt;<i>                 itr != _textureSet.end();
+</I>&gt;<i>                 ++itr)
+</I>&gt;<i>         {
+</I>&gt;<i>                 osg::Texture* texture = const_cast&lt;osg::Texture*&gt;(itr-&gt;get());
+</I>&gt;<i> 
+</I>&gt;<i>                 osg::Texture2D* texture2D = dynamic_cast&lt;osg::Texture2D*&gt;(texture);
+</I>&gt;<i>                 osg::Texture3D* texture3D = dynamic_cast&lt;osg::Texture3D*&gt;(texture);
+</I>&gt;<i> 
+</I>&gt;<i>                 osg::ref_ptr&lt;osg::Image&gt; image = texture2D ? texture2D-&gt;getImage() : (texture3D ? texture3D-&gt;getImage() : 0);
+</I>&gt;<i>                 if (image.valid() &amp;&amp;
+</I>&gt;<i>                         (image-&gt;getPixelFormat() == GL_RGB || image-&gt;getPixelFormat() == GL_RGBA) &amp;&amp;
+</I>&gt;<i>                         (image-&gt;s() &gt;= 32 &amp;&amp; image-&gt;t() &gt;= 32))
+</I>&gt;<i>                 {
+</I>&gt;<i>                         texture-&gt;setInternalFormatMode(_internalFormatMode);
+</I>&gt;<i> 
+</I>&gt;<i>                         // need to disable the unref after apply, otherwise the image could go out of scope.
+</I>&gt;<i>                         bool unrefImageDataAfterApply = texture-&gt;getUnRefImageDataAfterApply();
+</I>&gt;<i>                         texture-&gt;setUnRefImageDataAfterApply(false);
+</I>&gt;<i> 
+</I>&gt;<i>                         // get OpenGL driver to create texture from image.
+</I>&gt;<i>                         texture-&gt;apply(*state);
+</I>&gt;<i> 
+</I>&gt;<i>                         // restore the original setting
+</I>&gt;<i>                         texture-&gt;setUnRefImageDataAfterApply(unrefImageDataAfterApply);
+</I>&gt;<i> 
+</I>&gt;<i>                         image-&gt;readImageFromCurrentTexture(0, true);
+</I>&gt;<i> 
+</I>&gt;<i>                         texture-&gt;setInternalFormatMode(osg::Texture::USE_IMAGE_DATA_FORMAT);
+</I>&gt;<i>                 }
+</I>&gt;<i>         }
+</I>&gt;<i> }
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> my question is ,how can i make the 456.osgb has the same size with 123.osgb
+</I>&gt;<i> 
+</I>&gt;<i> Thank you!
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> tangrijing
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic756f.php?p=72746#72746">http://forum.openscenegraph.org/viewtopic.php?p=72746#72746</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007562.html">[osg-users] Same vertices selected multiple times
+</A></li>
+	<LI>Next message (by thread): <A HREF="007552.html">[osg-users] writeNode after readNode makes the osgb model much bigger size
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7543">[ date ]</a>
+              <a href="thread.html#7543">[ thread ]</a>
+              <a href="subject.html#7543">[ subject ]</a>
+              <a href="author.html#7543">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

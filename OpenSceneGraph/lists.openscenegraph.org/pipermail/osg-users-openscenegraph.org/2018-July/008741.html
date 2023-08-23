@@ -1,0 +1,181 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgQt + OSG 3.6.2 Status
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20%2B%20OSG%203.6.2%20Status&In-Reply-To=%3C1531944027.m2f.74359%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008740.html">
+   <LINK REL="Next"  HREF="008742.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgQt + OSG 3.6.2 Status</H1>
+<!--htdig_noindex-->
+    <B>James Davis</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgQt%20%2B%20OSG%203.6.2%20Status&In-Reply-To=%3C1531944027.m2f.74359%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osgQt + OSG 3.6.2 Status">davisjamesf at gmail.com
+       </A><BR>
+    <I>Wed Jul 18 13:00:27 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008740.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+        <LI>Next message (by thread): <A HREF="008742.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8741">[ date ]</a>
+              <a href="thread.html#8741">[ thread ]</a>
+              <a href="subject.html#8741">[ subject ]</a>
+              <a href="author.html#8741">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I'm no code guru (more like a hacker), but I'll post what I do if it makes sense and helps.  Had to hand-type this as my code is on a different PC and I couldnt copy.  You'll probably see some typos and short cuts.   
+
+My setup is in a class called OSGDataViewer which double inherits a view base class (pretty much a QMainWindow) and a CompositeViewer.
+
+I define a osgQt::GraphisWindowQt* m_gw member along with all my manipulators, rootnode hud etc in this OSGDataViewer class.
+
+In my constructor, I call a method initializeOSG() which does the following:
+
+setThreadModel(osgViewer::Viewer::SingleThreaded);
+osg::ref_ptr&lt;osg::Camera&gt; cam0 = this-&gt;createCamera(x(), y(), height(), &quot;Main Camera&quot;, false); //more on createCamera in a bit.  x,y,width,height comes from qmainwindow
+
+QWidget* GLWidget = m_gw-&gt;getGLWidget();
+
+//finally set my central widget
+this-&gt;setCentralWidget(GLWidget);
+
+I then setup a cam1 which is my hud camera.  I'll post if you want to see it.
+
+Next I set up my root node, depthPartitionNode, and others.
+
+finally, I'll call another local method:
+addNewView(cam0.get(), rootnode.get(), &quot;MainView&quot;) //i'd call this with cam1 also.  This method is described below also
+
+finally, my difference scene manipulators are created  and i'd do something like the following:
+
+this-&gt;getView(0)-&gt;setCameraManipulator(m_keyswitchManipulator.get())
+
+I'd also setup callbacks as example:
+this-&gt;getView(1)-&gt;getCamera()-&gt;setFinalDrawCallbac(w_WinCapCallback.get())
+
+------------
+here is my createCamera method:
+osg::Camera* OSGDataViewer::createCamera(int x, y, w, h, name...)
+osg::ref_ptr&lt;osg::DisplaySettings&gt; ds = osg::DisplaySettings::instance();
+ds-&gt;setMaxNumberOfGraphicContext(20)
+osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+traits-&gt;readDISPLAY
+if (traits-&gt;displayNum&lt;0) traigs-&gt;displayNum=0;
+
+traits-&gt;windowName = name
+traits-&gt;.....
+  x=x
+  y=y
+  width=w
+  alpha = ds-&gt;getMinimumNumberAlphaBits
+  stencil = ds-&gt;getMinimumNumStencilBits()
+  windowDecoration = false
+  doubleBuffer = true;
+  sampleBuffers = ds-&gt;getMultiSamples
+  samples = ds-&gt;getNumMultiSamples
+
+  traits-&gt;inheritedWindowData = new osgViewer::GraphicsWindowWin32::WindowData((HWND)QWidget::winID());
+osgQt::GraphicsWindowQt *GWQ;
+
+if (!m_gw)
+  traits-&gt;sharedContext = 0;
+   GWQ = new osgQt::GraphicsWindowQt(traits.get())
+   GWQ-&gt;createNewContextID
+else
+   traits-&gt;sharedContext = m_gw
+   GWQ = new osgQt::GraphicsWindowQt(traits.get())
+   GWQ-&gt;createNewContextID();
+
+GWQ-&gt;setName(name)
+osg::ref_ptr&lt;osg::Camera&gt; camera = new osg::Camera()
+camera-&gt;setGraphicsContext(GWQ);
+
+QWidget* GLWidget = GWQ-&gt;getGLWidget();
+GLWidget-&gt;setAttribute(Qt::WA_PaintOnScreen)
+   .....                                 WA_NoSystemBackground
+                                         WA_OpaquePaintEvent
+                                         WA_DeleteOnClose
+GLWidget-&gt;setAttribute(Qt::ClickFocus)
+
+camera-&gt;setClearColor(...
+camera-&gt;setViewPort(new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height))
+camera -&gt;setLODScale(3.0)
+camera-&gt;setProjectionMatrixAsPerspective(......
+osg::StateSet* stateset = camera-&gt;getOrCreateStateSet()
+stateset-&gt;setGlobalDefaults()
+return camera.release()
+
+
+------------
+here is my addNewView method:
+void OSGDataViewer::addNewView(osg::Camera* camera, osg::Node* scene, string viewname)
+
+osgVIewer::View* view = new osgVIewer::View;
+view-&gt;setCamera(camera)
+view-&gt;adddEventHandler(new osgGA::StateSetManipulator(view-&gt;getCamera()-&gt;getOrCreateStateSet()))
+view-&gt;addEventHandler(new osgVIewer::ThreadingHandler)
+....                                                      ::WindowSizeHandler)
+                                                          ::StatsHandler)
+view-&gt;setLightingMode(osg::View::SKY_LIGHT)
+view-&gt;getDatabasePaer()-&gt;setUnrefImageDataAfterApplyPolicy(true, valse)
+
+this-&gt;addView(view)
+
+view-&gt;setSceneData(scene);                        
+
+Hope this is as clear as mud!
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic8e78.php?p=74359#74359">http://forum.openscenegraph.org/viewtopic.php?p=74359#74359</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008740.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+	<LI>Next message (by thread): <A HREF="008742.html">[osg-users] osgQt + OSG 3.6.2 Status
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8741">[ date ]</a>
+              <a href="thread.html#8741">[ thread ]</a>
+              <a href="subject.html#8741">[ subject ]</a>
+              <a href="author.html#8741">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

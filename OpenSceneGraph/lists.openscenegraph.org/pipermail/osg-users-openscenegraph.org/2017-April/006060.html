@@ -1,0 +1,205 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Recommended way to render a scene from multiple independent viewpoints
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Recommended%20way%20to%20render%20a%20scene%20from%20multiple%0A%20independent%20viewpoints&In-Reply-To=%3CCAHhSfthFtJHHZTm-y%2BW7ff6R5ofXD3SaZa67YaSe%3D8h5eu0BOA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006059.html">
+   <LINK REL="Next"  HREF="006061.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Recommended way to render a scene from multiple independent viewpoints</H1>
+<!--htdig_noindex-->
+    <B>Riccardo Corsi</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Recommended%20way%20to%20render%20a%20scene%20from%20multiple%0A%20independent%20viewpoints&In-Reply-To=%3CCAHhSfthFtJHHZTm-y%2BW7ff6R5ofXD3SaZa67YaSe%3D8h5eu0BOA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Recommended way to render a scene from multiple independent viewpoints">riccardo.corsi at kairos3d.it
+       </A><BR>
+    <I>Tue Apr 11 05:25:44 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006059.html">[osg-users] Recommended way to render a scene from multiple	independent viewpoints
+</A></li>
+        <LI>Next message: <A HREF="006061.html">[osg-users] Recommended way to render a scene from multiple independent viewpoints
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6060">[ date ]</a>
+              <a href="thread.html#6060">[ thread ]</a>
+              <a href="subject.html#6060">[ subject ]</a>
+              <a href="author.html#6060">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Hannes,
+
+for the camera setup you're after I recommend using a SlaveUpdateCallback,
+which will be called once per frame for each slave camera, allowing you to
+manipulate the camera position/orientation at will.
+
+Here's a code snippet:
+
+// implement a slave callback to place the camera as you want
+class MySlaveCallback : public osg::View::Slave::UpdateSlaveCallback
+{
+   // implement update method
+   virtual void updateSlave(osg::View&amp; view, osg::View::Slave&amp; slave){ ... }
+}
+
+// add the camera as slave
+slaveCam-&gt;setGraphicsContext(gc);
+viewer.addSlave(slaveCam, true);
+
+// install your callback
+osg::View::Slave* slave = viewer.findSlaveForCamera(slaveCam);
+slave-&gt;_updateSlaveCallback = pMirrorCallback;
+
+Ricky
+
+On Tue, Apr 11, 2017 at 2:11 PM, Hannes Naude &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">naude.jj at gmail.com</A>&gt; wrote:
+
+&gt;<i> I think I solved my own problem. I was planning to use
+</I>&gt;<i>
+</I>&gt;<i> viewer.addSlave(cam,...)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> and then use
+</I>&gt;<i>
+</I>&gt;<i> cam-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> to decouple the slave camera from the master. (If this is not the best
+</I>&gt;<i> approach, I would still like to hear, but it seems pretty clean)
+</I>&gt;<i>
+</I>&gt;<i> It turned out that I did not even need the second call. I think this is
+</I>&gt;<i> because I have an update callback attached to each of the slave cameras
+</I>&gt;<i> that explicitly sets the view matrix to match the world-to-local matrix of
+</I>&gt;<i> some node in the scenegraph and thereby overrides the slaving.
+</I>&gt;<i>
+</I>&gt;<i> By the way, this is something else that has bothered me. The requirement
+</I>&gt;<i> for a camera to track a node in the scenegraph seems like it should be
+</I>&gt;<i> extremely common. But in order to implement this I had to write my own
+</I>&gt;<i> little NodeTracker Callback as follows:
+</I>&gt;<i>
+</I>&gt;<i> class NodeTracker : public NodeCallback
+</I>&gt;<i>
+</I>&gt;<i> {
+</I>&gt;<i>
+</I>&gt;<i> public:
+</I>&gt;<i>
+</I>&gt;<i>    NodePath _nodepath;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>    NodeTracker(Node* node):_nodepath(node-&gt;getParentalNodePaths()[0]){}
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>    virtual void operator()(Node* node, NodeVisitor* nv)
+</I>&gt;<i>
+</I>&gt;<i>    {
+</I>&gt;<i>
+</I>&gt;<i>  ref_ptr&lt;Camera&gt; cam=node-&gt;asCamera();
+</I>&gt;<i>
+</I>&gt;<i>  if(cam)
+</I>&gt;<i>
+</I>&gt;<i>  {
+</I>&gt;<i>
+</I>&gt;<i>  Matrix mat2=cam-&gt;getViewMatrix();
+</I>&gt;<i>
+</I>&gt;<i>  Matrix mat=computeWorldToLocal(_nodepath);
+</I>&gt;<i>
+</I>&gt;<i> cam-&gt;setViewMatrix(mat);
+</I>&gt;<i>
+</I>&gt;<i>  }
+</I>&gt;<i>
+</I>&gt;<i>  traverse(node, nv);
+</I>&gt;<i>
+</I>&gt;<i>    }
+</I>&gt;<i>
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> It feels like this is such a common requirement that something like it
+</I>&gt;<i> should be built into OSG. I had a look at the tutorial on the subject :
+</I>&gt;<i>
+</I>&gt;<i> <A HREF="../../../../trac.openscenegraph.org/projects/osg/wiki/Support/Tutorials/index.html">http://trac.openscenegraph.org/projects/osg//wiki/Support/Tutorials/</A>
+</I>&gt;<i> CameraControlNodeFollowing
+</I>&gt;<i>
+</I>&gt;<i> but it recommends a solution that seems even more generally useful and is
+</I>&gt;<i> quite verbose, yet is not included in osg. What am I missing here?
+</I>&gt;<i>
+</I>&gt;<i> Regards
+</I>&gt;<i> Hannes Naude
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Tue, Apr 11, 2017 at 1:08 PM, Hannes Naude &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">naude.jj at gmail.com</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi all
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I am trying to render a single scene from multiple viewpoints. I
+</I>&gt;&gt;<i> initially implemented this with a compositeviewer as per the
+</I>&gt;&gt;<i> osgthirdpersonview example. This worked fine except that my update
+</I>&gt;&gt;<i> callbacks appeared to be getting called more than once per render cycle. I
+</I>&gt;&gt;<i> assumed that the update traversal was being done for each view separately
+</I>&gt;&gt;<i> and therefore nodes that are present in multiple views will have their
+</I>&gt;&gt;<i> update callbacks called multiple times. So, at this point I tried to do the
+</I>&gt;&gt;<i> same thing but with a single View, somewhat similar to the osgCamera
+</I>&gt;&gt;<i> example. But, I do not want to add my cameras with viewer.addSlave as I
+</I>&gt;&gt;<i> want them to move independently of one another. So I tried adding them into
+</I>&gt;&gt;<i> the scene graph and giving each their own GraphicsContext, but even though
+</I>&gt;&gt;<i> the windows corresponding to these GraphicsContexts get created, it appears
+</I>&gt;&gt;<i> as if all rendering is done in a single window with multiple viewpoints
+</I>&gt;&gt;<i> being rendered over one another.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Obviously there are many ways to skin this cat, but I would appreciate
+</I>&gt;&gt;<i> some guidance on the recommended approach. To recap my requirements are :
+</I>&gt;&gt;<i>  - Multiple cameras viewing the same scene.
+</I>&gt;&gt;<i>  - Camera positions and orientations must be independently controlled.
+</I>&gt;&gt;<i>  - Node update callbacks should be called only once per Node per render
+</I>&gt;&gt;<i> cycle.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Any help will be appreciated
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Regards
+</I>&gt;&gt;<i> Hannes Naude
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170411/3423c4eb/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170411/3423c4eb/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006059.html">[osg-users] Recommended way to render a scene from multiple	independent viewpoints
+</A></li>
+	<LI>Next message: <A HREF="006061.html">[osg-users] Recommended way to render a scene from multiple independent viewpoints
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6060">[ date ]</a>
+              <a href="thread.html#6060">[ thread ]</a>
+              <a href="subject.html#6060">[ subject ]</a>
+              <a href="author.html#6060">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,141 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-gb" lang="en-gb">
+
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
+<head>
+    <script type="text/javascript">
+var siteurl='../../../../index.html';
+var tmplurl='../../../../templates/ja_purity_ii/index.html';
+var isRTL = false;
+</script>
+
+<base  />
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content="scene graph
+OpenGL
+realtime graphics
+OpenGL ES" />
+	<meta name="author" content="Torben Dannhauer" />
+	<meta name="robots" content="noindex, nofollow" />
+	<meta name="description" content="Project website for OpenSceneGraph" />
+	<meta name="generator" content="Joomla! - Open Source Content Management" />
+	<title>How to extract dataset parts</title>
+	<link href="../../../../index4adc.css?jat3action=gzip&amp;jat3type=css&amp;jat3file=t3-assets%2Fcss_4ca7c.css" rel="stylesheet" type="text/css" />
+	<script type="application/json" class="joomla-script-options new">{"csrf.token":"8209e1c6468f316786935c5820a254ee","system.paths":{"root":"","base":""}}</script>
+	<script src="../../../../indexa945.php?jat3action=gzip&amp;jat3type=js&amp;jat3file=t3-assets%2Fjs_a0ffa.js" type="text/javascript"></script>
+	<script type="text/javascript">
+jQuery(window).on('load',  function() {
+				new JCaption('img.caption');
+			});
+	</script>
+
+<!--[if ie]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/templates/ja_purity_ii/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+
+
+
+
+<link href="../../../../plugins/system/jat3/jat3/base-themes/default/images/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+
+
+<!--[if IE 7.0]>
+<style>
+.clearfix { display: inline-block; } /* IE7xhtml*/
+</style>
+<![endif]-->
+
+<script language="javascript" type="text/javascript">
+var rightCollapseDefault='show';
+var excludeModules='38';
+</script>
+<script language="javascript" type="text/javascript" src="../../../../templates/ja_purity_ii/js/ja.rightcol.js"></script>
+
+<style type="text/css">
+#ja-header .main {
+	background-image: url(../../../../templates/ja_purity_ii/images/header/header2.jpg);
+}
+</style></head>
+
+<body id="bd" class="fs3 com_content contentpane">
+    <div id="system-message-container">
+	</div>
+
+    <div class="item-page clearfix">
+	<h1 class="componentheading">
+	Virtual Planet Builder	</h1>
+	<h2 class="contentheading">
+			<a href="117-how-to-extract-dataset-parts.html">
+		How to extract dataset parts</a>
+		</h2>
+
+	
+<div class="article-tools clearfix">
+	<ul class="actions">
+			<li>
+		<a href="#" onclick="window.print();return false;">			<span class="icon-print" aria-hidden="true"></span>
+		Print	</a>		</li>
+		
+	</ul>
+
+
+
+	<dl class="article-info">
+	<dt class="article-info-term">Details</dt>
+	<dd class="category-name">
+				Category: <span><a href="../virtual-planet-builder.html">Virtual Planet Builder</a></span>		</dd>
+	<dd class="published">
+	Published: <span>14 February 2013</span>	</dd>
+	<dd class="createdby"> 
+				Written by <span>Torben Dannhauer</span>	
+	</dd>
+	
+	<dd class="hits">
+	Hits: <span>12009</span>	</dd>
+	</dl>
+</div>
+
+
+	<h3 id="SupportedOSGVersions">Supported OSG Versions</h3>
+<p>Versions of OSG since February 10th 2012 (&gt;3.0.1) support the caching of OSG models from local sources. This is required to follow this tutorial.</p>
+<h3 id="Overview">Overview</h3>
+<p>The idea behind this example is to take an existing database that was built with VPB and use <strong>osgfilecache</strong> to 'cache' the local terrain database to another local directory. osgfilecache supports level/extends limitation, so it is possible to extract only terrain within certain bounds or level of detail.</p>
+<h3 id="Assumptions">Assumptions</h3>
+<ul>
+<li> Let <strong>/home/large_database</strong> = the root of the original (large) database, i.e. the directory where the top-level .osgb file is located.</li>
+<li>Let <strong>/home/database_part</strong> = the root of the destination database with limited extends. It should be writable to allow osgfilecache to write the files into it.</li>
+<li>The large source database root was called terrain.osgb (<strong>/home/large_database/terrain.osgb</strong>)</li>
+<li>The large source database was build in <strong>geocentric</strong> mode.</li>
+<li>Using bash on Linux. Replacing the pathes it should be possible to follow the recipe also on windows. <strong>Be aware of he limited NTFS performance and stability if you try to extract giga-/terabyte size datasets''' </strong></li>
+</ul>
+<h3 id="Procedure">Procedure</h3>
+<p>One note before we start with the commands: pagedLOD nodes store the database path, which is the path to the file. This path is overwritten by osgfilecache. To get a independent new sub database with relative paths, you mast enter the directory of the large source terrain database before you invoke osgfilecache. Otherwise you will get a terrain dataset with absolute paths which will cause OSG to continue loading from the original database instead from the extracted limited dataset.</p>
+<p>Enter the source terrain dataset</p>
+<pre class="wiki">cd /home/large_database
+</pre>
+<p>The command structure is 'osgfilecache --file-cache &lt;your destination folder&gt; &lt;options to control the new database extents&gt; &lt;relative path to your source database root file&gt; For example for the above assumptions, it would be the following to extract the database until LOD level 3 ('-l 3'):</p>
+<pre class="wiki">osgfilecache --file-cache /home/database_part -l 3 ./terrain.osgb
+</pre>
+<p>According to the osgfielcache help, the following extend definitions are allowed:</p>
+<pre class="wiki"> -e level minX minY maxX maxY                                                  
+                    Read down to &lt;level&gt; across the extents minX, minY to maxY,
+                    maxY.  Note, for geocentric datase X and Y are longitude and
+                    latitude respectively.
+  -l level          Read down to level across the whole database.
+
+</pre>
+<h3 id="Example">Example</h3>
+<p>To extract lon 11-15 and lat 30-40 until level 8:</p>
+<pre class="wiki">osgfilecache --file-cache /home/torben/test -e 8 11 30 15 40 ./terrain.osgb
+</pre>
+<h3 id="Advancedusage">Advanced usage</h3>
+<p><strong>Note: You can run osgfilecache multiple times in the same directory to 'compose' a new database with different extends. E.g. worldwide&lt;=level 5, europe&lt;=level 8 and germany&lt;=level 25</strong></p> 
+			
+				
+
+	</div>
+</body>
+
+</html>

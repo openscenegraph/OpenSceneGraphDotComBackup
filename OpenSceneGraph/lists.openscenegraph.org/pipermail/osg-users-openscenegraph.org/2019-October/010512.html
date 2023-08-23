@@ -1,0 +1,325 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Crash on some machines while rendering a progressive line strip
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20on%20some%20machines%20while%20rendering%20a%20progressive%0A%20line%20strip&In-Reply-To=%3C1570212542.m2f.76790%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010518.html">
+   <LINK REL="Next"  HREF="010561.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Crash on some machines while rendering a progressive line strip</H1>
+<!--htdig_noindex-->
+    <B>Rakesh Prasad</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20on%20some%20machines%20while%20rendering%20a%20progressive%0A%20line%20strip&In-Reply-To=%3C1570212542.m2f.76790%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Crash on some machines while rendering a progressive line strip">rptutor2012 at gmail.com
+       </A><BR>
+    <I>Fri Oct  4 11:09:02 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010518.html">[osg-users] Image from shader
+</A></li>
+        <LI>Next message (by thread): <A HREF="010561.html">[osg-users] Crash on some machines while rendering a progressive line strip
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10512">[ date ]</a>
+              <a href="thread.html#10512">[ thread ]</a>
+              <a href="subject.html#10512">[ subject ]</a>
+              <a href="author.html#10512">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+I have a code which renders a progressive line strip. When the line strip is unmasked to display it crashes on some machines. I use osg 3.6.4 with MFC Visual Studio 2019 with V142. The same problem was observed on osg 3.4.0 with MFC and Visual Studio 2013 v120. I am completely clueless as why it would crash since its not on my machine. I dont have the crash stack and other variable values. I have some observations.I will list my code and try to explain as best as possible.
+I migrated from osg 3.4.0 hoping 3.6.4 will resolve the issue.
+
+createHUDClubHdPts is called to create the scenegraph with the arrays. After which every frame AddCurPtToHandClubPath is called. This function updates the point in the array. As the frames are rendered a line that progressed based on the coordinates is displayed.  The render target is a MFC MDI client window. The render frames are called from a thread of class OpenThreads::Thread
+
+While trying to debug the issue using logs.  I found that when the numPtsinHandClubPath value goes to 199 it crashes. We can see that the array size is 2000.  Everytime it used to crash after 200 values were updated into the coordinate vector and color vector.
+
+It has never crashed on two of my machines so I dont have the stack and variable values. Few remote machines it has crashed.
+Do let me know if there is any query or clarity required.
+... 
+
+Thank you!
+
+Cheers,
+Rakesh
+
+Code:
+
+//following variables are defined in COSGViewer
+	osg::MatrixTransform* mtClubHandPath;
+	osg::ref_ptr&lt;osg::Geode&gt; osgGeodeHandClubPath;
+	unsigned int MaxPtsInHandCLubPath;
+	osg::ref_ptr&lt;osg::Geometry&gt; geomHandPath;
+	osg::ref_ptr&lt;osg::Geometry&gt; geomClubPath;
+	osg::ref_ptr&lt;osg::Vec3Array&gt; coordsHandPath;
+	osg::ref_ptr&lt;osg::Vec3Array&gt; coordsClubPath;
+	osg::ref_ptr&lt;osg::Vec4Array&gt; coloursHandPath;
+	osg::ref_ptr&lt;osg::Vec4Array&gt; coloursClubPath;
+	osg::ref_ptr&lt;osg::DrawArrays&gt; drawArrayHandPath;
+	osg::ref_ptr&lt;osg::DrawArrays&gt; drawArrayClubPath;
+
+
+osg::MatrixTransform* COSGViewer::createHUDClubHdPts(int X0, int Y0, int X1, int Y1, int textYOffset)
+{
+	mtClubHandPath = new osg::MatrixTransform();
+	osg::Matrix m;
+	m.makeTranslate(0, 0, 0);
+	mtClubHandPath-&gt;setMatrix(m);
+
+	RECT rect;
+	::GetWindowRect(m_hWnd, &amp;rect);
+
+
+	osg::ref_ptr&lt;osg::Geometry&gt; linesGeom = new osg::Geometry();
+	osgGeodeHandClubPath = new osg::Geode();
+
+	osg::ref_ptr&lt;osg::StateSet&gt; stateset = osgGeodeHandClubPath-&gt;getOrCreateStateSet();
+
+	stateset-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+	stateset-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+
+	osg::ref_ptr&lt;osg::LineWidth&gt; linewidth = new osg::LineWidth();
+	linewidth-&gt;setWidth(4.0f);
+	stateset-&gt;setAttributeAndModes(linewidth, osg::StateAttribute::ON);
+
+	unsigned int n_points = 2000;
+	MaxPtsInHandCLubPath = n_points;
+	numPtsinHandClubPath = 0;
+	geomHandPath = new osg::Geometry();
+	geomClubPath = new osg::Geometry();
+
+	coordsHandPath = new osg::Vec3Array;// (n_points);
+	coordsClubPath = new osg::Vec3Array;// (n_points);
+	coloursHandPath = new osg::Vec4Array;// (n_points);
+	coloursClubPath = new osg::Vec4Array;// (n_points);
+
+
+		for (unsigned int j = 0; j &lt; n_points; ++j) {
+
+			coordsHandPath-&gt;push_back(osg::Vec3(0, 0, 0));
+			coordsClubPath-&gt;push_back(osg::Vec3(0, 0, 0));
+			coloursHandPath-&gt;push_back(osg::Vec4(1.0, 0, 0, 1.0));
+			coloursClubPath-&gt;push_back(osg::Vec4(0, 0, 1.0, 1.0));
+
+
+		}
+
+
+		geomHandPath-&gt;setVertexArray(coordsHandPath);
+		geomClubPath-&gt;setVertexArray(coordsClubPath);
+
+		drawArrayHandPath = new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP);
+		//geomHandPath-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP, 0, n_points));
+		geomHandPath-&gt;addPrimitiveSet(drawArrayHandPath);
+
+		drawArrayClubPath = new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP);
+		geomClubPath-&gt;addPrimitiveSet(drawArrayClubPath);
+
+
+	geomHandPath-&gt;setColorArray(coloursHandPath, osg::Array::BIND_PER_VERTEX);
+	geomClubPath-&gt;setColorArray(coloursClubPath, osg::Array::BIND_PER_VERTEX);
+
+	geomHandPath-&gt;setDataVariance(osg::Object::DYNAMIC);
+	geomClubPath-&gt;setDataVariance(osg::Object::DYNAMIC);
+
+	osgGeodeHandClubPath-&gt;addDrawable(geomHandPath);
+	osgGeodeHandClubPath-&gt;addDrawable(geomClubPath);
+
+	mtClubHandPath-&gt;addChild(osgGeodeHandClubPath);
+	return mtClubHandPath;
+}
+
+
+
+void COSGViewer::AddCurPtToHandClubPath(int ccurFr, int cPrevFr)
+{
+	if (ccurFr != -1)
+	{
+		if (ccurFr == cPrevFr)
+			return;
+	}
+
+	osg::Vec3Array * lcoordsHandPath = dynamic_cast&lt;osg::Vec3Array*&gt;(geomHandPath-&gt;getVertexArray());
+	osg::Vec3Array * lcoordsClubPath = dynamic_cast&lt;osg::Vec3Array*&gt;(geomClubPath-&gt;getVertexArray());
+
+	osg::Vec4Array * lcolorHandPath = dynamic_cast&lt;osg::Vec4Array*&gt;(geomHandPath-&gt;getColorArray());
+	osg::Vec4Array * lcolorClubPath = dynamic_cast&lt;osg::Vec4Array*&gt;(geomClubPath-&gt;getColorArray());
+	
+	osg::Vec3 lhandVec;
+	
+	float fps = 240.0f;
+
+	if (mPolhemus-&gt;mnUseG4data == 2)
+		fps = 120.0f;
+
+	if (((fps == 120.0f) &amp;&amp; (mPolhemus-&gt;m_nActiveHubCount == 2)) || (fps == 240.0f))
+	{
+		if (osgViewerTrailCalib == FALSE)
+		{
+			if ((mRightHandedness == 1) || (mRightHandedness == -1))
+			{
+				lhandVec = vSensorCM[7];
+			}
+			else
+			{
+				lhandVec = vSensorCM[5];
+			}
+		}
+		else
+		{
+			if ((mRightHandedness == 1) || (mRightHandedness == -1))
+			{
+				lhandVec = vSensorCM[5];
+			}
+			else
+			{
+				lhandVec = vSensorCM[7];
+			}
+		}
+	}
+	else
+	{
+		lhandVec = vVMidHands;
+	}
+
+	(*lcoordsHandPath)[numPtsinHandClubPath] = lhandVec;
+	(*lcoordsClubPath)[numPtsinHandClubPath] = vVClub;
+
+	if (ccurFr == osgAddress)
+	{
+	}
+
+
+
+	if (ccurFr != -1)
+	{
+		if (ccurFr &lt;= osgTop)
+		{
+
+			(*lcolorHandPath)[numPtsinHandClubPath] = hdClubPathcrKey[0];
+			(*lcolorClubPath)[numPtsinHandClubPath] = hdClubPathcrKey[3];
+		}
+		else if ((ccurFr &gt; osgTop) &amp;&amp; (ccurFr &lt;= osgImpact))
+		{
+
+			(*lcolorHandPath)[numPtsinHandClubPath] = hdClubPathcrKey[1];
+			(*lcolorClubPath)[numPtsinHandClubPath] = hdClubPathcrKey[4];
+		}
+		else if (ccurFr &gt; osgImpact)
+		{
+
+			(*lcolorHandPath)[numPtsinHandClubPath] = hdClubPathcrKey[2];
+			(*lcolorClubPath)[numPtsinHandClubPath] = hdClubPathcrKey[5];
+		}
+	}
+	else
+	{
+		(*lcolorHandPath)[numPtsinHandClubPath] = hdClubPathcrKey[0];
+		(*lcolorClubPath)[numPtsinHandClubPath] = hdClubPathcrKey[3];
+	}
+
+
+	unsigned int lnumEleDisp;
+	if (numPtsinHandClubPath &gt; 10)
+		lnumEleDisp = numPtsinHandClubPath+1;
+	else
+		lnumEleDisp = numPtsinHandClubPath+1;
+
+	lcoordsHandPath-&gt;dirty();
+	lcoordsClubPath-&gt;dirty();
+
+	drawArrayHandPath-&gt;setFirst(0);
+	drawArrayHandPath-&gt;setCount(lnumEleDisp);
+
+	drawArrayClubPath-&gt;setFirst(0);
+	drawArrayClubPath-&gt;setCount(lnumEleDisp);
+
+	geomHandPath-&gt;setUseDisplayList(false);
+	geomHandPath-&gt;dirtyDisplayList();
+	geomHandPath-&gt;dirtyBound();
+
+	geomClubPath-&gt;setUseDisplayList(false);
+	geomClubPath-&gt;dirtyDisplayList();
+	geomClubPath-&gt;dirtyBound();
+
+	if (numPtsinHandClubPath == 200)
+	{
+		LOGD.LOGRP(FL, &quot;State2&quot;);
+	}
+
+	numPtsinHandClubPath++;
+
+	if (numPtsinHandClubPath == MaxPtsInHandCLubPath)
+	{
+		ClearAnimHandClubPath(0, 0);
+	}
+
+	if (numPtsinHandClubPath == 200)
+	{
+		LOGD.LOGRP(FL, &quot;State3&quot;);
+	}
+
+}
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic42c5.php?p=76790#76790">http://forum.openscenegraph.org/viewtopic.php?p=76790#76790</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: hdclubpath.jpg
+Type: image/jpeg
+Size: 53132 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20191004/4bee7d1f/attachment-0001.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191004/4bee7d1f/attachment-0001.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010518.html">[osg-users] Image from shader
+</A></li>
+	<LI>Next message (by thread): <A HREF="010561.html">[osg-users] Crash on some machines while rendering a progressive line strip
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10512">[ date ]</a>
+              <a href="thread.html#10512">[ thread ]</a>
+              <a href="subject.html#10512">[ subject ]</a>
+              <a href="author.html#10512">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

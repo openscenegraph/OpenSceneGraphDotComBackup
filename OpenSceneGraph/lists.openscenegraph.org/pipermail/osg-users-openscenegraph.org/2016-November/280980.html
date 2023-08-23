@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Text size and overlapping on osg sphere.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Text%20size%20and%20overlapping%20on%20osg%20sphere.&In-Reply-To=%3C1478785983.m2f.69309%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004823.html">
+   <LINK REL="Next"  HREF="280991.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Text size and overlapping on osg sphere.</H1>
+<!--htdig_noindex-->
+    <B>Inna Reddy</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Text%20size%20and%20overlapping%20on%20osg%20sphere.&In-Reply-To=%3C1478785983.m2f.69309%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Text size and overlapping on osg sphere.">osgforum at tevs.eu
+       </A><BR>
+    <I>Thu Nov 10 05:53:03 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004823.html">[osg-users] World to local coordinates
+</A></li>
+        <LI>Next message: <A HREF="280991.html">[osg-users] osgText setColor problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280980">[ date ]</a>
+              <a href="thread.html#280980">[ thread ]</a>
+              <a href="subject.html#280980">[ subject ]</a>
+              <a href="author.html#280980">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+I have made osg sphere and drawign text on it. Currently , my code palces the text in some places on the sphere.I am facing three issues. 
+
+1. But when I have  more numbers of texts . few of them are overlapping each other. Is ther any way to avoid this from osg or its pure mathematics. 
+
+2. Text also overlapping with the behind the text. Lets say, when the text1 is on the backside of the sphere , it overlapps with the text which is on the front surface of the sphere. Is it possible to set not to happen like that. 
+
+3. I am using character size text-&gt;setCharacterSize(500000);. Which is very big number, If I use smaller than this. its really bad. What's casuing this issue? 
+
+currently, this is the code I am using to draw the text on the sphere. 
+osgText::Text* createText(osg::EllipsoidModel* ellipsoid, double latitude, double longitude, double height, const std::string&amp; str)
+{
+	double X, Y, Z;
+	ellipsoid-&gt;convertLatLongHeightToXYZ(osg::DegreesToRadians(latitude), osg::DegreesToRadians(longitude), height, X, Y, Z);
+
+
+	osgText::Text* text = new osgText::FadeText;
+
+	osg::Vec3 normal = ellipsoid-&gt;computeLocalUpVector(X, Y, Z);
+	text-&gt;setCullCallback(new osg::ClusterCullingCallback(osg::Vec3(X, Y, Z), normal, 0.0));
+
+	text-&gt;setText(str);
+	osg::ref_ptr&lt;osgText::Font&gt; font = osgText::readFontFile(&quot;fonts/CalibriLI.ttf&quot;);
+	text-&gt;setFont(font.get());
+	text-&gt;setColor(osg::Vec4(1.0f, 1.0f, 1.0, 1.0f));
+	text-&gt;setPosition(osg::Vec3(X, Y, Z));
+	text-&gt;setCharacterSize(500000);
+	text-&gt;setDrawMode(osgText::Text::TEXT /*| osgText::Text::BOUNDINGBOX*/);
+	text-&gt;setAxisAlignment(osgText::Text::SCREEN);
+	//text-&gt;setCharacterSizeMode(osgText::Text::OBJECT_COORDS_WITH_MAXIMUM_SCREEN_SIZE_CAPPED_BY_FONT_HEIGHT);
+	text-&gt;setCharacterSizeMode(osgText::Text::OBJECT_COORDS);
+	text-&gt;setAutoRotateToScreen(true);
+	return text;
+}
+
+//**********************************************************
+osg::Node* createTextOnEllipsoid(osg::EllipsoidModel* ellipsoid)
+{
+	osg::Group* group = new osg::Group;
+
+	group-&gt;getOrCreateStateSet()-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+
+	osg::Geode* geode = new osg::Geode;
+	group-&gt;addChild(geode);
+
+	std::vector&lt;std::string&gt; textList;
+	textList.push_back(&quot;England&quot;);
+textList.push_back(&quot;Netherlands&quot;);
+	textList.push_back(&quot;Russia&quot;);
+	textList.push_back(&quot;Japan&quot;);
+	textList.push_back(&quot;This is not country&quot;);
+
+	unsigned int numLat = 10;
+	unsigned int numLong = 10;
+	double latitude = 0.0;
+	double longitude = -100.0;
+	double deltaLatitude = 1.0f;
+	double deltaLongitude = 1.0f;
+	 int t = 0;
+	for ( int i = 0; i &lt; textList.size(); ++i, longitude += rand() % 1000){
+		std::cout &lt;&lt; &quot; i value :: \n &quot; &lt;&lt; i &lt;&lt; &quot;Lat::&quot; &lt;&lt; latitude;
+		for ( int k = 0; k &lt; numLong; ++k, t++, latitude += rand() % 100){
+			std::cout &lt;&lt; &quot; K value :: \n &quot; &lt;&lt; k &lt;&lt; &quot;latitude&quot;&lt;&lt; latitude;
+			geode-&gt;addDrawable(createText(ellipsoid, latitude, longitude, 0, textList[t % textList.size()]));
+		}
+	}
+	
+	return group;	
+}
+
+
+... 
+
+Thank you!
+
+Cheers,
+Inna
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicb739.php?p=69309#69309">http://forum.openscenegraph.org/viewtopic.php?p=69309#69309</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004823.html">[osg-users] World to local coordinates
+</A></li>
+	<LI>Next message: <A HREF="280991.html">[osg-users] osgText setColor problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#280980">[ date ]</a>
+              <a href="thread.html#280980">[ thread ]</a>
+              <a href="subject.html#280980">[ subject ]</a>
+              <a href="author.html#280980">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

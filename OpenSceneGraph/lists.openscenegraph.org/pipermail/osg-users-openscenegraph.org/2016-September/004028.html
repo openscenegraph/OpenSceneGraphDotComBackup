@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAbout%20VertexArrayObject%20Branch%5D%20FeedBack%20and%0A%09Insight&In-Reply-To=%3CCAFN7Y%2BXdxHABcuXGMrhS%3Dm0_Nb%2BoyyGp1mG1HEbp%2Ben-cyU49A%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280247.html">
+   <LINK REL="Next"  HREF="280249.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAbout%20VertexArrayObject%20Branch%5D%20FeedBack%20and%0A%09Insight&In-Reply-To=%3CCAFN7Y%2BXdxHABcuXGMrhS%3Dm0_Nb%2BoyyGp1mG1HEbp%2Ben-cyU49A%40mail.gmail.com%3E"
+       TITLE="[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sun Sep  4 04:35:46 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280247.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+        <LI>Next message: <A HREF="280249.html">[osg-users] PagedLOD glitches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4028">[ date ]</a>
+              <a href="thread.html#4028">[ thread ]</a>
+              <a href="subject.html#4028">[ subject ]</a>
+              <a href="author.html#4028">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Julien,
+
+Updating VAO's isn't particularly costly in itself, the cost that
+Jannik was seeing was entirely down to the fact that the when you use
+DrawThreadPerContext the next frame is held back until all StateSet
+and Drawable's that have been dispatched.  The solution for Jannik was
+nothing more than call drawable-&gt;dirtyGLObjects() to force the VAO to
+compile the VBO's without setting the DataVariance to DYNAMIC.
+
+I may introduce a STREAM entry to the DataVariance enum to capture
+data the idea that data is not being reallocated/sizes being changed,
+just updated in place on each frame and hence not a thread critical
+data change.  I haven't made any decision on this yet,
+
+The question whether we need to share VAO's between Drawable is really
+down to whether there is any tangible performance benefit.  For you
+own tests I believe the cost of matching up VAO's at runtime was too
+high so distorted the results to have fewer VAO's.
+
+The implementation in the vertex_array_branch minimises the cost of
+switching between VAO's avoiding any dynamic matching costs.  Adding
+sharing of VertexArrayState is possible but if we do it it's something
+that should be done in scene graph creation not dynamically during the
+draw traversal.  If we did add sharing of VAS then I'd do it by adding
+a data structure above VAS that contains a the buffer_object&lt;VAS&gt; that
+is presently in Drawable.  This contain object would be the bit that
+would be shared between Drawable and it would only make sense to share
+it when the associated Drawable all share the same osg::Array's.
+
+An osgUtil::Optimizer pass could easily do this match up after loading
+of scene graph.  You potentially could have an optimization pass that
+merges osg::Arraty's and reassigns to the osg::Geometry to make
+sharing of VAO's possible.
+
+However, all this work has no established benefit, we don't whether
+we'll see any tangible performance benefit to make this extra
+complexity worthwhile.  Personally I haven't felt this extra work
+justified, we are only like to be seeing small marginal gains at this
+point as the bulk of the gains achievable with VAO have already been
+made.
+
+At this stage my priority is getting the getting the wider community
+to start testing the vertex_array_branch and get ready to merge with
+master as soon as possible, then it's time to move on to getting
+OSG-3.6 ourt the door.  Effort on this front is where I really need
+assistance.
+
+Robert.
+
+On 3 September 2016 at 15:09, Julien Valentin
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">julienvalentin51 at gmail.com</A>&gt; wrote:
+&gt;<i> Hi Robert,
+</I>&gt;<i> I think I understand what Jannik wanna means:
+</I>&gt;<i> Dynamic meshes doesn't require the vao to be &quot;recompiled&quot; on arrays changes. The only case when vao have to be redefined/&quot;recompiled&quot; is when vas change (in case of arrays adding/removing)
+</I>&gt;<i> So the datavariance of arrays is DYNAMIC but in order not to force the vao to be redifined at each frame (and the loossing all advantages of using vao) ones should set datavariance of the geometry to STATIC.
+</I>&gt;<i> So it leads to datavariance semantic violation...
+</I>&gt;<i>
+</I>&gt;<i> What I think of is making VAS a component of Drawable with that kind of code:
+</I>&gt;<i> class VAS : Object {
+</I>&gt;<i> void setVertexArray(Array);
+</I>&gt;<i> void setNormalArray(Array);
+</I>&gt;<i> protected:
+</I>&gt;<i> mutable bufferred_object&lt;PCVAS&gt; percontextVAS;
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> With this kind of stuff ones could control the data variance of the VAS itself and not the drawable:
+</I>&gt;<i> For the case of dynamic meshes:
+</I>&gt;<i> -geometry and arrays dattavariance would be DYNAMIC
+</I>&gt;<i> -but geometry vas datavariance would be STATIC
+</I>&gt;<i> (Further it would allow to share VAO  between Drawables at compile time)
+</I>&gt;<i> ...and everyone would be happy...No?
+</I>&gt;<i>
+</I>&gt;<i> I'm currently trying to implement it but I would rather have your opinion first (to avoid coding for nothing)
+</I>&gt;<i>
+</I>&gt;<i> Cheers
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> robertosfield wrote:
+</I>&gt;&gt;<i> Hi Jannik,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 17 August 2016 at 14:52, Jannik Heller &lt;&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> &gt; I have tested out the VAO branch on my Nvidia graphics card. As you said, VAO+VBO is slightly faster than VBO but not as fast as display lists. Would be curious on the performance results with AMD cards.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Unfortunately, I am unable to use VAO for animated meshes because you've introduced a new meaning of the dataVariance flag. <A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/vertex_array_object/include/osg/Drawable#L523">https://github.com/openscenegraph/OpenSceneGraph/blob/vertex_array_object/include/osg/Drawable#L523</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I haven't introduced a new meaning to DataVariance, all I have done it
+</I>&gt;&gt;<i> utilize it for knowing whether the VAO needs updating or not.  I have
+</I>&gt;&gt;<i> done this to avoid the extra checks required against the individual
+</I>&gt;&gt;<i> arrays to see if they are dirty or not - I have done it for
+</I>&gt;&gt;<i> performance reasons as I want to keep the CPU overhead for draw
+</I>&gt;&gt;<i> dispatch as low as possible.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> &gt; I do *not* set the dataVariance to DYNAMIC for all my animated meshes because the performance overhead of DYNAMIC is not acceptable for me. If Drawables are set to DYNAMIC, OSG would not break frame until all the draws are submitted. I manage the updates using a double buffering scheme that prevents the buffer from being modified while the draw thread is using it. So essentially I don't need the DYNAMIC flag, but now I'm forced to use it (and incur the performance overhead associated with it) because OSG won't update the arrays if I don't. :( Previously it was sufficient to dirty() the vertex arrays to get OSG to update things. Hopefully that can be fixed.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> This is a sticky one.  Your mesh *is* dynamic, the correct way to
+</I>&gt;&gt;<i> label the geometry is DYNAMIC.  In your usage case you are taking
+</I>&gt;&gt;<i> advantage of the fact that in certain circumstances you ignore the
+</I>&gt;&gt;<i> threading issues associated with dynamically updating whilst it's
+</I>&gt;&gt;<i> being dispatched by the drawing thread, however, this is a dangerous
+</I>&gt;&gt;<i> game to play that you have to be really careful to do without
+</I>&gt;&gt;<i> introducing a race condition.  Whether you are just getting lucky in
+</I>&gt;&gt;<i> your code or it's genuinely safe I can't say as I don't have the code.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> In your case you are wanting a DataVariance of
+</I>&gt;&gt;<i> DYNAMIC_BUT_DRAW_TRAVERSAL_PLEASE_DONT_TREAT_ME_AS_SUCH.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I guess the special case where modifying the data is safe would be
+</I>&gt;&gt;<i> STATIC_ALLOCATION_DYNAMIC_UPDATE or something along those line.
+</I>&gt;&gt;<i> Perhaps STREAM might be terminology that might fit this.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> However, even with the STREAM case if you are updating in the update
+</I>&gt;&gt;<i> or cull traversal while the draw thread is reading that same data you
+</I>&gt;&gt;<i> could get corrupted data sent to OpenGL driver, here you really should
+</I>&gt;&gt;<i> be double buffering.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'll ponder on this issue, but for now strictly speaking the VAO
+</I>&gt;&gt;<i> implementation is perfectly correct, requiring that the DataVariance
+</I>&gt;&gt;<i> be DYNAMIC is a correct interpretation of what the DataVariance is.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>  ------------------
+</I>&gt;&gt;<i> Post generated by Mail2Forum
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic1e59.php?p=68509#68509">http://forum.openscenegraph.org/viewtopic.php?p=68509#68509</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280247.html">[osg-users] [About VertexArrayObject Branch] FeedBack and	Insight
+</A></li>
+	<LI>Next message: <A HREF="280249.html">[osg-users] PagedLOD glitches
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4028">[ date ]</a>
+              <a href="thread.html#4028">[ thread ]</a>
+              <a href="subject.html#4028">[ subject ]</a>
+              <a href="author.html#4028">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

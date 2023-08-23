@@ -1,0 +1,248 @@
+Index: examples/osganalysis/osganalysis.cpp
+===================================================================
+--- examples/osganalysis/osganalysis.cpp	(revision 15019)
++++ examples/osganalysis/osganalysis.cpp	(working copy)
+@@ -540,6 +540,7 @@
+                             const std::string& outputFilename,
+                              SceneGraphProcessor* sceneGraphProcessor, 
+                              osgUtil::IncrementalCompileOperation* ico):
++        osg::Referenced(true),
+         Operation("DatabasePaging Operation", false),
+         _filename(filename),
+         _outputFilename(outputFilename),
+Index: examples/osgcatch/osgcatch.cpp
+===================================================================
+--- examples/osgcatch/osgcatch.cpp	(revision 15019)
++++ examples/osgcatch/osgcatch.cpp	(working copy)
+@@ -1366,6 +1366,7 @@
+ {
+     public:
+         CompileStateCallback(GameEventHandler* eh):
++            osg::Referenced(true),
+             osg::Operation("CompileStateCallback", false),
+             _gameEventHandler(eh) {}
+         
+Index: examples/osggraphicscost/osggraphicscost.cpp
+===================================================================
+--- examples/osggraphicscost/osggraphicscost.cpp	(revision 15019)
++++ examples/osggraphicscost/osggraphicscost.cpp	(working copy)
+@@ -29,6 +29,7 @@
+ public:
+ 
+     CalibrateCostEsimator(osg::GraphicsCostEstimator* gce):
++        osg::Referenced(true),
+         osg::GraphicsOperation("CalbirateCostEstimator",false),
+         _gce(gce) {}
+ 
+Index: examples/osgmotionblur/osgmotionblur.cpp
+===================================================================
+--- examples/osgmotionblur/osgmotionblur.cpp	(revision 15019)
++++ examples/osgmotionblur/osgmotionblur.cpp	(working copy)
+@@ -26,6 +26,7 @@
+ {
+ public:
+     MotionBlurOperation(double persistence):
++        osg::Referenced(true),
+         osg::Operation("MotionBlur",true),
+         cleared_(false),
+         persistence_(persistence)
+Index: examples/osgshaderterrain/osgshaderterrain.cpp
+===================================================================
+--- examples/osgshaderterrain/osgshaderterrain.cpp	(revision 15019)
++++ examples/osgshaderterrain/osgshaderterrain.cpp	(working copy)
+@@ -261,6 +261,7 @@
+ public:
+ 
+     TestSupportOperation():
++        osg::Referenced(true),
+         osg::GraphicsOperation("TestSupportOperation",false),
+         _supported(true),
+         _errorMessage() {}
+Index: examples/osgtext/osgtext.cpp
+===================================================================
+--- examples/osgtext/osgtext.cpp	(revision 15019)
++++ examples/osgtext/osgtext.cpp	(working copy)
+@@ -559,6 +559,7 @@
+ public:
+ 
+     UpdateTextOperation(const osg::Vec3& center, float diameter, osg::Group* group):
++        osg::Referenced(true),
+         Operation("UpdateTextOperation", true),
+         _center(center),
+         _diameter(diameter),
+Index: examples/osgthreadedterrain/osgthreadedterrain.cpp
+===================================================================
+--- examples/osgthreadedterrain/osgthreadedterrain.cpp	(revision 15019)
++++ examples/osgthreadedterrain/osgthreadedterrain.cpp	(working copy)
+@@ -83,6 +83,7 @@
+ public:
+ 
+     LoadAndCompileOperation(const std::string& filename, osgUtil::IncrementalCompileOperation* ico , osg::RefBlockCount* block):
++        osg::Referenced(true),
+         Operation("Load and compile Operation", false),
+         _filename(filename),
+         _incrementalCompileOperation(ico),
+@@ -128,6 +129,7 @@
+ 
+ 
+     MasterOperation(const std::string& filename, osgUtil::IncrementalCompileOperation* ico):
++        osg::Referenced(true),
+         Operation("Master reading operation",true),
+         _filename(filename),
+         _incrementalCompileOperation(ico)
+Index: examples/osgvolume/osgvolume.cpp
+===================================================================
+--- examples/osgvolume/osgvolume.cpp	(revision 15019)
++++ examples/osgvolume/osgvolume.cpp	(working copy)
+@@ -306,6 +306,7 @@
+ public:
+ 
+     TestSupportOperation():
++        osg::Referenced(true),
+         osg::GraphicsOperation("TestSupportOperation",false),
+         supported(true),
+         errorMessage(),
+Index: include/osg/GraphicsThread
+===================================================================
+--- include/osg/GraphicsThread	(revision 15019)
++++ include/osg/GraphicsThread	(working copy)
+@@ -49,6 +49,7 @@
+ struct OSG_EXPORT SwapBuffersOperation : public GraphicsOperation
+ {
+     SwapBuffersOperation():
++        osg::Referenced(true),
+         GraphicsOperation("SwapBuffers",true) {}
+ 
+     virtual void operator () (GraphicsContext* context);
+@@ -65,6 +66,7 @@
+     };
+ 
+     BarrierOperation(int numThreads, PreBlockOp op=NO_OPERATION, bool keep=true):
++        osg::Referenced(true),
+         Operation("Barrier", keep),
+         OpenThreads::Barrier(numThreads),
+         _preBlockOp(op) {}
+@@ -81,6 +83,7 @@
+ struct OSG_EXPORT ReleaseContext_Block_MakeCurrentOperation : public GraphicsOperation, public RefBlock
+ {
+     ReleaseContext_Block_MakeCurrentOperation():
++        osg::Referenced(true),
+         GraphicsOperation("ReleaseContext_Block_MakeCurrent", false) {}
+ 
+     virtual void release();
+Index: include/osg/OperationThread
+===================================================================
+--- include/osg/OperationThread	(revision 15019)
++++ include/osg/OperationThread	(working copy)
+@@ -52,7 +52,6 @@
+     public:
+ 
+         Operation(const std::string& name, bool keep):
+-            osg::Referenced(true),
+             _name(name),
+             _keep(keep) {}
+ 
+@@ -75,14 +74,12 @@
+         /** Do the actual task of this operation.*/
+         virtual void operator () (Object*) = 0;
+ 
+-    protected:
++protected:
+ 
+         Operation():
+-            Referenced(true),
+             _keep(false) {}
+ 
+         Operation(const Operation& op):
+-            Referenced(true),
+             _name(op._name),
+             _keep(op._keep) {}
+ 
+Index: src/osg/GraphicsThread.cpp
+===================================================================
+--- src/osg/GraphicsThread.cpp	(revision 15019)
++++ src/osg/GraphicsThread.cpp	(working copy)
+@@ -98,6 +98,7 @@
+ 
+ 
+ BlockAndFlushOperation::BlockAndFlushOperation():
++    osg::Referenced(true),
+     GraphicsOperation("Block",false)
+ {
+     reset();
+@@ -115,6 +116,7 @@
+ }
+ 
+ FlushDeletedGLObjectsOperation::FlushDeletedGLObjectsOperation(double availableTime, bool keep):
++    osg::Referenced(true),
+     GraphicsOperation("FlushDeletedGLObjectsOperation",keep),
+     _availableTime(availableTime)
+ {
+Index: src/osg/OperationThread.cpp
+===================================================================
+--- src/osg/OperationThread.cpp	(revision 15019)
++++ src/osg/OperationThread.cpp	(working copy)
+@@ -22,6 +22,7 @@
+ struct BlockOperation : public Operation, public Block
+ {
+     BlockOperation():
++        osg::Referenced(true),
+         Operation("Block",false)
+     {
+         reset();
+Index: src/osgUtil/GLObjectsVisitor.cpp
+===================================================================
+--- src/osgUtil/GLObjectsVisitor.cpp	(revision 15019)
++++ src/osgUtil/GLObjectsVisitor.cpp	(working copy)
+@@ -181,6 +181,7 @@
+ //
+ 
+ GLObjectsOperation::GLObjectsOperation(GLObjectsVisitor::Mode mode):
++    osg::Referenced(true),
+     osg::GraphicsOperation("GLObjectOperation",false),
+     _mode(mode)
+ {
+@@ -187,6 +188,7 @@
+ }
+ 
+ GLObjectsOperation::GLObjectsOperation(osg::Node* subgraph, GLObjectsVisitor::Mode mode):
++    osg::Referenced(true),
+     osg::GraphicsOperation("GLObjectOperation",false),
+     _subgraph(subgraph),
+     _mode(mode)
+Index: src/osgUtil/IncrementalCompileOperation.cpp
+===================================================================
+--- src/osgUtil/IncrementalCompileOperation.cpp	(revision 15019)
++++ src/osgUtil/IncrementalCompileOperation.cpp	(working copy)
+@@ -445,6 +445,7 @@
+ // IncrementalCompileOperation
+ //
+ IncrementalCompileOperation::IncrementalCompileOperation():
++    osg::Referenced(true),
+     osg::GraphicsOperation("IncrementalCompileOperation",true),
+     _flushTimeRatio(0.5),
+     _conservativeTimeRatio(0.5),
+Index: src/osgUtil/RenderStage.cpp
+===================================================================
+--- src/osgUtil/RenderStage.cpp	(revision 15019)
++++ src/osgUtil/RenderStage.cpp	(working copy)
+@@ -1122,6 +1122,7 @@
+ struct DrawInnerOperation : public osg::Operation
+ {
+     DrawInnerOperation(RenderStage* stage, osg::RenderInfo& renderInfo) :
++        osg::Referenced(true),
+         osg::Operation("DrawInnerStage",false),
+         _stage(stage),
+         _renderInfo(renderInfo) {}
+Index: src/osgViewer/Renderer.cpp
+===================================================================
+--- src/osgViewer/Renderer.cpp	(revision 15019)
++++ src/osgViewer/Renderer.cpp	(working copy)
+@@ -352,6 +352,7 @@
+ //
+ //  Renderer
+ Renderer::Renderer(osg::Camera* camera):
++    osg::Referenced(true),
+     osg::GraphicsOperation("Renderer",true),
+     _camera(camera),
+     _done(false),

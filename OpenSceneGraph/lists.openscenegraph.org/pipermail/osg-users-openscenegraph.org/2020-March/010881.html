@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Viewport screen resolution not scaling properly in OSX retina
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Viewport%20screen%20resolution%20not%20scaling%20properly%20in%20OSX%0A%20retina&In-Reply-To=%3Cmailman.75314.1583936363.7168.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010903.html">
+   <LINK REL="Next"  HREF="010883.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Viewport screen resolution not scaling properly in OSX retina</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Viewport%20screen%20resolution%20not%20scaling%20properly%20in%20OSX%0A%20retina&In-Reply-To=%3Cmailman.75314.1583936363.7168.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Viewport screen resolution not scaling properly in OSX retina">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Wed Mar 11 07:15:37 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010903.html">[osg-users] Export GLTF from OSG?
+</A></li>
+        <LI>Next message (by thread): <A HREF="010883.html">[osg-users] Viewport screen resolution not scaling properly in OSX retina
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10881">[ date ]</a>
+              <a href="thread.html#10881">[ thread ]</a>
+              <a href="subject.html#10881">[ subject ]</a>
+              <a href="author.html#10881">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+
+The viewport dpi is different from the window dpi on OSX. Is there a way to 
+fix the viewport dimensions, preferably by autodetecting the size of the 
+frame buffer, so that the viewport size matches the window size? 
+
+There must be a way to detect the frame buffer size in OSG, but I cannot 
+find it.
+
+The particular issue occurs with the FLTK sample program when compiled on 
+my macbook.
+
+//<A HREF="https://github.com/openscenegraph/OpenSceneGraph/blob/master/examples/osgviewerFLTK/osgviewerFLTK.cpp">https://github.com/openscenegraph/OpenSceneGraph/blob/master/examples/osgviewerFLTK/osgviewerFLTK.cpp</A>
+
+On OSX, the viewport fills the bottom left  quarter of the window. I have 
+read the scale factor to apply to the viewport is 2x the window size, but 
+the resulting dimensions of the rescaled viewport are not exactly right. is 
+there a way to access the framebuffer to get its dimensions?
+
+On windows, I understand this issue could be fixed with a call to
+
+///    ::SetProcessDPIAware();  //.. .alternately: SetProcessDpiAwareness()
+
+but there seems to be no equivalent on for OSX.
+
+I was unsuccessful accessing the function glfwGetFramebufferSize defined in 
+&lt;GLFW/glfw3.h&gt; 
+
+I have also tried to modify the sample code AdapterWidget() with the 
+following commented lines to access the frame buffer size from OSG, with no 
+luck. 
+
+            AdapterWidget(x,y,w,h,label),xpixscale(1.0),ypixscale(1.0)
+            {
+                getCamera()-&gt;setViewport(new 
+osg::Viewport(0,0,xpixscale*w,ypixscale*h));
+                getCamera()-&gt;setProjectionMatrixAsPerspective(30.0f, 
+static_cast&lt;double&gt;(w)/static_cast&lt;double&gt;(h), 1.0f, 10000.0f);
+                getCamera()-&gt;setGraphicsContext(getGraphicsWindow());
+                getCamera()-&gt;setDrawBuffer(GL_BACK);
+                getCamera()-&gt;setReadBuffer(GL_BACK);
+            
+                setThreadingModel(osgViewer::Viewer::SingleThreaded);
+ //           unsigned int swidth, sheight;
+ //                  osgViewer::GraphicsWindow * _gw = getGraphicsWindow();
+ //                  osg::GraphicsContext * gc = (osg::GraphicsContext*) 
+_gw;
+ //                  osg::GraphicsContext::WindowingSystemInterface * wsi = 
+gc-&gt;getWindowingSystemInterface();
+ //                  //yields wsi-&gt;Name == &quot;Cocoa&quot; but no other useful 
+information
+ //                  osg::DisplaySettings *ds = 
+gc-&gt;getWindowingSystemInterface()-&gt;getDisplaySettings();  // This is NULL
+ //                  sheight = ds-&gt;getScreenHeight();
+ //                  swidth =  ds-&gt;getScreenWidth();
+ //                  std::cout &lt;&lt; sheight &lt;&lt; &quot; &quot; &lt;&lt; swidth &lt;&lt; std::endl;
+            }
+
+There must be a solution to detecting the frame buffer size in OSG so the 
+viewport size can be scaled to the window size. but I cannot find it. Does 
+anyone have a solution?
+
+Thanks
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/b92b3183-f1f0-4238-901e-37e73da3978e%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/b92b3183-f1f0-4238-901e-37e73da3978e%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200311/da87af86/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200311/da87af86/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010903.html">[osg-users] Export GLTF from OSG?
+</A></li>
+	<LI>Next message (by thread): <A HREF="010883.html">[osg-users] Viewport screen resolution not scaling properly in OSX retina
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10881">[ date ]</a>
+              <a href="thread.html#10881">[ thread ]</a>
+              <a href="subject.html#10881">[ subject ]</a>
+              <a href="author.html#10881">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

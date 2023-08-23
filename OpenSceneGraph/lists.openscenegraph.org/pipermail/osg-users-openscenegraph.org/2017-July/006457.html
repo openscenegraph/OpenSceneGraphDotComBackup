@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] ViewerBase::frame() method slow after changing the color of a geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ViewerBase%3A%3Aframe%28%29%20method%20slow%20after%20changing%20the%0A%20color%20of%20a%20geometry&In-Reply-To=%3C9d23f98d-8688-8dc5-a847-9af076033d8f%40oktal-se.fr%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006456.html">
+   <LINK REL="Next"  HREF="006458.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] ViewerBase::frame() method slow after changing the color of a geometry</H1>
+<!--htdig_noindex-->
+    <B>Lionel Lagarde</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ViewerBase%3A%3Aframe%28%29%20method%20slow%20after%20changing%20the%0A%20color%20of%20a%20geometry&In-Reply-To=%3C9d23f98d-8688-8dc5-a847-9af076033d8f%40oktal-se.fr%3E"
+       TITLE="[osg-users] ViewerBase::frame() method slow after changing the color of a geometry">lionel.lagarde at oktal-se.fr
+       </A><BR>
+    <I>Fri Jul 21 02:25:15 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006456.html">[osg-users] ViewerBase::frame() method slow after changing the	color of a geometry
+</A></li>
+        <LI>Next message: <A HREF="006458.html">[osg-users] ViewerBase::frame() method slow after changing the color of a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6457">[ date ]</a>
+              <a href="thread.html#6457">[ thread ]</a>
+              <a href="subject.html#6457">[ subject ]</a>
+              <a href="author.html#6457">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I don't know about the double frame but the default for geometries 
+(drawables in fact) is to use OpenGL display lists (depending on the OSG 
+compilation).
+
+OpenGL display lists creation takes time. The dirtyDisplayList method 
+forces OSG to re-create the OpenGL display list.
+
+
+The solution is to force the geometry to use vertex arrays:
+
+geometry-&gt;setUseDisplayLists(false);
+
+On 21/07/2017 11:11, Gianni Ambrosio wrote:
+
+&gt;<i> Hi All,
+</I>&gt;<i> I build a huge geometry (27 milion vertices, 9 milion triangles) as follows:
+</I>&gt;<i>
+</I>&gt;<i> 	osg::Geometry* geometry = new osg::Geometry;
+</I>&gt;<i> 	geometry-&gt;setDataVariance(osg::Object::DYNAMIC);
+</I>&gt;<i> 	geometry-&gt;setVertexArray(buildVertices(count));
+</I>&gt;<i> 	geometry-&gt;setColorArray(buildColors(count), osg::Array::BIND_PER_VERTEX);
+</I>&gt;<i> 	geometry-&gt;addPrimitiveSet(buildElements(count));
+</I>&gt;<i>
+</I>&gt;<i> On mouse event, after getting an intersection with the graphics, I do:
+</I>&gt;<i>
+</I>&gt;<i> 	osg::Geometry* geom = dynamic_cast&lt;osg::Geometry*&gt;(intersection.drawable.get());
+</I>&gt;<i> 	osg::Vec4Array&amp; color = dynamic_cast&lt;osg::Vec4Array&amp;&gt;(*geom-&gt;getColorArray());
+</I>&gt;<i> 	color[intersection.indexList[0]] = selectedColor;
+</I>&gt;<i> 	color[intersection.indexList[1]] = selectedColor;
+</I>&gt;<i> 	color[intersection.indexList[2]] = selectedColor;
+</I>&gt;<i> 	geom-&gt;dirtyDisplayList();
+</I>&gt;<i> 	color.dirty();
+</I>&gt;<i>
+</I>&gt;<i> The problem is that after these lines there is a delay of at least one second before seeing the triangle with the updated color on my 3D viewer.
+</I>&gt;<i> Debugging OSG code I found that &quot;ViewerBase::frame()&quot; is called twice before seeing the new color. Moreover the first time &quot;frame()&quot; is called &quot;renderingTraversals()&quot; takes a lot.
+</I>&gt;<i>
+</I>&gt;<i> I will debug the OSG code deeper but is there a way to prevent the delay I see in my application?
+</I>&gt;<i> You can find the full example in attachment.
+</I>&gt;<i>
+</I>&gt;<i> Thanks for your help,
+</I>&gt;<i> Gianni
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic18b5.php?p=71295#71295">http://forum.openscenegraph.org/viewtopic.php?p=71295#71295</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170721/f2d2d9b6/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170721/f2d2d9b6/attachment.htm</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006456.html">[osg-users] ViewerBase::frame() method slow after changing the	color of a geometry
+</A></li>
+	<LI>Next message: <A HREF="006458.html">[osg-users] ViewerBase::frame() method slow after changing the color of a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6457">[ date ]</a>
+              <a href="thread.html#6457">[ thread ]</a>
+              <a href="subject.html#6457">[ subject ]</a>
+              <a href="author.html#6457">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

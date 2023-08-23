@@ -1,0 +1,177 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Maybe&nbsp;the&nbsp;datavariance on&nbsp;your&nbsp;drawables&nbsp;is&nbsp;not&nbsp;set&nbsp;to&nbsp;static?&lt;div&gt;Laurens.&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Wed,&nbsp;Oct&nbsp;9,&nbsp;2019&nbsp;at&nbsp;9:27&nbsp;AM&nbsp;Gianluca&nbsp;Natale&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:natale@europe.altair.com&quot;&gt;natale@europe.altair.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+&lt;div&nbsp;lang=&quot;IT&quot;&gt;<br>
+&lt;div&nbsp;class=&quot;gmail-m_-2136905288960285074WordSection1&quot;&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;Hi&nbsp;Chris,&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;first&nbsp;of&nbsp;all,&nbsp;thanks&nbsp;for&nbsp;helping.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;&lt;u&gt;&lt;/u&gt; &lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;Each&nbsp;of&nbsp;those&nbsp;200&nbsp;objects&nbsp;is&nbsp;simply&nbsp;the&nbsp;shape&nbsp;of&nbsp;an&nbsp;arrow&nbsp;(basically&nbsp;a&nbsp;cone&nbsp;and&nbsp;a&nbsp;cylinder),&nbsp;whose&nbsp;geometry&nbsp;takes&nbsp;no&nbsp;more&nbsp;than&nbsp;100&nbsp;vertices.&lt;br&gt;<br>
+The&nbsp;drawable&nbsp;that&nbsp;renders&nbsp;each&nbsp;arrow&nbsp;is&nbsp;a&nbsp;custom&nbsp;drawable&nbsp;that&nbsp;I&nbsp;derived&nbsp;from&nbsp;osg::drawable,&nbsp;where&nbsp;I’ve&nbsp;overridden&nbsp;the&nbsp;drawImplementation.&lt;br&gt;<br>
+Internally&nbsp;my&nbsp;drawable&nbsp;allocates&nbsp;a&nbsp;VBO&nbsp;for&nbsp;the&nbsp;geometry,&nbsp;and&nbsp;sends&nbsp;it&nbsp;directly&nbsp;to&nbsp;OpenGL&nbsp;for&nbsp;rendering&nbsp;in&nbsp;drawImplementation.&lt;br&gt;<br>
+My&nbsp;drawable&nbsp;provides&nbsp;a&nbsp;consistent&nbsp;bounding&nbsp;box&nbsp;that&nbsp;OSG&nbsp;uses&nbsp;to&nbsp;cull&nbsp;the&nbsp;drawable&nbsp;when&nbsp;outside&nbsp;of&nbsp;the&nbsp;viewing&nbsp;volume.&lt;br&gt;<br>
+Each&nbsp;drawable&nbsp;is&nbsp;inserted&nbsp;in&nbsp;a&nbsp;geode,&nbsp;that&nbsp;in&nbsp;its&nbsp;turn&nbsp;is&nbsp;attached&nbsp;to&nbsp;an&nbsp;autotransform&nbsp;matrix,&nbsp;because&nbsp;I&nbsp;need&nbsp;those&nbsp;shapes&nbsp;to&nbsp;be&nbsp;rendered&nbsp;at&nbsp;constant&nbsp;size&nbsp;on&nbsp;screen&nbsp;(70&nbsp;pixels).&lt;br&gt;<br>
+So,&nbsp;it&nbsp;is&nbsp;OSG&nbsp;that&nbsp;during&nbsp;rendering&nbsp;traversal&nbsp;computes&nbsp;the&nbsp;scale&nbsp;factors&nbsp;of&nbsp;that&nbsp;autotransform,&nbsp;to&nbsp;keep&nbsp;the&nbsp;constant&nbsp;size.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;Note&nbsp;that&nbsp;I’m&nbsp;not&nbsp;using&nbsp;shaders&nbsp;at&nbsp;the&nbsp;moment,&nbsp;but&nbsp;still&nbsp;the&nbsp;ffp.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;&lt;u&gt;&lt;/u&gt; &lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;At&nbsp;the&nbsp;beginning&nbsp;I&nbsp;had&nbsp;thought&nbsp;that&nbsp;my&nbsp;drawImplementation&nbsp;was&nbsp;the&nbsp;bottleneck&nbsp;in&nbsp;redrawing,&nbsp;but&nbsp;even&nbsp;if&nbsp;I&nbsp;comment&nbsp;its&nbsp;code&nbsp;completely&lt;br&gt;<br>
+(making&nbsp;drawImplementation&nbsp;an&nbsp;empty&nbsp;function),&nbsp;still&nbsp;the&nbsp;redraw&nbsp;takes&nbsp;a&nbsp;considerable&nbsp;time.&lt;br&gt;<br>
+It&nbsp;looks&nbsp;like&nbsp;most&nbsp;of&nbsp;the&nbsp;time&nbsp;was&nbsp;taken&nbsp;to&nbsp;traverse&nbsp;the&nbsp;scenegraph,&nbsp;apply&nbsp;the&nbsp;transformation&nbsp;and&nbsp;culling&nbsp;the&nbsp;drawables.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;&lt;u&gt;&lt;/u&gt; &lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;I’m&nbsp;still&nbsp;investigating,&nbsp;and&nbsp;trying&nbsp;to&nbsp;isolate&nbsp;the&nbsp;issue.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;&lt;u&gt;&lt;/u&gt; &lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;Thanks,&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;Gianluca&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;span&nbsp;lang=&quot;EN-US&quot;&gt;&lt;u&gt;&lt;/u&gt; &lt;u&gt;&lt;/u&gt;&lt;/span&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;b&gt;Da:&lt;/b&gt;&nbsp;osg-users&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:osg-users-bounces@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users-bounces@lists.openscenegraph.org&lt;/a&gt;&gt;<br>
+&lt;b&gt;Per&nbsp;conto&nbsp;di&nbsp;&lt;/b&gt;Chris&nbsp;Hanson&lt;br&gt;<br>
+&lt;b&gt;Inviato:&lt;/b&gt;&nbsp;martedì&nbsp;8&nbsp;ottobre&nbsp;2019&nbsp;15:51&lt;br&gt;<br>
+&lt;b&gt;A:&lt;/b&gt;&nbsp;OpenSceneGraph&nbsp;Users&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&gt;&lt;br&gt;<br>
+&lt;b&gt;Oggetto:&lt;/b&gt;&nbsp;Re:&nbsp;[osg-users]&nbsp;R:&nbsp;multiple&nbsp;matrix&nbsp;transfromations&nbsp;cause&nbsp;severe&nbsp;slowness&nbsp;in&nbsp;performance&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;u&gt;&lt;/u&gt; &lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;I&nbsp;believe&nbsp;most&nbsp;computations&nbsp;you&nbsp;could&nbsp;imagine&nbsp;doing&nbsp;could&nbsp;be&nbsp;performed&nbsp;in&nbsp;the&nbsp;vertex&nbsp;shader&nbsp;during&nbsp;draw&nbsp;rather&nbsp;than&nbsp;by&nbsp;the&nbsp;CPU&nbsp;during&nbsp;cull.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;u&gt;&lt;/u&gt; &lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;To&nbsp;describe&nbsp;more&nbsp;we&#39;d&nbsp;need&nbsp;a&nbsp;better&nbsp;idea&nbsp;of&nbsp;what&nbsp;those&nbsp;200&nbsp;objects&nbsp;are,&nbsp;how&nbsp;they&nbsp;behave,&nbsp;what&nbsp;they&nbsp;represent,&nbsp;and&nbsp;how&nbsp;auto&nbsp;transform&nbsp;is&nbsp;being&nbsp;used.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;u&gt;&lt;/u&gt; &lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;On&nbsp;Tue,&nbsp;Oct&nbsp;8,&nbsp;2019&nbsp;at&nbsp;7:36&nbsp;AM&nbsp;Gianluca&nbsp;Natale&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:natale@europe.altair.com&quot;&nbsp;target=&quot;_blank&quot;&gt;natale@europe.altair.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;blockquote&nbsp;style=&quot;border-top:none;border-right:none;border-bottom:none;border-left:1pt&nbsp;solid&nbsp;rgb(204,204,204);padding:0cm&nbsp;0cm&nbsp;0cm&nbsp;6pt;margin-left:4.8pt;margin-right:0cm&quot;&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;As&nbsp;I&nbsp;said,&nbsp;I’d&nbsp;like&nbsp;to&nbsp;use&nbsp;auto-transformations&nbsp;for&nbsp;those&nbsp;200&nbsp;objects,&nbsp;so&nbsp;I&nbsp;need&nbsp;200&nbsp;transformations&nbsp;for&nbsp;sure,&nbsp;and&nbsp;those&nbsp;transformations&nbsp;are&nbsp;updated&nbsp;by&nbsp;OSG&nbsp;at&nbsp;rendering&nbsp;time.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;So,&nbsp;the&nbsp;transformation&nbsp;has&nbsp;to&nbsp;be&nbsp;computed&nbsp;by&nbsp;OSG&nbsp;out&nbsp;of&nbsp;my&nbsp;vertex&nbsp;shader.&nbsp;Am&nbsp;I&nbsp;wrong?<br>
+&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;b&gt;Da:&lt;/b&gt;&nbsp;osg-users&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:osg-users-bounces@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users-bounces@lists.openscenegraph.org&lt;/a&gt;&gt;<br>
+&lt;b&gt;Per&nbsp;conto&nbsp;di&nbsp;&lt;/b&gt;Chris&nbsp;Hanson&lt;br&gt;<br>
+&lt;b&gt;Inviato:&lt;/b&gt;&nbsp;martedì&nbsp;8&nbsp;ottobre&nbsp;2019&nbsp;14:42&lt;br&gt;<br>
+&lt;b&gt;A:&lt;/b&gt;&nbsp;OpenSceneGraph&nbsp;Users&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&gt;&lt;br&gt;<br>
+&lt;b&gt;Oggetto:&lt;/b&gt;&nbsp;Re:&nbsp;[osg-users]&nbsp;multiple&nbsp;matrix&nbsp;transfromations&nbsp;cause&nbsp;severe&nbsp;slowness&nbsp;in&nbsp;performance&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;Can&nbsp;you&nbsp;find&nbsp;a&nbsp;way&nbsp;to&nbsp;perform&nbsp;the&nbsp;transform&nbsp;on&nbsp;each&nbsp;object&nbsp;in&nbsp;a&nbsp;vertex&nbsp;shader&nbsp;and&nbsp;not&nbsp;have&nbsp;a&nbsp;unique&nbsp;state&nbsp;have&nbsp;to&nbsp;be&nbsp;calculated&nbsp;for&nbsp;each&nbsp;of&nbsp;the&nbsp;200&nbsp;objects?&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;On&nbsp;Tue,&nbsp;Oct&nbsp;8,&nbsp;2019&nbsp;at&nbsp;6:20&nbsp;AM&nbsp;Gianluca&nbsp;Natale&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:natale@europe.altair.com&quot;&nbsp;target=&quot;_blank&quot;&gt;natale@europe.altair.com&lt;/a&gt;&gt;&nbsp;wrote:&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;blockquote&nbsp;style=&quot;border-top:none;border-right:none;border-bottom:none;border-left:1pt&nbsp;solid&nbsp;rgb(204,204,204);padding:0cm&nbsp;0cm&nbsp;0cm&nbsp;6pt;margin:5pt&nbsp;0cm&nbsp;5pt&nbsp;4.8pt&quot;&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;Hi&nbsp;all,&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;I&nbsp;have&nbsp;a&nbsp;performance&nbsp;issue&nbsp;in&nbsp;my&nbsp;scenegraph&nbsp;that&nbsp;I&nbsp;cannot&nbsp;completely&nbsp;understand.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;My&nbsp;scenegraph&nbsp;is&nbsp;made&nbsp;by&nbsp;a&nbsp;main&nbsp;matrix&nbsp;transform,&nbsp;with&nbsp;these&nbsp;2&nbsp;children:&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;ul&nbsp;type=&quot;disc&quot;&gt;<br>
+&lt;li&nbsp;class=&quot;gmail-m_-2136905288960285074gmail-m3624598838946311341gmail-m2700963786699460416msolistparagraph&quot;&gt;<br>
+One&nbsp;geode&nbsp;that&nbsp;renders&nbsp;a&nbsp;big&nbsp;object&nbsp;on&nbsp;screen&nbsp;(the&nbsp;geometry&nbsp;in&nbsp;the&nbsp;drawable&nbsp;can&nbsp;take&nbsp;up&nbsp;to&nbsp;several&nbsp;thousands&nbsp;vertices);&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/li&gt;&lt;li&nbsp;class=&quot;gmail-m_-2136905288960285074gmail-m3624598838946311341gmail-m2700963786699460416msolistparagraph&quot;&gt;<br>
+One&nbsp;group&nbsp;node&nbsp;that&nbsp;in&nbsp;its&nbsp;turn&nbsp;has&nbsp;200&nbsp;children,&nbsp;each&nbsp;made&nbsp;by&nbsp;a&nbsp;matrix&nbsp;transform&nbsp;and&nbsp;a&nbsp;geode.&nbsp;The&nbsp;drawable&nbsp;in&nbsp;each&nbsp;of&nbsp;those&nbsp;geodes&nbsp;is&nbsp;very&nbsp;simple&nbsp;(no&nbsp;more&nbsp;than&nbsp;100&nbsp;vertices)&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/li&gt;&lt;/ul&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;It&nbsp;seems&nbsp;that&nbsp;this&nbsp;configuration&nbsp;allows&nbsp;me&nbsp;to&nbsp;have&nbsp;at&nbsp;most&nbsp;50&nbsp;fps.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;I&nbsp;feel&nbsp;that&nbsp;this&nbsp;should&nbsp;be&nbsp;rendered&nbsp;much&nbsp;faster.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;So&nbsp;I&nbsp;made&nbsp;some&nbsp;experiment.&nbsp;If&nbsp;I&nbsp;remove&nbsp;the&nbsp;200&nbsp;matrix&nbsp;transform&nbsp;attached&nbsp;to&nbsp;the&nbsp;group&nbsp;node&nbsp;I&nbsp;mentioned&nbsp;above,&lt;br&gt;<br>
+and&nbsp;directly&nbsp;apply&nbsp;the&nbsp;transformations&nbsp;to&nbsp;the&nbsp;vertices&nbsp;of&nbsp;the&nbsp;geometries&nbsp;in&nbsp;the&nbsp;200&nbsp;drawables&nbsp;of&nbsp;the&nbsp;small&nbsp;objects,&nbsp;performance&nbsp;improves&nbsp;a&nbsp;lot,&nbsp;till&nbsp;100&nbsp;fps.&lt;br&gt;<br>
+I&nbsp;investigatd&nbsp;a&nbsp;bit&nbsp;inside&nbsp;OSG&nbsp;code&nbsp;(I’m&nbsp;using&nbsp;OG&nbsp;ver.3.4.1),&nbsp;and&nbsp;apparently&nbsp;the&nbsp;only&nbsp;overhead&nbsp;due&nbsp;to&nbsp;the&nbsp;additional&nbsp;matrix&nbsp;transformations&nbsp;is&nbsp;a&nbsp;call&nbsp;to&nbsp;glLoadMatrix&nbsp;(I’m&nbsp;using&nbsp;the&nbsp;old&nbsp;ffp).&lt;br&gt;<br>
+How&nbsp;can&nbsp;you&nbsp;explain&nbsp;such&nbsp;an&nbsp;improvement?&lt;br&gt;<br>
+&lt;br&gt;<br>
+My&nbsp;real&nbsp;problem&nbsp;is&nbsp;that&nbsp;I&nbsp;would&nbsp;like&nbsp;to&nbsp;replace&nbsp;the&nbsp;200&nbsp;matrix&nbsp;transfromations&nbsp;with&nbsp;200&nbsp;auto-transform&nbsp;matrices,&nbsp;since&nbsp;I’d&nbsp;like&nbsp;those&nbsp;small&nbsp;objects&nbsp;to&nbsp;keep&nbsp;constant&nbsp;size&nbsp;on&nbsp;screen.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;But&nbsp;if&nbsp;I&nbsp;do&nbsp;that,&nbsp;I&nbsp;cannot&nbsp;remove&nbsp;the&nbsp;200&nbsp;transformations&nbsp;at&nbsp;all,&nbsp;and&nbsp;I’ll&nbsp;end&nbsp;up&nbsp;with&nbsp;a&nbsp;bad&nbsp;performance.&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;Any&nbsp;idea&nbsp;about&nbsp;what&nbsp;I&nbsp;can&nbsp;try&nbsp;to&nbsp;make&nbsp;rendering&nbsp;of&nbsp;my&nbsp;scenegraph&nbsp;faster?&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;Thanks,&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;Gianluca&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Flists.openscenegraph.org%2Flistinfo.cgi%2Fosg-users-openscenegraph.org&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638653731&amp;sdata=Ucr17caFSHVZXJ58aCuCaXtIqEPR55rEX68o8iGCX04%3D&amp;reserved=0&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/blockquote&gt;<br>
+&lt;/div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;<br>
+&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt; &lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;--<br>
+&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;<br>
+Chris&nbsp;&#39;Xenon&#39;&nbsp;Hanson,&nbsp;omo&nbsp;sanza&nbsp;lettere.&nbsp;&lt;a&nbsp;href=&quot;mailto:Xenon@AlphaPixel.com&quot;&nbsp;target=&quot;_blank&quot;&gt;<br>
+Xenon@AlphaPixel.com&lt;/a&gt;&nbsp;&lt;a&nbsp;href=&quot;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Fwww.alphapixel.com%2F&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638653731&amp;sdata=Or0JG2UC9n2xnuF5%2FIoTDL8lvVxF1Hzad1YyHH%2FvZH4%3D&amp;reserved=0&quot;&nbsp;target=&quot;_blank&quot;&gt;<br>
+http://www.alphapixel.com/&lt;/a&gt;&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;<br>
+Training&nbsp;•&nbsp;Consulting&nbsp;•&nbsp;Contracting&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;<br>
+3D&nbsp;•&nbsp;Scene&nbsp;Graphs&nbsp;(Open&nbsp;Scene&nbsp;Graph/OSG)&nbsp;•&nbsp;OpenGL&nbsp;2&nbsp;•&nbsp;OpenGL&nbsp;3&nbsp;•&nbsp;OpenGL&nbsp;4&nbsp;•&nbsp;GLSL&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;1&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;2&nbsp;•&nbsp;OpenCL&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;<br>
+&lt;span&nbsp;style=&quot;font-size:9.5pt&quot;&gt;Legal/IP&nbsp;• Forensics&nbsp;• &lt;/span&gt;Imaging &lt;span&nbsp;style=&quot;font-size:9.5pt&quot;&gt;• UAVs •&nbsp;GIS&nbsp;•&nbsp;GPS&nbsp;•&nbsp;osgEarth • Terrain • Telemetry&nbsp;•&nbsp;Cryptography&nbsp;•&nbsp;LIDAR&nbsp;•&nbsp;Embedded&nbsp;•&nbsp;Mobile&nbsp;•&nbsp;iPhone/iPad/iOS&nbsp;•&nbsp;Android&lt;/span&gt;&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;<br>
+&lt;a&nbsp;href=&quot;https://nam02.safelinks.protection.outlook.com/?url=https%3A%2F%2Ftwitter.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638663725&amp;sdata=0W9mzPAV8ei6k%2F1%2FdPe4gp%2BQ9p7QC6AgWq19EG%2FGAxE%3D&amp;reserved=0&quot;&nbsp;target=&quot;_blank&quot;&gt;@alphapixel&lt;/a&gt;<br>
+&lt;a&nbsp;href=&quot;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Ffacebook.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638663725&amp;sdata=ahAuQDQ6LMv3NuwNRoj%2BDIti7KG%2BtziyVOaoE7JppU4%3D&amp;reserved=0&quot;&nbsp;target=&quot;_blank&quot;&gt;<br>
+facebook.com/alphapixel&lt;/a&gt; (775)&nbsp;623-PIXL&nbsp;[7495]&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Flists.openscenegraph.org%2Flistinfo.cgi%2Fosg-users-openscenegraph.org&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638673719&amp;sdata=8LPvhljWGQjqrssrZHE%2BGwnG7ET3Z2qEQG1vOh%2BoRF0%3D&amp;reserved=0&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/blockquote&gt;<br>
+&lt;/div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;<br>
+&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;&lt;u&gt;&lt;/u&gt; &lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&gt;--&nbsp;&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;div&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;Chris&nbsp;&#39;Xenon&#39;&nbsp;Hanson,&nbsp;omo&nbsp;sanza&nbsp;lettere.<br>
+&lt;a&nbsp;href=&quot;mailto:Xenon@AlphaPixel.com&quot;&nbsp;target=&quot;_blank&quot;&gt;Xenon@AlphaPixel.com&lt;/a&gt;&nbsp;&lt;a&nbsp;href=&quot;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Fwww.alphapixel.com%2F&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638673719&amp;sdata=ANBohUXLHJTI5xhBVgvpg9dwbhaB6k9V3KAWQizoHm4%3D&amp;reserved=0&quot;&nbsp;target=&quot;_blank&quot;&gt;<br>
+http://www.alphapixel.com/&lt;/a&gt;&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;Training&nbsp;•&nbsp;Consulting&nbsp;•&nbsp;Contracting&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;3D&nbsp;•&nbsp;Scene&nbsp;Graphs&nbsp;(Open&nbsp;Scene&nbsp;Graph/OSG)&nbsp;•&nbsp;OpenGL&nbsp;2&nbsp;•&nbsp;OpenGL&nbsp;3&nbsp;•&nbsp;OpenGL&nbsp;4&nbsp;•&nbsp;GLSL&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;1&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;2&nbsp;•&nbsp;OpenCL&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;&lt;span&nbsp;style=&quot;font-size:9.5pt&quot;&gt;Legal/IP&nbsp;• Forensics&nbsp;• &lt;/span&gt;Imaging &lt;span&nbsp;style=&quot;font-size:9.5pt&quot;&gt;• UAVs •&nbsp;GIS&nbsp;•&nbsp;GPS&nbsp;•&nbsp;osgEarth • Terrain • Telemetry&nbsp;•&nbsp;Cryptography&nbsp;•&nbsp;LIDAR&nbsp;•&nbsp;Embedded&nbsp;•&nbsp;Mobile&nbsp;•<br>
+&nbsp;iPhone/iPad/iOS&nbsp;•&nbsp;Android&lt;/span&gt;&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;p&nbsp;class=&quot;MsoNormal&quot;&nbsp;align=&quot;center&quot;&nbsp;style=&quot;text-align:center&quot;&gt;&lt;a&nbsp;href=&quot;https://nam02.safelinks.protection.outlook.com/?url=https%3A%2F%2Ftwitter.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638683714&amp;sdata=RpsWNoSX3Hs96xvhybs3Q%2BZcAbGvfFaTNgxJk1r7mZY%3D&amp;reserved=0&quot;&nbsp;target=&quot;_blank&quot;&gt;@alphapixel&lt;/a&gt;<br>
+&lt;a&nbsp;href=&quot;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Ffacebook.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638683714&amp;sdata=hnABSO6gLf%2FdBDNeX06qQ9NlnHUg1D13Fxf%2F4yBuRcY%3D&amp;reserved=0&quot;&nbsp;target=&quot;_blank&quot;&gt;<br>
+facebook.com/alphapixel&lt;/a&gt; (775)&nbsp;623-PIXL&nbsp;[7495]&lt;u&gt;&lt;/u&gt;&lt;u&gt;&lt;/u&gt;&lt;/p&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;<br>
+
+</tt>

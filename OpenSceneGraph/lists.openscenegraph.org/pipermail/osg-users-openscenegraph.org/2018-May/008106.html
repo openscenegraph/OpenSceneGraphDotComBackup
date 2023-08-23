@@ -1,0 +1,201 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] (no subject)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%28no%20subject%29&In-Reply-To=%3CCAFN7Y%2BVwqrR47zGNU20yKBr4pVxLkEza%3DaV6nPZ0Qm2ZbYYaeg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008105.html">
+   <LINK REL="Next"  HREF="008107.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] (no subject)</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%28no%20subject%29&In-Reply-To=%3CCAFN7Y%2BVwqrR47zGNU20yKBr4pVxLkEza%3DaV6nPZ0Qm2ZbYYaeg%40mail.gmail.com%3E"
+       TITLE="[osg-users] (no subject)">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed May  2 00:42:13 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008105.html">[osg-users] (no subject)
+</A></li>
+        <LI>Next message (by thread): <A HREF="008107.html">[osg-users] OpenSceneGraph-3.6.1 release candidate 2 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8106">[ date ]</a>
+              <a href="thread.html#8106">[ thread ]</a>
+              <a href="subject.html#8106">[ subject ]</a>
+              <a href="author.html#8106">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Oran,
+
+When optimizing OSG applications most of the task is really about
+optimizing the scene graph to address bottlenecks.  You've taken the
+first step in look at high level cull, draw dispatch (the OSG's draw
+traversal dispatch data into the OpenGL FIFO) and draw GPU stats, and
+listing the various scene graph stats that cause the performance
+issues.
+
+The next step is working out how to address the performance issues,
+the first step in this is to look at which element of the frame is
+longest and start there as this is likely the most fruitful place to
+achieve gains.  In your case I expect each of the high cull, draw
+dispatch and draw GPU are all linked to how fine grained the scene
+graph is set up - you have large number of scene graph level objects
+relative to the number vertices and primitives being dispatched.
+
+The most effective way to improve performance will be merge
+osg::Geometry and with it simplify the scene graph structure above it.
+You can only merge osg::Geometry that share the same state so this may
+require some adjustment to how you manage the state of objects.
+Moving state changes from osg::StateSet's/osg::Material into the
+osg::Geometry as per vertex data/per PrimitiveSet data may the be the
+solution, it might be that shaders might be need to help with this.
+
+For picking, if you merge a large number of osg::Geometry then CPU
+based intersection testing may end up being slower, to resolve this
+you can build osg::KdTree for the osg::Geometry and then the
+IntersectionVisitor will be able to use the KdTree to speed up
+intersection.
+
+If you want to pick patches then you may want to keep each patch in
+it's own osg::PrimitiveSet rather than merging these.   However,
+merging osg::PrimitiveSet is something that will help performance,
+just like merging osg::Geometry will do.  For modern graphics hardware
+it's typically best to just use a single osg::DrawElementsUShort/UInt
+with GL_TRIANGLES mode for all the triangles in an osg::Geometry
+rather than using triangle strips.  So if you are wanting to pick and
+edit patches that you once managed at the osg::Geometry level, then
+you could merge all the triangles in the original osg::Geometry into a
+single osg::DrawElementUShort/UInt and then merge the osg::Geometry
+data whilst not further merging any of the primitives sets.
+
+The osgUtil::Optimizer class has a collected of visitors that can help
+with merging state and geometries, and the osgUtil::MeshOptimizers can
+also help with generating efficient meshes.
+
+Robert
+
+
+On 2 May 2018 at 01:31, Oran Wallace &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">oran.wallace at survice.com</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi All,
+</I>&gt;<i>
+</I>&gt;<i> Been using OSG for a while and have learned a lot and enjoyed it. I
+</I>&gt;<i> currently have an application with uses OSG and Qt for displaying a highly
+</I>&gt;<i> detailed model. A database is loaded which may cause colors in the model to
+</I>&gt;<i> change or additional geometries to be generated.
+</I>&gt;<i>
+</I>&gt;<i> My OSG viewport is a class which subclasses from QWidget and
+</I>&gt;<i> osgViewer::CompisiteViewer and is embedded into a QMainWindow. This works
+</I>&gt;<i> fine so I've stuck with it. The application can perform most CAD-like
+</I>&gt;<i> operations on the model with OSG.
+</I>&gt;<i>
+</I>&gt;<i> I've finally encountered a model which brings my application to around 1-2
+</I>&gt;<i> fps while interacting with it. I know there are various techniques used to
+</I>&gt;<i> help with performance but also understand the approach depends on the
+</I>&gt;<i> situation. I'm currently considering a major rewrite.
+</I>&gt;<i>
+</I>&gt;<i> Scene Details:
+</I>&gt;<i>     1. 540k vertices
+</I>&gt;<i>     2. 81000 drawables
+</I>&gt;<i>     3. 77000 sorted drawables
+</I>&gt;<i>     4. 81000 fast drawables
+</I>&gt;<i>     5. 81000 primitive sets
+</I>&gt;<i>     6. 100000 triangles
+</I>&gt;<i>     7. 37000 quad
+</I>&gt;<i>     8. 181000 polygon     ( probably hurting a lot)
+</I>&gt;<i>     9. 26000 unique state sets
+</I>&gt;<i>     10. 73000 instance state sets
+</I>&gt;<i>     11. 28000 groups
+</I>&gt;<i>
+</I>&gt;<i> Cull: 113.50, Draw: 390, GPU: 355 (never seen values this high on the
+</I>&gt;<i> forums)
+</I>&gt;<i> Additionally the graph doesn't seem to rendering correctly; the largest
+</I>&gt;<i> &quot;bar&quot; is Cull and last ~10% is the Draw, which doesnt seem to match the
+</I>&gt;<i> values. (Probably because a single frame takes so long?)
+</I>&gt;<i>
+</I>&gt;<i> Implementation Details:
+</I>&gt;<i>     1. I am orthographic project as it is a &quot;CAD&quot; style application.
+</I>&gt;<i>     2. Currently all objects are within Geode-&gt;Geometry nodes, each with
+</I>&gt;<i> their own vertex, color, and normal arrays.
+</I>&gt;<i>     3. The main &quot;mode&quot; of the application is a &quot;ghosted&quot; mode which is
+</I>&gt;<i> applied to the walls of the model. Each wall has an osg::Material set to it
+</I>&gt;<i> and blending turned on.
+</I>&gt;<i>     4. All objects are pickable and hold a variety of property data
+</I>&gt;<i> (extracted from the models file or the database). I have implemented
+</I>&gt;<i> &quot;picking&quot; using the PickHandler::pick example and code.
+</I>&gt;<i>     5. A user often views the whole model from afar interacting with other
+</I>&gt;<i> Qt widgets and watch how the scene changes, occasionally they will zoom in
+</I>&gt;<i> on a section but are never &quot;inside&quot; the model. I can clearly see when view
+</I>&gt;<i> frustum culling is working when zooming in.
+</I>&gt;<i>     6. My graph is VERY flat. Nearly all object are attached to the root
+</I>&gt;<i> node (objects like cubes, cylinders, and meshes), when the rooms form a
+</I>&gt;<i> closed space I create a group node whos children are the walls. (I often
+</I>&gt;<i> rearranged it but never saw an performance changes from this)
+</I>&gt;<i>     7. Anything else you need to know...
+</I>&gt;<i>
+</I>&gt;<i> Fairly certain my main problem is just the sheer number of draw calls the
+</I>&gt;<i> occur when my models get a decent amount (20,000+) objects. It seems a
+</I>&gt;<i> remedy for this is to combine drawables and share one vertex array
+</I>&gt;<i> (correct?).  Would this totally break the picking code? This application is
+</I>&gt;<i> designed to run on computers with &quot;buisness&quot; level GPU (example GeForce GT
+</I>&gt;<i> 640) but sadly I have to use the nouveau drivers.
+</I>&gt;<i>
+</I>&gt;<i> Sorry for being so long winded by wanted to clearly lay down the situation
+</I>&gt;<i> for anyone that feels like helping. Also thanks a lot to anyone willing to
+</I>&gt;<i> help me out!
+</I>&gt;<i>
+</I>&gt;<i> ~Oran
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008105.html">[osg-users] (no subject)
+</A></li>
+	<LI>Next message (by thread): <A HREF="008107.html">[osg-users] OpenSceneGraph-3.6.1 release candidate 2 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8106">[ date ]</a>
+              <a href="thread.html#8106">[ thread ]</a>
+              <a href="subject.html#8106">[ subject ]</a>
+              <a href="author.html#8106">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

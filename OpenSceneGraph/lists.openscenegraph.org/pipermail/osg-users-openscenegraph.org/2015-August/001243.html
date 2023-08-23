@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Qt5 integration
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Qt5%20integration&In-Reply-To=%3CCAHhSftjF0YM-Q99DrsBX8JiAcuoBZ_uwnusKW6omtD6Bophe7Q%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001232.html">
+   <LINK REL="Next"  HREF="001244.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Qt5 integration</H1>
+<!--htdig_noindex-->
+    <B>Riccardo Corsi</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Qt5%20integration&In-Reply-To=%3CCAHhSftjF0YM-Q99DrsBX8JiAcuoBZ_uwnusKW6omtD6Bophe7Q%40mail.gmail.com%3E"
+       TITLE="[osg-users] Qt5 integration">riccardo.corsi at kairos3d.it
+       </A><BR>
+    <I>Mon Aug 17 09:33:46 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001232.html">[osg-users] Qt5 integration
+</A></li>
+        <LI>Next message: <A HREF="001244.html">[osg-users] Qt5 integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1243">[ date ]</a>
+              <a href="thread.html#1243">[ thread ]</a>
+              <a href="subject.html#1243">[ subject ]</a>
+              <a href="author.html#1243">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi James,
+
+I haven't looked into osg+qt integration since a while so I might not be
+aware of the latest features available.
+
+&gt;<i>From my point of view the most desired feature is to be able to integrate a
+</I>qt scene (a GUI layout or a browser/pdf/svg viewer widget) inside an osg
+driven application smoothly - i.e. without the need of a Qt application to
+run as main thread loop, but hiding it as a &quot;slave&quot; somewhere in an osg
+module/node, to make those widget pluggable in a &quot;regular&quot; osg application.
+
+Instead if you're interested, a while ago I coded an integration to render
+with osg inside a QtQuick+QML application.
+Basically the solution implements a custom QtQuick node which renders an
+osgViewer scene to an FBO, and then copies the FBO contents back to the Qt
+context, to make it available in the qt/qml scenegraph which renders the
+widgets.
+The osgQuickNode uses a separate OpenGL context, not to interfere with the
+one used by Qt for its own scene rendering.
+All the code is here: <A HREF="https://github.com/rickyviking/qmlosg">https://github.com/rickyviking/qmlosg</A>
+If you have questions about the implementation feel free to write me.
+
+Ricky
+
+On Mon, Aug 17, 2015 at 12:54 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> HI Alistair,
+</I>&gt;<i>
+</I>&gt;<i> I'm not familiar with Qt5/QQuck2 so can't comment on the Qt side, so have
+</I>&gt;<i> to defer to others on this.
+</I>&gt;<i>
+</I>&gt;<i> On the OSG side osgViewer is designed specifically to handle a thread per
+</I>&gt;<i> graphics context/window - it's a core feature of how osg::GraphicsContext,
+</I>&gt;<i> osg::GraphicsThread are designed and implemented.  If Qt5 requires a thread
+</I>&gt;<i> per window then this is a model that osgViewer can be capable of handling
+</I>&gt;<i> since it's inception (well before Qt5), the only question would be to how
+</I>&gt;<i> to integrate the threading in synchronization operations that Qt5 is
+</I>&gt;<i> forcing upon the set up with the way that the OSG manages things.  Perhaps
+</I>&gt;<i> subclassing from osg::GraphicsThread might be one approach or other classes.
+</I>&gt;<i>
+</I>&gt;<i> I don't know if the other direction might be possible - stop Qt trying to
+</I>&gt;<i> do everything that the OSG can already do perfectly without it.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 17 August 2015 at 09:48, Alistair Baxter &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">alistair at mve.com</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> As you are no doubt aware, James, we've been looking into this sort of
+</I>&gt;&gt;<i> integration ourselves. QQuick 2 integration is part of our goal, although
+</I>&gt;&gt;<i> we hadn't been planning direct interaction between QML and out osg scenes,
+</I>&gt;&gt;<i> since we have a separate data model. Although if such a thing existed, and
+</I>&gt;&gt;<i> were sufficiently convenient to use, then we might be interested in
+</I>&gt;&gt;<i> integrating it in a similar way to how we use the existing 3D osg
+</I>&gt;&gt;<i> manipulators. We've never really been interested in QWidgetImage, we only
+</I>&gt;&gt;<i> ever used it to try and get round a window composition issue on OSX.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Our main concern at the moment is that we need a multi-window viewer. Due
+</I>&gt;&gt;<i> to the way Qt 5 has a separate opengl render thread per Window, this has
+</I>&gt;&gt;<i> meant reimplementing a significant chunk of OSGCompositeViewer in order to
+</I>&gt;&gt;<i> get it to work at all, and we are discovering a variety of
+</I>&gt;&gt;<i> thread-synchronisation issues.
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150817/a9cea57d/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150817/a9cea57d/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001232.html">[osg-users] Qt5 integration
+</A></li>
+	<LI>Next message: <A HREF="001244.html">[osg-users] Qt5 integration
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1243">[ date ]</a>
+              <a href="thread.html#1243">[ thread ]</a>
+              <a href="subject.html#1243">[ subject ]</a>
+              <a href="author.html#1243">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

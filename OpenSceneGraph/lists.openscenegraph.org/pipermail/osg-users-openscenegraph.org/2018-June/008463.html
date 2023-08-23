@@ -1,0 +1,105 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] VBO Bug with 3.6.1 and Normal Arrays
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAFN7Y%2BXbLAhyLv1aL73YJv3ZakHbMQiwpLGjXogj6htfB99s7w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008462.html">
+   <LINK REL="Next"  HREF="008464.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] VBO Bug with 3.6.1 and Normal Arrays</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20VBO%20Bug%20with%203.6.1%20and%20Normal%20Arrays&In-Reply-To=%3CCAFN7Y%2BXbLAhyLv1aL73YJv3ZakHbMQiwpLGjXogj6htfB99s7w%40mail.gmail.com%3E"
+       TITLE="[osg-users] VBO Bug with 3.6.1 and Normal Arrays">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Jun 13 10:05:41 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008462.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+        <LI>Next message (by thread): <A HREF="008464.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8463">[ date ]</a>
+              <a href="thread.html#8463">[ thread ]</a>
+              <a href="subject.html#8463">[ subject ]</a>
+              <a href="author.html#8463">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Dan, et. al,
+
+I haven't yet got to bottom of this issue, but so far it looks like
+doing the Array::setBinding(Array::BIND_PER_VERTEX) call later than
+the array itself is assigned to the geometry bypasses the mechanism
+that osg::Geometry uses to make sure all the arrays that need a VBO
+have one assigned.
+
+To clarify this issue further I've made the
+Geometry::addVertexBufferObjectIfRequired() public so I can see if
+calling this after the late Array::setBinding().  This isn't a
+solution, just another workaround, but for me mainly a means of
+testing a hypothos, to the problem late binding code I added the
+geom-&gt;addVertexBufferObjectIfRequired(normals); call:
+
+    if (!earlyBinding)
+    {
+        normals-&gt;setBinding(osg::Array::BIND_PER_VERTEX);
+        geom-&gt;addVertexBufferObjectIfRequired(normals);
+    }
+
+This enables the test program to run properly without crash or
+warnings, both triangles now behave the same regardless of the early
+or late setBinding.  However, this isn't a proper solution, it won't
+fix problem without amending late setBinding() codes in the OSG or in
+client applications.  For these cases they really should be calling
+setBinding prior to the Geometry:set*Array() methods.
+
+As things stand I can't see easy solution as the Array doesn't know
+about the osg::Geometry that it's attached to so can't jump in a do
+the addVertexBufferObjectIfRequired(), we could automatically assigned
+a local VBO when the Binding is set to BIND_PER_VERTEX but this would
+then lead to lots of separate VBO's being created all over the place
+where they aren't needed, and would blow up memory and performance.
+
+Another avenue is perhaps to try and make the code a bit more
+resilient to a VBO being assigned or not.  I don't know exactly why we
+are getting crash in the draw code so I'll look into this next.
+
+Robert.
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008462.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+	<LI>Next message (by thread): <A HREF="008464.html">[osg-users] VBO Bug with 3.6.1 and Normal Arrays
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8463">[ date ]</a>
+              <a href="thread.html#8463">[ thread ]</a>
+              <a href="subject.html#8463">[ subject ]</a>
+              <a href="author.html#8463">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

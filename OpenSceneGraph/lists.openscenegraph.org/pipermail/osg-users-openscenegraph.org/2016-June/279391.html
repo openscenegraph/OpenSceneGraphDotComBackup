@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] PolytopeIntersector LIMIT_NEAREST (or LIMIT_ONE)	different distances for different groupnodes
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20PolytopeIntersector%20LIMIT_NEAREST%20%28or%20LIMIT_ONE%29%0A%09different%20distances%20for%20different%20groupnodes&In-Reply-To=%3C1464790076.m2f.67319%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003429.html">
+   <LINK REL="Next"  HREF="003171.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] PolytopeIntersector LIMIT_NEAREST (or LIMIT_ONE)	different distances for different groupnodes</H1>
+<!--htdig_noindex-->
+    <B>David Knipp</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20PolytopeIntersector%20LIMIT_NEAREST%20%28or%20LIMIT_ONE%29%0A%09different%20distances%20for%20different%20groupnodes&In-Reply-To=%3C1464790076.m2f.67319%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] PolytopeIntersector LIMIT_NEAREST (or LIMIT_ONE)	different distances for different groupnodes">David.Knipp at gmx.net
+       </A><BR>
+    <I>Wed Jun  1 07:07:56 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003429.html">[osg-users] freetype build support on Windows
+</A></li>
+        <LI>Next message: <A HREF="003171.html">[osg-users] PolytopeIntersector LIMIT_NEAREST (or LIMIT_ONE) different distances for different groupnodes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279391">[ date ]</a>
+              <a href="thread.html#279391">[ thread ]</a>
+              <a href="subject.html#279391">[ subject ]</a>
+              <a href="author.html#279391">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I'm very sorry that i have to create a new post. I'm currently facing a problem i can't solve on my own. 
+
+Im working on a single Model which has a lot of group nodes and geometry nodes. This model is categorized in a few &quot;main&quot; groups. 
+
+In the beginning i worked only with one of this main groups at once. 
+
+The application does view this group and handle pickings on them. Everything worked nice and cleanly. After i was mixing some of the groups the results of the picker got strange. 
+
+Groups got different distances and also the differences change if i just change the angle i'm looking at the model. (orbit manipulator! I don't change the distance!)
+
+The strange behavior is that i start picking nodes that where BEHIND of the nodes i wanted to pick (in viewer).
+
+I'm working with a picker like so:
+
+int x = GET_X_LPARAM(lParam); // windows mouse pos
+int y = GET_Y_LPARAM(lParam); // windows mouse pos
+
+float _x = static_cast&lt;float&gt;(x);
+float _y = static_cast&lt;float&gt;(y);
+
+_x = 2.f * (_x - 0.f) / (window_width - 0.f) - 1.f;
+_y = -(2.f * (_y - 0.f) / (window_height - 0.f) - 1.f);
+
+double w = 0.005, h = 0.005;
+osgUtil::PolytopeIntersector * picker = new osgUtil::PolytopeIntersector(osgUtil::Intersector::CoordinateFrame::PROJECTION, _x - w, _y - h, _x + w, _y + h);
+
+picker-&gt;setIntersectionLimit(osgUtil::Intersector::LIMIT_NEAREST);
+picker&gt;setPrecisionHint(osgUtil::Intersector::PrecisionHint::USE_DOUBLE_CALCULATIONS);
+picker-&gt;setDimensionMask(osgUtil::PolytopeIntersector::AllDims);
+
+osgUtil::IntersectionVisitor iv(picker);
+iv.setTraversalMode(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN);
+
+viewer-&gt;getCamera()-&gt;accept(iv);
+
+if (picker-&gt;containsIntersections()) {
+   const osg::NodePath&amp; nodePath = 
+       picker-&gt;getFirstIntersection().nodePath;
+   unsigned int idx = nodePath.size();
+   while (idx--) {
+        // bla bla specifc
+    }
+}
+
+What i mean is described in Attachments.
+
+First Image &quot;pick-error.png&quot;:
+
+Red: Calculated nearer (but are in viewer BEHIND!)
+Green: Calculated further away (Actually the node i wanted to pick)
+
+Second Image &quot;pick-error2.png&quot;:
+
+I just change the angle of the orbit viewer for about 30 degrees and don't change the distance to object. The Distances just explode to much higher values. (Note the Model should only be about &quot;2.f&quot; heigh!)
+
+I guess the second image error was allways present, but i didn't realised it, because the picker worked allways right.
+
+Another side node, the model seems to doesn't stand in the right position. It should be in 0 0 0 but is located anywhere like 1 -11 -180 or something like that. Which is very strange but never made a problem. 
+For loading i do: 
+
+// ... osg::MatrixTransform mt
+const double angle = osg::DegreesToRadians(90.);
+const osg::Vec3d axis(1, 0, 0);
+mt-&gt;setMatrix(osg::Matrix::rotate(angle, axis));
+mt-&gt;addChild(model);
+root-&gt;addChild(mt);
+..
+
+I can't upload the model because it's not for public use.
+
+I hope the informations are enough that some kind person can give me a hint.
+
+I worked to all coordinate frames. Only Projection seemd to work for me. Never found the right matrices to make View or Model working. Precision Hint can be float which has the same errors. Intersection Limit can be &quot;NO_LIMIT&quot; and wouldn't change a thing.
+
+A LineSegmentIntersector never found a result.
+
+Cheers,
+NoxxKn
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic507c.php?p=67319#67319">http://forum.openscenegraph.org/viewtopic.php?p=67319#67319</A>
+
+
+
+
+Attachments: 
+<A HREF="../../../../forum.openscenegraph.org/files/pick_error2_941.png">http://forum.openscenegraph.org//files/pick_error2_941.png</A>
+<A HREF="../../../../forum.openscenegraph.org/files/pick_error_165.png">http://forum.openscenegraph.org//files/pick_error_165.png</A>
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003429.html">[osg-users] freetype build support on Windows
+</A></li>
+	<LI>Next message: <A HREF="003171.html">[osg-users] PolytopeIntersector LIMIT_NEAREST (or LIMIT_ONE) different distances for different groupnodes
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279391">[ date ]</a>
+              <a href="thread.html#279391">[ thread ]</a>
+              <a href="subject.html#279391">[ subject ]</a>
+              <a href="author.html#279391">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

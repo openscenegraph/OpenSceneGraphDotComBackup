@@ -1,0 +1,144 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Exporting OpenFlight Models
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Exporting%20OpenFlight%20Models&In-Reply-To=%3CCAFN7Y%2BUmWUcw6oyVqY8aVFeaaqkwDrg7vAZ%2B%3DhqfU58E-Fct_w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008588.html">
+   <LINK REL="Next"  HREF="008596.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Exporting OpenFlight Models</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Exporting%20OpenFlight%20Models&In-Reply-To=%3CCAFN7Y%2BUmWUcw6oyVqY8aVFeaaqkwDrg7vAZ%2B%3DhqfU58E-Fct_w%40mail.gmail.com%3E"
+       TITLE="[osg-users] Exporting OpenFlight Models">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Jun 27 13:07:45 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008588.html">[osg-users] Exporting OpenFlight Models
+</A></li>
+        <LI>Next message (by thread): <A HREF="008596.html">[osg-users] Exporting OpenFlight Models
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8590">[ date ]</a>
+              <a href="thread.html#8590">[ thread ]</a>
+              <a href="subject.html#8590">[ subject ]</a>
+              <a href="author.html#8590">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Dan,
+
+The PR looks like an acceptable level of hackiness to resolve this
+problem so I've merged this.
+
+There is limit in how much we should go chasing our tails on this
+suff, there is fixed function code all over the OSG so it'd be a
+massive undertaking to try and find fall-backs for all these.  I would
+recommend that users don't use GLCORE unless they need to make it easy
+port to GLES2/3 or to have to the latest GL features under OSX where
+it's only possible with GLCORE.  If you have to use GLCORE then I
+think we just need to look at the real trouble points and resolve them
+locally - this PR is an example where I think this is acceptable, but
+it's not something I'd want to see spread across the whole OSG.
+
+If users really want a clean GL then that's Vulkan, it's what GLCORE
+was attempting to achieve but falling along way short.  So personally
+I'd rather user just leave the legacy features of GL on when using the
+OSG if there isn't any pressing need otherwise.
+
+Robert.
+On Wed, 27 Jun 2018 at 18:09, Daniel Emminizer, Code 5773
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">dan.emminizer at nrl.navy.mil</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> Tl;dr: I think I found a bug in OpenFlight's FltExportVisitor::isTextured() when FFP is disabled.  This email explains PR 568 more thoroughly.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I am having problems saving out OpenFlight models and was hoping someone could point out what I'm doing wrong.  I think I might have identified a bug but would like another set of eyes.
+</I>&gt;<i>
+</I>&gt;<i> I have an open source FLT that is textured that I'm trying to load, make a minor edit to, and save out.  My code is simple:
+</I>&gt;<i>
+</I>&gt;<i>     osg::ref_ptr&lt;osgDB::Options&gt; opts = new osgDB::Options;
+</I>&gt;<i>     opts-&gt;setOptionString(&quot;keepExternalReferences&quot;);
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Node&gt; node = osgDB::readRefNodeFile(argv[1], opts.get());
+</I>&gt;<i>
+</I>&gt;<i>     opts = new osgDB::Options;
+</I>&gt;<i>     bool succeeded = osgDB::writeNodeFile(*node, argv[2], opts.get());
+</I>&gt;<i>
+</I>&gt;<i> It writes out the geometry, but never writes out the textures.  I've spent the last couple of hours tracking down why and I think I understand.  I'm using GL3 / GLCORE mode in OSG 3.6.2-rc2.  I think it's important to note this because I believe the bug is related to a FFP change with StateSet.
+</I>&gt;<i>
+</I>&gt;<i> The OpenFlight loader reads the image and the textures just fine, and displays them.  TexturePalette::readTexture() correctly calls setTextureAttributeAndModes() with a valid texture.  This ends up calling osg::Texture::getModeUsage(), which is responsible for turning on GL_TEXTURE_2D.
+</I>&gt;<i>
+</I>&gt;<i> Later on, the FltExportVisitor only respects a texture if GL_TEXTURE_2D is enabled, via FltExportVisitor::isTextured().
+</I>&gt;<i>
+</I>&gt;<i> But when OSG_GL_FIXED_FUNCTION_AVAILABLE is disabled due to GLCORE profile, osg::Texture::getModeUsage() is not defined, so setTextureAttributeandModes() never sets the mode on GL_TEXTURE_2D.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I think the fix is to update isTextured() to check for presence of a texture when OSG_GL_FIXED_FUNCTION_AVAILABLE is not set.  Does this seem reasonable?
+</I>&gt;<i>
+</I>&gt;<i> I have put up a PR to inspect at: <A HREF="https://github.com/openscenegraph/OpenSceneGraph/pull/568">https://github.com/openscenegraph/OpenSceneGraph/pull/568</A>
+</I>&gt;<i>
+</I>&gt;<i> I do have workarounds on my side, so this isn't super critical.  But I think it will impact anyone who uses OSG with GLCORE mode who is trying to export FLT files.
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i>
+</I>&gt;<i>  - Dan
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008588.html">[osg-users] Exporting OpenFlight Models
+</A></li>
+	<LI>Next message (by thread): <A HREF="008596.html">[osg-users] Exporting OpenFlight Models
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8590">[ date ]</a>
+              <a href="thread.html#8590">[ thread ]</a>
+              <a href="subject.html#8590">[ subject ]</a>
+              <a href="author.html#8590">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

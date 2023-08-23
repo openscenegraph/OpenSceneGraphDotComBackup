@@ -1,0 +1,41 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Scott,&nbsp;your&nbsp;fixes&nbsp;did&nbsp;not&nbsp;fix&nbsp;the&nbsp;issues&nbsp;on&nbsp;the&nbsp;OSX&nbsp;with&nbsp;the&nbsp;DDS&nbsp;textures&nbsp;...&nbsp;But&nbsp;thanks&nbsp;anyway&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;Thu,&nbsp;Sep&nbsp;24,&nbsp;2015&nbsp;at&nbsp;9:26&nbsp;PM,&nbsp;Robert&nbsp;Osfield&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Scott,&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Thanks&nbsp;for&nbsp;the&nbsp;follow&nbsp;up. &nbsp;&lt;br&gt;&lt;br&gt;Could&nbsp;you&nbsp;post&nbsp;the&nbsp;whole&nbsp;modified&nbsp;file,&nbsp;this&nbsp;way&nbsp;we&nbsp;can&nbsp;avoid&nbsp;any&nbsp;possible&nbsp;copy&nbsp;and&nbsp;past&nbsp;errors.&lt;br&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;Thanks,&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;24&nbsp;September&nbsp;2015&nbsp;at&nbsp;20:13,&nbsp;Davis,&nbsp;Timothy&nbsp;S&nbsp;CTR&nbsp;comnavairsyscom&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:timothy.s.davis.ctr@navy.mil&quot;&nbsp;target=&quot;_blank&quot;&gt;timothy.s.davis.ctr@navy.mil&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Sorry. &nbsp;It&nbsp;keeps&nbsp;trying&nbsp;to&nbsp;encrypt&nbsp;the&nbsp;message.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Robert&lt;br&gt;<br>
+&lt;br&gt;<br>
+While&nbsp;continuing&nbsp;to&nbsp;build&nbsp;a&nbsp;model&nbsp;that&nbsp;results&nbsp;in&nbsp;the&nbsp;problem,&nbsp;I&nbsp;discovered&nbsp;something&nbsp;I&nbsp;didn&#39;t&nbsp;see&nbsp;before. &nbsp;The&nbsp;IVE&nbsp;model&nbsp;had&nbsp;an&nbsp;incorrect&nbsp;number&nbsp;of&nbsp;mipmap&nbsp;levels&nbsp;(it&nbsp;had&nbsp;8)&nbsp;for&nbsp;a&nbsp;32x32&nbsp;texture. &nbsp;It&nbsp;makes&nbsp;sense&nbsp;that&nbsp;glTexStorage2D&nbsp;would&nbsp;generate&nbsp;INVALID_OPERATION&nbsp;in&nbsp;this&nbsp;case. &nbsp;Rebuilding&nbsp;the&nbsp;model&nbsp;from&nbsp;a&nbsp;source&nbsp;with&nbsp;uncompressed&nbsp;textures&nbsp;and&nbsp;recompressing&nbsp;the&nbsp;textures&nbsp;worked. &nbsp;The&nbsp;original&nbsp;model&nbsp;was&nbsp;converted&nbsp;with&nbsp;a&nbsp;much&nbsp;older&nbsp;version&nbsp;of&nbsp;OSG,&nbsp;pre&nbsp;OSG&nbsp;3&nbsp;for&nbsp;sure.&lt;br&gt;<br>
+&lt;br&gt;<br>
+So&nbsp;I&nbsp;was&nbsp;barking&nbsp;up&nbsp;the&nbsp;wrong&nbsp;tree:)&lt;br&gt;<br>
+&lt;br&gt;<br>
+That&nbsp;addresses&nbsp;my&nbsp;specific&nbsp;issue&nbsp;without&nbsp;needing&nbsp;a&nbsp;change&nbsp;to&nbsp;OSG&nbsp;3.4.0. &nbsp;However,&nbsp;I&nbsp;still&nbsp;think&nbsp;it&nbsp;is&nbsp;worth&nbsp;trying&nbsp;for&nbsp;the&nbsp;OSX&nbsp;case.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Trajce&lt;br&gt;<br>
+&lt;br&gt;<br>
+In&nbsp;osg/Texture.cpp,&nbsp;function&nbsp;applyTexImage2D(),&nbsp;find&nbsp;the&nbsp;line:&lt;br&gt;<br>
+&lt;br&gt;<br>
+useTexStorage&nbsp;&amp;=&nbsp;sizedInternalFormat&nbsp;!=&nbsp;0;&lt;br&gt;<br>
+&lt;br&gt;<br>
+add&nbsp;the&nbsp;following&nbsp;after&nbsp;the&nbsp;line:&lt;br&gt;<br>
+&lt;br&gt;<br>
+if&nbsp;(&nbsp;useTexStorage&nbsp;&amp;&amp;&nbsp;compressed_image&nbsp;&amp;&amp;&nbsp;numMipmapLevels&nbsp;&gt;&nbsp;2&nbsp;)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;numMipmapLevels&nbsp;-=&nbsp;2;&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+This&nbsp;is&nbsp;clearly&nbsp;not&nbsp;production&nbsp;quality&nbsp;as&nbsp;it&nbsp;assumes&nbsp;block&nbsp;size&nbsp;is&nbsp;4&nbsp;and&nbsp;complete&nbsp;mipmaps&nbsp;to&nbsp;1x1. &nbsp;It&nbsp;should&nbsp;be&nbsp;enough&nbsp;to&nbsp;check&nbsp;the&nbsp;approach. &nbsp;You&nbsp;may&nbsp;have&nbsp;to&nbsp;set&nbsp;GL_TEXTURE_MAX_LEVEL&nbsp;if&nbsp;the&nbsp;driver&nbsp;thinks&nbsp;the&nbsp;texture&nbsp;is&nbsp;incomplete,&nbsp;but&nbsp;I&nbsp;didn&#39;t&nbsp;have&nbsp;that&nbsp;issue.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Scott&lt;br&gt;<br>
+&lt;div&gt;&lt;div&gt;_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;br&gt;_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_signature&quot;&gt;trajce&nbsp;nikolov&nbsp;nick&lt;br&gt;&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+
+</tt>

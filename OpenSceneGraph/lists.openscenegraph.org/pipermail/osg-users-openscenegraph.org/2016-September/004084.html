@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] how safe is to add nodes in cull traversal
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20how%20safe%20is%20to%20add%20nodes%20in%20cull%20traversal&In-Reply-To=%3CCAO-%2Bzik%3DFur8dEc3dLC2edEaJe9ZNvwDtR8cNvv6M5qWu5TpHA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004083.html">
+   <LINK REL="Next"  HREF="004086.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] how safe is to add nodes in cull traversal</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20how%20safe%20is%20to%20add%20nodes%20in%20cull%20traversal&In-Reply-To=%3CCAO-%2Bzik%3DFur8dEc3dLC2edEaJe9ZNvwDtR8cNvv6M5qWu5TpHA%40mail.gmail.com%3E"
+       TITLE="[osg-users] how safe is to add nodes in cull traversal">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Sat Sep 10 10:12:36 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004083.html">[osg-users] how safe is to add nodes in cull traversal
+</A></li>
+        <LI>Next message: <A HREF="004086.html">[osg-users] how safe is to add nodes in cull traversal
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4084">[ date ]</a>
+              <a href="thread.html#4084">[ thread ]</a>
+              <a href="subject.html#4084">[ subject ]</a>
+              <a href="author.html#4084">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert
+
+&gt;<i> How long have you been using the OSG now?
+</I>
+Since 2003? :-) .. I knew the answer but I was &quot;hoping&quot; to maybe see some
+light in dealing with sort of very complex code. Here is the situation in
+brief:
+
+- for every frame I have dynaimic list of objects (lights, with rtt cameras
+attached)
+- In custom cull visitor I am getting a new list of sorted cameras (this
+must happen in the cull traversal for reasons)
+- now after the cull is done, I have to make the new list from the cull
+traversal 'active' for the frame (active means, disable/erase the old list
+and making the new one actual - and these is by updating the scenegraph)
+
+But, while writing this I just recall what you did for the txp loader for
+the smart mesh handling with the TileMapper, where custom cull traversal is
+launched before the frame
+
+Please take my apologize for asking 'stupid' questions ;-), but sometime I
+struggle and the panic is faster then the rational thinking and the
+experience. I need it in written :-). Thanks again for the good
+description. Hope it will help others too
+
+Cheers,
+Nick
+
+On Sat, Sep 10, 2016 at 6:49 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> On 10 September 2016 at 12:42, Trajce Nikolov NICK
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Hi Community,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; me again :-) ..  As the subject says, I an having the viewer setup with
+</I>&gt;<i> &gt; CullDrawThreadPerContext and I want to add nodes in the cull traversal.
+</I>&gt;<i> Is
+</I>&gt;<i> &gt; it safe to do so?
+</I>&gt;<i>
+</I>&gt;<i> How long have you been using the OSG now?
+</I>&gt;<i>
+</I>&gt;<i> Short answer. NO.  Longer answer, NO it's not safe.
+</I>&gt;<i>
+</I>&gt;<i> Full answer: It's *not* generally safe to add nodes during any
+</I>&gt;<i> traversal, especially the cull traversal.  There are very specific
+</I>&gt;<i> circumstances when it can be done during during a traversal but you
+</I>&gt;<i> have to be fully aware of what can go wrong and make sure you don't
+</I>&gt;<i> fall foul of any of the potential problems.
+</I>&gt;<i>
+</I>&gt;<i> A major gotcha with changing the scene graph in the cull traversal is
+</I>&gt;<i> that multiple camera's can have multiple threads running cull
+</I>&gt;<i> traversals on them on parallel.  If you wanted to go change the scene
+</I>&gt;<i> graph when threading is happened then you'd need to lock the node in
+</I>&gt;<i> some way to prevent problems happening.  There are lots of threading
+</I>&gt;<i> pitfalls here - both for performance and obscure threading crashes.
+</I>&gt;<i>
+</I>&gt;<i> Another major issue is invalidation of iterators.  If you have code
+</I>&gt;<i> that traverses through a vector of children and as you handle one of
+</I>&gt;<i> the children you decide it's time to add/remove/insert and new child
+</I>&gt;<i> into the list being iterated then any reallocation of the vector being
+</I>&gt;<i> iterator will invalidate the iterators.  Invalidate the iterators and
+</I>&gt;<i> bang you're app will go down in flames.
+</I>&gt;<i>
+</I>&gt;<i> So.... in almost all instances trying to add/remove/insert nodes
+</I>&gt;<i> during the cull traversal is REALLY BAD IDEA.
+</I>&gt;<i>
+</I>&gt;<i> If you really want to do it. Go do it, you have the source code, you
+</I>&gt;<i> have debuggers, you can go shoot yourself in the foot or if your lucky
+</I>&gt;<i> work out a really narrow and safe way to do what you want to do.  I
+</I>&gt;<i> won't nurse you along in this route though.  Strong recommendation,
+</I>&gt;<i> don't play silly buggers, don't try it. It'll save you lots of time.
+</I>&gt;<i>
+</I>&gt;<i> Far better is do what other multi-threaded parts of the OSG do, do
+</I>&gt;<i> what the DatabasePager does, load data in a background thread,
+</I>&gt;<i> incremental compile new objects, when compilation is complete merge
+</I>&gt;<i> the subgraph with the main scene graph as an update operation prior to
+</I>&gt;<i> the update and event traversals.    This approach is safe, scales
+</I>&gt;<i> well, is well established to work well for multi-threaded and
+</I>&gt;<i> applications that need to target a solid 60hz.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160910/b5f670a2/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160910/b5f670a2/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004083.html">[osg-users] how safe is to add nodes in cull traversal
+</A></li>
+	<LI>Next message: <A HREF="004086.html">[osg-users] how safe is to add nodes in cull traversal
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4084">[ date ]</a>
+              <a href="thread.html#4084">[ thread ]</a>
+              <a href="subject.html#4084">[ subject ]</a>
+              <a href="author.html#4084">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

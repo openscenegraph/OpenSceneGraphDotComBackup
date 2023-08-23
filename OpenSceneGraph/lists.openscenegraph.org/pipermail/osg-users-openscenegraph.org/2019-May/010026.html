@@ -1,0 +1,181 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] &#22238;&#22797;&#65306; Is it possible to load texture without applying to adrawable
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%3D%3Fgb18030%3Fb%3Fu9i4tKO6IElzIGl0IHBvc3NpYmxlIHRvIGxvYWQg%3F%3D%0A%20%3D%3Fgb18030%3Fq%3Ftexture_without_applying_to_adrawable%3F%3D&In-Reply-To=%3Ctencent_12A8C744F6D995D0C41949A4AA25CF108B0A%40qq.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010025.html">
+   <LINK REL="Next"  HREF="010027.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] &#22238;&#22797;&#65306; Is it possible to load texture without applying to adrawable</H1>
+<!--htdig_noindex-->
+    <B>Garfield Pig  </B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%3D%3Fgb18030%3Fb%3Fu9i4tKO6IElzIGl0IHBvc3NpYmxlIHRvIGxvYWQg%3F%3D%0A%20%3D%3Fgb18030%3Fq%3Ftexture_without_applying_to_adrawable%3F%3D&In-Reply-To=%3Ctencent_12A8C744F6D995D0C41949A4AA25CF108B0A%40qq.com%3E"
+       TITLE="[osg-users] &#22238;&#22797;&#65306; Is it possible to load texture without applying to adrawable">yuqicxy at foxmail.com
+       </A><BR>
+    <I>Thu May  9 09:35:50 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010025.html">[osg-users] Is it possible to load texture without applying to a drawable
+</A></li>
+        <LI>Next message (by thread): <A HREF="010027.html">[osg-users] Is it possible to load texture without applying to a drawable
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10026">[ date ]</a>
+              <a href="thread.html#10026">[ thread ]</a>
+              <a href="subject.html#10026">[ subject ]</a>
+              <a href="author.html#10026">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Steve,
+I meet the similar question yesterday,how about use osg::texture::apply method with a new state under a new GraphicContext.
+
+
+this is the source of my idea.
+
+
+In osg3.6.3 osgConv application.
+osgConv.cpp line 152
+
+
+void compress()
+    {
+        MyGraphicsContext context;
+        if (!context.valid())
+        {
+            osg::notify(osg::NOTICE)&lt;&lt;&quot;Error: Unable to create graphis context, problem with running osgViewer-&quot;&lt;&lt;osgViewerGetVersion()&lt;&lt;&quot;, cannot run compression.&quot;&lt;&lt;std::endl;
+            return;
+        }
+
+
+        osg::ref_ptr&lt;osg::State&gt; state = new osg::State;
+        state-&gt;initializeExtensionProcs();
+
+
+        for(TextureSet::iterator itr=_textureSet.begin();
+            itr!=_textureSet.end();
+            ++itr)
+        {
+            osg::Texture* texture = const_cast&lt;osg::Texture*&gt;(itr-&gt;get());
+
+
+            osg::Texture2D* texture2D = dynamic_cast&lt;osg::Texture2D*&gt;(texture);
+            osg::Texture3D* texture3D = dynamic_cast&lt;osg::Texture3D*&gt;(texture);
+
+
+            osg::ref_ptr&lt;osg::Image&gt; image = texture2D ? texture2D-&gt;getImage() : (texture3D ? texture3D-&gt;getImage() : 0);
+            if (image.valid() &amp;&amp;
+                (image-&gt;getPixelFormat()==GL_RGB || image-&gt;getPixelFormat()==GL_RGBA) &amp;&amp;
+                (image-&gt;s()&gt;=32 &amp;&amp; image-&gt;t()&gt;=32))
+            {
+                texture-&gt;setInternalFormatMode(_internalFormatMode);
+
+
+                // need to disable the unref after apply, otherwise the image could go out of scope.
+                bool unrefImageDataAfterApply = texture-&gt;getUnRefImageDataAfterApply();
+                texture-&gt;setUnRefImageDataAfterApply(false);
+
+
+                // get OpenGL driver to create texture from image.
+                texture-&gt;apply(*state);
+
+
+                // restore the original setting
+                texture-&gt;setUnRefImageDataAfterApply(unrefImageDataAfterApply);
+
+
+                image-&gt;readImageFromCurrentTexture(0,true);
+
+
+                texture-&gt;setInternalFormatMode(osg::Texture::USE_IMAGE_DATA_FORMAT);
+            }
+        }
+    }
+
+
+
+
+
+Thank you!
+
+
+Cheers,
+Qi Yu
+
+
+
+------------------ &#21407;&#22987;&#37038;&#20214; ------------------
+&#21457;&#20214;&#20154;: &quot;Steve Powers&quot;&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">stevenapowers at gmail.com</A>&gt;;
+&#21457;&#36865;&#26102;&#38388;: 2019&#24180;5&#26376;9&#26085;(&#26143;&#26399;&#22235;) &#26202;&#19978;11:33
+&#25910;&#20214;&#20154;: &quot;osg-users&quot;&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;;
+
+&#20027;&#39064;: [osg-users] Is it possible to load texture without applying to adrawable
+
+
+
+I am attempting to load a Texture2D into memory in order to pass the texture ID to a 3rd party OpenGL object that will use the ID within it's own drawable class.
+
+
+The issue is that the TextureObject attached to the texture is not getting instantiated and I think this is because it is not assigned to a drawable object and thus not getting visited.
+
+
+
+
+Instead, I set the texture to a stateset on an osg::Group node 
+
+
+
+
+stateset = group-&gt;getOrCreateStateSet();
+stateset-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+
+
+
+
+Is there a way to have this texture object instantiate without physically using the texture on a drawable?
+
+
+Thank you!
+
+
+Cheers,
+Steven
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190510/70b65c2a/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190510/70b65c2a/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010025.html">[osg-users] Is it possible to load texture without applying to a drawable
+</A></li>
+	<LI>Next message (by thread): <A HREF="010027.html">[osg-users] Is it possible to load texture without applying to a drawable
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10026">[ date ]</a>
+              <a href="thread.html#10026">[ thread ]</a>
+              <a href="subject.html#10026">[ subject ]</a>
+              <a href="author.html#10026">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

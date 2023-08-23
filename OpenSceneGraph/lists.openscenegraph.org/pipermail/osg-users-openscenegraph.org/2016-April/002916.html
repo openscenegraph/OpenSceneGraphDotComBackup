@@ -1,0 +1,143 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osg::CoordinateSystemNode
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%3A%3ACoordinateSystemNode&In-Reply-To=%3C1461690839.m2f.66968%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002718.html">
+   <LINK REL="Next"  HREF="278943.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osg::CoordinateSystemNode</H1>
+<!--htdig_noindex-->
+    <B>Alex Chen</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%3A%3ACoordinateSystemNode&In-Reply-To=%3C1461690839.m2f.66968%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osg::CoordinateSystemNode">alex.xl.zhou at gmail.com
+       </A><BR>
+    <I>Tue Apr 26 10:13:59 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002718.html">[osg-users] osg::CoordinateSystemNode
+</A></li>
+        <LI>Next message: <A HREF="278943.html">[osg-users] [build] CMake 3.5.1 and OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2916">[ date ]</a>
+              <a href="thread.html#2916">[ thread ]</a>
+              <a href="subject.html#2916">[ subject ]</a>
+              <a href="author.html#2916">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all,
+
+I get the same problem with BVH plug in when using CMU dataset.
+Below is my minor fix to the code and it seems to work for several motions I loaded.
+
+File attached.
+Main changes:
+typedef std::pair&lt;osg::ref_ptr&lt;osgAnimation::Bone&gt;, std::pair&lt;int, std::string&gt; &gt; JointNode;
+
+    void alterChannel( std::string name, std::pair&lt;int, std::string&gt;&amp; p )
+    {
+		int&amp; value = p.first;
+		std::string&amp; str = p.second;
+
+		if      ( name==&quot;Xposition&quot; ) value |= 0x01;
+        else if ( name==&quot;Yposition&quot; ) value |= 0x02;
+        else if ( name==&quot;Zposition&quot; ) value |= 0x04;
+		else if ( name==&quot;Zrotation&quot; ) {value |= 0x08; str.push_back('Z');}
+		else if ( name==&quot;Xrotation&quot; ) {value |= 0x10; str.push_back('X');}
+		else if ( name==&quot;Yrotation&quot; ) {value |= 0x20; str.push_back('Y');}
+    }
+
+    void setKeyframe( osgDB::Input&amp; fr, int ch, const std::string&amp; order, double time,
+                      osgAnimation::Vec3KeyframeContainer* posKey,
+                      osgAnimation::QuatKeyframeContainer* rotKey )
+    {
+        if ( ch&amp;0x07 &amp;&amp; posKey )  // Position keyframe
+        {
+            float keyValue[3] = { 0.0f };
+            if ( ch&amp;0x01 ) fr.readSequence( keyValue[0] );
+            if ( ch&amp;0x02 ) fr.readSequence( keyValue[1] );
+            if ( ch&amp;0x04 ) fr.readSequence( keyValue[2] );
+
+            osg::Vec3 vec( keyValue[0], keyValue[1], keyValue[2] );
+            posKey-&gt;push_back( osgAnimation::Vec3Keyframe(time, vec) );
+        }
+
+        if ( ch&amp;0x38 &amp;&amp; rotKey )  // Rotation keyframe
+        {
+			osg::Matrix rotMat;
+            float keyValue[3] = { 0.0f };
+			for(int i = 0; i &lt; order.size(); ++i) {
+				char f = order[i];
+				if(f == 'X') {
+					if ( ch&amp;0x10 ) fr.readSequence( keyValue[0] );
+					rotMat = osg::Matrix::rotate(osg::DegreesToRadians(keyValue[0]), osg::Vec3(1.0,0.0,0.0)) * rotMat;
+				}
+				else if(f == 'Y') {
+					if ( ch&amp;0x20 ) fr.readSequence( keyValue[1] );
+					rotMat = osg::Matrix::rotate(osg::DegreesToRadians(keyValue[1]), osg::Vec3(0.0,1.0,0.0)) * rotMat;
+				}
+				else if(f == 'Z') {
+					if ( ch&amp;0x08 ) fr.readSequence( keyValue[2] );
+					rotMat = osg::Matrix::rotate(osg::DegreesToRadians(keyValue[2]), osg::Vec3(0.0,0.0,1.0)) * rotMat;
+				}
+			}
+			osg::Quat quat = rotMat.getRotate();
+			rotKey-&gt;push_back( osgAnimation::QuatKeyframe(time, quat) );
+		}
+    }
+
+There are a few other places that can be seen by compared files.
+
+
+Cheers,
+Alex
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc7b6.php?p=66968#66968">http://forum.openscenegraph.org/viewtopic.php?p=66968#66968</A>
+
+
+
+
+Attachments: 
+<A HREF="../../../../forum.openscenegraph.org/files/readerwriterbvh_198.cpp">http://forum.openscenegraph.org//files/readerwriterbvh_198.cpp</A>
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002718.html">[osg-users] osg::CoordinateSystemNode
+</A></li>
+	<LI>Next message: <A HREF="278943.html">[osg-users] [build] CMake 3.5.1 and OSG
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2916">[ date ]</a>
+              <a href="thread.html#2916">[ thread ]</a>
+              <a href="subject.html#2916">[ subject ]</a>
+              <a href="author.html#2916">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,122 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Hi&nbsp;Robert,&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;I&nbsp;am&nbsp;very&nbsp;thankful&nbsp;for&nbsp;every&nbsp;hint,&nbsp;really.&nbsp;These&nbsp;hints&nbsp;are&nbsp;really&nbsp;valuable&nbsp;for&nbsp;optimization.&nbsp;And&nbsp;I&nbsp;found&nbsp;the&nbsp;issue,&nbsp;it&nbsp;was&nbsp;pre/post&nbsp;multiply&nbsp;order&nbsp;of&nbsp;the&nbsp;matrices.&nbsp;I&nbsp;was&nbsp;to&nbsp;avoid&nbsp;the&nbsp;calculus&nbsp;from&nbsp;the&nbsp;nodepath&nbsp;and&nbsp;use&nbsp;the&nbsp;ModelView&nbsp;matrix&nbsp;already&nbsp;available&nbsp;in&nbsp;the&nbsp;CullVisitor.&nbsp;Here&nbsp;is&nbsp;the&nbsp;snippet&nbsp;for&nbsp;someone&nbsp;who&nbsp;might&nbsp;face&nbsp;the&nbsp;same&nbsp;issue:&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;div&gt;osg::Matrixd&nbsp;inverseViewMatrix&nbsp;=&nbsp;getCurrentCamera()-&gt;getInverseViewMatrix();&lt;/div&gt;&lt;div&gt;osg::Matrixd&nbsp;modelViewMatrix&nbsp;=&nbsp;(*getModelViewMatrix());&lt;/div&gt;&lt;div&gt;osg::Matrixd&nbsp;worldMatrix&nbsp;=&nbsp;osg::computeLocalToWorld(getNodePath());&lt;/div&gt;&lt;div&gt;osg::Matrixd&nbsp;worldMatrix2&nbsp;=&nbsp;modelViewMatrix&nbsp;*&nbsp;inverseViewMatrix;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;worldMatrix&nbsp;is&nbsp;equal&nbsp;to&nbsp;worldMatrix2&nbsp;..&nbsp;It&nbsp;was&nbsp;really&nbsp;the&nbsp;order&nbsp;of&nbsp;the&nbsp;matrices.&nbsp;I&nbsp;was&nbsp;under&nbsp;impression&nbsp;it&nbsp;is&nbsp;the&nbsp;same&nbsp;as&nbsp;in&nbsp;GLSL&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Thanks&nbsp;a&nbsp;bunch&nbsp;again!&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Cheers,&lt;/div&gt;&lt;div&gt;Nick&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;Thu,&nbsp;Nov&nbsp;3,&nbsp;2016&nbsp;at&nbsp;2:59&nbsp;PM,&nbsp;Robert&nbsp;Osfield&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;I&nbsp;don&#39;t&nbsp;have&nbsp;time&nbsp;to&nbsp;dive&nbsp;deeply&nbsp;in&nbsp;user&nbsp;projects,&nbsp;I&nbsp;can&nbsp;do&nbsp;quick&lt;br&gt;<br>
+scans&nbsp;of&nbsp;email&nbsp;and&nbsp;provide&nbsp;quick&nbsp;replies&nbsp;where&nbsp;possible. &nbsp;In&nbsp;terms&nbsp;of&lt;br&gt;<br>
+optimization&nbsp;I&#39;d&nbsp;say&nbsp;avoiding&nbsp;the&nbsp;inverse&nbsp;matrix&nbsp;might&nbsp;be&nbsp;useful.&lt;br&gt;<br>
+Using&nbsp;the&nbsp;Matrix.postMultTrans/&lt;wbr&gt;preMultTrans&nbsp;would&nbsp;also&nbsp;be&nbsp;another&lt;br&gt;<br>
+optimization&nbsp;step&nbsp;you&nbsp;could&nbsp;use. &nbsp;The&nbsp;use&nbsp;of&nbsp;the&nbsp;UserValue&nbsp;looks&nbsp;like&lt;br&gt;<br>
+it&nbsp;won&#39;t&nbsp;be&nbsp;thread&nbsp;safe&nbsp;or&nbsp;even&nbsp;safe&nbsp;n&nbsp;the&nbsp;presence&nbsp;of&nbsp;multiple&nbsp;cull&lt;br&gt;<br>
+traversals.&lt;br&gt;<br>
+&lt;br&gt;<br>
+On&nbsp;3&nbsp;November&nbsp;2016&nbsp;at&nbsp;11:40,&nbsp;Trajce&nbsp;Nikolov&nbsp;NICK&lt;br&gt;<br>
+&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:trajce.nikolov.nick@gmail.com&quot;&gt;trajce.nikolov.nick@gmail.com&lt;/a&gt;&lt;wbr&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&nbsp;Thanks&nbsp;Robert,&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;I&nbsp;am&nbsp;aware&nbsp;of&nbsp;it,&nbsp;it&nbsp;is&nbsp;already&nbsp;used&nbsp;in&nbsp;my&nbsp;second&nbsp;snippet.&nbsp;Here&nbsp;it&nbsp;is:&nbsp;(is&lt;br&gt;<br>
+&gt;&nbsp;it&nbsp;done&nbsp;properly?)&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;void&nbsp;MyCullVisitor::apply(osg::&lt;wbr&gt;LightSource&amp;&nbsp;node)&lt;br&gt;<br>
+&gt;&nbsp;{&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; osg::Matrixd&nbsp;inverseViewMatrix&nbsp;=&lt;br&gt;<br>
+&gt;&nbsp;osg::Matrixd::inverse(&lt;wbr&gt;getCurrentCamera()-&gt;&lt;wbr&gt;getViewMatrix());&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; osg::Matrixd&nbsp;worldMatrix&nbsp;=&nbsp;inverseViewMatrix&nbsp;*&nbsp;(*getModelViewMatrix());&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; osg::Vec3d&nbsp;pos(node.getLight()-&gt;&lt;wbr&gt;getPosition().x(),&lt;br&gt;<br>
+&gt;&nbsp;node.getLight()-&gt;getPosition()&lt;wbr&gt;.y(),&nbsp;node.getLight()-&gt;getPosition()&lt;wbr&gt;.z());&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; worldMatrix&nbsp;=&nbsp;osg::Matrixd::translate(pos)&nbsp;*&nbsp;worldMatrix;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; node.setUserValue(&quot;&lt;wbr&gt;WorldMatrix&quot;,&nbsp;worldMatrix);&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; if&nbsp;(node.getLight()-&gt;getLightNum(&lt;wbr&gt;)&nbsp;==&nbsp;0)&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; {&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; &nbsp; &nbsp; osgUtil::CullVisitor::apply(&lt;wbr&gt;node);&lt;br&gt;<br>
+&gt; &nbsp; &nbsp; }&lt;br&gt;<br>
+&gt;&nbsp;}&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;On&nbsp;Thu,&nbsp;Nov&nbsp;3,&nbsp;2016&nbsp;at&nbsp;9:14&nbsp;AM,&nbsp;Robert&nbsp;Osfield&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:robert.osfield@gmail.com&quot;&gt;robert.osfield@gmail.com&lt;/a&gt;&gt;&lt;br&gt;<br>
+&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;Hi&nbsp;Nick,&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;The&nbsp;osgUtil::CullVisitor&nbsp;has&nbsp;the&nbsp;maintains&nbsp;a&nbsp;stack&nbsp;of&nbsp;ModelViewMatrix&lt;br&gt;<br>
+&gt;&gt;&nbsp;that&nbsp;it&nbsp;accumulates&nbsp;through&nbsp;the&nbsp;the&nbsp;scene&nbsp;graph&nbsp;traversal,&nbsp;you&nbsp;should&lt;br&gt;<br>
+&gt;&gt;&nbsp;just&nbsp;need&nbsp;to&nbsp;get&nbsp;the&nbsp;top&nbsp;of&nbsp;this&nbsp;stack&nbsp;using&lt;br&gt;<br>
+&gt;&gt;&nbsp;cullVisitor-&gt;&lt;wbr&gt;getModelViewMatrix().&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;Robert.&lt;br&gt;<br>
+&gt;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;On&nbsp;2&nbsp;November&nbsp;2016&nbsp;at&nbsp;22:25,&nbsp;Trajce&nbsp;Nikolov&nbsp;NICK&lt;br&gt;<br>
+&gt;&gt;&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:trajce.nikolov.nick@gmail.com&quot;&gt;trajce.nikolov.nick@gmail.com&lt;/a&gt;&lt;wbr&gt;&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;Hi&nbsp;Community,&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;I&nbsp;am&nbsp;trying&nbsp;to&nbsp;optimize&nbsp;the&nbsp;rendering.&nbsp;Getting&nbsp;huge&nbsp;update&nbsp;numbers.&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;The&nbsp;story&nbsp;is&nbsp;this:&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;My&nbsp;scene&nbsp;has&nbsp;huge&nbsp;number&nbsp;of&nbsp;lights,&nbsp;some&nbsp;are&nbsp;static&nbsp;(streetlights)&nbsp;some&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;dynamic&nbsp;(a&nbsp;car).&nbsp;The&nbsp;lighting&nbsp;engine&nbsp;needs&nbsp;the&nbsp;World&nbsp;matrix&nbsp;of&nbsp;a&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;LightSource&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;and&nbsp;the&nbsp;ViewMatrix&nbsp;(which&nbsp;is&nbsp;the&nbsp;same&nbsp;as&nbsp;the&nbsp;World&nbsp;inverse&nbsp;just&nbsp;with&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;some&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;extra&nbsp;rotation).&nbsp;In&nbsp;my&nbsp;code&nbsp;after&nbsp;the&nbsp;update&nbsp;before&nbsp;the&nbsp;rendering&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;traversal&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;I&nbsp;am&nbsp;updating&nbsp;these&nbsp;matrices&nbsp;each&nbsp;frame&nbsp;and&nbsp;I&nbsp;am&nbsp;about&nbsp;to&nbsp;place&nbsp;this&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;code&nbsp;in&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;my&nbsp;custom&nbsp;CullVisitor&nbsp;(which&nbsp;traverse&nbsp;the&nbsp;scene&nbsp;anyway&nbsp;but&nbsp;only&nbsp;the&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;active&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;children).&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;Here&nbsp;is&nbsp;my&nbsp;approach&nbsp;at&nbsp;the&nbsp;moment:&nbsp;list&nbsp;of&nbsp;light&nbsp;entities&nbsp;and&nbsp;here&nbsp;is&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;how&nbsp;I&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;am&nbsp;computing&nbsp;these:&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;&lt;a&nbsp;href=&quot;http://pastebin.com/0A64sc7Y&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://pastebin.com/0A64sc7Y&lt;/a&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;Simply&nbsp;getting&nbsp;the&nbsp;NodePath&nbsp;and&nbsp;computing&nbsp;the&nbsp;world&nbsp;matrix&nbsp;from&nbsp;this&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;node&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;path.&nbsp;This&nbsp;seams&nbsp;to&nbsp;be&nbsp;costly&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;I&nbsp;am&nbsp;after&nbsp;wiser&nbsp;optimization,&nbsp;to&nbsp;place&nbsp;this&nbsp;in&nbsp;my&nbsp;CullVistor:&nbsp;Here&nbsp;is&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;the&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;snippet:&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;&lt;a&nbsp;href=&quot;http://pastebin.com/6dQnih8N&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://pastebin.com/6dQnih8N&lt;/a&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;These&nbsp;snippets&nbsp;are&nbsp;simple&nbsp;and&nbsp;I&nbsp;would&nbsp;like&nbsp;to&nbsp;ask&nbsp;if&nbsp;this&nbsp;is&nbsp;more&nbsp;proper&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;way,&nbsp;which&nbsp;it&nbsp;seams&nbsp;to&nbsp;me&nbsp;since&nbsp;I&nbsp;will&nbsp;gain&nbsp;more&nbsp;performance&nbsp;by&nbsp;updating&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;only&nbsp;the&nbsp;culled&nbsp;and&nbsp;active&nbsp;nodes.&nbsp;Also&nbsp;the&nbsp;math&nbsp;in&nbsp;the&nbsp;cull&nbsp;visitor.&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;Thanks&nbsp;a&nbsp;lot&nbsp;for&nbsp;any&nbsp;hints,&nbsp;ideas.&nbsp;As&nbsp;always&nbsp;:-)&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;Cheers,&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;Nick&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;--&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;trajce&nbsp;nikolov&nbsp;nick&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+&gt;&gt;&nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&gt;&gt;&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&gt;&nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;--&lt;br&gt;<br>
+&gt;&nbsp;trajce&nbsp;nikolov&nbsp;nick&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+&gt;&nbsp;______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+&gt;&nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&gt;&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_signature&quot;&nbsp;data-smartmail=&quot;gmail_signature&quot;&gt;trajce&nbsp;nikolov&nbsp;nick&lt;br&gt;&lt;/div&gt;<br>
+&lt;/div&gt;<br>
+
+</tt>

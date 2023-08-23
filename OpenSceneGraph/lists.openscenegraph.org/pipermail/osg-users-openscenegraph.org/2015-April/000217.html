@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Android osgPlugins
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20osgPlugins&In-Reply-To=%3C1430127228.m2f.63539%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000216.html">
+   <LINK REL="Next"  HREF="000218.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Android osgPlugins</H1>
+<!--htdig_noindex-->
+    <B>Christian Kehl</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%20osgPlugins&In-Reply-To=%3C1430127228.m2f.63539%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Android osgPlugins">christian-kehl at web.de
+       </A><BR>
+    <I>Mon Apr 27 02:33:49 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000216.html">[osg-users] Android osgPlugins
+</A></li>
+        <LI>Next message: <A HREF="000218.html">[osg-users] Android osgPlugins
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#217">[ date ]</a>
+              <a href="thread.html#217">[ thread ]</a>
+              <a href="subject.html#217">[ subject ]</a>
+              <a href="author.html#217">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+the proposed change in the Application.mk did have no influence on the outcome, unfortunately. Hence, I reverted to the dirty trick of copying the libgnustl-shared.so and libgnustl_static.a to the OSG_LIB directory. That did get rid of the major body of errors, leaving just the following errors:
+
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian at PROMETHEUS</A>:/media/christian/DATA/osgAndroid/org.openscenegraph.android$ ${ANDROID_NDK}/ndk-build
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosgViewer.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosg.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosgDB.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosgUtil.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIosgGA.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= JNIUtils.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= MultiViewNode.cpp
+[armeabi] Compile++ thumb: jniosg-gles1 &lt;= GLES2ShaderGenVisitor.cpp
+[armeabi] SharedLibrary  : libjniosg-gles1.so
+/home/christian/android-install/lib/osgPlugins-3.3.7/libosgdb_serializers_osgparticle.a(RadialShooter.cpp.o):RadialShooter.cpp:function osgParticle::range&lt;float&gt;::get_random() const: error: undefined reference to 'rand'
+/home/christian/android-install/lib/osgPlugins-3.3.7/libosgdb_serializers_osgparticle.a(RadialShooter.cpp.o):RadialShooter.cpp:function osgParticle::RadialShooter::shoot(osgParticle::Particle*) const: error: undefined reference to 'rand'
+/home/christian/android-install/lib/osgPlugins-3.3.7/libosgdb_serializers_osgparticle.a(RandomRateCounter.cpp.o):RandomRateCounter.cpp:function osgParticle::RandomRateCounter::numParticlesToCreate(double) const: error: undefined reference to 'rand'
+/home/christian/android-install/lib/osgPlugins-3.3.7/libosgdb_serializers_osgparticle.a(SectorPlacer.cpp.o):SectorPlacer.cpp:function osgParticle::SectorPlacer::place(osgParticle::Particle*) const: error: undefined reference to 'rand'
+/home/christian/android-install/lib/libosgText.a(Glyph.cpp.o):Glyph.cpp:function osgText::GlyphTexture::apply(osg::State&amp;) const: error: undefined reference to 'glGenerateMipmap'
+/home/christian/android-install/lib/libosgDB.a(FileUtils.cpp.o):FileUtils.cpp:function osgDB::fileType(std::string const&amp;): error: undefined reference to 'stat64'
+/home/christian/android-install/lib/libosgDB.a(FileUtils.cpp.o):FileUtils.cpp:function osgDB::makeDirectory(std::string const&amp;): error: undefined reference to 'stat64'
+/home/christian/android-install/lib/libosgDB.a(FileUtils.cpp.o):FileUtils.cpp:function osgDB::makeDirectory(std::string const&amp;): error: undefined reference to 'stat64'
+/home/christian/android-install/lib/libosg.a(Shader.cpp.o):Shader.cpp:function osg::Shader::PerContextShader::compileShader(osg::State&amp;): error: undefined reference to 'glShaderBinary'
+collect2: error: ld returned 1 exit status
+make: *** [obj/local/armeabi/libjniosg-gles1.so] Error 1
+
+The first part of the errors is related to a missing rand() function. This is quite weird to me cause rand() is a core C function, so that should theoretically compile anywhere and everywhere. No clue why it misses that function.
+Then, there are the two gl-related errors. The mipmap generation, I believe, is part of the glu-library, which is not referred to by the GLES library file (should that function be in the Android build in any case ?). The other one is the glShaderBinary, which could be a GLES1-GLES2 glitch, I assume.
+The third category are the stat64 errors, which are related (I strongly believe) to some missing ifdefs for 32-bit - 64-bit compilation (as only the newest android models and the r10c NDK support 64-bit compile and run).
+
+Any idea how to get rid of these last errors ?
+
+Thank you!
+
+Cheers,
+Christian
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicdb62.php?p=63539#63539">http://forum.openscenegraph.org/viewtopic.php?p=63539#63539</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000216.html">[osg-users] Android osgPlugins
+</A></li>
+	<LI>Next message: <A HREF="000218.html">[osg-users] Android osgPlugins
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#217">[ date ]</a>
+              <a href="thread.html#217">[ thread ]</a>
+              <a href="subject.html#217">[ subject ]</a>
+              <a href="author.html#217">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

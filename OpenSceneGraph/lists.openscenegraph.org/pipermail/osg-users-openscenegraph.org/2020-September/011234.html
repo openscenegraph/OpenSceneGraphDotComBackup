@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How can we have a single VRAM footprint over multiple contexts/windows/views/camera in a multi-thread safe way?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20can%20we%20have%20a%20single%20VRAM%20footprint%20over%0A%20multiple%20contexts/windows/views/camera%20in%20a%20multi-thread%20safe%20way%3F&In-Reply-To=%3Cmailman.17543.1601482743.3539.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011229.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How can we have a single VRAM footprint over multiple contexts/windows/views/camera in a multi-thread safe way?</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20can%20we%20have%20a%20single%20VRAM%20footprint%20over%0A%20multiple%20contexts/windows/views/camera%20in%20a%20multi-thread%20safe%20way%3F&In-Reply-To=%3Cmailman.17543.1601482743.3539.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] How can we have a single VRAM footprint over multiple contexts/windows/views/camera in a multi-thread safe way?">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Wed Sep 30 09:18:48 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011229.html">[osg-users] How can we have a single VRAM footprint over multiple contexts/windows/views/camera in a multi-thread safe way?
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11234">[ date ]</a>
+              <a href="thread.html#11234">[ thread ]</a>
+              <a href="subject.html#11234">[ subject ]</a>
+              <a href="author.html#11234">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Vaillancourt,
+
+The OSG does not provide thread safe sharing of contexts, and OpenGL itself
+doesn't provide it either, so even if we attempted to mutex lock all access
+to GL objects that multi-threaded nature of graphics would step around
+locks we attempted to add.  If you want to share contexts then you'll need
+to use single threading.
+
+With the VSG Vulkan objects are per logical device so you can share objects
+on the same hardware in a more user controlled way, one still has to take
+care because the objects aren't generally safe to read/write to one has to
+use explicit synchronization when managing objects to avoid threading
+collisions.  The VSG and Vulkan have waaay lower CPU overhead so
+multi-threading is actually far less critical for performance,
+paradoxically as Vulkan is so much better at handling threading!
+
+Robert.
+
+On Wed, 30 Sep 2020 at 14:05, OpenSceneGraph Users &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt; wrote:
+
+&gt;<i> Greetings.
+</I>&gt;<i>
+</I>&gt;<i> Using OSG 3.6.3, we have experimented with the 'osgwindows' example,
+</I>&gt;<i> loading a test model and observing the VRAM usage.
+</I>&gt;<i>
+</I>&gt;<i> We saw that having two graphics context, set to each camera of the two
+</I>&gt;<i> windows (as in the example) has twice the VRAM footprint usage compared to
+</I>&gt;<i> using a single graphics context, camera and window.
+</I>&gt;<i>
+</I>&gt;<i> Is there a multi-thread safe way to only have a single VRAM footprint
+</I>&gt;<i> usage, using two graphics contexts/cameras/windows ?
+</I>&gt;<i>
+</I>&gt;<i> We have tried &quot;sharing&quot; the first graphics context to the
+</I>&gt;<i> 'traits-&gt;sharedContext' of the second window.
+</I>&gt;<i>
+</I>&gt;<i> This seems to have given us the the desired effect of single VRAM
+</I>&gt;<i> footprint usage, but any multi-threading model seems to be unstable, not
+</I>&gt;<i> functional.
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> - Vaillancourt
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> You received this message because you are subscribed to the Google Groups
+</I>&gt;<i> &quot;OpenSceneGraph Users&quot; group.
+</I>&gt;<i> To unsubscribe from this group and stop receiving emails from it, send an
+</I>&gt;<i> email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+</I>&gt;<i> To view this discussion on the web visit
+</I>&gt;<i> <A HREF="https://groups.google.com/d/msgid/osg-users/fec92607-7b68-4144-b480-5cd2c071283fo%40googlegroups.com">https://groups.google.com/d/msgid/osg-users/fec92607-7b68-4144-b480-5cd2c071283fo%40googlegroups.com</A>
+</I>&gt;<i> &lt;<A HREF="https://groups.google.com/d/msgid/osg-users/fec92607-7b68-4144-b480-5cd2c071283fo%40googlegroups.com?utm_medium=email&amp;utm_source=footer">https://groups.google.com/d/msgid/osg-users/fec92607-7b68-4144-b480-5cd2c071283fo%40googlegroups.com?utm_medium=email&amp;utm_source=footer</A>&gt;
+</I>&gt;<i> .
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200930/367bbd36/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200930/367bbd36/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011229.html">[osg-users] How can we have a single VRAM footprint over multiple contexts/windows/views/camera in a multi-thread safe way?
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11234">[ date ]</a>
+              <a href="thread.html#11234">[ thread ]</a>
+              <a href="subject.html#11234">[ subject ]</a>
+              <a href="author.html#11234">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

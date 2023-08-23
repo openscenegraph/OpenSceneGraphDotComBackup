@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Loading a SilverLining environment map into an OpenSceneGraph texture
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Loading%20a%20SilverLining%20environment%20map%20into%20an%0A%20OpenSceneGraph%20texture&In-Reply-To=%3C1518626058.m2f.72961%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007720.html">
+   <LINK REL="Next"  HREF="007722.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Loading a SilverLining environment map into an OpenSceneGraph texture</H1>
+<!--htdig_noindex-->
+    <B>Chris Hardy</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Loading%20a%20SilverLining%20environment%20map%20into%20an%0A%20OpenSceneGraph%20texture&In-Reply-To=%3C1518626058.m2f.72961%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Loading a SilverLining environment map into an OpenSceneGraph texture">hardyc02 at gmail.com
+       </A><BR>
+    <I>Wed Feb 14 08:34:18 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007720.html">[osg-users] DatabasePager insights
+</A></li>
+        <LI>Next message (by thread): <A HREF="007722.html">[osg-users] Loading a SilverLining environment map into an OpenSceneGraph texture
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7721">[ date ]</a>
+              <a href="thread.html#7721">[ thread ]</a>
+              <a href="subject.html#7721">[ subject ]</a>
+              <a href="author.html#7721">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+Perhaps this is as much a SilverLining question so I've reached out to Frank Kane, but I am attempting to use SilverLining&#8217;s GetEnvironmentMap to load an HDR cube map into an osg::TextureCubeMap for input into an image based lighting scheme. I can&#8217;t seem to figure out how to do this properly.
+
+I&#8217;ve tried something like the following, based on these old forum posts I&#8217;ve found: 
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2974.php?t=15277&amp;view=next">http://forum.openscenegraph.org/viewtopic.php?t=15277&amp;view=next</A> 
+<A HREF="../../../../forum.openscenegraph.org/viewtopicadba.php?t=12966&amp;view=next">http://forum.openscenegraph.org/viewtopic.php?t=12966&amp;view=next</A> 
+
+
+Code:
+osg::TextureCubeMap* hdrEnvMap = new osg::TextureCubeMap;
+hdrEnvMap-&gt;setTextureSize(width, height);
+hdrEnvMap-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+hdrEnvMap-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+hdrEnvMap-&gt;setWrap(osg::Texture::WRAP_R, osg::Texture::CLAMP_TO_EDGE);
+hdrEnvMap-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+hdrEnvMap-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+hdrEnvMap-&gt;setInternalFormat(GL_RGB16F);
+hdrEnvMap-&gt;setSourceFormat(GL_RGB);
+hdrEnvMap-&gt;setSourceType(GL_FLOAT);
+
+osg::GraphicsContext* graphicsContext = camera-&gt;getGraphicsContext();
+unsigned int cid = graphicsContext-&gt;getState()-&gt;getContextID();
+osg::Texture::TextureObject* obj = hdrEnvMap-&gt;getTextureObject(cid);
+obj-&gt;setAllocated(true);
+
+unsigned int handle = obj-&gt;id();
+void* ptr = &handle;
+atmosphere-&gt;GetEnvironmentMap(ptr, 6);
+
+osg::Texture::TextureObject *textureObject = new osg::Texture::TextureObject(hdrEnvMap, handle, GL_TEXTURE_CUBE_MAP);
+textureObject-&gt;setAllocated();
+hdrEnvMap-&gt;setTextureObject(cid, textureObject);
+osg::State *state = camera-&gt;getGraphicsContext()-&gt;getState();
+
+state-&gt;setActiveTextureUnit(0);
+hdrEnvMap-&gt;apply(*state);
+state-&gt;haveAppliedTextureAttribute(0, hdrEnvMap);
+
+
+
+The environment map seems like it&#8217;s being returned correctly, as GetEnvironmentMap returns true, and I call it elsewhere in my codebase to pass to Triton for reflections, which also works okay. So I think it&#8217;s a matter of not knowing how to initialize the cube map object in OSG properly.
+
+Thanks in advance for any insight.
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2f63.php?p=72961#72961">http://forum.openscenegraph.org/viewtopic.php?p=72961#72961</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007720.html">[osg-users] DatabasePager insights
+</A></li>
+	<LI>Next message (by thread): <A HREF="007722.html">[osg-users] Loading a SilverLining environment map into an OpenSceneGraph texture
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7721">[ date ]</a>
+              <a href="thread.html#7721">[ thread ]</a>
+              <a href="subject.html#7721">[ subject ]</a>
+              <a href="author.html#7721">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

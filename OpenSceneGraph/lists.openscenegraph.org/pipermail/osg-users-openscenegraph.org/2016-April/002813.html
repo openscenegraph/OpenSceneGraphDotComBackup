@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] set proper size to window manager at startup
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20set%20proper%20size%20to%20window%20manager%20at%20startup&In-Reply-To=%3CCAFN7Y%2BWkaBYBcGAKovTh3AW%2BDPWD6iyjD6Z0Uvy-hEor3YwqUQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002812.html">
+   <LINK REL="Next"  HREF="002815.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] set proper size to window manager at startup</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20set%20proper%20size%20to%20window%20manager%20at%20startup&In-Reply-To=%3CCAFN7Y%2BWkaBYBcGAKovTh3AW%2BDPWD6iyjD6Z0Uvy-hEor3YwqUQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] set proper size to window manager at startup">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Apr 18 03:28:45 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002812.html">[osg-users] set proper size to window manager at startup
+</A></li>
+        <LI>Next message: <A HREF="002815.html">[osg-users] set proper size to window manager at startup
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2813">[ date ]</a>
+              <a href="thread.html#2813">[ thread ]</a>
+              <a href="subject.html#2813">[ subject ]</a>
+              <a href="author.html#2813">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Gianni,
+
+It is appropriate for osgGA::EventQueue::setStartClick() to call clear() as
+otherwise the queue would end up with inconsistent time stamps, as existing
+events would have the wrong relative time.
+
+The only alternative to this would be to reset all the event in the queue
+so that their time was reset relative to the previous and new start ticks.
+However, the setStartClick is something done at initialization of the
+viewer, before event handling is meant to kick off, it's not something that
+is meant for after start up.
+
+Personally I think the problem you are seeing is in osgWidget relying upon
+resize events at the start of the application, it really shouldn't rely
+upon this.  I'm not the author though so pinpointing what it should do
+would require sifting through the design and implementation to see a better
+approach.  Unfortunately I don't have the time to do this right now.
+
+Robert.
+
+On 18 April 2016 at 11:19, Gianni Ambrosio &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">g.ambrosio+osg at gmail.com</A>&gt; wrote:
+
+&gt;<i> OK, thanks Robert for the informations.
+</I>&gt;<i> So, just tio summarize the case for Cedric.
+</I>&gt;<i> When a Qt Application starts, most of Qt events (like resize, show,
+</I>&gt;<i> activate, ...) are sent to GLWidget before the OSG code handles them.
+</I>&gt;<i> GLWidget handles those events and queue them into OSG Eventqueue to be
+</I>&gt;<i> processed on the next frame() call. The problem in that the first call of
+</I>&gt;<i> ViewerBase::frame(double) calls
+</I>&gt;<i> setStartTick(osg::Timer::instance()-&gt;getStartTick()) (in realize() method)
+</I>&gt;<i> which clears the queued events. So this causes all events already queues
+</I>&gt;<i> not correctly handled.
+</I>&gt;<i>
+</I>&gt;<i> I found that setStartTick() call is used somewhere in OSG code. I can
+</I>&gt;<i> suggest to call eventQueue.clear() before setStartTick() separatedly when
+</I>&gt;<i> needed instead of calling it directly inside setStartTick() but I'm not
+</I>&gt;<i> aware of the overall OSG code and possible consequences.
+</I>&gt;<i>
+</I>&gt;<i> Hope this helps.
+</I>&gt;<i> Gianni
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic2a14.php?p=66854#66854">http://forum.openscenegraph.org/viewtopic.php?p=66854#66854</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160418/85fb2602/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160418/85fb2602/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002812.html">[osg-users] set proper size to window manager at startup
+</A></li>
+	<LI>Next message: <A HREF="002815.html">[osg-users] set proper size to window manager at startup
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2813">[ date ]</a>
+              <a href="thread.html#2813">[ thread ]</a>
+              <a href="subject.html#2813">[ subject ]</a>
+              <a href="author.html#2813">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

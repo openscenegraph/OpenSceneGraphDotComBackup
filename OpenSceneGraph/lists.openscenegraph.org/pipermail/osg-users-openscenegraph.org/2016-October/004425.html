@@ -1,0 +1,156 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] blending with shader
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20blending%20with%20shader&In-Reply-To=%3C1476111425.m2f.68949%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004379.html">
+   <LINK REL="Next"  HREF="004440.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] blending with shader</H1>
+<!--htdig_noindex-->
+    <B>Gianni Ambrosio</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20blending%20with%20shader&In-Reply-To=%3C1476111425.m2f.68949%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] blending with shader">g.ambrosio+osg at gmail.com
+       </A><BR>
+    <I>Mon Oct 10 07:57:05 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004379.html">[osg-users] blending with shader
+</A></li>
+        <LI>Next message: <A HREF="004440.html">[osg-users] blending with shader
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4425">[ date ]</a>
+              <a href="thread.html#4425">[ thread ]</a>
+              <a href="subject.html#4425">[ subject ]</a>
+              <a href="author.html#4425">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi David,
+I'm not able to use the BlendFunct you posted but it seems I can get something nice with the following (fragment) shader:
+
+char myBlendingProgram[] =
+&quot;uniform float width;\n&quot;
+&quot;uniform float height;\n&quot;
+&quot;uniform sampler2D sceneTexture;\n&quot;
+&quot;uniform sampler2D blendTexture;\n&quot;
+&quot;void main(void) {\n&quot;
+&quot;	vec2 texCoord = vec2(gl_FragCoord.x/width, gl_FragCoord.y/height);\n&quot;
+&quot;	vec4 sceneColor = texture2D(sceneTexture, texCoord);\n&quot;
+&quot;	vec4 blendingColor = texture2D(blendTexture, texCoord);\n&quot;
+&quot;	gl_FragColor = sceneColor * blendingColor;\n&quot;
+&quot;}\n&quot;;
+
+Anyway I have some questions.
+
+In your BlendFunct I don't know how you get the &quot;inout vec4 color&quot; parameter. I guess it's something like &quot;sceneColor&quot; in my shader. But I would like to know the proper way you suggest to get it.
+
+Then,
+just like the osgdistortion example, I have the following OSG node structure:
+
+
+Code:
+root (osg::Group)
++--- renderToTextureCamera (osg::Camera)
+|<i>      +--- (Scene)
+</I>+--- hudCamera(osg::Camera)
+       +--- geode (osg::Geode)
+              +--- geometry (osg::Geometry)
+
+
+
+To the renderToTextureCamera I call:
+camera-&gt;attach(osg::Camera::COLOR_BUFFER, texture);
+
+While I attach the texture to the geometry with the code:
+osg::StateSet* stateset = geometry-&gt;getOrCreateStateSet();
+stateset-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute:: ON);
+stateset-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+And I attach the shader to the Geode node.
+
+Is it correct to attach the shader to the geode?
+
+Anyway, here is the code I use to attach the shader and related uniforms to the geode stateset:
+
+
+Code:
+void OsgPlugin::addShader(osg::Geode* node)
+{
+	osg::StateSet * stateset = node-&gt;getOrCreateStateSet();
+
+	osg::Program * program = new osg::Program;
+	stateset-&gt;setAttribute(program);
+	program-&gt;addShader(new osg::Shader(osg::Shader::FRAGMENT, myBlendingProgram));
+
+	stateset-&gt;addUniform(new osg::Uniform(&quot;width&quot;, (float)1280.0));
+	stateset-&gt;addUniform(new osg::Uniform(&quot;height&quot;, (float)720.0));
+
+	osg::ref_ptr&lt; osg::Image&gt; blendingImage = osgDB::readImageFile(&quot;C:/Users/User/Desktop/temp/blending.png&quot;);
+	osg::Texture2D* texture = new osg::Texture2D(blendingImage.get());
+	texture-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+	texture-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+
+	stateset-&gt;setTextureAttribute(1, texture);
+	stateset-&gt;addUniform(new osg::Uniform(&quot;blendTexture&quot;, 1));
+}
+
+
+
+
+One note: I have to use 1 as first parameter of setTextureAttribute to make my example working (with 0 it didn't work).
+On the other hand I was surprised to have a valid sceneTexture in my shader without setting it on the stateset of the geode nor adding a uniform for it! Can you exaplain me why? I can suppose the TextureAttribute can be inherited from the stateset of the related geometry but I can't understand why the uniform is not needed.
+
+Moreover, the &quot;sceneTexture&quot; variable I get in the shader is not distorted. In fact I used the same code of osgdistortion exampe for the moment where a sort of distortion is implemented on the geometry.
+If I remove the shader I can correctly see the distortion. Can you explain me why please?
+
+I have one more question (problem to solve) but I think that's enough for the moment.
+
+Best regards,
+Gianni
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic3b69.php?p=68949#68949">http://forum.openscenegraph.org/viewtopic.php?p=68949#68949</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004379.html">[osg-users] blending with shader
+</A></li>
+	<LI>Next message: <A HREF="004440.html">[osg-users] blending with shader
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4425">[ date ]</a>
+              <a href="thread.html#4425">[ thread ]</a>
+              <a href="subject.html#4425">[ subject ]</a>
+              <a href="author.html#4425">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

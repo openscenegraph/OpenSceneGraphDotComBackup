@@ -1,0 +1,171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] a question on extension functions convention
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20a%20question%20on%20extension%20functions%20convention&In-Reply-To=%3CCAFVQEu0L-CNBudGNuYQDzyRdKS1ZLKnm3XV0_9vYpjWoGsY1KQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="276259.html">
+   <LINK REL="Next"  HREF="276260.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] a question on extension functions convention</H1>
+<!--htdig_noindex-->
+    <B>Sergey Kurdakov</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20a%20question%20on%20extension%20functions%20convention&In-Reply-To=%3CCAFVQEu0L-CNBudGNuYQDzyRdKS1ZLKnm3XV0_9vYpjWoGsY1KQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] a question on extension functions convention">sergey.forum at gmail.com
+       </A><BR>
+    <I>Fri Apr 10 14:32:37 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="276259.html">[osg-users]  a question on extension functions convention
+</A></li>
+        <LI>Next message: <A HREF="276260.html">[osg-users] Master compilation error with MinGW / C++11
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#39">[ date ]</a>
+              <a href="thread.html#39">[ thread ]</a>
+              <a href="subject.html#39">[ subject ]</a>
+              <a href="author.html#39">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+after I wrote previous email I dug more into current emscripten way to
+convert gl calls.
+
+It looks like it is now possible to build working code with current osg
+naming scheme for extensions ( unfortunately emscripten documentation on
+these issues is  scarce, so I missed this possibility it in my previous
+porting attempts).
+
+Now I will make another round to convert osg with new approach and see if
+it actually works for osg.
+
+Thus disregard my first request.
+Thanks for your time.
+
+Regards
+Sergey
+
+On Fri, Apr 10, 2015 at 6:25 PM, Sergey Kurdakov &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">sergey.forum at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> you might notice, that I try to make a port of osg to emscripten
+</I>&gt;<i>
+</I>&gt;<i> Overall osg 'for  the web'  works, but I found several issues with
+</I>&gt;<i> emscripten which require me to keep
+</I>&gt;<i> quite a different copy of osg
+</I>&gt;<i>
+</I>&gt;<i> The main issue are  extensions.
+</I>&gt;<i>
+</I>&gt;<i> The problem arises from how emscripten translates OpenGL to WebGL calls.
+</I>&gt;<i>
+</I>&gt;<i> it takes
+</I>&gt;<i>
+</I>&gt;<i> gl* functions in C code and directly substitutes them  with webgl gl*
+</I>&gt;<i> functions.
+</I>&gt;<i>
+</I>&gt;<i> Now it is clear what the problem is : that emscripten compiler does not
+</I>&gt;<i> understand extension functions which are set in the way
+</I>&gt;<i>
+</I>&gt;<i> setGLExtensionFuncPtr(_gl*
+</I>&gt;<i>
+</I>&gt;<i> let's take an example:
+</I>&gt;<i>
+</I>&gt;<i> void Texture2DArray::Extensions::glTexSubImage3D( GLenum target, GLint
+</I>&gt;<i> level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei
+</I>&gt;<i> height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels)
+</I>&gt;<i> const
+</I>&gt;<i> {
+</I>&gt;<i>     if (_glTexSubImage3D)
+</I>&gt;<i>     {
+</I>&gt;<i>         _glTexSubImage3D( target, level, xoffset, yoffset, zoffset, width,
+</I>&gt;<i> height, depth, format, type, pixels);
+</I>&gt;<i>     }
+</I>&gt;<i>     else
+</I>&gt;<i>     {
+</I>&gt;<i>         OSG_WARN&lt;&lt;&quot;Error: glTexSubImage3D not supported by OpenGL
+</I>&gt;<i> driver&quot;&lt;&lt;std::endl;
+</I>&gt;<i>     }
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> _glTexSubImage3D function won't be translated ,
+</I>&gt;<i>
+</I>&gt;<i> There are different ways to keep emscripten happy and use that
+</I>&gt;<i> glTexSubImage3D and I have forced it.
+</I>&gt;<i> But the ways how i did so far - looks patchy and inconsistent ( lots of
+</I>&gt;<i> '#ifdef's where calls to extensions occur )
+</I>&gt;<i>
+</I>&gt;<i> And I would like to have an osg port which is minimally different from
+</I>&gt;<i> stock osg ( just ifdef ed threading functions - there are no threads in
+</I>&gt;<i> browser and there will not be any similar threading functions to one used
+</I>&gt;<i> in osg for foreseeable future ).
+</I>&gt;<i>
+</I>&gt;<i> the  solution which will satisfy emscripten with least invasive way seems
+</I>&gt;<i> to have
+</I>&gt;<i>
+</I>&gt;<i> Extensions::_gl
+</I>&gt;<i>
+</I>&gt;<i> functions everywhere and also
+</I>&gt;<i>
+</I>&gt;<i> setGLExtensionFuncPtr(gl*  //no _ before gl
+</I>&gt;<i>
+</I>&gt;<i> approach to set extensions.
+</I>&gt;<i>
+</I>&gt;<i> and for setGLExtensionFuncPtr - for emscripten there will be a special
+</I>&gt;<i> function to deal with what gl functions WebGL has and what not.
+</I>&gt;<i>
+</I>&gt;<i> of cause I understand - such a change might break quite a bit of user code
+</I>&gt;<i> in case I develop a patch for osg which follows  such convention
+</I>&gt;<i>
+</I>&gt;<i> I have several other ways to deal - to write a special emscripten module
+</I>&gt;<i> which will be clever enough to use both gl and _gl functions during
+</I>&gt;<i> translation phase, but then - it is hardly possible that it will be
+</I>&gt;<i> accepted to emscripten as it will be needed only for my port and any user
+</I>&gt;<i> will need to hack emscripten to compile osg for web.
+</I>&gt;<i>
+</I>&gt;<i> so my question is - how feasible is to ask for _gl gl convention swap for
+</I>&gt;<i> extention _gl* functions and their Extensions::gl* wrappers?
+</I>&gt;<i>
+</I>&gt;<i> Best regards
+</I>&gt;<i> Sergey
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150411/44a6d997/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150411/44a6d997/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="276259.html">[osg-users]  a question on extension functions convention
+</A></li>
+	<LI>Next message: <A HREF="276260.html">[osg-users] Master compilation error with MinGW / C++11
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#39">[ date ]</a>
+              <a href="thread.html#39">[ thread ]</a>
+              <a href="subject.html#39">[ subject ]</a>
+              <a href="author.html#39">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

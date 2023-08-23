@@ -1,0 +1,273 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How does shadow technic work if geometry shaders are in use
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20does%20shadow%20technic%20work%20if%20geometry%20shaders%0A%20are%20in%20use&In-Reply-To=%3CCAO-%2BzimSfG8MfpTEs_FyaPveu%2B20jh5fx%3DOoO%2B-QSMe88v42NA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="276769.html">
+   <LINK REL="Next"  HREF="000552.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How does shadow technic work if geometry shaders are in use</H1>
+<!--htdig_noindex-->
+    <B>Trajce Nikolov NICK</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20does%20shadow%20technic%20work%20if%20geometry%20shaders%0A%20are%20in%20use&In-Reply-To=%3CCAO-%2BzimSfG8MfpTEs_FyaPveu%2B20jh5fx%3DOoO%2B-QSMe88v42NA%40mail.gmail.com%3E"
+       TITLE="[osg-users] How does shadow technic work if geometry shaders are in use">trajce.nikolov.nick at gmail.com
+       </A><BR>
+    <I>Mon Jun  8 05:38:12 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="276769.html">[osg-users] How does shadow technic work if geometry shaders are in use
+</A></li>
+        <LI>Next message: <A HREF="000552.html">[osg-users] How does shadow technic work if geometry shaders are in use
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#547">[ date ]</a>
+              <a href="thread.html#547">[ thread ]</a>
+              <a href="subject.html#547">[ subject ]</a>
+              <a href="author.html#547">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Werner,
+
+I am not the author of the LISPSM technique (Wojtek Lewandowski is), but if
+it all works for GL2 (which I use too) I expect it is something with the
+GL3 support.
+
+And yes, the shadow technique has it's own shaders you can replace too
+(what I am doing for my project). Have a look at StandardShadowMap
+interface.
+
+Otherwise the code looks good, it is what I am doing it too. Again, if it
+works for GL2 and not for GL3 then it might be GL3 specific. Can you see
+any shadows with GL3 without using your shaders for the objectSwitch?
+
+On Mon, Jun 8, 2015 at 2:20 PM, Werner Modenbach &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Werner.Modenbach at texion.eu</A>
+&gt;<i> wrote:
+</I>
+&gt;<i>  Sorry, was on a business trip for a while.
+</I>&gt;<i> Here is my code (shortened a little):
+</I>&gt;<i>
+</I>&gt;<i>  osg::Group *rootNode = new osg::Group();
+</I>&gt;<i> view-&gt;setSceneData(rootNode);
+</I>&gt;<i>
+</I>&gt;<i> shadowedScene = new osgShadow::ShadowedScene;
+</I>&gt;<i> shadowedScene-&gt;setReceivesShadowTraversalMask(ReceivesShadowTraversalMask
+</I>&gt;<i> );
+</I>&gt;<i> shadowedScene-&gt;setCastsShadowTraversalMask(CastsShadowTraversalMask);
+</I>&gt;<i> rootNode-&gt;addChild(shadowedScene.get());
+</I>&gt;<i>
+</I>&gt;<i>  objectSwitch = new osg::Switch;
+</I>&gt;<i> shadowedScene-&gt;addChild(objectSwitch);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>  lightSource = new osg::LightSource;
+</I>&gt;<i> lightSource-&gt;setLight(myLight);
+</I>&gt;<i>  lightSource-&gt;setReferenceFrame(osg::LightSource::ABSOLUTE_RF);
+</I>&gt;<i>  lightSource-&gt;setLocalStateSetModes(osg::StateAttribute::ON);
+</I>&gt;<i>  shadowedScene-&gt;addChild(lightSource.get());
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>  osg::StateSet * stateset = objectSwitch -&gt;getOrCreateStateSet();
+</I>&gt;<i>
+</I>&gt;<i> // setting uniforms etc. here
+</I>&gt;<i>
+</I>&gt;<i> osg::Program * program = new osg::Program();
+</I>&gt;<i> stateset-&gt;setAttribute( program );
+</I>&gt;<i>
+</I>&gt;<i> program-&gt;addShader(Cl_ShaderGen::getShader(osg::Shader::VERTEX,
+</I>&gt;<i> forceGL3Mode, ...)); program-&gt;addShader(Cl_ShaderGen::getShader(osg::
+</I>&gt;<i> Shader::GEOMETRY, forceGL3Mode, ...)); program-&gt;addShader(Cl_ShaderGen::
+</I>&gt;<i> getShader(osg::Shader::FRAGMENT, forceGL3Mode, ...));
+</I>&gt;<i>  view-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getState()-&gt;
+</I>&gt;<i> setUseModelViewAndProjectionUniforms(forceGL3Mode);
+</I>&gt;<i> view-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getState()-&gt;
+</I>&gt;<i> setUseVertexAttributeAliasing(forceGL3Mode);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> If I use GL2 mode everything works like expected.
+</I>&gt;<i> In GL3 mode without shadow technique everything works fine (using geometry
+</I>&gt;<i> shader)
+</I>&gt;<i> In GL3 mode assigning a shadow technique doesn't change anything i.e. no
+</I>&gt;<i> shadow appears.
+</I>&gt;<i> If I assign the schaders to the state set of shadowedScene in GL3 mode
+</I>&gt;<i> without shadow technique
+</I>&gt;<i> everything appears the normal way but when assigning a shadow technique
+</I>&gt;<i> geometry shaders
+</I>&gt;<i> don't do their work any more.
+</I>&gt;<i> So my guess is that shadow technique just replaces the shaders.
+</I>&gt;<i>
+</I>&gt;<i> Is my approach wrong? Do I do something in a non standard way?
+</I>&gt;<i>
+</I>&gt;<i> Many thanks for hints and help.
+</I>&gt;<i>
+</I>&gt;<i> - Werner -
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Am 29.05.2015 um 18:53 schrieb Trajce Nikolov NICK:
+</I>&gt;<i>
+</I>&gt;<i> Hard to say without seeing your code .... I have modified shaders for the
+</I>&gt;<i> LSPSM. Can you share a sample app ?
+</I>&gt;<i>
+</I>&gt;<i> On Fri, May 29, 2015 at 6:38 PM, Werner Modenbach &lt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Werner.Modenbach at texion.eu</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i>  Hi Nick,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I'm using LightSpacePerspective  shadow technique as well.
+</I>&gt;&gt;<i> But I set the shaders only inside the scene graph where reqired.
+</I>&gt;&gt;<i> Do I have to set them anywhere else?
+</I>&gt;&gt;<i> My graph looks like that:
+</I>&gt;&gt;<i>  * ---------------
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                              | RootNode    |
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                              ---------------
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                               /            \
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                        ---------------    ---------------------
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                        | ShadowScene |    |evtl. PPU-Prozessor|
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                        ---------------    ---------------------
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                        /             \
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                ---------------     ---------------
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                |  Switchnode |     | LightSource |
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   *                                ---------------     ---------------  *                                 /          \\\
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Am 29.05.2015 um 18:16 schrieb Trajce Nikolov NICK:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi Werner,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>  I am doing the same and using the LightSpacePerspective shadow
+</I>&gt;&gt;<i> techinque. In your program you have to set your vertex and fragment shaders
+</I>&gt;&gt;<i> as well, and it will be picked up correctly if you set the masks for
+</I>&gt;&gt;<i> receiving/cast shadows .... So it should work. As long as they are part of
+</I>&gt;&gt;<i> the top ShadowedScene
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>  Nick
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>  Nick
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On Fri, May 29, 2015 at 5:56 PM, Werner Modenbach &lt;
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Werner.Modenbach at texion.eu</A>&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>  Hi all,
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> My scene contains many objects, which are created by geometry shaders.
+</I>&gt;&gt;&gt;<i> So no vertices are created outside the graphics card for those objects.
+</I>&gt;&gt;&gt;<i> So I use
+</I>&gt;&gt;&gt;<i>     state-&gt;setUseVertexAttributeAliasing(true)
+</I>&gt;&gt;&gt;<i> and
+</I>&gt;&gt;&gt;<i>     state-&gt;setUseModelViewAndProjectionUniforms(true)
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Is it possible using a shadow technique in this case? If I'm right the
+</I>&gt;&gt;&gt;<i> shadow technique installs it's own shaders.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Thanks for any hint.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> - Werner -
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>  --
+</I>&gt;&gt;<i> trajce nikolov nick
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">listosg-users at lists.openscenegraph.orghttp</A>://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   --
+</I>&gt;&gt;<i> *TEXION Software Solutions, Rotter Bruch 26a, D-52068 Aachen*
+</I>&gt;&gt;<i> Phone: +49 241 475757-0
+</I>&gt;&gt;<i> Fax: +49 241 475757-29 &lt;%2B49%20241%20475757-29&gt;
+</I>&gt;&gt;<i> Web: <A HREF="http://texion.eu/">http://texion.eu</A>
+</I>&gt;&gt;<i> eMail: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">info at texion.eu</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>  --
+</I>&gt;<i> trajce nikolov nick
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">listosg-users at lists.openscenegraph.orghttp</A>://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> *TEXION Software Solutions, Rotter Bruch 26a, D-52068 Aachen*
+</I>&gt;<i> Phone: +49 241 475757-0
+</I>&gt;<i> Fax: +49 241 475757-29
+</I>&gt;<i> Web: <A HREF="http://texion.eu/">http://texion.eu</A>
+</I>&gt;<i> eMail: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">info at texion.eu</A>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>
+
+-- 
+trajce nikolov nick
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150608/d5e1610c/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150608/d5e1610c/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="276769.html">[osg-users] How does shadow technic work if geometry shaders are in use
+</A></li>
+	<LI>Next message: <A HREF="000552.html">[osg-users] How does shadow technic work if geometry shaders are in use
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#547">[ date ]</a>
+              <a href="thread.html#547">[ thread ]</a>
+              <a href="subject.html#547">[ subject ]</a>
+              <a href="author.html#547">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

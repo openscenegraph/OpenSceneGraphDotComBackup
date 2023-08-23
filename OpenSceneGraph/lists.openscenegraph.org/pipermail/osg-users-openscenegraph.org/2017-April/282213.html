@@ -1,0 +1,257 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [3rdparty] OSG + Qt on Android
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5B3rdparty%5D%20OSG%20%2B%20Qt%20on%20Android&In-Reply-To=%3CA34F6C4CE892ED439B9E2367B3842D917290E8BD%40MVE-EX-VM-01.MVE.rf%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="282212.html">
+   <LINK REL="Next"  HREF="005991.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [3rdparty] OSG + Qt on Android</H1>
+<!--htdig_noindex-->
+    <B>Alistair Baxter</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5B3rdparty%5D%20OSG%20%2B%20Qt%20on%20Android&In-Reply-To=%3CA34F6C4CE892ED439B9E2367B3842D917290E8BD%40MVE-EX-VM-01.MVE.rf%3E"
+       TITLE="[osg-users] [3rdparty] OSG + Qt on Android">alistair at mve.com
+       </A><BR>
+    <I>Mon Apr  3 01:24:57 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="282212.html">[osg-users] Help with osgVolume
+</A></li>
+        <LI>Next message: <A HREF="005991.html">[osg-users] [3rdparty] OSG + Qt on Android
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282213">[ date ]</a>
+              <a href="thread.html#282213">[ thread ]</a>
+              <a href="subject.html#282213">[ subject ]</a>
+              <a href="author.html#282213">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>When I had to make an app integrate osg and Qt on Android (and other portable platforms) , I based it off the osg / Qt Quick example here:
+
+<A HREF="https://forum.qt.io/topic/30707/demo-integrating-openscenegraph-with-qt-quick">https://forum.qt.io/topic/30707/demo-integrating-openscenegraph-with-qt-quick</A>
+
+Since then, other osg / Qt quick examples have been put forward, if you search the mailing list archives.
+
+Qt widgets isn't really intended to work well with mobile platforms, and that's what the old osgQt library is based on.
+
+
+-----Original Message-----
+From: osg-users [mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] On Behalf Of Coach Treazy
+Sent: 31 March 2017 23:45
+To: <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+Subject: [osg-users] [3rdparty] OSG + Qt on Android
+
+All,
+
+I'm trying to run an open scene graph+qt example on my Samsung Galaxy S2 tablet. I'm using Qt 5.8, OpenSceneGraph 3.5.6, Android NDK-r13b and Android 6.0 (API Level 23). FYI - I compiled open scene graph on Android and did not download binaries.
+
+I cannot even get the open scene graph examples to work. Code compiles fine but when I deploy it on my tablet all I see is a blue screen. I have seen this question posted on the forums before but I do not think it has been solved. This is my first post and therefore I cannot post URL links to the previous answers but you can search for the title &quot;OSG with Qt on Android fails to render anything&quot; on the forums
+
+I have posted my example code below and any help will be appreciated.
+
+
+Code:
+#include &quot;QTimer&quot;
+#include &quot;QApplication&quot;
+#include &quot;QGridLayout&quot;
+
+#include &quot;osgViewer/CompositeViewer&quot;
+#include &quot;osgViewer/ViewerEventHandlers&quot;
+#include &quot;osg/PositionAttitudeTransform&quot;
+#include &quot;osgGA/MultiTouchTrackballManipulator&quot;
+#include &quot;osg/ShapeDrawable&quot;
+#include &quot;osgDB/ReadFile&quot;
+#include &quot;osgQt/GraphicsWindowQt&quot;
+
+#include &quot;iostream&quot;
+
+class ViewerWidget : public QWidget, public osgViewer::CompositeViewer {
+public:
+ViewerWidget(QWidget* parent = 0, Qt::WindowFlags f = 0, osgViewer::ViewerBase::ThreadingModel threadingModel=osgViewer::CompositeViewer::SingleThreaded) : QWidget(parent, f) { setThreadingModel(threadingModel);
+
+// disable the default setting of viewer.done() by pressing Escape.
+setKeyEventSetsDone(0);
+
+const double r_earth = 6378.137;
+const double r_sun = 695990.0;
+const double AU = 149697900.0;
+
+// Create the Earth, in blue
+osg::ShapeDrawable *earth_sd = new osg::ShapeDrawable;
+osg::Sphere* earth_sphere = new osg::Sphere; earth_sphere-&quot;setName(&quot;EarthSphere&quot;);
+earth_sphere-&quot;setRadius(r_earth);
+earth_sd-&quot;setShape(earth_sphere);
+earth_sd-&quot;setColor(osg::Vec4(0, 0, 1.0, 1.0));
+
+osg::Geode* earth_geode = new osg::Geode; earth_geode-&quot;setName(&quot;EarthGeode&quot;);
+earth_geode-&quot;addDrawable(earth_sd);
+
+// Create the Sun, in yellow
+osg::ShapeDrawable *sun_sd = new osg::ShapeDrawable;
+osg::Sphere* sun_sphere = new osg::Sphere; sun_sphere-&quot;setName(&quot;SunSphere&quot;); sun_sphere-&quot;setRadius(r_sun); sun_sd-&quot;setShape(sun_sphere); sun_sd-&quot;setColor(osg::Vec4(1.0, 0.0, 0.0, 1.0));
+
+osg::Geode* sun_geode = new osg::Geode;
+sun_geode-&quot;setName(&quot;SunGeode&quot;);
+sun_geode-&quot;addDrawable(sun_sd);
+
+// Move the sun behind the earth
+osg::PositionAttitudeTransform *pat = new osg::PositionAttitudeTransform; pat-&quot;setPosition(osg::Vec3d(0.0, AU, 0.0)); pat-&quot;addChild(sun_geode);
+
+osg::Geometry * unitCircle = new osg::Geometry(); {
+	osg::Vec4Array * colours = new osg::Vec4Array(1);
+	(*colours)[0] = osg::Vec4d(1.0,1.0,1.0,1.0);
+	unitCircle-&quot;setColorArray(colours, osg::Array::BIND_OVERALL);
+	const unsigned int n_points = 1024;
+	osg::Vec3Array * coords = new osg::Vec3Array(n_points);
+	const double dx = 2.0*osg::PI/n_points;
+	double s,c;
+	for (unsigned int j=0; j&quot;n_points; ++j) {
+		s = sin(dx*j);
+		c = cos(dx*j);
+		(*coords)[j].set(osg::Vec3d(c,s,0.0));
+	}
+	unitCircle-&quot;setVertexArray(coords);
+	unitCircle-&quot;getOrCreateStateSet()-&quot;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+	unitCircle-&quot;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP,0,n_points));
+}
+
+osg::Geometry *axes = new osg::Geometry; {
+	osg::Vec4Array *colours = new osg::Vec4Array(1);
+	(*colours)[0] = osg::Vec4d(1.0,0.0,0.0,1.0);
+	axes-&quot;setColorArray(colours, osg::Array::BIND_OVERALL);
+	osg::Vec3Array *coords = new osg::Vec3Array(6);
+	(*coords)[0].set(osg::Vec3d(0.0, 0.0, 0.0));
+	(*coords)[1].set(osg::Vec3d(0.5, 0.0, 0.0));
+	(*coords)[2].set(osg::Vec3d(0.0, 0.0, 0.0));
+	(*coords)[3].set(osg::Vec3d(0.0, 0.5, 0.0));
+	(*coords)[4].set(osg::Vec3d(0.0, 0.0, 0.0));
+	(*coords)[5].set(osg::Vec3d(0.0, 0.0, 0.5));
+	axes-&quot;setVertexArray(coords);
+	axes-&quot;getOrCreateStateSet()-&quot;setMode(GL_LIGHTING,osg::StateAttribute::OFF);
+	axes-&quot;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES,0,6));
+}
+
+// Earth orbit
+osg::Geode * earthOrbitGeode = new osg::Geode; earthOrbitGeode-&quot;addDrawable(unitCircle);
+earthOrbitGeode-&quot;addDrawable(axes);
+earthOrbitGeode-&quot;setName(&quot;EarthOrbitGeode&quot;);
+
+osg::PositionAttitudeTransform * earthOrbitPAT = new osg::PositionAttitudeTransform; earthOrbitPAT-&quot;setScale(osg::Vec3d(AU,AU,AU));
+earthOrbitPAT-&quot;setPosition(osg::Vec3d(0.0, AU, 0.0)); earthOrbitPAT-&quot;addChild(earthOrbitGeode);
+earthOrbitPAT-&quot;setName(&quot;EarthOrbitPAT&quot;);
+
+osg::Group* scene = new osg::Group;
+scene-&quot;setName(&quot;SceneGroup&quot;);
+scene-&quot;addChild(earth_geode);
+scene-&quot;addChild(pat);
+scene-&quot;addChild(earthOrbitPAT);
+
+QWidget* widget1 = addViewWidget(createGraphicsWindow(0,0,100,100),scene);
+
+QGridLayout* grid = new QGridLayout;
+grid-&quot;addWidget( widget1, 0, 0 );
+setLayout( grid );
+
+connect( &amp;_timer, SIGNAL(timeout()), this, SLOT(update()) ); _timer.start( 10 ); }
+
+QWidget* addViewWidget( osgQt::GraphicsWindowQt* gw, osg::ref_ptr&quot;osg::Node&quot; scene ) {
+osgViewer::View* view = new osgViewer::View; addView( view );
+
+osg::Camera* camera = view-&quot;getCamera(); camera-&quot;setGraphicsContext( gw );
+
+const osg::GraphicsContext::Traits* traits = gw-&quot;getTraits();
+
+//camera-&quot;setClearColor( osg::Vec4(1.0, 0.0, 0.0, 0.0) ); camera-&quot;setViewport( new osg::Viewport(0, 0, traits-&quot;width, traits-&quot;height) ); camera-&quot;setProjectionMatrixAsPerspective(30.0f, static_cast&quot;double&quot;(traits-&quot;width)/static_cast&quot;double&quot;(traits-&quot;height), 1.0f, 10000.0f );
+
+view-&quot;setSceneData( scene.get() );
+view-&quot;addEventHandler( new osgViewer::StatsHandler ); view-&quot;setCameraManipulator( new osgGA::MultiTouchTrackballManipulator ); gw-&quot;setTouchEventsEnabled( true ); return gw-&quot;getGLWidget(); }
+
+osgQt::GraphicsWindowQt* createGraphicsWindow( int x, int y, int w, int h, const std::string&amp; name=&quot;Planets&quot;, bool windowDecoration=false ) {
+osg::DisplaySettings* ds = osg::DisplaySettings::instance().get();
+osg::ref_ptr&quot;osg::GraphicsContext::Traits&quot; traits = new osg::GraphicsContext::Traits; traits-&quot;windowName = name; traits-&quot;windowDecoration = windowDecoration; traits-&quot;x = x; traits-&quot;y = y; traits-&quot;width = w; traits-&quot;height = h; traits-&quot;doubleBuffer = true; traits-&quot;alpha = ds-&quot;getMinimumNumAlphaBits(); traits-&quot;stencil = ds-&quot;getMinimumNumStencilBits(); traits-&quot;sampleBuffers = ds-&quot;getMultiSamples(); traits-&quot;samples = ds-&quot;getNumMultiSamples();
+
+return new osgQt::GraphicsWindowQt(traits.get());
+}
+
+virtual void paintEvent( QPaintEvent* /*event*/ ) { frame(); }
+
+protected:
+
+QTimer _timer;
+};
+
+int main( int argc, char** argv )
+{
+osg::ArgumentParser arguments(&amp;argc, argv);
+
+#if QT_VERSION &quot;= 0x050000
+// Qt5 is currently crashing and reporting &quot;Cannot make QOpenGLContext current in a different thread&quot; when the viewer is run multi-threaded, this is regression from Qt4 osgViewer::ViewerBase::ThreadingModel threadingModel = osgViewer::ViewerBase::SingleThreaded;
+#else
+osgViewer::ViewerBase::ThreadingModel threadingModel = osgViewer::ViewerBase::CullDrawThreadPerContext;
+#endif
+
+while (arguments.read(&quot;--SingleThreaded&quot;)) threadingModel = osgViewer::ViewerBase::SingleThreaded;
+while (arguments.read(&quot;--CullDrawThreadPerContext&quot;)) threadingModel = osgViewer::ViewerBase::CullDrawThreadPerContext;
+while (arguments.read(&quot;--DrawThreadPerContext&quot;)) threadingModel = osgViewer::ViewerBase::DrawThreadPerContext;
+while (arguments.read(&quot;--CullThreadPerCameraDrawThreadPerContext&quot;)) threadingModel = osgViewer::ViewerBase::CullThreadPerCameraDrawThreadPerContext;
+
+#if QT_VERSION &quot;= 0x040800
+// Required for multithreaded QGLWidget on Linux/X11, see <A HREF="http://blog.qt.io/blog/2011/06/03/threaded-opengl-in-4-8/">http://blog.qt.io/blog/2011/06/03/threaded-opengl-in-4-8/</A>
+if (threadingModel != osgViewer::ViewerBase::SingleThreaded)
+QApplication::setAttribute(Qt::AA_X11InitThreads);
+#endif
+
+QApplication app(argc, argv);
+ViewerWidget* viewWidget = new ViewerWidget(0, Qt::Widget, threadingModel); viewWidget-&quot;realize(); viewWidget-&quot;setGeometry( 100, 100, 800, 600 ); viewWidget-&quot;show(); return app.exec(); }
+
+[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicc400.php?p=70630#70630">http://forum.openscenegraph.org/viewtopic.php?p=70630#70630</A>
+
+
+
+
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="282212.html">[osg-users] Help with osgVolume
+</A></li>
+	<LI>Next message: <A HREF="005991.html">[osg-users] [3rdparty] OSG + Qt on Android
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282213">[ date ]</a>
+              <a href="thread.html#282213">[ thread ]</a>
+              <a href="subject.html#282213">[ subject ]</a>
+              <a href="author.html#282213">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

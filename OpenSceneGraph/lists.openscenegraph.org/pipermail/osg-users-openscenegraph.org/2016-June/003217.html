@@ -1,0 +1,184 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] PagedLOD and page in/out detection
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20PagedLOD%20and%20page%20in/out%20detection&In-Reply-To=%3CCAFN7Y%2BXbKgxpj-Hk8gHEyrwSDNKGuPZods%3DA0CDZ5K_K90FNWg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003216.html">
+   <LINK REL="Next"  HREF="003218.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] PagedLOD and page in/out detection</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20PagedLOD%20and%20page%20in/out%20detection&In-Reply-To=%3CCAFN7Y%2BXbKgxpj-Hk8gHEyrwSDNKGuPZods%3DA0CDZ5K_K90FNWg%40mail.gmail.com%3E"
+       TITLE="[osg-users] PagedLOD and page in/out detection">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Jun  3 10:51:18 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003216.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+        <LI>Next message: <A HREF="003218.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3217">[ date ]</a>
+              <a href="thread.html#3217">[ thread ]</a>
+              <a href="subject.html#3217">[ subject ]</a>
+              <a href="author.html#3217">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Nick,
+
+It's *really* inefficient to use an update callback to do this type of
+task, I can not recommend going this path, it's waste of both our time
+trying to coax it to do something useful.
+
+The right way of doing it is by overriding the
+DatabasePager::updateSceneGraph() method or implementing you own
+equivalent method in the Viewer::updateTraversak() in place of current
+calls to updateceneSceneGraph().
+
+Robert.
+
+On 3 June 2016 at 18:28, Trajce Nikolov NICK
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> this is my update callback .. And I know for sure it was working. I just did
+</I>&gt;<i> a clean app (modified osgviewer with only this callback installed in the
+</I>&gt;<i> root PagedLODs) and I never see a Paged Out tile ... I am limited to not
+</I>&gt;<i> having the possibility to make a custom DatabasePager or it will go really
+</I>&gt;<i> complicated. The root PagedLOD can have only one or zero children (that is
+</I>&gt;<i> the test database I am testing it against)
+</I>&gt;<i>
+</I>&gt;<i> struct UpdateCallback : public osg::NodeCallback
+</I>&gt;<i> {
+</I>&gt;<i> UpdateCallback()
+</I>&gt;<i> : _numChildren(0)
+</I>&gt;<i> {
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i> virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+</I>&gt;<i> {
+</I>&gt;<i> osg::PagedLOD* plod = dynamic_cast&lt;osg::PagedLOD*&gt;(node);
+</I>&gt;<i> if (plod)
+</I>&gt;<i> {
+</I>&gt;<i> if (plod-&gt;getNumChildren() != _numChildren)
+</I>&gt;<i> {
+</I>&gt;<i> _numChildren = plod-&gt;getNumChildren();
+</I>&gt;<i>
+</I>&gt;<i> if (_numChildren)
+</I>&gt;<i> std::cout &lt;&lt; &quot;Paged in&quot; &lt;&lt; std::endl;
+</I>&gt;<i> else
+</I>&gt;<i> std::cout &lt;&lt; &quot;Paged out&quot; &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i> }
+</I>&gt;<i> traverse(node, nv);
+</I>&gt;<i> }
+</I>&gt;<i> protected:
+</I>&gt;<i> int _numChildren;
+</I>&gt;<i> };
+</I>&gt;<i>
+</I>&gt;<i> On Fri, Jun 3, 2016 at 6:49 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Hi Nick,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> There isn't a feature directly built into osg::PageLOD or
+</I>&gt;&gt;<i> DatabasePager for this.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> What you could do is look at the  creating a custom DatabasePager that
+</I>&gt;&gt;<i> overrides the following method:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>        /** Merge the changes to the scene graph by calling calling
+</I>&gt;&gt;<i> removeExpiredSubgraphs then addLoadedDataToSceneGraph.
+</I>&gt;&gt;<i>           * Note, must only be called from single thread update phase. */
+</I>&gt;&gt;<i>         virtual void updateSceneGraph(const osg::FrameStamp&amp; frameStamp);
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Within this you could add your own tracking of when things are merge or
+</I>&gt;&gt;<i> removed.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On 3 June 2016 at 17:15, Trajce Nikolov NICK
+</I>&gt;&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+</I>&gt;&gt;<i> &gt; Hi Community,
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; I was looking for a way to detect when PagedLOD gets its children paged
+</I>&gt;&gt;<i> &gt; in/out. So I installed an update callback and based on a difference in
+</I>&gt;&gt;<i> &gt; the
+</I>&gt;&gt;<i> &gt; children number I was able to know when such change occurred. And this
+</I>&gt;&gt;<i> &gt; was
+</I>&gt;&gt;<i> &gt; working with a code an year ago.
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Now it doesn't .. Any clue or hint how to detect such changes?
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Thanks a bunch as always!
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; Cheers,
+</I>&gt;&gt;<i> &gt; Nick
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; --
+</I>&gt;&gt;<i> &gt; trajce nikolov nick
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; _______________________________________________
+</I>&gt;&gt;<i> &gt; osg-users mailing list
+</I>&gt;&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i> &gt;
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> trajce nikolov nick
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003216.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+	<LI>Next message: <A HREF="003218.html">[osg-users] PagedLOD and page in/out detection
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3217">[ date ]</a>
+              <a href="thread.html#3217">[ thread ]</a>
+              <a href="subject.html#3217">[ subject ]</a>
+              <a href="author.html#3217">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,286 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Glowing Sphere Effect
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Glowing%20Sphere%20Effect&In-Reply-To=%3C564EE797.5080008%40gmx.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002022.html">
+   <LINK REL="Next"  HREF="278298.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Glowing Sphere Effect</H1>
+<!--htdig_noindex-->
+    <B>Sebastian Messerschmidt</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Glowing%20Sphere%20Effect&In-Reply-To=%3C564EE797.5080008%40gmx.de%3E"
+       TITLE="[osg-users] Glowing Sphere Effect">sebastian.messerschmidt at gmx.de
+       </A><BR>
+    <I>Fri Nov 20 01:27:51 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002022.html">[osg-users] Glowing Sphere Effect
+</A></li>
+        <LI>Next message: <A HREF="278298.html">[osg-users] [build] Can't Build OSG 3.4.0 with VC2010 express and	SDK7.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2027">[ date ]</a>
+              <a href="thread.html#2027">[ thread ]</a>
+              <a href="subject.html#2027">[ subject ]</a>
+              <a href="author.html#2027">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Erik,
+&gt;<i> Hi Sebastian,
+</I>&gt;<i>
+</I>&gt;<i> Thank you for your reply.
+</I>&gt;<i>
+</I>&gt;<i> As far as what type of glowing effect I'm after, I want something similar to the following:
+</I>&gt;<i> <A HREF="../../../../i.stack.imgur.com/54Z2C.png">http://i.stack.imgur.com/54Z2C.png</A>
+</I>&gt;<i> That is, I want a shiny glowing light to emit beyond the boundaries of the sphere.
+</I>Ok, basically this not related to OSG directly.
+One option is to render the scene to texture and run a separable blur 
+filter on the pixels you want to &quot;glow&quot;. The osgPPU might help here.
+The use of the infamous search device might reveal other options tough.
+
+&gt;<i>
+</I>&gt;<i> As far as your comment about normals, I thought that was taken care of by the smoothing visitor. Perhaps you can help me understand this concept a little better...
+</I>
+I didn't catch the visitor, but in general should provide at least face 
+normals. The smoothing visitor will fail with more complex geometry if 
+you don't provide enough topological information I guess.
+For more complex models you should use assets out of modelling programs 
+anyway.
+
+Cheers
+Sebastian
+&gt;<i>
+</I>&gt;<i> As an experiment, I modified my code for six different variations and took screen captures of each of them. The experiments were:
+</I>&gt;<i> 1) No normals set, without the smoothing visitor
+</I>&gt;<i> 2) No normals set, with the smoothing visitor
+</I>&gt;<i> 3) &quot;Good&quot; normals set per primitive, without the smoothing visitor
+</I>&gt;<i> 4) &quot;Good&quot; normals set per primitive, with the smoothing visitor
+</I>&gt;<i> 5) &quot;Bad&quot; normals set per primitive, without the smoothing visitor
+</I>&gt;<i> 6) &quot;Bad&quot; normals set per primitive, with the smoothing visitor
+</I>&gt;<i>
+</I>&gt;<i> By &quot;good&quot; normals I mean that for each triangle I set the normal to be the cross product of the two vectors that go along two sides of the triangle, and by &quot;bad&quot; normals I mean that I always set each normal vector to (0.0f, 0.0f, 1.0f). I set the normal vectors like so:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> // Create the normal array for this geometry
+</I>&gt;<i> osg::ref_ptr &lt; osg::Vec3Array &gt; pNormalsArray = new osg::Vec3Array;
+</I>&gt;<i>
+</I>&gt;<i> //
+</I>&gt;<i> // For each triangle...
+</I>&gt;<i> //
+</I>&gt;<i>
+</I>&gt;<i> // Add the vertices that make up this triangle
+</I>&gt;<i> pVertexArray-&gt;push_back(Vertex1);
+</I>&gt;<i> pVertexArray-&gt;push_back(Vertex2);
+</I>&gt;<i> pVertexArray-&gt;push_back(Vertex3);
+</I>&gt;<i>
+</I>&gt;<i> // Set the normal vector for this triangle
+</I>&gt;<i> pNormalsArray-&gt;push_back((Vertex3 - Vertex1) ^ (Vertex2 - Vertex1));
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i> //
+</I>&gt;<i> // Done with all triangle vertices and normals
+</I>&gt;<i> //
+</I>&gt;<i>
+</I>&gt;<i> // Set this as the geometry's vertex array
+</I>&gt;<i> pGeometry-&gt;setVertexArray(pVertexArray);
+</I>&gt;<i>
+</I>&gt;<i> // Set the geometry's normals array
+</I>&gt;<i> pGeometry-&gt;setNormalArray(pNormalsArray);
+</I>&gt;<i> pGeometry-&gt;setNormalBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
+</I>&gt;<i>
+</I>&gt;<i> ...
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The results were interesting (at least to me):
+</I>&gt;<i>
+</I>&gt;<i> 1) No normals set, no smoothing: A boring, ordinary, monochrome sphere
+</I>&gt;<i> 2) No normals set, with smoothing, A good looking sphere with some shine to it
+</I>&gt;<i> 3) &quot;Good&quot; normals set, no smoothing: A very dark, boring, ordinary, monochrome sphere
+</I>&gt;<i> 4) &quot;Good&quot; normals set, with smoothing: A good looking sphere with some shine to it
+</I>&gt;<i> 5) &quot;Bad&quot; normals set, no smoothing: A boring, ordinary, monochrome sphere
+</I>&gt;<i> 6) &quot;Bad&quot; normals set, with smoothing: A good looking sphere with some shine to it
+</I>&gt;<i>
+</I>&gt;<i> Screen capture images of scenarios 1 and 5 were binary identical, so the effects were identical.
+</I>&gt;<i> Screen capture images of scenarios 2, 4, and 6 were binary identical, so the effects were identical.
+</I>&gt;<i>
+</I>&gt;<i> This means that when using the smoothing visitor, it doesn't matter how I set the normal vectors, or if I even set them at all. This also means that not setting any normals was, in this case, equivalent to setting bogus normals (where each normal was set to the z-axis).
+</I>&gt;<i>
+</I>&gt;<i> I tried using setEmission on the material but all that happened was the color changed.
+</I>&gt;<i>
+</I>&gt;<i> So, how can I achieve the kind of glow effect that I want, and do I in fact have to set any normals or is using the smoothing visitor enough? I've attached the six screenshots (I have since changed the color to a dark green 0, 153, 0 instead of red).
+</I>&gt;<i>
+</I>&gt;<i> Thank you very much in advance!
+</I>&gt;<i>
+</I>&gt;<i> Erik
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> SMesserschmidt wrote:
+</I>&gt;&gt;<i> Hi Erik,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Do you mean glowing like non-lit but selfillumination? Then you're maybe
+</I>&gt;&gt;<i> after the setEmission property.
+</I>&gt;&gt;<i> If you want a glow like bloom-effect, then you'll need some image
+</I>&gt;&gt;<i> postprocessing or texture tricks.
+</I>&gt;&gt;<i> Maybe you can send some picture which resembles what you are trying to
+</I>&gt;&gt;<i> achieve.
+</I>&gt;&gt;<i> BTW: your geometry doesn't have any normals, so lighting will be wrong
+</I>&gt;&gt;<i> in any case.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Cheers
+</I>&gt;&gt;<i> Sebastian
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Hello everyone!
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I'm generating a sphere geode and I'd like to add a glowing effect in any variable color. I've only found one other similar topic on these forums but there was no answer. I imagine this must be possible, I just don't know how to do it. I've posted my code that creates the geode.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Any and all help is very much appreciated!
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Code:
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // The center of my sphere
+</I>&gt;&gt;&gt;<i> osg::Vec3 tSphereCenter(0.0f, 0.0f, 0.0f);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Create the geode
+</I>&gt;&gt;&gt;<i> osg::ref_ptr &lt; osg::Geode &gt; pGeode = new osg::Geode;
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Create the geometry
+</I>&gt;&gt;&gt;<i> osg::ref_ptr &lt; osg::Geometry &gt; pGeometry = new osg::Geometry;
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // The vertex array that defines the shape of the sphere
+</I>&gt;&gt;&gt;<i> osg::ref_ptr &lt; osg::Vec3Array &gt; pVertexArray = new osg::Vec3Array;
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> //
+</I>&gt;&gt;&gt;<i> // Add vertices to pVertexArray using an icosahedron approach...
+</I>&gt;&gt;&gt;<i> // How this is done is not relevant to this question...
+</I>&gt;&gt;&gt;<i> //
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Set this as the geometry's vertex array
+</I>&gt;&gt;&gt;<i> pGeometry-&gt;setVertexArray(pVertexArray);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Set the primitive set
+</I>&gt;&gt;&gt;<i> osg::ref_ptr &lt; osg::DrawArrays &gt; pDrawArrays = new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, static_cast &lt; GLsizei &gt;(pVertexArray-&gt;size()));
+</I>&gt;&gt;&gt;<i> pGeometry-&gt;addPrimitiveSet(pDrawArrays);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Get the state set
+</I>&gt;&gt;&gt;<i> osg::ref_ptr &lt; osg::StateSet &gt; pStateSet = pGeometry-&gt;getOrCreateStateSet();
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Create the material
+</I>&gt;&gt;&gt;<i> osg::ref_ptr &lt; osg::Material &gt; pMaterial = new osg::Material;
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Set the sphere color to red
+</I>&gt;&gt;&gt;<i> pMaterial-&gt;setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Make the sphere shiny
+</I>&gt;&gt;&gt;<i> pMaterial-&gt;setShininess(osg::Material::FRONT_AND_BACK, 128.0f);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Set the material on the geometry's state set
+</I>&gt;&gt;&gt;<i> pStateSet-&gt;setAttribute(pMaterial);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Finish up with the geometry
+</I>&gt;&gt;&gt;<i> pStateSet-&gt;setMode(GL_NORMALIZE, osg::StateAttribute::ON);
+</I>&gt;&gt;&gt;<i> pGeometry-&gt;setStateSet(pStateSet);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Add this geometry to the geode
+</I>&gt;&gt;&gt;<i> pGeode-&gt;addDrawable(pGeometry);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Ensure the geode is visible
+</I>&gt;&gt;&gt;<i> pGeode-&gt;setNodeMask(0xffffffff);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Smooth out the material
+</I>&gt;&gt;&gt;<i> osgUtil::SmoothingVisitor sv;
+</I>&gt;&gt;&gt;<i> pGeode-&gt;accept(sv);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> // Add the geode to the scene
+</I>&gt;&gt;&gt;<i> pSceneGroup-&gt;addChild(pGeode);
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Thank you very much!
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Cheers,
+</I>&gt;&gt;&gt;<i> Erik[/code]
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> ------------------
+</I>&gt;&gt;&gt;<i> Read this topic online here:
+</I>&gt;&gt;&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic5261.php?p=65690#65690">http://forum.openscenegraph.org/viewtopic.php?p=65690#65690</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>   ------------------
+</I>&gt;&gt;<i> Post generated by Mail2Forum
+</I>&gt;<i> [/img]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic5928.php?p=65696#65696">http://forum.openscenegraph.org/viewtopic.php?p=65696#65696</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151120/7b47ff1e/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151120/7b47ff1e/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002022.html">[osg-users] Glowing Sphere Effect
+</A></li>
+	<LI>Next message: <A HREF="278298.html">[osg-users] [build] Can't Build OSG 3.4.0 with VC2010 express and	SDK7.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2027">[ date ]</a>
+              <a href="thread.html#2027">[ thread ]</a>
+              <a href="subject.html#2027">[ subject ]</a>
+              <a href="author.html#2027">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

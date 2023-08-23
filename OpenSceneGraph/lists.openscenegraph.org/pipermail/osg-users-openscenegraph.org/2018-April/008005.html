@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Writing texture coordinates on a mesh without going through traversal code?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Writing%20texture%20coordinates%20on%20a%20mesh%20without%20going%0A%20through%20traversal%20code%3F&In-Reply-To=%3C2438722196A70147905EB5B327A5159F2D20A3%40HDXDSP55.us.lmco.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008004.html">
+   <LINK REL="Next"  HREF="008006.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Writing texture coordinates on a mesh without going through traversal code?</H1>
+<!--htdig_noindex-->
+    <B>Rowley, Marlin R</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Writing%20texture%20coordinates%20on%20a%20mesh%20without%20going%0A%20through%20traversal%20code%3F&In-Reply-To=%3C2438722196A70147905EB5B327A5159F2D20A3%40HDXDSP55.us.lmco.com%3E"
+       TITLE="[osg-users] Writing texture coordinates on a mesh without going through traversal code?">marlin.r.rowley at lmco.com
+       </A><BR>
+    <I>Fri Apr 13 13:30:42 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008004.html">[osg-users] qtquick &amp; setMirrorVertically mouse position problem
+</A></li>
+        <LI>Next message (by thread): <A HREF="008006.html">[osg-users] Writing texture coordinates on a mesh without going through traversal code?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8005">[ date ]</a>
+              <a href="thread.html#8005">[ thread ]</a>
+              <a href="subject.html#8005">[ subject ]</a>
+              <a href="author.html#8005">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello!
+
+I'm trying to generate my own texture coordinates (on-the-fly) by having a callback that runs when a piece of geometry intersects my object.  So for example, I create a realworld frustum and when my frustum has a shader that's bound to some arbitrary object in the world.  When my frustum intersects this object, I would like to generate texture coordinates on this object based on how far or near I am to the frustum's near/far planes (it's perspective frustum).  We had the following code for doing this:
+
+void ViewshedOSG::updateTextureCoordinates()
+{
+// write the plane equation for all 3 planes
+// that make up the camera view frustum.  We can
+// then access this from the shader to test whether
+// we are in the frustum's volume or not.
+    osg::Matrixd projection = mCamera-&gt;getViewMatrix();
+      mTexGen-&gt;setPlanesFromMatrix(projection *
+      osg::Matrix::translate(1.0, 1.0, 1.0) *
+      osg::Matrix::scale(0.5f, 0.5f, 0.5f));
+// Bring our models viewspace coordinates back
+// into model space coordinate of the camera frustum
+osg::RefMatrix * refMatrix = new osg::RefMatrix
+           (mCamera-&gt;getInverseViewMatrix() * *_cv-&gt;getModelViewMatrix());
+// Copy the texture generator to the mesh where you
+// can index it's coordinates from the ViewshedID
+      _cv-&gt;getRenderStage()-&gt;getPositionalStateContainer()-&gt;
+            addPositionedTextureAttribute
+            (mId, refMatrix, mTexGen.get());
+}
+
+
+However, this code was based on a cull visitor calling this function from a callback.  I have my own callback and it's not based on a visitor. Is there anyway to get the objects modelview matrix() without calling it from a cull visitor?  Also only need to write the 'addPositionedTextureAttribute' on the geometry in order to access the coordinates through a shader.
+
+I'm trying to keep this simple.  Am I in the right direction?
+
+Thanks,
+
+-M
+----------------------------------------
+Marlin Rowley
+Software Engineer, Staff
+[cid:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">image002.jpg at 01D39374.DEC5A2E0</A>]
+Missiles and Fire Control
+972-603-1931 (office)
+214-926-0622 (mobile)
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">marlin.r.rowley at lmco.com</A>&gt;
+
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20180413/a52db8df/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180413/a52db8df/attachment.html</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: image001.jpg
+Type: image/jpeg
+Size: 3114 bytes
+Desc: image001.jpg
+URL: &lt;<A HREF="../attachments/20180413/a52db8df/attachment.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20180413/a52db8df/attachment.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008004.html">[osg-users] qtquick &amp; setMirrorVertically mouse position problem
+</A></li>
+	<LI>Next message (by thread): <A HREF="008006.html">[osg-users] Writing texture coordinates on a mesh without going through traversal code?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8005">[ date ]</a>
+              <a href="thread.html#8005">[ thread ]</a>
+              <a href="subject.html#8005">[ subject ]</a>
+              <a href="author.html#8005">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

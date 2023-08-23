@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Volume image crash on the latest version of	Nvidia	driver
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20image%20crash%20on%20the%20latest%20version%20of%0A%09Nvidia%09driver&In-Reply-To=%3C12B07BBBE033D44DB6DB402A39E7559160034488%40exmbx04-cdc.nexus.csiro.au%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001139.html">
+   <LINK REL="Next"  HREF="001157.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Volume image crash on the latest version of	Nvidia	driver</H1>
+<!--htdig_noindex-->
+    <B>Clement.Chu at csiro.au</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20image%20crash%20on%20the%20latest%20version%20of%0A%09Nvidia%09driver&In-Reply-To=%3C12B07BBBE033D44DB6DB402A39E7559160034488%40exmbx04-cdc.nexus.csiro.au%3E"
+       TITLE="[osg-users] Volume image crash on the latest version of	Nvidia	driver">Clement.Chu at csiro.au
+       </A><BR>
+    <I>Mon Aug 10 22:51:24 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001139.html">[osg-users] Volume image crash on the latest version of Nvidia	driver
+</A></li>
+        <LI>Next message: <A HREF="001157.html">[osg-users] Volume image crash on the latest version of Nvidia	driver
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1155">[ date ]</a>
+              <a href="thread.html#1155">[ thread ]</a>
+              <a href="subject.html#1155">[ subject ]</a>
+              <a href="author.html#1155">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+   Finally, I found out where causes the crash problem.  The problem is not related to the type casting.  See the source code below:
+
+float num_iterations = ceil(length((te-t0).xyz)/SampleDensityValue);
+
+
+   The problem is the value of num_iterations is a NaN float value (not a number), so that why it makes an infinite running in the loop and then crashed.  I think the problem is on the method length().  In some condition (different values of t0 and te) makes the method length() to return a NaN value.  I added a line of code to check variable num_iterations.
+
+  if (isnan(num_iterations)) num_iterations = 2.0;
+
+
+  So far it works on both nvidia and intel cards.
+
+
+
+Regards,
+Clement
+
+
+________________________________________
+From: osg-users [<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] on behalf of Robert Osfield [<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>]
+Sent: Monday, 10 August 2015 17:42
+To: OpenSceneGraph Users
+Subject: Re: [osg-users] Volume image crash on the latest version of Nvidia     driver
+
+Hi Clement,
+
+I have been looking GLSL for what might help us determine when to use float vs ints.  The follow info might be useful:
+
+   <A HREF="https://github.com/mattdesl/lwjgl-basics/wiki/GLSL-Versions">https://github.com/mattdesl/lwjgl-basics/wiki/GLSL-Versions</A>
+
+Perhaps we should just add a #version 130 (OpenGL Version &gt;= 3.0) to the top of the fragment shaders to make sure they support ints.  This may mean that the Intel driver fails though.
+
+What Intel hardware, drivers and OpenGL version support by the drivers do you have on your system?
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001139.html">[osg-users] Volume image crash on the latest version of Nvidia	driver
+</A></li>
+	<LI>Next message: <A HREF="001157.html">[osg-users] Volume image crash on the latest version of Nvidia	driver
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1155">[ date ]</a>
+              <a href="thread.html#1155">[ thread ]</a>
+              <a href="subject.html#1155">[ subject ]</a>
+              <a href="author.html#1155">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

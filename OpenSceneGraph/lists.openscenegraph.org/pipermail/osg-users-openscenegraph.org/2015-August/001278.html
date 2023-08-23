@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] _intersectionLimit doesn't seem to be working...
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20_intersectionLimit%20doesn%27t%20seem%20to%20be%20working...&In-Reply-To=%3CCAFN7Y%2BVtUC%2B2WnbQrksN4%3DhhaO7WZ5ZaNx%2BpbVzZbLwXhVHYmg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001277.html">
+   <LINK REL="Next"  HREF="277398.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] _intersectionLimit doesn't seem to be working...</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20_intersectionLimit%20doesn%27t%20seem%20to%20be%20working...&In-Reply-To=%3CCAFN7Y%2BVtUC%2B2WnbQrksN4%3DhhaO7WZ5ZaNx%2BpbVzZbLwXhVHYmg%40mail.gmail.com%3E"
+       TITLE="[osg-users] _intersectionLimit doesn't seem to be working...">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Aug 19 06:54:23 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001277.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+        <LI>Next message: <A HREF="277398.html">[osg-users] Rotation of a node starts clockwise and ends	counter-clockwise.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1278">[ date ]</a>
+              <a href="thread.html#1278">[ thread ]</a>
+              <a href="subject.html#1278">[ subject ]</a>
+              <a href="author.html#1278">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Shayne,
+
+On 19 August 2015 at 14:34, Shayne Tueller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">shayne.tueller at hill.af.mil</A>&gt;
+wrote:
+
+&gt;<i> So, if I understand you correctly, there's no way to tell VPB to build a
+</I>&gt;<i> &quot;flat&quot; file (i.e. one that that does not have Paged LODs in it) in
+</I>&gt;<i> geocentric space? In other words, is there a way to decorate a sphere with
+</I>&gt;<i> just raw DTED data using VPB? I know this doesn't make sense for a visual
+</I>&gt;<i> database but it might make sense for other usages like viewing a raw DTED
+</I>&gt;<i> tile on a spheroid. If VPB won't do this, I suppose I can just use a height
+</I>&gt;<i> field and map it to a spheroid myself.
+</I>&gt;<i>
+</I>
+VPB doesn't have support for just generating a single level terrain
+database at full resolution.  It's written with rendering at a solid 60hz
+in mind, it's not written to support the the type of usage you are after.
+The task you are after should be a lot more straight forward as big part of
+VPB complexity comes down to the reprojection, resample and generation of
+well balance quad tree for paging.
+
+
+
+&gt;<i> My second question has to do with the LODs in VPB. What is the default LOD
+</I>&gt;<i> setting for VPB? You mentioned that I might not have gone deep enough in my
+</I>&gt;<i> database? It appears to me that VPB builds LODs by default and goes deep
+</I>&gt;<i> enough based on the resolution of the original source data. For example, I
+</I>&gt;<i> ran VPB on just one tile of level 1 DTED and didn't specify any levels of
+</I>&gt;<i> detail setting on the command line. It built the database to level 6. I
+</I>&gt;<i> then did another build and specified &quot;--PagedLOD&quot; and &quot;-l 24&quot; on the
+</I>&gt;<i> command line and it didn't do anything different. It still just built to
+</I>&gt;<i> level 6...
+</I>&gt;<i>
+</I>
+The -l setting is the maximum number of levels.  The VPB won't generate to
+this level if the source data doesn't warrant it.  The levels each divide
+the X and Y axis by two, doubling the effective resolution at each level,
+and will keep dividing until the resolution of the output matches or
+exceeds the source resolution.
+
+Even if the resolution of the output tiles is higher than the source the
+re-projection and alignment to a different grid will result in unavoidable
+differences in the source and output data.  Normally these differences are
+small enough to not cause problems for rendering databases.
+
+If I were to tackle the creation of a scheme for paging in source DEM's I'd
+come up with a hierarchy for mapping all the source data into a quad tree,
+this quad tree would be held in memory and allow rapid intersection testing
+to find out which DEM's are of interest for a particular intersection
+test.  Once you have the DEM's then you'd cache the DEM's you are likely to
+need, and supplement these as the intersection tests required new tiles.
+If you can pre-empt what DEM's will be needed ahead of when you do the
+actual intersection you'd be able to go fetch them with a background thread
+and have them ready so the intersection test doesn't need to stall waiting
+for a load.  Finally such a scheme would need to be load balanced so that
+once you hit a maximum memory footprint you start expiring DEM's that
+haven't recently been used.
+
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150819/31361d5b/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150819/31361d5b/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001277.html">[osg-users] _intersectionLimit doesn't seem to be working...
+</A></li>
+	<LI>Next message: <A HREF="277398.html">[osg-users] Rotation of a node starts clockwise and ends	counter-clockwise.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1278">[ date ]</a>
+              <a href="thread.html#1278">[ thread ]</a>
+              <a href="subject.html#1278">[ subject ]</a>
+              <a href="author.html#1278">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Crash on exit (graphics thread removing camera)
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20on%20exit%20%28graphics%20thread%20removing%20camera%29&In-Reply-To=%3CCAFN7Y%2BX9J41UsFPFzgcjYeyXR-MrKR2z%2BBU-mPrbouc_s-Xm-g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003897.html">
+   <LINK REL="Next"  HREF="003911.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Crash on exit (graphics thread removing camera)</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Crash%20on%20exit%20%28graphics%20thread%20removing%20camera%29&In-Reply-To=%3CCAFN7Y%2BX9J41UsFPFzgcjYeyXR-MrKR2z%2BBU-mPrbouc_s-Xm-g%40mail.gmail.com%3E"
+       TITLE="[osg-users] Crash on exit (graphics thread removing camera)">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Aug 15 07:49:11 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003897.html">[osg-users] Crash on exit (graphics thread removing camera)
+</A></li>
+        <LI>Next message: <A HREF="003911.html">[osg-users] Crash on exit (graphics thread removing camera)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3898">[ date ]</a>
+              <a href="thread.html#3898">[ thread ]</a>
+              <a href="subject.html#3898">[ subject ]</a>
+              <a href="author.html#3898">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Jannik,
+
+On 15 August 2016 at 15:03, Jannik Heller &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">scrawl at baseoftrash.de</A>&gt; wrote:
+&gt;<i> Given that there is no documentation suggesting that removing RTT camera's is unsafe - I just assumed it was a bug :)
+</I>
+You can't document a issue if you haven't conceived of the specific
+usage case that it's associated with :-)
+
+What you are doing is very narrow type of usage.
+
+&gt;<i> As a workaround I believe that removing the Camera's children before removing the camera should fix the crash. That means releaseGLObjects() won't be called on the Camera's subgraph on destruction but to be honest that feature seems broken to me anyway:
+</I>&gt;<i>
+</I>&gt;<i> What the intent probably was:
+</I>&gt;<i> - release any GL resources that are only used by this Camera
+</I>&gt;<i>
+</I>&gt;<i> What the code actually does:
+</I>&gt;<i> - release any GL resources of a Node only used by this Camera *and* all its child-nodes (which may be shared resources still in use by other Cameras).
+</I>&gt;<i>
+</I>&gt;<i> What are your thoughts on removing the releaseGLObjects() stuff from GraphicsContext::removeCamera - it is not working as intended, and removing it would fix the race condition as a side effect :)
+</I>
+Adding and removing nodes from the scene graph while it's being
+co-concurrently rendered is a tough ask. There are very specific
+mechanisms in place to help make it possible - i.e. PagedLOD.
+
+The releaseGLObjects() and removeCamera() are there to make sure
+resources are correctly cleaned up.  If you really try you can break
+it, like hiding resources from that active parts of the viewer/scene
+graph that are their to clean up things.
+
+The key issue you are trying to push the OSG in ways that it's not
+designed to handle.  If you want to dynamically add/remove Camera's
+nodes then you'll need to you'll need to halt the multi-threading of
+draw while you do it.
+
+You can say the OSG should support your particular usage case but
+making this possible could well be intrusive to the rest of the OSG.
+The OSG has to balance the way things are designed and implemented to
+make keep the feature/complexity and performance balance justified.
+
+For your particular usage model I think the approach is pretty easy to
+implement or to workaround within the client application - switch off
+threading when you do unsafe tasks, or just toggle the Camera on/off.
+
+However, ff you can spot an easy way to fix things for your usage case
+without interfering with the performance and simplicity of the current
+design then propose it.
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003897.html">[osg-users] Crash on exit (graphics thread removing camera)
+</A></li>
+	<LI>Next message: <A HREF="003911.html">[osg-users] Crash on exit (graphics thread removing camera)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3898">[ date ]</a>
+              <a href="thread.html#3898">[ thread ]</a>
+              <a href="subject.html#3898">[ subject ]</a>
+              <a href="author.html#3898">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

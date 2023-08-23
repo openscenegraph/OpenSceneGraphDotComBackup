@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Pragmatic shader - a new #pragma directive proposition
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20-%20a%20new%20%23pragma%20directive%0A%20proposition&In-Reply-To=%3C569785E2.6040007%40ib-caddy.si%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271972.html">
+   <LINK REL="Next"  HREF="271974.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Pragmatic shader - a new #pragma directive proposition</H1>
+<!--htdig_noindex-->
+    <B>Robert Milharcic</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Pragmatic%20shader%20-%20a%20new%20%23pragma%20directive%0A%20proposition&In-Reply-To=%3C569785E2.6040007%40ib-caddy.si%3E"
+       TITLE="[osg-users] Pragmatic shader - a new #pragma directive proposition">robert.milharcic at ib-caddy.si
+       </A><BR>
+    <I>Thu Jan 14 03:26:26 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271972.html">[osg-users] Pragmatic shader - a new #pragma directive	proposition
+</A></li>
+        <LI>Next message: <A HREF="271974.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271975">[ date ]</a>
+              <a href="thread.html#271975">[ thread ]</a>
+              <a href="subject.html#271975">[ subject ]</a>
+              <a href="author.html#271975">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert Osfield,
+
+On 14.1.2016 10:10, Robert Osfield wrote:
+&gt;<i> Hi Robert M, et. al,
+</I>&gt;<i>
+</I>&gt;<i> I understand the motivation the proposal but it does look like it'll
+</I>&gt;<i> complicate the parsing significantly so am inclined to suggest we look
+</I>&gt;<i> at the problem at look for easier ways to implement it.
+</I>
+Actually, while I was waiting for a feedback I made a proof of concept implementation which turns out to be relatively straightforward task. For the parser part I have to add only a few more lines (excluding sanity checks):
+
+void Shader::_computeShaderDefines()
+{
+     ...
+
+     if (keyword == &quot;import_defines&quot;) _parseShaderDefines(str, _shaderDefines);
+     else if (keyword == &quot;requires&quot;) _parseShaderDefines(str, _shaderRequirements);
+     else if (keyword == &quot;repeat_begin&quot;)
+     {
+         ShaderDefines shaderCodeBlockIdentifers;
+         _parseShaderDefines(str, shaderCodeBlockIdentifers);
+
+         ShaderCodeBlock shaderCodeBlock;
+
+         shaderCodeBlock._begin = eol;
+         shaderCodeBlock._end = std::string::npos;
+
+         shaderCodeBlock._identifier = *shaderCodeBlockIdentifers.begin();
+         _shaderCodeBlocks.push_back(shaderCodeBlock);
+     }
+     else if (keyword == &quot;repeat_end&quot;)
+     {
+         ShaderCodeBlock&amp; shaderCodeBlock = _shaderCodeBlocks.back();
+         shaderCodeBlock._end = _shaderSource.find_last_not_of(&quot; \t&quot;, pos - 8);
+     }
+
+     ...
+}
+&gt;<i> In terms of code bloat in shaders, the #pragma(tic) shader composition
+</I>&gt;<i> ensures that the final code passed the OpenGL will have all the
+</I>&gt;<i> unimplemented paths removed so performance won't be an issue.  For
+</I>&gt;<i> developers code bloat in shaders is an potential issue, one thing you
+</I>&gt;<i> do to help would be to wrap up all the lighting calls into a small set
+</I>&gt;<i> of functions that are called from the main, these functions are
+</I>&gt;<i> implemented in separate shaders that handle all the different code
+</I>&gt;<i> paths so at least the complexity is kept in one place and can be
+</I>&gt;<i> reused easily.
+</I>Agreed.
+
+&gt;<i> A second possibility would be to have developers auto generate shaders
+</I>&gt;<i> so avoid creating bloated shaders directly.
+</I>&gt;<i>
+</I>&gt;<i> A third approach might be to have the ability to provide a custom
+</I>&gt;<i> parser to the OSG so that it can handle custom syntax that developers
+</I>&gt;<i> feel suits their needs better than the default set of features
+</I>&gt;<i> provided by the core #pragma(tic) shader composition.
+</I>&gt;<i>
+</I>Third approach is the approach I like most. I wonder what others have to say about this, though...
+
+Robert Milharcic
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271972.html">[osg-users] Pragmatic shader - a new #pragma directive	proposition
+</A></li>
+	<LI>Next message: <A HREF="271974.html">[osg-users] Pragmatic shader - a new #pragma directive proposition
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271975">[ date ]</a>
+              <a href="thread.html#271975">[ thread ]</a>
+              <a href="subject.html#271975">[ subject ]</a>
+              <a href="author.html#271975">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

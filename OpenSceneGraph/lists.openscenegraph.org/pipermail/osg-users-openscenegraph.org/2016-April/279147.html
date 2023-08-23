@@ -1,0 +1,371 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgVolume::MultipassTechnique use
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgVolume%3A%3AMultipassTechnique%20use&In-Reply-To=%3CCAHKmQh9KxXynGXf%2BR_7EcfSi8%2B-G8QZY%3DKDpDUWr4ZkoM%2B8urw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002930.html">
+   <LINK REL="Next"  HREF="002933.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgVolume::MultipassTechnique use</H1>
+<!--htdig_noindex-->
+    <B>Alex Taylor</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgVolume%3A%3AMultipassTechnique%20use&In-Reply-To=%3CCAHKmQh9KxXynGXf%2BR_7EcfSi8%2B-G8QZY%3DKDpDUWr4ZkoM%2B8urw%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgVolume::MultipassTechnique use">alextaylor at gmail.com
+       </A><BR>
+    <I>Tue Apr 26 13:35:52 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002930.html">[osg-users] Question about OSG 3.4 doxygen
+</A></li>
+        <LI>Next message: <A HREF="002933.html">[osg-users] osgVolume::MultipassTechnique use
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279147">[ date ]</a>
+              <a href="thread.html#279147">[ thread ]</a>
+              <a href="subject.html#279147">[ subject ]</a>
+              <a href="author.html#279147">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hey all,
+
+I'm running into a segmentation violation when I attempt to use
+osgVolume::MultipassTechnique more or less as a drop in replacement for
+RayTracedTechnique using OSG 3.4. My use of RayTracedTechnique works and
+renders fine.
+
+Here is an partial code listing demonstrating my use of MultipassTechnique:
+
+*    void setVolumeProperties(osg::ref_ptr&lt;osgVolume::Volume&gt;
+volume,osg::ref_ptr&lt;osgVolume::VolumeTile&gt; tile,*
+*            osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer,
+VolumePropertyManager &amp;volumeProperties,
+osg::ref_ptr&lt;osgVolume::VolumeScene&gt; volumeScene)*
+*    {*
+
+*        // FixedFunctionTechnique turns on GL_LIGHTING, which breaks the
+color rendering.*
+*        osg::StateSet* stateset = volume-&gt;getOrCreateStateSet();*
+
+*        if (volumeProperties.volumeTechnique ==
+VolumeTechnique::RayTraced){*
+*            osg::ref_ptr&lt;osgVolume::RayTracedTechnique&gt; rayTraced = new
+osgVolume::RayTracedTechnique();*
+*            tile-&gt;setVolumeTechnique(rayTraced.get());*
+*            osg::ref_ptr&lt;osg::FrontFace&gt; frontFace(new
+osg::FrontFace(osg::FrontFace::CLOCKWISE));*
+*            stateset-&gt;setAttribute(frontFace.get(),
+osg::StateAttribute::PROTECTED);*
+*            layer-&gt;addProperty(new
+osgVolume::SampleDensityWhenMovingProperty(volumeProperties.sampleDensityWhenMoving));*
+*            layer-&gt;addProperty(new
+osgVolume::SampleDensityProperty(volumeProperties.sampleDensity));*
+*        } else if (volumeProperties.volumeTechnique ==
+VolumeTechnique::Multipass) {*
+*            osg::ref_ptr&lt;osgVolume::MultipassTechnique&gt; multipass = new
+osgVolume::MultipassTechnique();*
+*            tile-&gt;setVolumeTechnique(multipass.get());*
+*            volumeScene-&gt;addChild(volume.get());*
+*            volume-&gt;getOrCreateStateSet();*
+*            layer-&gt;addProperty(new osgVolume::SampleRatioProperty(1.0f));*
+*            layer-&gt;addProperty(new
+osgVolume::SampleRatioWhenMovingProperty(0.5f));*
+
+*        } else if (volumeProperties.volumeTechnique ==
+VolumeTechnique::FixedFunction) {*
+*            tile-&gt;setVolumeTechnique(new
+osgVolume::FixedFunctionTechnique());*
+*            stateset-&gt;setMode(GL_LIGHTING,osg::StateAttribute::OFF |
+osg::StateAttribute::OVERRIDE);*
+*        } else {*
+*            throw hg::PropertyException(&quot;VolumeTechnique&quot;);*
+*        }*
+
+*        layer-&gt;addProperty(new
+osgVolume::TransferFunctionProperty(volumeProperties.transferFunction.get()));*
+*        layer-&gt;addProperty(new
+osgVolume::AlphaFuncProperty(volumeProperties.alphaFunc));*
+*        if (volumeProperties.useLighting) layer-&gt;addProperty(new
+osgVolume::LightingProperty);*
+*        if (volumeProperties.useIsosurface) layer-&gt;addProperty(new
+osgVolume::IsoSurfaceProperty(volumeProperties.alphaFunc));*
+*        if (volumeProperties.useMaximumIntensityProjection)
+layer-&gt;addProperty(new osgVolume::MaximumIntensityProjectionProperty());*
+*    }*
+
+The following function returns the Node * that will be passed to the
+viewer. I either return a osgVolume::Volume * or osgVolume::VolumeScene *
+object depending on whether I'm using multipass rendering as my Node *.
+
+*    osg::Node* BP_createPeerHelper(Volume&amp; v,*
+*            hg::SceneClient&amp; client,*
+*            const gui_objects::Cookie&amp; owner,*
+*            hg::UpdateState&amp; us) {*
+
+*        osg::ref_ptr&lt;osgVolume::Volume&gt; volume = new osgVolume::Volume;*
+*        osg::ref_ptr&lt;osgVolume::VolumeScene&gt; volumeScene = new
+osgVolume::VolumeScene;*
+
+*        const mxArray* data = v.getData();*
+*        VolumePropertyManager volumeProperties(v,us);*
+
+*        if (data != NULL &amp;&amp; mxGetNumberOfDimensions(data) == 3 &amp;&amp;
+mxGetClassID(data) == mxUINT8_CLASS) {*
+
+
+*            osg::ref_ptr&lt;osgVolume::VolumeTile&gt; tile = new
+osgVolume::VolumeTile;*
+*            volume-&gt;addChild(tile.get());*
+
+*            // If we are using FixedFunctionTechnique, we need to apply
+the transfer function to get a new allocated RGBA memory on the CPU to pass
+to OSG.*
+*            // Otherwise, we can pass the intensity data directly to the
+card. GPU shaders does the RGBA directly.*
+*            osg::ref_ptr&lt;osg::Image&gt; intensityImage =
+createTexture3D(data);*
+*            osg::ref_ptr&lt;osg::Image&gt; image_3d =
+(volumeProperties.volumeTechnique == VolumeTechnique::FixedFunction) ?*
+*
+osgVolume::applyTransferFunction(intensityImage.get(),volumeProperties.transferFunction.get())
+:<i>*
+</I>*
+intensityImage.release();*
+
+*            osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer = new
+osgVolume::ImageLayer(image_3d);*
+*            tile-&gt;setLayer(layer.get());*
+
+*
+setVolumeProperties(volume,tile,layer,volumeProperties,volumeScene);*
+
+*            // Our original implementation positioned the bbox [-0.5,0.5]
+in each dimension.*
+*            // FixedFunctionTechnique applies the locator matrix to the a
+unit cube [0 1] in each dimension.*
+*            // To get the equivalent spatial referencing, apply a
+translation of -0.5 to each dimension.*
+*            osg::ref_ptr&lt;osg::RefMatrix&gt; matrix = new osg::RefMatrix();*
+*            matrix-&gt;makeTranslate(-0.5,-0.5,-0.5);*
+
+*            tile-&gt;setLocator(new osgVolume::Locator(*matrix));*
+
+*        }*
+*        else {*
+*            throw hg::PropertyException(&quot;Data&quot;);*
+*        }*
+
+*        std::cout &lt;&lt; &quot;volumeScene pointer: &quot; &lt;&lt; volumeScene.get() &lt;&lt;
+std::endl;*
+
+*        if (volumeProperties.volumeTechnique ==
+VolumeTechnique::Multipass)*
+*            return volumeScene.release();*
+*        else*
+*            return volume.release();*
+
+*    }*
+
+When I execute my code that previously worked with RayTracedTechnique, I
+receive the following stack trace
+
+Stack Trace (from fault):
+
+*[  0] 0x0000000104879d04
+fl::diag::stacktrace_base::capture(fl::diag::thread_context const&amp;,
+unsigned long) at stacktrace.cpp:175 (in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libmwfl.dylib)*
+
+*[  1] 0x000000010487cf9a void (anonymous
+namespace)::terminate_impl::log&lt;char const*&gt;(char const* const&amp;,
+fl::diag::thread_context const&amp;, char const*, int, char const*, bool) at
+terminate.cpp:238 (in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libmwfl.dylib)*
+
+*[  2] 0x000000010487ca09 fl::diag::terminate_log(char const*,
+__darwin_ucontext const*) at lock_types.hpp:362 (in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libmwfl.dylib)*
+
+*[  3] 0x00000001081cf0a8 (anonymous
+namespace)::crash_context::generate_crash_report_(std::__1::basic_ostream&lt;char,
+std::__1::char_traits&lt;char&gt; &gt;&amp;) const at sighndl.cpp:1149 (in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libmwmcr.dylib)*
+
+*[  4] 0x00000001081cea00 (anonymous namespace)::crash_context::ctor_() at
+sighndl.cpp:1025 (in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libmwmcr.dylib)*
+
+*[  5] 0x00000001081cd62a mnFatalSignalHandler at sighndl.cpp:729 (in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libmwmcr.dylib)*
+
+*[  6] 0x00007fff90c31f1a _sigtramp+00000026 at
+/usr/lib/system/libsystem_platform.dylib+20250 (no debugging symbols found)*
+
+*[  7] 0x0000000000000005 [unknown function] at [unknown module] (no module
+specified)*
+
+*[  8] 0x00000001204c4e56
+osgVolume::MultipassTechnique::traverse(osg::NodeVisitor&amp;)+00000086 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgVolume.130.dylib+106070
+(no debugging symbols found)*
+
+*[  9] 0x00000001204dcbf6
+osgVolume::VolumeTile::traverse(osg::NodeVisitor&amp;)+00000438 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgVolume.130.dylib+203766
+(no debugging symbols found)*
+
+*[ 10] 0x00000001204d7c0b
+osgVolume::VolumeScene::traverse(osg::NodeVisitor&amp;)+00008827 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgVolume.130.dylib+183307
+(no debugging symbols found)*
+
+*[ 11] 0x0000000143a8daf2 osgUtil::CullVisitor::apply(osg::Group&amp;)+00000642
+at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgUtil.130.dylib+39666
+(no debugging symbols found)*
+
+*[ 12] 0x00000001204d8a79
+osgVolume::VolumeScene::accept(osg::NodeVisitor&amp;)+00000121 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgVolume.130.dylib+187001
+(no debugging symbols found)*
+
+*[ 13] 0x00000001438749ef osg::Group::traverse(osg::NodeVisitor&amp;)+00000047
+at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosg.130.dylib+522735
+(no debugging symbols found)*
+
+*[ 14] 0x0000000143a8dbf0
+osgUtil::CullVisitor::apply(osg::Transform&amp;)+00000240 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgUtil.130.dylib+39920
+(no debugging symbols found)*
+
+*[ 15] 0x00000001438b9499
+osg::MatrixTransform::accept(osg::NodeVisitor&amp;)+00000121 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosg.130.dylib+803993
+(no debugging symbols found)*
+
+*[ 16] 0x00000001438749ef osg::Group::traverse(osg::NodeVisitor&amp;)+00000047
+at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosg.130.dylib+522735
+(no debugging symbols found)*
+
+*[ 17] 0x0000000143a8daf2 osgUtil::CullVisitor::apply(osg::Group&amp;)+00000642
+at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgUtil.130.dylib+39666
+(no debugging symbols found)*
+
+*[ 18] 0x0000000143876049 osg::Group::accept(osg::NodeVisitor&amp;)+00000121 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosg.130.dylib+528457
+(no debugging symbols found)*
+
+*[ 19] 0x00000001438749ef osg::Group::traverse(osg::NodeVisitor&amp;)+00000047
+at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosg.130.dylib+522735
+(no debugging symbols found)*
+
+*[ 20] 0x0000000143a8f29d
+osgUtil::CullVisitor::apply(osg::Camera&amp;)+00003021 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgUtil.130.dylib+45725
+(no debugging symbols found)*
+
+*[ 21] 0x000000014381c209 osg::Camera::accept(osg::NodeVisitor&amp;)+00000121
+at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosg.130.dylib+160265
+(no debugging symbols found)*
+
+*[ 22] 0x00000001438749ef osg::Group::traverse(osg::NodeVisitor&amp;)+00000047
+at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosg.130.dylib+522735
+(no debugging symbols found)*
+
+*[ 23] 0x0000000143a8daf2 osgUtil::CullVisitor::apply(osg::Group&amp;)+00000642
+at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgUtil.130.dylib+39666
+(no debugging symbols found)*
+
+*[ 24] 0x0000000143876049 osg::Group::accept(osg::NodeVisitor&amp;)+00000121 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosg.130.dylib+528457
+(no debugging symbols found)*
+
+*[ 25] 0x00000001438749ef osg::Group::traverse(osg::NodeVisitor&amp;)+00000047
+at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosg.130.dylib+522735
+(no debugging symbols found)*
+
+*[ 26] 0x0000000143b486bb osgUtil::SceneView::cullStage(osg::Matrixd
+const&amp;, osg::Matrixd const&amp;, osgUtil::CullVisitor*, osgUtil::StateGraph*,
+osgUtil::RenderStage*, osg::Viewport*)+00002875 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgUtil.130.dylib+804539
+(no debugging symbols found)*
+
+*[ 27] 0x0000000143b47117 osgUtil::SceneView::cull()+00001399 at
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libosgUtil.130.dylib+798999
+(no debugging symbols found)*
+
+*[ 28] 0x00000001372607da
+SceneRendererImpl::renderScene(hg::openscenegraph::RenderTimes&amp;,
+hg::openscenegraph::RenderCounts&amp;, osgUtil::SceneView*, unsigned int) at
+osgSceneServer.cpp:1448 (in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libmwosgserver.dylib)*
+
+*[ 29] 0x000000013725922e
+hg::openscenegraph::OsgSceneServer::cullAndDraw(int, bool, double, double)
+at osgSceneServer.cpp:1809 (in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libmwosgserver.dylib)*
+
+*[ 30] 0x000000011f298082
+UIJ_call_OpenGLPaintFcn(gui_objects::scene_server::SceneServerProxy*, int,
+bool, double, double) at SceneServerPeerEvents.cpp:56 (in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libuij.dylib)*
+
+*[ 31] 0x000000011e589414
+Java_com_mathworks_hg_peer_JavaSceneServerPeer_doDisplay at Scene.cpp:129
+(in
+/mathworks/devel/sbs/28/ataylor.Bmlhg_task1.j377265/matlab/bin/maci64/libnativehg.dylib)*
+I was wondering if either from the stack trace or my code segments if there
+is an obvious culprit in terms of my use of MultipassTechnique. I feel like
+my use is consistent with the pattern established in the shipping example,
+but I'm a bit stuck at the moment as far as next directions to debug my
+problem...
+
+Thanks as always for any help,
+
+Alex
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160426/8e0c84ba/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160426/8e0c84ba/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002930.html">[osg-users] Question about OSG 3.4 doxygen
+</A></li>
+	<LI>Next message: <A HREF="002933.html">[osg-users] osgVolume::MultipassTechnique use
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279147">[ date ]</a>
+              <a href="thread.html#279147">[ thread ]</a>
+              <a href="subject.html#279147">[ subject ]</a>
+              <a href="author.html#279147">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

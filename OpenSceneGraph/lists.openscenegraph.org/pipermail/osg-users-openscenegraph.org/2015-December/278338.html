@@ -1,0 +1,231 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [StateSet] Handle .png as a texture
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BStateSet%5D%20Handle%20.png%20as%20a%20texture&In-Reply-To=%3C1449679659.m2f.65831%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278337.html">
+   <LINK REL="Next"  HREF="278339.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [StateSet] Handle .png as a texture</H1>
+<!--htdig_noindex-->
+    <B>Stephane Mas</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BStateSet%5D%20Handle%20.png%20as%20a%20texture&In-Reply-To=%3C1449679659.m2f.65831%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [StateSet] Handle .png as a texture">stephane.mas at gmail.com
+       </A><BR>
+    <I>Wed Dec  9 08:47:39 PST 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278337.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+        <LI>Next message: <A HREF="278339.html">[osg-users] Can't build documentation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278338">[ date ]</a>
+              <a href="thread.html#278338">[ thread ]</a>
+              <a href="subject.html#278338">[ subject ]</a>
+              <a href="author.html#278338">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I experience problems to display a .png image as an osg::Geode.
+
+The thing is that it was perfectly working when I was using version 3.2.0 of osg library, but now that I use version 3.2.1, it no more works. 
+
+Here are samples from my code (sorry for bad indentation) :
+
+I first load the image :
+
+Code:
+
+osg::Image * image;
+image = osgDB::readImageFile(pathToTheImage);
+
+
+
+
+I create a osg::Geometry :
+
+
+Code:
+
+
+// Retrieve image dimension
+_imageWidth = image-&gt;s();
+_imageHeight = image-&gt;t();
+
+// Build the plane geometry
+osg::Geometry* planeGeometry = new osg::Geometry();
+
+//---------------------------------------
+// Compute vertices to keep the image ratio.
+// Max dimension (width or height) will be considered 1 unit long
+//---------------------------------------
+double vertexLeft;
+double vertexBottom;
+double vertexRight;
+double vertexTop;
+
+// Center on the image
+if( _imageWidth &gt; _imageHeight ){
+vertexLeft = - 0.5 * (_imageHeight / _imageWidth);
+vertexBottom = - 0.5;
+vertexRight = + 0.5 * (_imageHeight / _imageWidth);
+vertexTop = + 0.5;
+}
+else{
+vertexLeft = - 0.5;
+vertexBottom = - 0.5 * (_imageWidth / _imageHeight);
+vertexRight = + 0.5;
+vertexTop = + 0.5 * (_imageWidth / _imageHeight);
+}
+
+int verticesScale = 1; // We could specify a scale there, but it would be harder to change it in a second time in another function call ...
+osg::Vec3Array * vertices = new osg::Vec3Array;
+vertices-&gt;push_back(osg::Vec3(verticesScale*vertexLeft, verticesScale*vertexBottom, 0));
+vertices-&gt;push_back(osg::Vec3(verticesScale*vertexRight, verticesScale*vertexBottom, 0));
+vertices-&gt;push_back(osg::Vec3(verticesScale*vertexRight, verticesScale*vertexTop, 0));
+vertices-&gt;push_back(osg::Vec3(verticesScale*vertexLeft, verticesScale*vertexTop, 0));
+
+osg::DrawElementsUInt * indices = new osg::DrawElementsUInt(osg::PrimitiveSet::POLYGON, 0);
+indices-&gt;push_back(0);
+indices-&gt;push_back(1);
+indices-&gt;push_back(2);
+indices-&gt;push_back(3);
+
+osg::Vec4Array * colors = new osg::Vec4Array;
+colors-&gt;push_back(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f)); // no transparency
+
+osg::Vec2Array * textureCoords = new osg::Vec2Array(4);
+(*textureCoords)[0].set(0.0f, 0.0f);
+(*textureCoords)[1].set(1.0f, 0.0f);
+(*textureCoords)[2].set(1.0f, 1.0f);
+(*textureCoords)[3].set(0.0f, 1.0f);
+
+planeGeometry-&gt;setTexCoordArray(0, textureCoords);
+
+osg::Vec3Array * normals = new osg::Vec3Array;
+normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+planeGeometry-&gt;setNormalArray(normals);
+
+planeGeometry-&gt;setNormalBinding(osg::Geometry::BIND_OVERALL);
+planeGeometry-&gt;addPrimitiveSet(indices);
+planeGeometry-&gt;setVertexArray(vertices);
+planeGeometry-&gt;setColorArray(colors);
+
+planeGeometry-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+
+
+
+I fill a geode with the built geometry
+
+
+Code:
+
+osg::Geode * texturedPlaneGeode = new osg::Geode();
+texturedPlaneGeode-&gt;addDrawable(planeGeometry);
+
+
+
+	
+Then I handle the state set of the geode :	
+
+Code:
+
+texturedPlaneGeode-&gt;setStateSet(createTextureStateFromSingleImage(image));
+
+
+
+
+Here is how I handle the state set from a given osgImage :
+
+
+Code:
+
+osg::StateSet * createTextureStateFromSingleImage(osg::Image * singleImage)
+{
+// create the StateSet to store the texture data
+osg::StateSet* texturedPlaneStateSet = new osg::StateSet;
+
+// Build the texture
+osg::Texture2D * texture = new osg::Texture2D;
+texture-&gt;setDataVariance(osg::Object::DYNAMIC);
+texture-&gt;setImage(singleImage);
+
+// Update StateSet to use the texture
+texturedPlaneStateSet-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+
+// Turn blending on (so alpha texture looks right)
+texturedPlaneStateSet-&gt;setMode(GL_BLEND, osg::StateAttribute::ON);
+
+// Turn lighting off (to keep exact - inside image - colors when rendering)
+texturedPlaneStateSet-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+
+// Disable depth testing so geometry is drawn regardless of depth values
+// of geometry already draw.
+texturedPlaneStateSet-&gt;setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+
+texturedPlaneStateSet-&gt;setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
+// Need to make sure this geometry is draw last. RenderBins are handled
+// in numerical order so set bin number to 11
+texturedPlaneStateSet-&gt;setRenderBinDetails(11, &quot;RenderBin&quot;);
+
+
+return texturedPlaneStateSet;
+}
+
+
+
+
+The result is a plane with correct dimensions, but with only grey content.
+Do you have any idea on what I do wrong ?
+
+Thank you in advance for any help !
+Stephane
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic8c60.php?p=65831#65831">http://forum.openscenegraph.org/viewtopic.php?p=65831#65831</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278337.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+	<LI>Next message: <A HREF="278339.html">[osg-users] Can't build documentation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278338">[ date ]</a>
+              <a href="thread.html#278338">[ thread ]</a>
+              <a href="subject.html#278338">[ subject ]</a>
+              <a href="author.html#278338">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

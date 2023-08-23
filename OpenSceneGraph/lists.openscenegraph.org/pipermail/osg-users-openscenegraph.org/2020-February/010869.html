@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] ProgramBinary and shader composition - does it work?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ProgramBinary%20and%20shader%20composition%20-%20does%20it%20work%3F&In-Reply-To=%3Cmailman.72005.1582472886.7168.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010868.html">
+   <LINK REL="Next"  HREF="010866.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] ProgramBinary and shader composition - does it work?</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ProgramBinary%20and%20shader%20composition%20-%20does%20it%20work%3F&In-Reply-To=%3Cmailman.72005.1582472886.7168.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] ProgramBinary and shader composition - does it work?">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Sun Feb 23 07:47:51 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010868.html">[osg-users] ProgramBinary and shader composition - does it work?
+</A></li>
+        <LI>Next message (by thread): <A HREF="010866.html">[osg-users]  osgQt aspect ratio issue when inside QMainWindow
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10869">[ date ]</a>
+              <a href="thread.html#10869">[ thread ]</a>
+              <a href="subject.html#10869">[ subject ]</a>
+              <a href="author.html#10869">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Glenn,
+
+The way I'd tackle the issue of compilation of shaders taking a long time
+is to avoid doing it frame time, doing as much work in scene graph
+setup/compilation.
+
+For you usage case I assume you have a complex shader with many different
+constant inputs either controlling code paths or values, and the scene
+graph is configuring these as the values change provided by the scene graph
+via the #PCS defines.  If you can work out what range of different defines
+you will need then build a subgraph with each of these combinations and the
+sharing osg::Program that depends upon these then compile this subgraph,
+once it's all compiled you can discard it save for the osg::Program that
+you then reuse in your main application.
+
+This approach should in theory populate the osg::Program with all the GLSL
+program combinations that you will need and the OSG can internally just use
+these when rendering your main scene graph.
+
+Robert.
+
+On Sun, 23 Feb 2020 at 14:14, OpenSceneGraph Users &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt; wrote:
+
+&gt;<i> Robert,
+</I>&gt;<i>
+</I>&gt;<i> I have an application with several complex shaders. According to the
+</I>&gt;<i> profiler some of them take a while to link (glLinkProgram), long enough to
+</I>&gt;<i> cause a frame drop. This app cannot tolerate any frame drops so I was
+</I>&gt;<i> looking into glProgramBinary as a possible mitigation. I'm open to other
+</I>&gt;<i> ideas of course.
+</I>&gt;<i>
+</I>&gt;<i> Glenn Waldron / osgEarth
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> On Thu, Feb 20, 2020 at 10:31 AM OpenSceneGraph Users &lt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt; wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi Glenn,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> On Wed, 19 Feb 2020 at 17:56, OpenSceneGraph Users &lt;
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt; wrote:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> I was looking in the glProgramBinary support in osg::Program. I don't
+</I>&gt;&gt;&gt;<i> *think* it is integrated with your &quot;pragmatic&quot; define-based shader
+</I>&gt;&gt;&gt;<i> composition system. Specifically there doesn't seem to be a way to
+</I>&gt;&gt;&gt;<i> associate a ProgramBinary with a particular defineString at the
+</I>&gt;&gt;&gt;<i> PerContextProgram level.
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;&gt;<i> Am I right? And if so will you consider a submission to make this work?
+</I>&gt;&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> When writing the #pragma(tic) shader composition functionality I was just
+</I>&gt;&gt;<i> focused on conventional GLSL compiled shaders, I didn't consider
+</I>&gt;&gt;<i> glProgramBinary, so no idea of how it might interact, I don't expect it
+</I>&gt;&gt;<i> would would work though as the main task of shader composition is
+</I>&gt;&gt;<i> compositing the shaders to compile and compiling these at runtime.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Is there a reason why you are trying to the the glProgramBinary path?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Robert.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200223/a84c5244/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200223/a84c5244/attachment.html</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010868.html">[osg-users] ProgramBinary and shader composition - does it work?
+</A></li>
+	<LI>Next message (by thread): <A HREF="010866.html">[osg-users]  osgQt aspect ratio issue when inside QMainWindow
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10869">[ date ]</a>
+              <a href="thread.html#10869">[ thread ]</a>
+              <a href="subject.html#10869">[ subject ]</a>
+              <a href="author.html#10869">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

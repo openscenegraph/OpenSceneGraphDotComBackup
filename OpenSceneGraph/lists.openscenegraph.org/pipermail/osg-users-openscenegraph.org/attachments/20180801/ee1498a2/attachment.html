@@ -1,0 +1,114 @@
+#include <osg/Geode>
+#include <osg/Geometry>
+#include <osg/PointSprite>
+#include <osgViewer/Viewer>
+#include <osgViewer/ViewerEventHandlers>
+
+osg::Node* createCircle(const osg::Vec4f& color, float radius)
+{
+    osg::Geode* geode = new osg::Geode;
+    osg::Geometry* geom = new osg::Geometry;
+
+    // Draw a simple circle, every 3 degrees
+    osg::Vec3Array* vertices = new osg::Vec3Array();
+    for (int k = 0; k < 120; ++k)
+    {
+      double asRadians = osg::DegreesToRadians(3.0 * k);
+      vertices->push_back(osg::Vec3(radius * sin(asRadians), 0.0, radius * cos(asRadians)));
+    }
+
+    osg::Vec4Array* colors = new osg::Vec4Array(osg::Array::BIND_OVERALL);
+    colors->push_back(color);
+
+    geom->addPrimitiveSet(new osg::DrawArrays(GL_POINTS, 0, 120));
+    geom->setVertexArray(vertices);
+    geom->setColorArray(colors);
+    geode->addDrawable(geom);
+
+    return geode;
+}
+
+osg::Node* createScene()
+{
+    osg::Group* group = new osg::Group;
+    group->addChild(createCircle(osg::Vec4f(0.5, 1, 0.5, 1), 85.f));
+
+    osgText::Text* text = new osgText::Text;
+    text->setText("Press any key to turn on PointSprite.");
+    text->setCharacterSize(10.f);
+    text->setFont("fonts/times.ttf");
+    text->setAxisAlignment(osgText::Text::XZ_PLANE);
+    text->setAlignment(osgText::Text::CENTER_CENTER);
+    group->addChild(text);
+
+    return group;
+}
+
+struct PointSpriteAdder : public osgGA::GUIEventHandler
+{
+  explicit PointSpriteAdder(osg::StateSet* stateSet)
+    : stateSet_(stateSet)
+  {
+  }
+
+  virtual bool handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, osg::Object* obj, osg::NodeVisitor* nv)
+  {
+    if (ea.getEventType() == ea.KEYDOWN)
+    {
+      //////////////////////////////////////////////////////////////
+      // PointSprite::checkValidityOfModes() never gets called here
+      OSG_NOTICE << "Turning on Point Sprite.\n";
+      stateSet_->setTextureAttributeAndModes(0, new osg::PointSprite);
+    }
+    return GUIEventHandler::handle(ea, aa, obj, nv);
+  }
+
+  osg::ref_ptr<osg::StateSet> stateSet_;
+};
+
+int main(int argc, char** argv)
+{
+    osg::ArgumentParser arguments(&argc, argv);
+
+    // construct the viewer.
+    osgViewer::Viewer viewer(arguments);
+    osg::Node* scene = createScene();
+    viewer.setSceneData(scene);
+    viewer.setUpViewInWindow(100, 100, 800, 600);
+    viewer.addEventHandler(new osgViewer::StatsHandler());
+
+    OSG_NOTICE << "Point Sprite Mode Validity Tester\n";
+    OSG_NOTICE << "Arguments:\n";
+    OSG_NOTICE << "  --camera    Apply osg::PointSprite to Camera's state set only\n";
+    OSG_NOTICE << "  --scene     Apply osg::PointSprite to Scene's state set only\n";
+    OSG_NOTICE << "\n";
+
+    if (arguments.read("--camera"))
+    {
+      OSG_NOTICE << "--camera was detected; this will not call PointSprite::checkValidityOfModes().\n";
+      OSG_NOTICE << "Try calling with --scene to see 'correct' behavior.\n";
+
+      //////////////////////////////////////////////////////////////
+      // PointSprite::checkValidityOfModes() never gets called here
+      viewer.getCamera()->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite);
+    }
+    else if (arguments.read("--scene"))
+    {
+      OSG_NOTICE << "--scene was detected; this WILL correctly call PointSprite::checkValidityOfModes().\n";
+
+      //////////////////////////////////////////////////////////////
+      // PointSprite::checkValidityOfModes() will get called here, because the scene
+      // is traversed by GLObjectsVisitor during first render after setSceneData() call.
+      // Therefore, this correctly sets up the mode validity on GL_POINT_SPRITE.
+      scene->getOrCreateStateSet()->setTextureAttributeAndModes(0, new osg::PointSprite);
+    }
+    else
+    {
+      OSG_NOTICE << "No arguments detected; this will not correctly call PointSprite::checkValidityOfModes().\n";
+      OSG_NOTICE << "Try calling with --scene to see 'correct' behavior.\n";
+    }
+
+    viewer.addEventHandler(new PointSpriteAdder(scene->getOrCreateStateSet()));
+
+    return viewer.run();
+}

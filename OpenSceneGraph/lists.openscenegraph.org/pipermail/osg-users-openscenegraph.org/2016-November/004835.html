@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] ECEF Oriented Compass Implementation
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ECEF%20Oriented%20Compass%20Implementation&In-Reply-To=%3C1479292986.m2f.69390%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004833.html">
+   <LINK REL="Next"  HREF="004836.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] ECEF Oriented Compass Implementation</H1>
+<!--htdig_noindex-->
+    <B>Rambabu Repaka</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ECEF%20Oriented%20Compass%20Implementation&In-Reply-To=%3C1479292986.m2f.69390%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] ECEF Oriented Compass Implementation">ramboram488 at gmail.com
+       </A><BR>
+    <I>Wed Nov 16 02:43:06 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004833.html">[osg-users] ECEF Oriented Compass Implementation
+</A></li>
+        <LI>Next message: <A HREF="004836.html">[osg-users] ECEF Oriented Compass Implementation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4835">[ date ]</a>
+              <a href="thread.html#4835">[ thread ]</a>
+              <a href="subject.html#4835">[ subject ]</a>
+              <a href="author.html#4835">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+class Compass : public osg::Camera
+{
+public:
+	Compass();
+	Compass( const Compass&amp; copy, osg::CopyOp
+	copyop=osg::CopyOp::SHALLOW_COPY );
+	META_Node( osg, Compass );
+	void setPlate( osg::MatrixTransform* plate ) {_plateTransform = plate; }
+	void setNeedle( osg::MatrixTransform* needle ) {_needleTransform = needle; }
+	void setMainCamera( osg::Camera* camera ) {_mainCamera = camera; }
+	virtual void traverse( osg::NodeVisitor&amp; nv );
+protected:
+	virtual ~Compass();
+	osg::ref_ptr&lt;osg::MatrixTransform&gt; _plateTransform;
+	osg::ref_ptr&lt;osg::MatrixTransform&gt; _needleTransform;
+	osg::observer_ptr&lt;osg::Camera&gt; _mainCamera;
+};
+
+Compass::Compass( const Compass&amp; copy, osg::CopyOp copyop ):osg::Camera(copy, copyop),
+_plateTransform(copy._plateTransform),
+_needleTransform(copy._needleTransform),
+_mainCamera(copy._mainCamera)
+{
+}
+
+void Compass::traverse( osg::NodeVisitor&amp; nv )
+{
+	if ( _mainCamera.valid() &amp;&amp;nv.getVisitorType()==osg::NodeVisitor::CULL_VISITOR )
+	{
+		osg::Matrix matrix = _mainCamera-&gt;getViewMatrix();
+		matrix.setTrans( osg::Vec3() );
+		osg::Vec3 northVec = osg::Z_AXIS * matrix;
+		northVec.z() = 0.0f;
+		northVec.normalize();
+		osg::Vec3 axis = osg::Y_AXIS ^ northVec;
+		float angle = atan2(axis.length(), osg::Y_AXIS*northVec);axis.normalize();
+		if ( _plateTransform.valid() )
+		_plateTransform-&gt;setMatrix( osg::Matrix::rotate(angle, axis) );
+	}	
+	_plateTransform-&gt;accept( nv );
+	_needleTransform-&gt;accept( nv );
+	osg::Camera::traverse( nv );
+}
+
+compass class created but it is showing linker errors due to missing of library.How can i get that library file in osg.
+
+... 
+
+Thank you!
+
+Cheers,
+Rambabu
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicd1dc.php?p=69390#69390">http://forum.openscenegraph.org/viewtopic.php?p=69390#69390</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004833.html">[osg-users] ECEF Oriented Compass Implementation
+</A></li>
+	<LI>Next message: <A HREF="004836.html">[osg-users] ECEF Oriented Compass Implementation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4835">[ date ]</a>
+              <a href="thread.html#4835">[ thread ]</a>
+              <a href="subject.html#4835">[ subject ]</a>
+              <a href="author.html#4835">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

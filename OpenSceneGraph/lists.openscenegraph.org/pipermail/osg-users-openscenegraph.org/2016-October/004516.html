@@ -1,0 +1,220 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Fwd: OSG performance measurement
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Fwd%3A%20OSG%20performance%20measurement&In-Reply-To=%3CCACUuSRRS1G094CrPaO-4FHTod-cPwqshP%2BsFyQOKt5qi82c3vw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004509.html">
+   <LINK REL="Next"  HREF="280737.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Fwd: OSG performance measurement</H1>
+<!--htdig_noindex-->
+    <B>Hannes Naude</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Fwd%3A%20OSG%20performance%20measurement&In-Reply-To=%3CCACUuSRRS1G094CrPaO-4FHTod-cPwqshP%2BsFyQOKt5qi82c3vw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Fwd: OSG performance measurement">naude.jj at gmail.com
+       </A><BR>
+    <I>Tue Oct 18 01:25:21 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004509.html">[osg-users] Fwd: OSG performance measurement
+</A></li>
+        <LI>Next message: <A HREF="280737.html">[osg-users] Example of osgPartilcle::ExplosionOperator
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4516">[ date ]</a>
+              <a href="thread.html#4516">[ thread ]</a>
+              <a href="subject.html#4516">[ subject ]</a>
+              <a href="author.html#4516">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert
+
+Thanks for the reply. I toggled on the high levels of stats info and it was
+immediately apparent that the delays were occurring in the event traversal,
+which made no sense, since the only eventhandler that I explicitly added is
+the StatsHandler and the problem predates that.
+
+At this point, I abandoned my strong preconception that the problem was
+somewhere in my OSG calling code or in the way that I set up my project and
+just used htop to see whether any other processes were starving my little
+OSG program of CPU time (something I did not consider earlier, because of
+mentioned preconceptions and the fact that everything else running on my PC
+appears responsive.) I saw a bunch of java processes that were hogging the
+CPU (Attempts to install a newer eclipse via yatta that had failed silently
+a few days ago). After killing these, the framerate went up to 60Hz and
+stayed there after I uncommented all the actual functionality in my
+program. So this was not OSG related at all after all. :-O
+
+Thanks for your help.
+
+Regards
+Hannes
+
+On Mon, Oct 17, 2016 at 5:18 PM, Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;
+wrote:
+
+&gt;<i> Hi Hannes,
+</I>&gt;<i>
+</I>&gt;<i> There really isn't much info to go on from what you are written so
+</I>&gt;<i> far.  Using the StatsHandler is a good first step but just the frame
+</I>&gt;<i> rate reports doesn't tell us enough to know what is going on.
+</I>&gt;<i>
+</I>&gt;<i> Try toggling the the high levels of stats info and then look at the
+</I>&gt;<i> size of the update, event, cull, draw dispatch and draw GPU.
+</I>&gt;<i>
+</I>&gt;<i> Another thing to do is switch off vsync via the driver and see what
+</I>&gt;<i> the framerate is without vysunc on.
+</I>&gt;<i>
+</I>&gt;<i> Try with a range a models.  As a general note, the OSG with 980Ti
+</I>&gt;<i> should perform pretty well even for very large models.  I develop
+</I>&gt;<i> under Kubuntu and find the NVidia drivers work pretty well, it has to
+</I>&gt;<i> be a pretty serious model to get the frame rate down as low as
+</I>&gt;<i> 30-40fps, this requires ten's of millions of vertices per frame to be
+</I>&gt;<i> rendered or high res volume rendering.  With an small scene such as
+</I>&gt;<i> the OpenSceneGraph-Data's cow.osgt I get 6000+fps on a 1920x1080
+</I>&gt;<i> display.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 17 October 2016 at 16:05, Hannes Naude &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">naude.jj at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; OK. Scratch that, I no longer believe that this is a performance
+</I>&gt;<i> measurement
+</I>&gt;<i> &gt; issue, but rather a performance issue. I have replaced my measurement
+</I>&gt;<i> code
+</I>&gt;<i> &gt; with the built in StatsHandler class, so my code now looks as follows:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; int main() {
+</I>&gt;<i> &gt; ref_ptr&lt;osgViewer::CompositeViewer&gt; viewer=new
+</I>&gt;<i> osgViewer::CompositeViewer();
+</I>&gt;<i> &gt; ref_ptr&lt;osgViewer::View&gt; view1 = new osgViewer::View;
+</I>&gt;<i> &gt; viewer-&gt;addView(view1);
+</I>&gt;<i> &gt; view1-&gt;addEventHandler( new osgViewer::StatsHandler );
+</I>&gt;<i> &gt; return viewer-&gt;run();
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; When I press S statshandler reports 30-40fps. Obviously there is not a
+</I>&gt;<i> lot
+</I>&gt;<i> &gt; of room to have messed up in a 5-liner program, so I believe that that is
+</I>&gt;<i> &gt; the actual framerate that I am getting. Question is why. I am running on
+</I>&gt;<i> a
+</I>&gt;<i> &gt; NVIDIA Geforce 980Ti under Ubuntu 14.04 with nvidia driver version
+</I>&gt;<i> 352.63) .
+</I>&gt;<i> &gt; I have optimization on (-O3 under gcc)  and believe that I am linking
+</I>&gt;<i> &gt; against release libraries not debug ones.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Any ideas where to look??
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Regards
+</I>&gt;<i> &gt; Hannes
+</I>&gt;<i> &gt; ---------- Forwarded message ----------
+</I>&gt;<i> &gt; From: Hannes Naude &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">naude.jj at gmail.com</A>&gt;
+</I>&gt;<i> &gt; Date: Mon, Oct 17, 2016 at 1:46 PM
+</I>&gt;<i> &gt; Subject: OSG performance measurement
+</I>&gt;<i> &gt; To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Hi all
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; New to OSG so apologies if this is a stupid question.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I have written a visualization tool in OSG and as a last step, I wish to
+</I>&gt;<i> &gt; ensure that it runs at the screen refresh rate. My perception was that it
+</I>&gt;<i> &gt; mostly runs smoothly but stutters every few frames or so, so I wrote
+</I>&gt;<i> code to
+</I>&gt;<i> &gt; print the elapsed time between every two frames, rather than just the
+</I>&gt;<i> &gt; average framerate. The printout seemed to confirm this, so I gradually
+</I>&gt;<i> &gt; removed more and more of my scenegraph, trying to determine where the
+</I>&gt;<i> &gt; bottleneck lies. The weird thing is that I end up with a completely empty
+</I>&gt;<i> &gt; scenegraph (just rendering a blue screen) and execution time STILL seems
+</I>&gt;<i> to
+</I>&gt;<i> &gt; stutter. So, I strongly suspect that there is something fundamentally
+</I>&gt;<i> wrong
+</I>&gt;<i> &gt; with the way I am measuring. I realise that FPS is a bad performance
+</I>&gt;<i> metric,
+</I>&gt;<i> &gt; but right now I just want to get to the point where I am updating every
+</I>&gt;<i> &gt; frame on my hardware and I am not particularly concerned about
+</I>&gt;<i> performance
+</I>&gt;<i> &gt; on any other hardware. The remaining code looks like this:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; int main() {
+</I>&gt;<i> &gt; ref_ptr&lt;osgViewer::CompositeViewer&gt; viewer=new
+</I>&gt;<i> osgViewer::CompositeViewer();
+</I>&gt;<i> &gt; ref_ptr&lt;osgViewer::View&gt; view1 = new osgViewer::View;
+</I>&gt;<i> &gt; viewer-&gt;addView(view1);
+</I>&gt;<i> &gt; float timeNow,timePrev=0;
+</I>&gt;<i> &gt; while (!viewer-&gt;done())
+</I>&gt;<i> &gt; {
+</I>&gt;<i> &gt; viewer-&gt;frame();
+</I>&gt;<i> &gt; timeNow=osg::Timer::instance()-&gt;time_s();
+</I>&gt;<i> &gt; std::cout &lt;&lt; timeNow-timePrev &lt;&lt; &quot; &quot;;
+</I>&gt;<i> &gt; timePrev=timeNow;
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt; return(0);
+</I>&gt;<i> &gt; }
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; and the resulting printout to the console looks like this:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; 0.123003 0.00298501 0.000751987 0.016045 0.083418 0.038128 0.013075
+</I>&gt;<i> &gt; 0.00068298 0.014678 0.019825 0.013804 0.016688 0.01651 0.066802 0.023197
+</I>&gt;<i> &gt; 0.07995 0.013019 0.000387967 0.0331 0.000599027 0.03273 0.000575006
+</I>&gt;<i> 0.088067
+</I>&gt;<i> &gt; 0.083023...
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; As you can see, the loop occasionally takes as much as 88ms to complete,
+</I>&gt;<i> &gt; while at other time completing within 0.6ms. What could possibly be
+</I>&gt;<i> causing
+</I>&gt;<i> &gt; this massive variation?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Regards
+</I>&gt;<i> &gt; Hannes Naude
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-</A>
+</I>&gt;<i> openscenegraph.org
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161018/aaf63096/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161018/aaf63096/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004509.html">[osg-users] Fwd: OSG performance measurement
+</A></li>
+	<LI>Next message: <A HREF="280737.html">[osg-users] Example of osgPartilcle::ExplosionOperator
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4516">[ date ]</a>
+              <a href="thread.html#4516">[ thread ]</a>
+              <a href="subject.html#4516">[ subject ]</a>
+              <a href="author.html#4516">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

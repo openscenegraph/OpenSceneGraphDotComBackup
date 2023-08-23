@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgViewer/Renderer ctor set wrong defaults for	SceneView
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgViewer/Renderer%20ctor%20set%20wrong%20defaults%20for%0A%09SceneView&In-Reply-To=%3CCAFN7Y%2BVwTnETJDMy6--jHLGJGMK1jWLMcNV74Vs-KD9vgr2sjA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002263.html">
+   <LINK REL="Next"  HREF="002266.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgViewer/Renderer ctor set wrong defaults for	SceneView</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgViewer/Renderer%20ctor%20set%20wrong%20defaults%20for%0A%09SceneView&In-Reply-To=%3CCAFN7Y%2BVwTnETJDMy6--jHLGJGMK1jWLMcNV74Vs-KD9vgr2sjA%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgViewer/Renderer ctor set wrong defaults for	SceneView">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Feb  3 03:43:52 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002263.html">[osg-users] osgViewer/Renderer ctor set wrong defaults for SceneView
+</A></li>
+        <LI>Next message: <A HREF="002266.html">[osg-users] osgViewer/Renderer ctor set wrong defaults for SceneView
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2265">[ date ]</a>
+              <a href="thread.html#2265">[ thread ]</a>
+              <a href="subject.html#2265">[ subject ]</a>
+              <a href="author.html#2265">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Christian,
+
+On 3 February 2016 at 10:32, Christian Ehrlicher &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Ch.Ehrlicher at gmx.de</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I thought svn is the master, and not git. The git commit-id is
+</I>&gt;<i> eb7929b85ad87316a2437da03b4bb810cded7366 - it's between osg3.1.8 and 3.1.9
+</I>
+Thanks.  Git it now the master, we moved over not long ago.
+
+&gt;<i> The problem we've is that mostly all of our models in the terrain are
+</I>&gt;<i> displayed transparent in the middle of the screen when using osgViewer
+</I>&gt;<i> class. Using the osgviewer executable all looks find so I assume osgviewer
+</I>&gt;<i> does not use osgViewer class.
+</I>
+I suspect this is an issue with your application not setting the
+correct global state in the viewer's master Camera.  This issue was
+discussed a great deal before and shortly after the 3.2 release, but
+as you are just upgrading you have obviously missed this discussion.
+
+There was a bug prior to OSG-3.2 where SceneView would discard global
+StateSet values overwritting them with it's won global defaults.  The
+bug fix addressed this problem so users could set the viewer's
+Camera's StateSet and have this settings reflected in the scene.
+
+While this change does fix a bug it inadvertently exposed a bug in
+applications where they create their own osg::Camera without setting
+any global default state then apply this directly to the viewer.  This
+new osg::Camera then doesn't set any the defaults that are normally
+assumed to be enabled such as depth test and alpha blending etc.  The
+View(er) by default actually calls StateSet::setGlobalDefaults() but
+this is done at intiialization of the View(er) so if you then replace
+the View(er)'s Camera then you replace the one with the state set up
+with some sensible global defaults with one with no StateSet set up.
+
+The fix is to either just reuse the View(er)'s Camera rather than
+replace it, or if do replace it call:
+
+   viewer.getCamera()-&gt;getOrCreateStateSet()-&gt;setGlobalDefaults();
+
+Robert.
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002263.html">[osg-users] osgViewer/Renderer ctor set wrong defaults for SceneView
+</A></li>
+	<LI>Next message: <A HREF="002266.html">[osg-users] osgViewer/Renderer ctor set wrong defaults for SceneView
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2265">[ date ]</a>
+              <a href="thread.html#2265">[ thread ]</a>
+              <a href="subject.html#2265">[ subject ]</a>
+              <a href="author.html#2265">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

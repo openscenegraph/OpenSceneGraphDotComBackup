@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Viewer slaves and RTTs
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Viewer%20slaves%20and%20RTTs&In-Reply-To=%3C1487422663.m2f.70251%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005619.html">
+   <LINK REL="Next"  HREF="005622.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Viewer slaves and RTTs</H1>
+<!--htdig_noindex-->
+    <B>Johny Canes</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Viewer%20slaves%20and%20RTTs&In-Reply-To=%3C1487422663.m2f.70251%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Viewer slaves and RTTs">petrussijsma at gmail.com
+       </A><BR>
+    <I>Sat Feb 18 04:57:43 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005619.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+        <LI>Next message: <A HREF="005622.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5621">[ date ]</a>
+              <a href="thread.html#5621">[ thread ]</a>
+              <a href="subject.html#5621">[ subject ]</a>
+              <a href="author.html#5621">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Okay,
+
+
+Code:
+
+// window / slave
+	camera = new osg::Camera();
+	osg::Viewport* viewport;
+
+	/// {
+	osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+	traits-&gt;x = 300 + 0;
+	traits-&gt;y = 100 + 0;
+	traits-&gt;width = nr::width;
+	traits-&gt;height = nr::height;
+	traits-&gt;windowDecoration = true;
+	traits-&gt;doubleBuffer = true;
+	traits-&gt;sharedContext = 0;
+	traits-&gt;samples = 4; // MSAA
+	traits-&gt;vsync = false;
+
+	viewport = new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height);
+
+	gc = osg::GraphicsContext::createGraphicsContext( traits.get() );
+	gc-&gt;getState()-&gt;setUseModelViewAndProjectionUniforms( true );
+	gc-&gt;getState()-&gt;setUseVertexAttributeAliasing( true );
+
+	GLenum buffer = traits-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+
+	camera = viewer.getCamera();
+	camera-&gt;setName( &quot;Main&quot; );
+	camera-&gt;setGraphicsContext( gc.get() );
+
+	camera-&gt;setClearColor(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	camera-&gt;setViewport( new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height) );
+	//camera-&gt;getOrCreateStateSet()-&gt;setTextureAttributeAndModes( 0, texture, osg::StateAttribute::ON );
+
+	camera-&gt;setDrawBuffer( buffer );
+	camera-&gt;setReadBuffer( buffer );
+	camera-&gt;setRenderOrder( osg::Camera::RenderOrder::PRE_RENDER );
+	//camera-&gt;setRenderTargetImplementation( osg::Camera::FRAME_BUFFER_OBJECT );
+	
+	camera-&gt;attach( osg::Camera::COLOR_BUFFER0, texture );
+	//camera-&gt;attach( osg::Camera::COLOR_BUFFER, texture, 0, 0, false, 0, 0 );
+
+	//viewer.addSlave( camera, osg::Matrix(), osg::Matrix() );
+
+	//viewer.setCamera( camera ); // unnecessary / messes up z-ordering ...
+
+	//camera-&gt;addChild( root.get() );
+	/// }
+
+
+
+
+This makes a window. I get it that a window is backed by a camera / GC.
+
+So naturally, since I'm using the original camera, my camera, 'Main', will render to its window. It would be ideal to turn this off, and only have this camera render to a hidden buffer (FBO?). Using a pbuffer / pbuffer-rtt is overkill and I'm not sure I understand that approach.
+
+Cheers,
+Johny
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicbf3a.php?p=70251#70251">http://forum.openscenegraph.org/viewtopic.php?p=70251#70251</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005619.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+	<LI>Next message: <A HREF="005622.html">[osg-users] Viewer slaves and RTTs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5621">[ date ]</a>
+              <a href="thread.html#5621">[ thread ]</a>
+              <a href="subject.html#5621">[ subject ]</a>
+              <a href="author.html#5621">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

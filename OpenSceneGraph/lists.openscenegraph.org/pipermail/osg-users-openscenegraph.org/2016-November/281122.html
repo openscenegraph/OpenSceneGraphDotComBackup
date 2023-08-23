@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Change Graphic Context Runtimely
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Change%20Graphic%20Context%20Runtimely&In-Reply-To=%3C194c53fd.b888.158865bc28b.Coremail.tianzjyh%40126.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004902.html">
+   <LINK REL="Next"  HREF="281127.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Change Graphic Context Runtimely</H1>
+<!--htdig_noindex-->
+    <B>tianzjyh</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Change%20Graphic%20Context%20Runtimely&In-Reply-To=%3C194c53fd.b888.158865bc28b.Coremail.tianzjyh%40126.com%3E"
+       TITLE="[osg-users] Change Graphic Context Runtimely">tianzjyh at 126.com
+       </A><BR>
+    <I>Mon Nov 21 02:08:30 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004902.html">[osg-users] Rendering 3d Model using osgEarth.
+</A></li>
+        <LI>Next message: <A HREF="281127.html">[osg-users] Draw geometry that keeps its size in screen even with user manipulation (scaling, etc)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281122">[ date ]</a>
+              <a href="thread.html#281122">[ thread ]</a>
+              <a href="subject.html#281122">[ subject ]</a>
+              <a href="author.html#281122">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi, 
+  I found it difficult to achieve dynamic switching OpenGL context at run time.
+
+
+  In the following code, I try to achieve this switching in a single thread(rendering thread not included), but I got a frozen window after pressing the switch key.
+
+
+  My purpose is mainly to implement a quad-buffer switch option for users.
+
+
+  Which step have made the froze of the main loop?
+
+
+Codes:
+------------------------------------------------------------------------------------------------------
+1#include &lt;windows.h&gt;
+2
+3#include &lt;osg/Node&gt;
+4#include &lt;osgGA/GuiEventHandler&gt;
+5#include &lt;osgGA/TrackballManipulator&gt;
+6#include &lt;osgViewer/Viewer&gt;
+7#include &lt;osgDB/ReadFile&gt;
+8
+9osg::GraphicsContext* createGC(float x, float y, float w, float h, bool stereo)
+10{
+11osg::DisplaySettings* ds = osg::DisplaySettings::instance().get();
+12osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits;
+13traits-&gt;windowName = &quot;&quot;;
+14traits-&gt;windowDecoration = true;
+15traits-&gt;x = x;
+16traits-&gt;y = y;
+17traits-&gt;width = w;
+18traits-&gt;height = h;
+19traits-&gt;doubleBuffer = true;
+20traits-&gt;quadBufferStereo = stereo;
+21traits-&gt;alpha = ds-&gt;getMinimumNumAlphaBits();
+22traits-&gt;stencil = ds-&gt;getMinimumNumStencilBits();
+23traits-&gt;sampleBuffers = ds-&gt;getMultiSamples();
+24traits-&gt;samples = ds-&gt;getNumMultiSamples();
+25
+26return osg::GraphicsContext::createGraphicsContext(traits.get());
+27}
+28
+29bool _stereo = false;
+30osg::ref_ptr&lt;osg::GraphicsContext&gt; _newgc = NULL;
+31
+32class SwitchGC : public osgGA::GUIEventHandler
+33{
+34public:
+35virtual bool handle(const osgGA::GUIEventAdapter&amp; ea, osgGA::GUIActionAdapter&amp; aa)
+36{
+37switch (ea.getEventType())
+38{
+39case osgGA::GUIEventAdapter::EventType::KEYDOWN:
+40{
+41   if (ea.getKey() == osgGA::GUIEventAdapter::KEY_S)
+42   {
+43   //
+44   osgViewer::Viewer* viewer = dynamic_cast&lt;osgViewer::Viewer*&gt;(&amp;aa);
+45   if (viewer)
+46   {
+47   _stereo = !_stereo;
+48   _newgc = createGC(0, 0, 1000, 1000, _stereo);
+49   //viewer-&gt;getCamera()-&gt;setGraphicsContext(gc);
+50   osg::DisplaySettings::instance()-&gt;setStereo(_stereo);
+51   if (_stereo)
+52   {
+53   osg::DisplaySettings::instance()-&gt;setStereoMode(osg::DisplaySettings::QUAD_BUFFER);
+54   }
+55   }
+56
+57   return true;
+58   }
+59}
+60break;
+61default:
+62break;
+63}
+64
+65return false;
+66}
+67private:
+68};
+69
+70int main(int, char**)
+71{
+72osgViewer::Viewer* viewer = new osgViewer::Viewer();
+73
+74_stereo = !_stereo;
+75osg::GraphicsContext* gc = createGC(0, 0, 1000, 1000, _stereo);
+76osg::DisplaySettings::instance()-&gt;setStereo(_stereo);
+77if (_stereo)
+78{
+79osg::DisplaySettings::instance()-&gt;setStereoMode(osg::DisplaySettings::QUAD_BUFFER);
+80}
+81
+82
+83viewer-&gt;getCamera()-&gt;setGraphicsContext(gc);
+84viewer-&gt;setSceneData(osgDB::readNodeFile(&quot;cow.osg&quot;));
+85
+86osg::Camera* camera = viewer-&gt;getCamera();
+87const osg::GraphicsContext::Traits* traits = gc-&gt;getTraits();
+88
+89camera-&gt;setClearColor(osg::Vec4(0.2, 0.2, 0.2, 1.0));
+90camera-&gt;setViewport(new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height));
+91camera-&gt;setProjectionMatrixAsPerspective(30.0f, static_cast&lt;double&gt;(traits-&gt;width) / static_cast&lt;double&gt;(traits-&gt;height), 1.0f, 10000.0f);
+92
+93viewer-&gt;addEventHandler(new SwitchGC());
+94viewer-&gt;setCameraManipulator(new osgGA::TrackballManipulator);
+95
+96while (!viewer-&gt;done())
+97{
+98if (_newgc.get() != NULL)
+99{
+100osg::GraphicsContext*oldgc =  viewer-&gt;getCamera()-&gt;getGraphicsContext();
+101if (oldgc)
+102{
+103oldgc-&gt;close(true);
+104}
+105
+106viewer-&gt;getCamera()-&gt;setGraphicsContext(_newgc);
+107_newgc = NULL;
+108
+109camera-&gt;setClearColor(osg::Vec4(0.2, 0.2, 0.2, 1.0));
+110camera-&gt;setViewport(new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height));
+111camera-&gt;setProjectionMatrixAsPerspective(30.0f, static_cast&lt;double&gt;(traits-&gt;width) / static_cast&lt;double&gt;(traits-&gt;height), 1.0f, 10000.0f);
+112
+113viewer-&gt;realize();
+114viewer-&gt;addEventHandler(new SwitchGC());
+115viewer-&gt;setCameraManipulator(new osgGA::TrackballManipulator);
+116
+117}
+118
+119viewer-&gt;frame();
+120
+121}
+122return 0;
+123}
+124
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161121/852cbb1d/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161121/852cbb1d/attachment-0001.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004902.html">[osg-users] Rendering 3d Model using osgEarth.
+</A></li>
+	<LI>Next message: <A HREF="281127.html">[osg-users] Draw geometry that keeps its size in screen even with user manipulation (scaling, etc)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281122">[ date ]</a>
+              <a href="thread.html#281122">[ thread ]</a>
+              <a href="subject.html#281122">[ subject ]</a>
+              <a href="author.html#281122">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,96 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;Yeah,&nbsp;I&nbsp;wouldn&#39;t&nbsp;totally&nbsp;expect&nbsp;it&nbsp;would,&nbsp;but&nbsp;you&nbsp;can&nbsp;probably&nbsp;do&nbsp;that&nbsp;intersection&nbsp;test&nbsp;yourself&nbsp;if&nbsp;needed.&nbsp;I&nbsp;think&nbsp;it&#39;ll&nbsp;be&nbsp;faster&nbsp;and&nbsp;more&nbsp;accurate&nbsp;than&nbsp;the&nbsp;Z-buffer.&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;I&nbsp;did&nbsp;a&nbsp;tool&nbsp;that&nbsp;relied&nbsp;on&nbsp;the&nbsp;Z-buffer&nbsp;once.&nbsp;It&nbsp;was&nbsp;a&nbsp;bad&nbsp;choice...&lt;/div&gt;&lt;/div&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_attr&quot;&gt;On&nbsp;Tue,&nbsp;Apr&nbsp;16,&nbsp;2019&nbsp;at&nbsp;1:05&nbsp;PM&nbsp;Anna&nbsp;Osvin&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:osgforum@tevs.eu&quot;&gt;osgforum@tevs.eu&lt;/a&gt;&gt;&nbsp;wrote:&lt;br&gt;&lt;/div&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0px&nbsp;0px&nbsp;0px&nbsp;0.8ex;border-left:1px&nbsp;solid&nbsp;rgb(204,204,204);padding-left:1ex&quot;&gt;If&nbsp;you&nbsp;mean&nbsp;osgViewer::View::computeIntersections,&nbsp;then&nbsp;we&nbsp;tried&nbsp;it.&nbsp;For&nbsp;some&nbsp;reason&nbsp;it&nbsp;does&nbsp;not&nbsp;check&nbsp;intersections&nbsp;with&nbsp;volume&nbsp;model.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Here&nbsp;is&nbsp;raycast&nbsp;intersection&nbsp;check&nbsp;code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+bool&nbsp;pickPolygonalSceneIntersection(&nbsp;osgViewer::View&amp;&nbsp;view,&nbsp;const&nbsp;osg::Vec2&amp;&nbsp;point2d,&nbsp;osg::Vec3&amp;&nbsp;pickedPoint&nbsp;)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp; &nbsp;const&nbsp;osg::Camera*&nbsp;camera&nbsp;=&nbsp;view.getCamera();&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(&nbsp;camera&nbsp;==&nbsp;nullptr&nbsp;)&nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;Q_ASSERT_X(&nbsp;false,&nbsp;&quot;bool&nbsp;pickPolygonalSceneIntersection(&nbsp;...&nbsp;)&quot;,&nbsp;&quot;View&nbsp;has&nbsp;no&nbsp;camera.&quot;&nbsp;);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;return&nbsp;false;&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;osgUtil::LineSegmentIntersector::Intersections&nbsp;intersections;&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;if&nbsp;(&nbsp;view.computeIntersections(&nbsp;camera,&nbsp;osgUtil::Intersector::CoordinateFrame::WINDOW,&nbsp;point2d.x(),&nbsp;point2d.y(),&nbsp;intersections&nbsp;)&nbsp;)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;for&nbsp;(osgUtil::LineSegmentIntersector::Intersections::iterator&nbsp;hitr&nbsp;=&nbsp;intersections.begin();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;hitr&nbsp;!=&nbsp;intersections.end();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;++hitr)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(hitr-&gt;nodePath.size()&nbsp;&gt;&nbsp;4)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;pickedPoint&nbsp;=&nbsp;hitr-&gt;getWorldIntersectPoint();&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;return&nbsp;true;&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+ &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;return&nbsp;false;&lt;br&gt;<br>
+}&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Chris&nbsp;Hanson&nbsp;wrote:&lt;br&gt;<br>
+&gt;&nbsp;Instead&nbsp;of&nbsp;reading&nbsp;Z&nbsp;depth&nbsp;values,&nbsp;can&nbsp;you&nbsp;simply&nbsp;run&nbsp;an&nbsp;intersection&nbsp;of&nbsp;the&nbsp;click&nbsp;ray-vector&nbsp;against&nbsp;the&nbsp;model&nbsp;data&nbsp;(polygonal&nbsp;and&nbsp;volumetric)&nbsp;when&nbsp;they&nbsp;click&nbsp;to&nbsp;place&nbsp;markdown&nbsp;points?&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;On&nbsp;Mon,&nbsp;Apr&nbsp;15,&nbsp;2019&nbsp;at&nbsp;2:34&nbsp;PM&nbsp;Anna&nbsp;Osvin&nbsp;&lt;&nbsp;()&gt;&nbsp;wrote:&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;We&nbsp;are&nbsp;working&nbsp;on&nbsp;medical&nbsp;software&nbsp;for&nbsp;Dentists.&nbsp;We&nbsp;need&nbsp;to&nbsp;render&nbsp;CBCT&nbsp;and&nbsp;give&nbsp;user&nbsp;possibility&nbsp;to&nbsp;place&nbsp;some&nbsp;markdown&nbsp;points&nbsp;on&nbsp;it,&nbsp;for&nbsp;future&nbsp;diagnostics.&nbsp;Also&nbsp;sometimes&nbsp;it&#39;s&nbsp;required&nbsp;to&nbsp;render&nbsp;polygonal&nbsp;jaw&nbsp;models&nbsp;alongside&nbsp;with&nbsp;CBCT.&nbsp;As&nbsp;I&nbsp;said&nbsp;earlier,&nbsp;we&nbsp;nailed&nbsp;down&nbsp;the&nbsp;rendering&nbsp;and&nbsp;even&nbsp;&quot;hit&nbsp;detection&quot;,&nbsp;but&nbsp;there&nbsp;is&nbsp;a&nbsp;nasty&nbsp;bag&nbsp;with&nbsp;Z&nbsp;Buffer&nbsp;values&nbsp;of&nbsp;the&nbsp;background&nbsp;being&nbsp;incorrect,&nbsp;therefore&nbsp;user&nbsp;can&nbsp;place&nbsp;points&nbsp;onto&nbsp;nothing.&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;...&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Thank&nbsp;you!&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Cheers,&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Anna&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;------------------&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=75839#75839&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=75839#75839&lt;/a&gt;&nbsp;(&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=75839#75839&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=75839#75839&lt;/a&gt;)&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;_______________________________________________&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&gt;&nbsp;&gt; &nbsp;()&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&nbsp;(&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;)&lt;br&gt;<br>
+&gt;&nbsp;&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;--&nbsp;&lt;br&gt;<br>
+&gt;&nbsp;Chris&nbsp;&#39;Xenon&#39;&nbsp;Hanson,&nbsp;omo&nbsp;sanza&nbsp;lettere. &nbsp;&lt;a&nbsp;href=&quot;http://www.alphapixel.com/&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://www.alphapixel.com/&lt;/a&gt;&nbsp;(&lt;a&nbsp;href=&quot;http://www.alphapixel.com/&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://www.alphapixel.com/&lt;/a&gt;)&lt;br&gt;<br>
+&gt;&nbsp;Training&nbsp;•&nbsp;Consulting&nbsp;•&nbsp;Contracting&lt;br&gt;<br>
+&gt;&nbsp;3D&nbsp;•&nbsp;Scene&nbsp;Graphs&nbsp;(Open&nbsp;Scene&nbsp;Graph/OSG)&nbsp;•&nbsp;OpenGL&nbsp;2&nbsp;•&nbsp;OpenGL&nbsp;3&nbsp;•&nbsp;OpenGL&nbsp;4&nbsp;•&nbsp;GLSL&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;1&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;2&nbsp;•&nbsp;OpenCL&lt;br&gt;<br>
+&gt;&nbsp;Legal/IP&nbsp;• Forensics&nbsp;• Imaging • UAVs •&nbsp;GIS&nbsp;•&nbsp;GPS&nbsp;•&nbsp;osgEarth • Terrain • Telemetry&nbsp;•&nbsp;Cryptography&nbsp;•&nbsp;LIDAR&nbsp;•&nbsp;Embedded&nbsp;•&nbsp;Mobile&nbsp;•&nbsp;iPhone/iPad/iOS&nbsp;•&nbsp;Android&lt;br&gt;<br>
+&gt;&nbsp;@alphapixel&nbsp;(&lt;a&nbsp;href=&quot;https://twitter.com/alphapixel&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;https://twitter.com/alphapixel&lt;/a&gt;)&nbsp;&lt;a&nbsp;href=&quot;http://facebook.com/alphapixel&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;facebook.com/alphapixel&lt;/a&gt;&nbsp;(&lt;a&nbsp;href=&quot;http://facebook.com/alphapixel&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://facebook.com/alphapixel&lt;/a&gt;) (775)&nbsp;623-PIXL&nbsp;[7495]&lt;br&gt;<br>
+&gt;&nbsp;&lt;br&gt;<br>
+&gt; &nbsp;------------------&lt;br&gt;<br>
+&gt;&nbsp;Post&nbsp;generated&nbsp;by&nbsp;Mail2Forum&lt;br&gt;<br>
+[/code]&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=75845#75845&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=75845#75845&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&nbsp;target=&quot;_blank&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&nbsp;clear=&quot;all&quot;&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;--&nbsp;&lt;br&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&nbsp;class=&quot;gmail_signature&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Chris&nbsp;&#39;Xenon&#39;&nbsp;Hanson,&nbsp;omo&nbsp;sanza&nbsp;lettere.&nbsp;Xenon@AlphaPixel.com&nbsp;&lt;a&nbsp;href=&quot;http://www.alphapixel.com/&quot;&nbsp;target=&quot;_blank&quot;&gt;http://www.alphapixel.com/&lt;/a&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;Training&nbsp;•&nbsp;Consulting&nbsp;•&nbsp;Contracting&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;3D&nbsp;•&nbsp;Scene&nbsp;Graphs&nbsp;(Open&nbsp;Scene&nbsp;Graph/OSG)&nbsp;•&nbsp;OpenGL&nbsp;2&nbsp;•&nbsp;OpenGL&nbsp;3&nbsp;•&nbsp;OpenGL&nbsp;4&nbsp;•&nbsp;GLSL&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;1&nbsp;•&nbsp;OpenGL&nbsp;ES&nbsp;2&nbsp;•&nbsp;OpenCL&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;Legal/IP&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;Forensics&nbsp;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;Imaging &lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt; &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;UAVs &lt;/span&gt;&lt;span&nbsp;style=&quot;font-size:12.8px&quot;&gt;•&nbsp;GIS&nbsp;•&nbsp;GPS&nbsp;•&nbsp;osgEarth • Terrain • Telemetry&nbsp;•&nbsp;Cryptography&nbsp;•&nbsp;LIDAR&nbsp;•&nbsp;Embedded&nbsp;•&nbsp;Mobile&nbsp;•&nbsp;iPhone/iPad/iOS&nbsp;•&nbsp;Android&lt;/span&gt;&lt;/div&gt;&lt;div&nbsp;style=&quot;text-align:center&quot;&gt;&lt;a&nbsp;href=&quot;https://twitter.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;@alphapixel&lt;/a&gt;&nbsp;&lt;a&nbsp;href=&quot;http://facebook.com/alphapixel&quot;&nbsp;target=&quot;_blank&quot;&gt;facebook.com/alphapixel&lt;/a&gt; (775)&nbsp;623-PIXL&nbsp;[7495]&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;<br>
+
+</tt>

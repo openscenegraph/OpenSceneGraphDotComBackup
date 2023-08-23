@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] porting from osg-3.4.0 to osg-3.6.3
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20porting%20from%20osg-3.4.0%20to%20osg-3.6.3&In-Reply-To=%3CCAFN7Y%2BU71PCnS15Fsvr3XRoMu6Tq9r7UdKmNwFeDoEPXxy%3Duzg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009236.html">
+   <LINK REL="Next"  HREF="009241.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] porting from osg-3.4.0 to osg-3.6.3</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20porting%20from%20osg-3.4.0%20to%20osg-3.6.3&In-Reply-To=%3CCAFN7Y%2BU71PCnS15Fsvr3XRoMu6Tq9r7UdKmNwFeDoEPXxy%3Duzg%40mail.gmail.com%3E"
+       TITLE="[osg-users] porting from osg-3.4.0 to osg-3.6.3">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Oct  8 23:29:28 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009236.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+        <LI>Next message (by thread): <A HREF="009241.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9238">[ date ]</a>
+              <a href="thread.html#9238">[ thread ]</a>
+              <a href="subject.html#9238">[ subject ]</a>
+              <a href="author.html#9238">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Herman,
+
+Thanks for the stack trace, the crash site and value of nv suggest
+that for some reason the application is setting up the viewer without
+an EventVIsitior.  The osgViewer assigns one by default so this must
+have been reset, or the call to handle customized in some way that is
+non-standard.
+
+Have a look for any places where setEventVisitor is called in VTP.
+
+Robert.
+On Tue, 9 Oct 2018 at 07:15, Herman Varma &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hermanvarma at eastlink.ca</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi,
+</I>&gt;<i> Hi Robert
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I down down further to this statement
+</I>&gt;<i>
+</I>&gt;<i> m_pOsgViewer-&gt;frame();//
+</I>&gt;<i>
+</I>&gt;<i> In 3.4.0 it executes and in 3.6.3 it bombs here
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> The full code is posted below
+</I>&gt;<i> void vtScene::UpdateWindow(vtWindow *pWindow)
+</I>&gt;<i> {
+</I>&gt;<i>        if (!m_bInitialized) return;
+</I>&gt;<i>
+</I>&gt;<i>        // window background color
+</I>&gt;<i>        osg::Vec4 color2;
+</I>&gt;<i>        v2s(pWindow-&gt;GetBgColor(), color2);
+</I>&gt;<i>        m_pOsgViewer-&gt;getCamera()-&gt;setClearColor(color2);
+</I>&gt;<i>
+</I>&gt;<i>        // window size
+</I>&gt;<i>        IPoint2 winsize = pWindow-&gt;GetSize();
+</I>&gt;<i>        if (winsize.x == 0 || winsize.y == 0)
+</I>&gt;<i>        {
+</I>&gt;<i>               VTLOG(&quot;Warning: winsize %d %d\n&quot;, winsize.x, winsize.y);
+</I>&gt;<i>               return;
+</I>&gt;<i>        }
+</I>&gt;<i>        m_pOsgViewer-&gt;getCamera()-&gt;setViewport(0, 0, winsize.x, winsize.y);
+</I>&gt;<i>
+</I>&gt;<i>        // As of OSG 0.9.5, we need to store our own camera params and recreate
+</I>&gt;<i>        //  the projection matrix each frame.
+</I>&gt;<i>        float aspect;
+</I>&gt;<i>        if (winsize.x == 0 || winsize.y == 0)           // safety
+</I>&gt;<i>               aspect = 1.0;
+</I>&gt;<i>        else
+</I>&gt;<i>               aspect = (float) winsize.x / winsize.y;
+</I>&gt;<i>
+</I>&gt;<i>        if (m_pCamera-&gt;IsOrtho())
+</I>&gt;<i>        {
+</I>&gt;<i>               // Arguments are left, right, bottom, top, zNear, zFar
+</I>&gt;<i>               float w2 = m_pCamera-&gt;GetWidth() /2;
+</I>&gt;<i>               float h2 = w2 / aspect;
+</I>&gt;<i>               m_pOsgViewer-&gt;getCamera()-&gt;setProjectionMatrixAsOrtho(-w2, w2, -h2, h2,
+</I>&gt;<i>                      m_pCamera-&gt;GetHither(), m_pCamera-&gt;GetYon());
+</I>&gt;<i>        }
+</I>&gt;<i>        else
+</I>&gt;<i>        {
+</I>&gt;<i>               float fov_x = m_pCamera-&gt;GetFOV();
+</I>&gt;<i>               float a = tan (fov_x/2);
+</I>&gt;<i>               float b = a / aspect;
+</I>&gt;<i>               float fov_y_div2 = atan(b);
+</I>&gt;<i>               float fov_y_deg = osg::RadiansToDegrees(fov_y_div2 * 2);
+</I>&gt;<i>
+</I>&gt;<i>               m_pOsgViewer-&gt;getCamera()-&gt;setProjectionMatrixAsPerspective(fov_y_deg,
+</I>&gt;<i>                      aspect, m_pCamera-&gt;GetHither(), m_pCamera-&gt;GetYon());
+</I>&gt;<i>        }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>        // And apply the rotation and translation of the camera itself
+</I>&gt;<i>        const osg::Matrix &amp;mat2 = m_pCamera-&gt;getMatrix();
+</I>&gt;<i>        osg::Matrix imat;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>        imat.invert(mat2);
+</I>&gt;<i>
+</I>&gt;<i>        m_pOsgViewer-&gt;getCamera()-&gt;setViewMatrix(imat);
+</I>&gt;<i>        m_pOsgViewer-&gt;getCamera()-&gt;setCullMask(0x3);
+</I>&gt;<i>        // Also set the mask for the case of split-screen stereo
+</I>&gt;<i>        m_pOsgViewer-&gt;getCamera()-&gt;setCullMaskLeft(0x3);
+</I>&gt;<i>        m_pOsgViewer-&gt;getCamera()-&gt;setCullMaskRight(0x3);
+</I>&gt;<i>
+</I>&gt;<i>        m_pOsgViewer-&gt;frame();// ***************************It bombs on this statement
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> I also ran it in debug mode and posted a diagnostic.jpg of the resulting
+</I>&gt;<i> debug screen
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Herman
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopiccdf1.php?p=75049#75049">http://forum.openscenegraph.org/viewtopic.php?p=75049#75049</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Attachments:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/files/diagnostic_569.jpg">http://forum.openscenegraph.org//files/diagnostic_569.jpg</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009236.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+	<LI>Next message (by thread): <A HREF="009241.html">[osg-users] porting from osg-3.4.0 to osg-3.6.3
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9238">[ date ]</a>
+              <a href="thread.html#9238">[ thread ]</a>
+              <a href="subject.html#9238">[ subject ]</a>
+              <a href="author.html#9238">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20AutoTransform%2C%0A%20ROTATE_TO_SCREEN%20and%20small%20feature%20culling&In-Reply-To=%3C1522446735.m2f.73207%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007931.html">
+   <LINK REL="Next"  HREF="007909.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling</H1>
+<!--htdig_noindex-->
+    <B>Hartwig Wiesmann</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20AutoTransform%2C%0A%20ROTATE_TO_SCREEN%20and%20small%20feature%20culling&In-Reply-To=%3C1522446735.m2f.73207%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling">hartwig.wiesmann at skywind.eu
+       </A><BR>
+    <I>Fri Mar 30 14:52:15 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007931.html">[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+</A></li>
+        <LI>Next message (by thread): <A HREF="007909.html">[osg-users] [osgPlugins] Vertices duplicated in FBX plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7938">[ date ]</a>
+              <a href="thread.html#7938">[ thread ]</a>
+              <a href="subject.html#7938">[ subject ]</a>
+              <a href="author.html#7938">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+I want to come back to my original remark that culling does not work correctly with AutoTransforms and ROTATE_TO_SCREEN.
+
+I have modified the example osgautotransform.cpp by adding a new class that contains an AutoTransform and a drawable. An object of this class is added to the scene (createScene has been extended; basically the shown code replaces the original createScene method):
+
+
+Code:
+
+class AutoScaledBox : public osg::Node
+{
+public:
+	
+	AutoScaledBox(void) : m_AutoTransformPtr(nullptr)
+	{
+		this-&gt;initialize();
+	}
+	
+	AutoScaledBox(AutoScaledBox const&amp; autoScaledRectangle, osg::CopyOp const&amp; copyOperator=osg::CopyOp::SHALLOW_COPY) : osg::Node(autoScaledRectangle,copyOperator), m_AutoTransformPtr(autoScaledRectangle.m_AutoTransformPtr)
+	{
+	}
+	
+	META_Node(&quot;&quot;,AutoScaledBox)
+	
+	virtual osg::BoundingSphere computeBound(void) const override
+	{
+		if (m_AutoTransformPtr)
+			return m_AutoTransformPtr-&gt;computeBound();
+		else
+			return osg::BoundingSphere();
+	}
+	
+	virtual void traverse(osg::NodeVisitor&amp; nodeVisitor) override
+	{
+		if (m_AutoTransformPtr)
+			m_AutoTransformPtr-&gt;accept(nodeVisitor);
+	}
+	
+	void setPosition(osg::Vec3 const&amp; position)
+	{
+		if (m_AutoTransformPtr)
+			m_AutoTransformPtr-&gt;setPosition(position);
+	}
+	
+protected:
+	void initialize(void)
+	{
+		osg::ShapeDrawable* shapeDrawablePtr(new osg::ShapeDrawable());
+		
+		shapeDrawablePtr-&gt;setShape(new osg::Box(osg::Vec3(),4.0f));
+		
+		m_AutoTransformPtr = new osg::AutoTransform();
+		m_AutoTransformPtr-&gt;addChild(shapeDrawablePtr);
+		m_AutoTransformPtr-&gt;setAutoRotateMode(osg::AutoTransform::ROTATE_TO_SCREEN);
+		m_AutoTransformPtr-&gt;setAutoScaleToScreen(true);
+	}
+	
+private:
+	osg::ref_ptr&lt;osg::AutoTransform&gt; m_AutoTransformPtr;
+};
+
+osg::Node* createAutoScaledBox(osg::Vec3 const&amp; position)
+{
+	AutoScaledBox* autoScaledRectanglePtr(new AutoScaledBox());
+	
+	
+	autoScaledRectanglePtr-&gt;setPosition(position);
+	return autoScaledRectanglePtr;
+}
+
+osg::Node* createScene()
+{
+    osg::Group* root = new osg::Group;
+
+//    int numReps = 3333;
+    int numReps = 10;
+    root-&gt;addChild(createAxis(osg::Vec3(0.0,0.0,0.0),osg::Vec3(1000.0,0.0,0.0),numReps,osg::AutoTransform::ROTATE_TO_CAMERA,osgText::Text::XY_PLANE, &quot;ROTATE_TO_CAMERA&quot;));
+    root-&gt;addChild(createAxis(osg::Vec3(0.0,0.0,0.0),osg::Vec3(0.0,1000.0,0.0),numReps,osg::AutoTransform::ROTATE_TO_SCREEN,osgText::Text::XY_PLANE, &quot;ROTATE_TO_SCREEN&quot;));
+    root-&gt;addChild(createAxis(osg::Vec3(0.0,0.0,0.0),osg::Vec3(0.0,0.0,1000.0),numReps,osg::AutoTransform::NO_ROTATION,osgText::Text::XZ_PLANE, &quot;NO_ROTATION&quot;));
+
+    root-&gt;addChild(createAutoScale(osg::Vec3(500.0,500.0,500.0), 25.0, &quot;AutoScale with no min, max limits&quot;));
+    root-&gt;addChild(createAutoScale(osg::Vec3(500.0,500.0,300.0), 25.0, &quot;AutoScale with minScale = 1, maxScale = 2.0 &quot;, 1, 2.0));
+    root-&gt;addChild(createAutoScale(osg::Vec3(500.0,500.0,700.0), 25.0, &quot;AutoScale with minScale = 0.0, maxScale = 5.0 &quot;, 0.0, 5.0));
+
+		root-&gt;addChild(createAutoScaledBox(osg::Vec3(100.0f,100.0f,100.0f)));
+
+    return root;
+}
+
+
+
+
+If nothing else is modified you will see an additional small box at 100; 100; 100.
+
+Now, I additionally set the small feature culling pixel size to a relatively large value during the initialisation of the view:
+
+Code:
+view-&gt;getCamera()-&gt;setSmallFeatureCullingPixelSize(200.0f);
+
+
+
+Afterwards, all the axis labels disappear (as expected) but the small box is still visible! But from my understanding this small box should also be culled.
+Zooming in and out let the labels appear and disappear but the box remains visible all the time.
+
+Cheers,
+Hartwig
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicae02.php?p=73207#73207">http://forum.openscenegraph.org/viewtopic.php?p=73207#73207</A>
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007931.html">[osg-users] AutoTransform, ROTATE_TO_SCREEN and small feature culling
+</A></li>
+	<LI>Next message (by thread): <A HREF="007909.html">[osg-users] [osgPlugins] Vertices duplicated in FBX plugin
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7938">[ date ]</a>
+              <a href="thread.html#7938">[ thread ]</a>
+              <a href="subject.html#7938">[ subject ]</a>
+              <a href="author.html#7938">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

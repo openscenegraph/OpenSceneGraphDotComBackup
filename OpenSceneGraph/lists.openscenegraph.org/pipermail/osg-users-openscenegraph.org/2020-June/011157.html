@@ -1,0 +1,161 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Memory leak when using a pixel buffer to generate thumbnails
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Memory%20leak%20when%20using%20a%20pixel%20buffer%20to%20generate%0A%20thumbnails&In-Reply-To=%3Cmailman.1654.1592931497.1728.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011152.html">
+   <LINK REL="Next"  HREF="011158.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Memory leak when using a pixel buffer to generate thumbnails</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Memory%20leak%20when%20using%20a%20pixel%20buffer%20to%20generate%0A%20thumbnails&In-Reply-To=%3Cmailman.1654.1592931497.1728.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Memory leak when using a pixel buffer to generate thumbnails">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Tue Jun 23 07:33:24 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011152.html">[osg-users] I want to darken the osg::fog at night too, what should I do?
+</A></li>
+        <LI>Next message (by thread): <A HREF="011158.html">[osg-users] Memory leak when using a pixel buffer to generate thumbnails
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11157">[ date ]</a>
+              <a href="thread.html#11157">[ thread ]</a>
+              <a href="subject.html#11157">[ subject ]</a>
+              <a href="author.html#11157">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+I am using code extracted from the osgscreencapture example to generate 
+small thumbnails of loaded shapes.
+It all work is very nicely except that it is leaking memory on each usage.  
+I have commented out our code and based on that and a few other tests I am 
+fairly convinced that the leak is the pixel buffer (GraphicsContext) itself.
+
+
+osg::ref_ptr&lt;osg::GraphicsContext&gt;
+createPixelBuffer(int aSize, int aNumSamples)
+{
+    osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new 
+osg::GraphicsContext::Traits;
+    traits-&gt;x                                         = 0;
+    traits-&gt;y                                         = 0;
+    traits-&gt;width                                     = aSize;
+    traits-&gt;height                                    = aSize;
+    traits-&gt;red                                       = 8;
+    traits-&gt;green                                     = 8;
+    traits-&gt;blue                                      = 8;
+    traits-&gt;alpha                                     = 8;
+    traits-&gt;windowDecoration                          = false;
+    traits-&gt;pbuffer                                   = true;
+    traits-&gt;doubleBuffer                              = true;
+    traits-&gt;sharedContext                             = 0;
+    traits-&gt;readDISPLAY();
+    traits-&gt;setUndefinedScreenDetailsToDefaultScreen();
+
+    if (aNumSamples != 0)
+    {
+        traits-&gt;sampleBuffers = 1;
+        traits-&gt;samples       = aNumSamples;
+    }
+
+    return osg::GraphicsContext::createGraphicsContext(traits.get());
+}
+
+bool
+generateThumbnail(const std::string &amp; aFilePath,
+                  const std::string &amp; aThumbnailPath,
+                  const std::string &amp; aResourcesPath,
+                  int                 aSize,
+                  bool                aTopDownView)
+{
+    auto pixelBuffer = createPixelBuffer(aSize, 8);
+    if (!pixelBuffer)
+    {
+        pixelBuffer = createPixelBuffer(aSize, 0);
+    }
+
+//    const auto shape = loadShapeOrError(aFilePath);
+
+    osg::ref_ptr&lt;osgViewer::Viewer&gt; viewer = new osgViewer::Viewer;
+    auto              camera = viewer-&gt;getCamera();
+
+    camera-&gt;setGraphicsContext(pixelBuffer.get());
+    camera-&gt;setViewport(new osg::Viewport(0, 0, aSize, aSize));
+    camera-&gt;setDrawBuffer(GL_BACK);
+    camera-&gt;setReadBuffer(GL_BACK);
+
+//    setupShapeViewer(viewer, shape.get(), aResourcesPath, aTopDownView);
+
+//    osg::ref_ptr&lt;ImageGrabber&gt; grabber = new ImageGrabber(aThumbnailPath);
+//    viewer.getCamera()-&gt;setPostDrawCallback(grabber.get());
+
+    viewer-&gt;realize();
+    viewer-&gt;frame();
+
+    return true;
+};
+
+
+If I call the above code repeatedly then it leaks and I cannot understand 
+why since everything is in osg:ref_ptr&lt;&gt;. 
+The Viewer was a concrete instance originally but that makes no difference.
+I have also tried using a slave camera as in the original example.
+I have a nasty workaround of extracting a shared pixel buffer and re-using 
+it - but ideally this code would be called using std::async, to have 
+multiple thumbnails generated in parallel, so that is going to be tricky.
+
+Kinda hoping you can point to my stupid mistake in how I am using osg ;)
+
+Thanks,
+
+Brian
+
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/acdd2682-5b66-4064-aed1-66d2e5c9e3d5o%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/acdd2682-5b66-4064-aed1-66d2e5c9e3d5o%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200623/bd9d58d7/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200623/bd9d58d7/attachment.html</A>&gt;
+</PRE>
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011152.html">[osg-users] I want to darken the osg::fog at night too, what should I do?
+</A></li>
+	<LI>Next message (by thread): <A HREF="011158.html">[osg-users] Memory leak when using a pixel buffer to generate thumbnails
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11157">[ date ]</a>
+              <a href="thread.html#11157">[ thread ]</a>
+              <a href="subject.html#11157">[ subject ]</a>
+              <a href="author.html#11157">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

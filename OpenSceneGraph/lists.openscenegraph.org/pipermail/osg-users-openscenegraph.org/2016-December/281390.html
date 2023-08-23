@@ -1,0 +1,330 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Capture image on iOS get black image
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Capture%20image%20on%20iOS%20get%20black%20image&In-Reply-To=%3C1482800295.m2f.69771%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005158.html">
+   <LINK REL="Next"  HREF="005175.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Capture image on iOS get black image</H1>
+<!--htdig_noindex-->
+    <B>duc nguyen</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Capture%20image%20on%20iOS%20get%20black%20image&In-Reply-To=%3C1482800295.m2f.69771%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Capture image on iOS get black image">osgforum at tevs.eu
+       </A><BR>
+    <I>Mon Dec 26 16:58:15 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005158.html">[osg-users] Disbling GL_LIGHTING disables GL_BLEND
+</A></li>
+        <LI>Next message: <A HREF="005175.html">[osg-users] Capture image on iOS get black image
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281390">[ date ]</a>
+              <a href="thread.html#281390">[ thread ]</a>
+              <a href="subject.html#281390">[ subject ]</a>
+              <a href="author.html#281390">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I&#8217;m developing app on iOS using OpenSceneGraph with GLES 2, my app have a feature capture photo from osgviewer to save image file. I try to use some class i found in some topic below but the image i get is total black
+
+
+
+Code:
+class SnapImageDrawCallback : public osg::Camera::DrawCallback
+{
+public:
+    
+    SnapImageDrawCallback()
+    {
+        _snapImageOnNextFrame = false;
+    }
+    
+    void setFileName(const std::string&amp; filename) { _filename = filename; }
+    const std::string&amp; getFileName() const { return _filename; }
+    
+    void setSnapImageOnNextFrame(bool flag) { _snapImageOnNextFrame = flag; }
+    bool getSnapImageOnNextFrame() const { return _snapImageOnNextFrame; }
+    
+    virtual void operator () (const osg::Camera&amp; camera) const
+    {
+        //osg::notify(osg::NOTICE) &lt;&lt; &quot;Saved screen image to `&quot;&lt;&lt;_filename&lt;&lt;&quot;`&quot;&lt;&lt; std::endl;
+        if (!_snapImageOnNextFrame) return;
+        
+        //int x,y,width,height;
+        //int x =0,y=0,width=768*2,height=709*2;
+        int x,y,width,height;
+        x = camera.getViewport()-&gt;x();
+        y = camera.getViewport()-&gt;y();
+        width = camera.getViewport()-&gt;width();
+        height = camera.getViewport()-&gt;height();
+        //camera.getViewport() getViewport(x,y,width,height);
+        
+        osg::ref_ptr&lt;osg::Image&gt; image = new osg::Image;
+        
+        image-&gt;readPixels(x,y,width,height,GL_RGB,GL_UNSIGNED_BYTE);
+        
+        if (osgDB::writeImageFile(*image,_filename))
+        {
+            osg::notify(osg::NOTICE) &lt;&lt; &quot;Saved screen image to `&quot;&lt;&lt;_filename&lt;&lt;&quot;`&quot;&lt;&lt; std::endl;
+        }
+        
+        _snapImageOnNextFrame = false;
+        
+    }
+    
+protected:
+    
+    std::string _filename;
+    mutable bool        _snapImageOnNextFrame;
+    
+};
+
+class WindowCaptureCallback : public osg::Camera::DrawCallback
+{
+public:
+    WindowCaptureCallback(GLenum readBuffer, const std::string&amp; name):
+    _readBuffer(readBuffer),
+    _fileName(name)
+    {
+        _image = new osg::Image;
+    }
+    
+    virtual void operator () (osg::RenderInfo&amp; renderInfo) const
+    {
+#if !defined(OSG_GLES1_AVAILABLE) &amp;&amp; !defined(OSG_GLES2_AVAILABLE)
+        glReadBuffer(_readBuffer);
+#else
+        osg::notify(osg::NOTICE)&lt;&lt;&quot;Error: GLES unable to do glReadBuffer&quot;&lt;&lt;std::endl;
+#endif
+        
+        OpenThreads::ScopedLock&lt;OpenThreads::Mutex&gt; lock(_mutex);
+        osg::GraphicsContext* gc = renderInfo.getState()-&gt;getGraphicsContext();
+        if (gc-&gt;getTraits())
+        {
+            GLenum pixelFormat;
+            
+            if (gc-&gt;getTraits()-&gt;alpha)
+                pixelFormat = GL_RGBA;
+            else
+                pixelFormat = GL_RGB;
+            
+#if defined(OSG_GLES1_AVAILABLE) || defined(OSG_GLES2_AVAILABLE)
+            if (pixelFormat == GL_RGB)
+            {
+                GLint value = 0;
+#ifndef GL_IMPLEMENTATION_COLOR_READ_FORMAT
+#define GL_IMPLEMENTATION_COLOR_READ_FORMAT 0x8B9B
+#endif
+                glGetIntegerv(GL_IMPLEMENTATION_COLOR_READ_FORMAT, &amp;value);
+                if ( value != GL_RGB ||
+                    value != GL_UNSIGNED_BYTE )
+                {
+                    pixelFormat = GL_RGBA;//always supported
+                }
+            }
+#endif
+            int width = gc-&gt;getTraits()-&gt;width;
+            int height = gc-&gt;getTraits()-&gt;height;
+            
+            std::cout&lt;&lt;&quot;Capture: size=&quot;&lt;&lt;width&lt;&lt;&quot;x&quot;&lt;&lt;height&lt;&lt;&quot;, format=&quot;&lt;&lt;(pixelFormat == GL_RGBA ? &quot;GL_RGBA&quot;:&quot;GL_RGB&quot;)&lt;&lt;std::endl;
+            
+            _image-&gt;readPixels(0, 0, width, height, pixelFormat, GL_UNSIGNED_BYTE);
+        }
+        
+        if (!_fileName.empty())
+        {
+            std::cout &lt;&lt; &quot;Writing to: &quot; &lt;&lt; _fileName &lt;&lt; std::endl;
+            osgDB::writeImageFile(*_image, _fileName);
+        }
+    }
+    
+protected:
+    GLenum                      _readBuffer;
+    std::string                 _fileName;
+    osg::ref_ptr&lt;osg::Image&gt;    _image;
+    mutable OpenThreads::Mutex  _mutex;
+};
+
+
+@implementation CreateGroupViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    OSGAdapter *osgAdapter = [[OSGAdapter alloc] init];
+    
+    //osg::setNotifyLevel(osg::DEBUG_INFO);
+    //get the screen size
+    
+    unsigned int w = sceneView.frame.size.width;
+    unsigned int h = sceneView.frame.size.height;
+    
+    //create root
+    _root = new osg::MatrixTransform();
+    
+    //create the viewer
+    _viewer = new osgViewer::Viewer();
+    _viewer-&gt;getCamera()-&gt;setClearColor(osg::Vec4(0.25,0.4,0.0,0.0));
+    
+    // try msaa. available for iOS &gt;= 4.0
+    osg::ref_ptr&lt;osg::DisplaySettings&gt; settings = osg::DisplaySettings::instance();
+    settings-&gt;setNumMultiSamples(4);
+    
+    if(1) {
+        //create our graphics context directly so we can pass our own window
+        osg::ref_ptr&lt;osg::GraphicsContext::Traits&gt; traits = new osg::GraphicsContext::Traits();
+        
+        // Init the Windata Variable that holds the handle for the Window to display OSG in.
+        osg::ref_ptr&lt;osg::Referenced&gt; windata = new osgViewer::GraphicsWindowIOS::WindowData(self.sceneView);
+        
+        // Setup the traits parameters
+        traits-&gt;x = 0;
+        traits-&gt;y = 0;
+        traits-&gt;width = w*2 - 0;
+        traits-&gt;height = h*2 - 0;
+        traits-&gt;depth = 16; //keep memory down, default is currently 24
+        traits-&gt;windowDecoration = false;
+        traits-&gt;doubleBuffer = true;
+        traits-&gt;sharedContext = NULL;
+        traits-&gt;setInheritedWindowPixelFormat = true;
+        traits-&gt;samples = 4;
+        traits-&gt;sampleBuffers = 1;
+        traits-&gt;supportsResize = true;
+        
+        traits-&gt;inheritedWindowData = windata;
+        
+        //Create the Graphics Context
+        osg::ref_ptr&lt;osg::GraphicsContext&gt; graphicsContext = osg::GraphicsContext::createGraphicsContext(traits.get());
+        
+        //  if the context was created then attach to our viewer
+        if(graphicsContext)
+        {
+            _viewer-&gt;getCamera()-&gt;setGraphicsContext(graphicsContext);
+            _viewer-&gt;getCamera()-&gt;setViewport(new osg::Viewport(0, 0, traits-&gt;width, traits-&gt;height));
+            _viewer-&gt;getCamera()-&gt;setProjectionMatrixAsPerspective(30.0f, static_cast&lt;double&gt;(traits-&gt;width)/static_cast&lt;double&gt;(traits-&gt;height), 1.0f, 10000.0f);
+        }
+    }
+    
+    _root = [osgAdapter loadData];
+    
+    osg::Camera* hud_camera = [osgAdapter createHUD: (w * 2) : (h * 2)];
+    _root-&gt;addChild(hud_camera);
+    
+    _viewer-&gt;setSceneData(_root.get());
+    _viewer-&gt;setCameraManipulator(new osgGA::MultiTouchTrackballManipulator());
+    //_viewer-&gt;addEventHandler(new TestMultiTouchEventHandler(hud_camera));
+    
+    // sun single-threaded
+    _viewer-&gt;setThreadingModel(osgViewer::Viewer::SingleThreaded);
+    _viewer-&gt;realize();
+    
+    // render a frame so the window-manager shows some content and not only an empty + black window
+    _viewer-&gt;frame();
+    
+    // create a display link, which will update our scene on every screen-refresh
+    _displayLink = [[UIScreen mainScreen] displayLinkWithTarget:self selector:@selector(updateScene)];
+    [_displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
+    
+    
+    osg::ref_ptr&lt;SnapImageDrawCallback&gt; snapImageDrawCallback = new
+    SnapImageDrawCallback();
+    _viewer-&gt;getCamera()-&gt;setPostDrawCallback (snapImageDrawCallback.get());
+}
+
+//
+//Timer called function to update our scene and render the viewer
+//
+
+- (void)updateScene {
+    _viewer-&gt;frame();
+}
+
+- (IBAction)createImage:(id)sender {
+    
+    NSString* imageName = @&quot;screenshot.png&quot;
+    
+    _viewer-&gt;getViewerBase()-&gt;stopThreading();
+    
+    // use SnapImageDrawCallback class
+    osg::ref_ptr&lt;SnapImageDrawCallback&gt; snapImageDrawCallback =
+    dynamic_cast&lt;SnapImageDrawCallback*&gt;
+    (_viewer-&gt;getCamera()-&gt;getPostDrawCallback());
+    
+    if(snapImageDrawCallback.get())
+    {
+        std::cout &lt;&lt; &quot;make screenshot&quot; &lt;&lt; std::endl;
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString *documentsDirectory = [paths objectAtIndex:0];
+        NSString *fullPath = [documentsDirectory stringByAppendingPathComponent:[NSString stringWithFormat:@&quot;%@&quot;, imageName]];
+        
+        snapImageDrawCallback-&gt;setFileName([fullPath UTF8String]);
+        snapImageDrawCallback-&gt;setSnapImageOnNextFrame(true);
+    }
+    else
+    {
+        std::cout &lt;&lt; &quot;Warning: no make screenshot&quot; &lt;&lt; std::endl;
+    }
+    
+    // use WindowCaptureCallback class
+    // GLenum buffer = _viewer-&gt;getCamera()-&gt;getGraphicsContext()-&gt;getTraits()-&gt;doubleBuffer ? GL_BACK : GL_FRONT;
+    // _viewer-&gt;getCamera()-&gt;setFinalDrawCallback(new WindowCaptureCallback(buffer, [fullPath UTF8String]));
+    
+}
+
+
+
+Could you please help me resolve that.
+... 
+
+Thank you!
+
+Cheers,
+duc
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicf7c9-2.php?p=69771#69771">http://forum.openscenegraph.org/viewtopic.php?p=69771#69771</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005158.html">[osg-users] Disbling GL_LIGHTING disables GL_BLEND
+</A></li>
+	<LI>Next message: <A HREF="005175.html">[osg-users] Capture image on iOS get black image
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281390">[ date ]</a>
+              <a href="thread.html#281390">[ thread ]</a>
+              <a href="subject.html#281390">[ subject ]</a>
+              <a href="author.html#281390">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

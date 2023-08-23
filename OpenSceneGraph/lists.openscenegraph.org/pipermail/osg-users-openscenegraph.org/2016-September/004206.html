@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] SingleThreaded leading to whole application just running on one core
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3C5b0ecdfb-3062-e41e-b9cd-0750878bca1a%40wsoptics.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004207.html">
+   <LINK REL="Next"  HREF="004208.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] SingleThreaded leading to whole application just running on one core</H1>
+<!--htdig_noindex-->
+    <B>Christoph Weiss</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3C5b0ecdfb-3062-e41e-b9cd-0750878bca1a%40wsoptics.de%3E"
+       TITLE="[osg-users] SingleThreaded leading to whole application just running on one core">weiss at wsoptics.de
+       </A><BR>
+    <I>Fri Sep 23 00:42:08 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004207.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+        <LI>Next message: <A HREF="004208.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4206">[ date ]</a>
+              <a href="thread.html#4206">[ thread ]</a>
+              <a href="subject.html#4206">[ subject ]</a>
+              <a href="author.html#4206">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thank you so much for pointing this out, Pete.  So in 
+ViewerBase::setUpThreading() osg decides the whole application should be 
+confined to a single core.
+
+Judging by your comment, this has already been discussed and not deemed 
+a fault that should be fixed?
+
+Also, I suppose there is no way to it portably? 
+Thread::setProcessorAffinity() only allows restricting to a single core 
+and has tons of ifdefs, so I guess I need to handle every cross 
+compilation target individually?
+
+Thanks again, I really hope this behavior can be changed in a future 
+release!
+
+Christoph
+
+Mit freundlichen Gr&#252;&#223;en,
+
+Christoph Wei&#223;
+
+WSoptics GmbH
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">weiss at WSoptics.de</A>
++49 8868 181 997 3
+Zugspitzstra&#223;e 9
+86972 Altenstadt
+
+HRB 204558  Gerichtsstand: M&#252;nchen B  Ust.Id.Nr.: DE289079930
+Gesch&#228;ftsf&#252;hrer: Florian Sepp, Dr. Christoph Wei&#223;
+
+On 09/23/2016 06:25 AM, Pete Black wrote:
+&gt;<i> This is, bizarrely, by design.
+</I>&gt;<i>
+</I>&gt;<i> In single-threaded mode, OpenSceneGraph silently sets CPU affinity to a single core by default. Personally I think this is incredibly obtrusive on the programmer, and the reasons for this being default behaviour are terrible, but it is what it is.
+</I>&gt;<i>
+</I>&gt;<i> This is what I do:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> #ifdef LINUX
+</I>&gt;<i>     int numCPU = sysconf( _SC_NPROCESSORS_ONLN ); //glibc fails 'all ones' cpu masks so we need this sysconf call
+</I>&gt;<i>     cpu_set_t  mask;
+</I>&gt;<i>     CPU_ZERO(&amp;mask);
+</I>&gt;<i>     for (int i = 0; i &lt; numCPU ; i++)
+</I>&gt;<i>     {
+</I>&gt;<i>         CPU_SET(i, &amp;mask);
+</I>&gt;<i>         //qDebug(&quot;SETTING CPU %d&quot;,i);
+</I>&gt;<i>     }
+</I>&gt;<i>     int ret = sched_setaffinity(0, sizeof(mask), &amp;mask); //override OpenSceneGraphs shitty CPU affinity stuff
+</I>&gt;<i>     //qDebug(&quot;CPU COUNT: %d %d&quot;,CPU_COUNT(&amp;mask),ret);
+</I>&gt;<i>
+</I>&gt;<i> #endif
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic020e.php?p=68702#68702">http://forum.openscenegraph.org/viewtopic.php?p=68702#68702</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004207.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+	<LI>Next message: <A HREF="004208.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4206">[ date ]</a>
+              <a href="thread.html#4206">[ thread ]</a>
+              <a href="subject.html#4206">[ subject ]</a>
+              <a href="author.html#4206">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

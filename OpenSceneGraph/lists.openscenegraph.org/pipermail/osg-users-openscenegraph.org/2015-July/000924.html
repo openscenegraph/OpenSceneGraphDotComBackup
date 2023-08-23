@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] ClipNode Opposite Behavior
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ClipNode%20Opposite%20Behavior&In-Reply-To=%3C1437688683.m2f.64457%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000911.html">
+   <LINK REL="Next"  HREF="000925.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] ClipNode Opposite Behavior</H1>
+<!--htdig_noindex-->
+    <B>Erik Hensens</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20ClipNode%20Opposite%20Behavior&In-Reply-To=%3C1437688683.m2f.64457%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] ClipNode Opposite Behavior">ehensens at hunter.com
+       </A><BR>
+    <I>Thu Jul 23 14:58:04 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000911.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+        <LI>Next message: <A HREF="000925.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#924">[ date ]</a>
+              <a href="thread.html#924">[ thread ]</a>
+              <a href="subject.html#924">[ subject ]</a>
+              <a href="author.html#924">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thank you both for your input! I'm learning a lot.
+
+I'm new to fragment shaders, so I think that maybe I'm doing something obviously wrong...
+
+It seems that what I'm doing below should be pretty simple, but it doesn't work. When I reverse the if (fDist &lt; rad) to if (fDist &gt; rad) then the entire thing disappears. Otherwise (the way it is written below), nothing disappears.
+
+Thanks in advance for your help!
+
+
+Code:
+
+// The group node that contains the test geode
+osg::ref_ptr&lt;osg::Group&gt; pTestGroup = new osg::Group;
+
+// The test geode
+osg::ref_ptr&lt;osg::Geode&gt; pTestGeode = new osg::Geode;
+
+// The geode's geometry
+osg::ref_ptr&lt;osg::Geometry&gt; pTestGeometry = new osg::Geometry;
+
+// The geometry's test vertices
+osg::ref_ptr&lt;osg::Vec3Array&gt; pTestVerticesArray = new osg::Vec3Array;
+pTestVerticesArray-&gt;push_back(osg::Vec3(0.0f, -2.0f, -2.0f));
+pTestVerticesArray-&gt;push_back(osg::Vec3(0.0f, -2.0f, 2.0f));
+pTestVerticesArray-&gt;push_back(osg::Vec3(0.0f, 2.0f, 2.0f));
+pTestVerticesArray-&gt;push_back(osg::Vec3(0.0f, 2.0f, -2.0f));
+
+// Set this as the vertex array
+pTestGeometry-&gt;setVertexArray(pTestVerticesArray);
+
+// Define the primitive set
+osg::ref_ptr&lt;osg::DrawArrays&gt; pTestDrawArrays = new osg::DrawArrays(osg::PrimitiveSet::QUADS, 0, static_cast&lt;GLsizei&gt;(pTestVerticesArray-&gt;size()));
+pTestGeometry-&gt;addPrimitiveSet(pTestDrawArrays);
+
+// Normalize
+osg::ref_ptr&lt;osg::StateSet&gt; pTestStateSet = pTestGeometry-&gt;getOrCreateStateSet();
+pTestStateSet-&gt;setMode(GL_NORMALIZE, osg::StateAttribute::ON);
+
+// Add the test geometry to the geode
+pTestGeode-&gt;addDrawable(pTestGeometry);
+
+// Add the geode to the group
+pTestGroup-&gt;addChild(pTestGeode);
+
+// The fragment shader program source code
+std::string szFragSource(
+&quot;uniform vec3 center;\n&quot;
+&quot;uniform float rad;\n&quot;
+&quot;void main()\n&quot;
+&quot;{\n&quot;
+&quot;float fDistX = gl_FragCoord.x - center.x;\n&quot;
+&quot;float fDistY = gl_FragCoord.y - center.y;\n&quot;
+&quot;float fDistZ = gl_FragCoord.z - center.z;\n&quot;
+&quot;float fDist = sqrt(fDistX * fDistX + fDistY * fDistY + fDistZ * fDistZ);\n&quot;
+&quot;if (fDist &lt; rad) discard;\n&quot;
+&quot;}\n&quot;
+);
+
+// Create the fragment shader
+osg::ref_ptr&lt;osg::Shader&gt; pFragmentShader = new osg::Shader(osg::Shader::FRAGMENT, szFragSource.c_str());
+
+// Create the fragment program
+osg::ref_ptr&lt;osg::Program&gt; pProgram = new osg::Program;
+
+// Add the shader to the program
+pProgram-&gt;addShader(pFragmentShader);
+
+// Get the group node's stateset
+osg::StateSet *pStateSet = pTestGroup-&gt;getOrCreateStateSet();
+
+// The center of the sphere that I want to define the region that is not drawn
+osg::Vec3 tCenter(0.0f, 0.0f, 0.0f);
+
+// The radius of the sphere that I want to define the region that is not drawn
+float fRadius = 1.0f;
+
+// Add the center and radius uniforms
+osg::ref_ptr&lt;osg::Uniform&gt; pCenterUniform = new osg::Uniform(&quot;center&quot;, tCenter);
+osg::ref_ptr&lt;osg::Uniform&gt; pRadiusUniform = new osg::Uniform(&quot;rad&quot;, fRadius);
+pStateSet-&gt;addUniform(pCenterUniform);
+pStateSet-&gt;addUniform(pRadiusUniform);
+
+// Enact this fragment shader on the stateset
+pStateSet-&gt;setAttributeAndModes(pProgram);
+
+
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic776f.php?p=64457#64457">http://forum.openscenegraph.org/viewtopic.php?p=64457#64457</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000911.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+	<LI>Next message: <A HREF="000925.html">[osg-users] ClipNode Opposite Behavior
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#924">[ date ]</a>
+              <a href="thread.html#924">[ thread ]</a>
+              <a href="subject.html#924">[ subject ]</a>
+              <a href="author.html#924">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

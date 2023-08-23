@@ -1,0 +1,143 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Make an object linked to camera moovement
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Make%20an%20object%20linked%20to%20camera%20moovement&In-Reply-To=%3C1553075138.m2f.75724%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009807.html">
+   <LINK REL="Next"  HREF="009808.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Make an object linked to camera moovement</H1>
+<!--htdig_noindex-->
+    <B>Giacomo Bondi</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Make%20an%20object%20linked%20to%20camera%20moovement&In-Reply-To=%3C1553075138.m2f.75724%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Make an object linked to camera moovement">giacomobondizz7 at gmail.com
+       </A><BR>
+    <I>Wed Mar 20 02:45:38 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009807.html">[osg-users] VertexAttribDivisor -- should it be part of the VAO state?
+</A></li>
+        <LI>Next message (by thread): <A HREF="009808.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9810">[ date ]</a>
+              <a href="thread.html#9810">[ thread ]</a>
+              <a href="subject.html#9810">[ subject ]</a>
+              <a href="author.html#9810">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+i'm going to develop an example where a 3D Object follows camera in a rigid way. I mean, starting from 3d object position P0 (i.e. in the  upper left corner of viewport), when  i translate or rotate camera, this 3d Object still appears in the upper left corner, as thought 3d object is rigidically linked to camera with a transparent wire. Caused to some constraints, i would like  to link object to camera without addchild method, but using matrix/vector/quaternion transformation. 
+
+The scene has a group GROUP which has PAT (position attitude Transform) children which has Model3D (as 3d object Node). myCamera is the camera
+
+
+I have tried some approaches, but no ones gave the wanted results.
+
+First approach:
+...
+
+Code:
+osg::Matrix objectMatrix;
+objectMatrix.setPosition(PAT-&gt;getPosition());
+objectMatrix.setattitude(PAT-&gt;getrotate());
+osg::Matrix cameraInv=myCamera-&gt;getInverseViewMatrix();
+osg::Matrix newObjectMatrix=objectMatrix*cameraInv;
+PAT-&gt;setPosition(newObjectMatrix.getTranslate());
+PAT-&gt;setattitude(newObjectMatrix.getRotate());
+
+
+
+After translation and/or camera rotation, Object doesn't located in the desired position.
+
+Second approach:
+
+
+
+Code:
+//collect some initial values
+//called once
+void Init()
+{
+osg::Vec3 eye, center, up;
+myCamera-&gt;getViewMatrixAsLookAt(eye, center, up);
+osg::Vec3 objectPosition = PAT-&gt;getPosition();
+//class attribute, osg::Vec3 
+//vector between camera and object
+mOffsetFromCamera = objectPosition - eye;
+osg::Matrix cameraInv =myCamera-&gt;getInverseViewMatrix();
+//class attribute
+mCamRotOffset = cameraInv.getRotate();
+}
+
+// during simulation
+// on each frame (update)
+void Update()
+{
+osg::Vec3 eye, center, up;
+osg::Matrix cameraInv=myCamera()-&gt;getInverseViewMatrix();
+myCamera-&gt;getViewMatrixAsLookAt(eye, center, up);
+osg::Quat deltaCamRot=cameraInv.getRotate()-mCamRotOffset;
+
+//Rotate vector between camera and object
+osg::Vec3 newOffsetDirection = deltaCamRot*mOffsetFromCamera;
+osg::Vec3 newObjectPosition = eye + newOffsetDirection;
+PAT-&gt;setPosition(newObjectPosition);
+}
+
+
+
+In this approach, camera translation keep 3D object in the desired position, but camera rotation doesn't.
+
+Please, can you suggest me other approaches?
+Is there an example which shows some useful tips?
+
+Thank you!
+
+Cheers,
+Giacomo
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic76dc.php?p=75724#75724">http://forum.openscenegraph.org/viewtopic.php?p=75724#75724</A>
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009807.html">[osg-users] VertexAttribDivisor -- should it be part of the VAO state?
+</A></li>
+	<LI>Next message (by thread): <A HREF="009808.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9810">[ date ]</a>
+              <a href="thread.html#9810">[ thread ]</a>
+              <a href="subject.html#9810">[ subject ]</a>
+              <a href="author.html#9810">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

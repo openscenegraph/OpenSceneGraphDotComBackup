@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Volume image crash on the latest version of Nvidia	driver
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20image%20crash%20on%20the%20latest%20version%20of%20Nvidia%0A%09driver&In-Reply-To=%3CCAFN7Y%2BUwab9Vc00dh-kPtVn_DPNUm%2BdXwYZZtfWdbqMHR0RhKA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001155.html">
+   <LINK REL="Next"  HREF="001159.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Volume image crash on the latest version of Nvidia	driver</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20image%20crash%20on%20the%20latest%20version%20of%20Nvidia%0A%09driver&In-Reply-To=%3CCAFN7Y%2BUwab9Vc00dh-kPtVn_DPNUm%2BdXwYZZtfWdbqMHR0RhKA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Volume image crash on the latest version of Nvidia	driver">robert.osfield at gmail.com
+       </A><BR>
+    <I>Mon Aug 10 23:53:11 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001155.html">[osg-users] Volume image crash on the latest version of	Nvidia	driver
+</A></li>
+        <LI>Next message: <A HREF="001159.html">[osg-users] Volume image crash on the latest version of	Nvidia	driver
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1157">[ date ]</a>
+              <a href="thread.html#1157">[ thread ]</a>
+              <a href="subject.html#1157">[ subject ]</a>
+              <a href="author.html#1157">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>HI Clement,
+
+Good investigation.  This suggested workaround would sure be cleaner than
+my approach of toggling between float and int types.  The only problem with
+it would be how widely the isnan is supported.  I've done a quick internet
+search and haven't come up with a clear answer, it would seem there are
+systems that don't support it.
+
+Robert.
+
+On 11 August 2015 at 06:51, &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Clement.Chu at csiro.au</A>&gt; wrote:
+
+&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i>    Finally, I found out where causes the crash problem.  The problem is
+</I>&gt;<i> not related to the type casting.  See the source code below:
+</I>&gt;<i>
+</I>&gt;<i> float num_iterations = ceil(length((te-t0).xyz)/SampleDensityValue);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>    The problem is the value of num_iterations is a NaN float value (not a
+</I>&gt;<i> number), so that why it makes an infinite running in the loop and then
+</I>&gt;<i> crashed.  I think the problem is on the method length().  In some condition
+</I>&gt;<i> (different values of t0 and te) makes the method length() to return a NaN
+</I>&gt;<i> value.  I added a line of code to check variable num_iterations.
+</I>&gt;<i>
+</I>&gt;<i>   if (isnan(num_iterations)) num_iterations = 2.0;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>   So far it works on both nvidia and intel cards.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Regards,
+</I>&gt;<i> Clement
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ________________________________________
+</I>&gt;<i> From: osg-users [<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>] on behalf of
+</I>&gt;<i> Robert Osfield [<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>]
+</I>&gt;<i> Sent: Monday, 10 August 2015 17:42
+</I>&gt;<i> To: OpenSceneGraph Users
+</I>&gt;<i> Subject: Re: [osg-users] Volume image crash on the latest version of
+</I>&gt;<i> Nvidia     driver
+</I>&gt;<i>
+</I>&gt;<i> Hi Clement,
+</I>&gt;<i>
+</I>&gt;<i> I have been looking GLSL for what might help us determine when to use
+</I>&gt;<i> float vs ints.  The follow info might be useful:
+</I>&gt;<i>
+</I>&gt;<i>    <A HREF="https://github.com/mattdesl/lwjgl-basics/wiki/GLSL-Versions">https://github.com/mattdesl/lwjgl-basics/wiki/GLSL-Versions</A>
+</I>&gt;<i>
+</I>&gt;<i> Perhaps we should just add a #version 130 (OpenGL Version &gt;= 3.0) to the
+</I>&gt;<i> top of the fragment shaders to make sure they support ints.  This may mean
+</I>&gt;<i> that the Intel driver fails though.
+</I>&gt;<i>
+</I>&gt;<i> What Intel hardware, drivers and OpenGL version support by the drivers do
+</I>&gt;<i> you have on your system?
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150811/1f41f195/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150811/1f41f195/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001155.html">[osg-users] Volume image crash on the latest version of	Nvidia	driver
+</A></li>
+	<LI>Next message: <A HREF="001159.html">[osg-users] Volume image crash on the latest version of	Nvidia	driver
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1157">[ date ]</a>
+              <a href="thread.html#1157">[ thread ]</a>
+              <a href="subject.html#1157">[ subject ]</a>
+              <a href="author.html#1157">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

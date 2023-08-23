@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Minor change proposal : Blacklist usage of all unsized texture internat format
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Minor%20change%20proposal%20%3A%20Blacklist%20usage%20of%20all%0A%20unsized%20texture%20internat%20format&In-Reply-To=%3C1534366652.m2f.74536%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008926.html">
+   <LINK REL="Next"  HREF="008885.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Minor change proposal : Blacklist usage of all unsized texture internat format</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Minor%20change%20proposal%20%3A%20Blacklist%20usage%20of%20all%0A%20unsized%20texture%20internat%20format&In-Reply-To=%3C1534366652.m2f.74536%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Minor change proposal : Blacklist usage of all unsized texture internat format">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Wed Aug 15 13:57:32 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008926.html">[osg-users] Minor change proposal : Blacklist usage of all unsized texture internat format
+</A></li>
+        <LI>Next message (by thread): <A HREF="008885.html">[osg-users] LookAt() function parameter meanings..
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8914">[ date ]</a>
+              <a href="thread.html#8914">[ thread ]</a>
+              <a href="subject.html#8914">[ subject ]</a>
+              <a href="author.html#8914">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>the killer feature requiring immutable texture is BindImageTexture...
+
+
+mp3butcher wrote:
+&gt;<i> Immutable Storage  mandatory for lot of GL4 features:
+</I>&gt;<i> TextureImage synchronization,TextureView, persistance mapping, virtual texture and surely other stuff I didn't used yet
+</I>&gt;<i> 
+</I>&gt;<i> Further it's better for the driver checks
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> robertosfield wrote:
+</I>&gt;<i> &gt; Hi Julien,
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; On Wed, 15 Aug 2018 at 16:35, Julien Valentin
+</I>&gt;<i> &gt; &lt;&gt; wrote:
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; &gt; I'll do the pr you want from me
+</I>&gt;<i> &gt; &gt; (with this ugly patch code:
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; Code:
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; ex for Texture2D:
+</I>&gt;<i> &gt; &gt; if( useTexStorrage)
+</I>&gt;<i> &gt; &gt; extensions-&gt;glTexStorage2D( GL_TEXTURE_2D, (_numMipmapLevels &gt;0)?_numMipmapLevels:1,
+</I>&gt;<i> &gt; &gt; _sourceFormat ? assumeSizedInternalFormat(_internalFormat,_sourceFormat) :
+</I>&gt;<i> &gt; &gt; assumeSizedInternalFormat(_internalFormat,GL_UNSIGNED_BYTE),
+</I>&gt;<i> &gt; &gt; _textureWidth, _textureHeight);
+</I>&gt;<i> &gt; &gt; )
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; It is indeed ugly change, the best way to avoid this code complexity
+</I>&gt;<i> &gt; would be to push the test into a dedicated helper method such
+</I>&gt;<i> &gt; selectInternalFormat().  I don't saying this is the actual solution to
+</I>&gt;<i> &gt; go for but that's the general way to avoid extra tests from
+</I>&gt;<i> &gt; obfuscating local code.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; --
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; However, having don't a first pass look into the wider glTexStorage
+</I>&gt;<i> &gt; issue I'm truck by just by adding glTexStorage* usage is what is
+</I>&gt;<i> &gt; complicating all the texture setup code, as glTexStorage isn't
+</I>&gt;<i> &gt; available everywhere we can't remove the old glTexImage calls, so we
+</I>&gt;<i> &gt; are stuck with two code paths, in some case these two code paths have
+</I>&gt;<i> &gt; lots of nested if () blocks within them so it's a substantial amount
+</I>&gt;<i> &gt; of code that is being added.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Every line of extra code is an extra potential sight for bugs, every
+</I>&gt;<i> &gt; extra optional code path adds another platform combination that needs
+</I>&gt;<i> &gt; testing - and as us developers are limited resource each of these code
+</I>&gt;<i> &gt; paths has less usage exposure, the less exposure the more likely bugs
+</I>&gt;<i> &gt; are likely to creep into the code without being spotted.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; So for code quality we need to avoid optional code path where
+</I>&gt;<i> &gt; possible.  If we have to introduce an optional code path it has to be
+</I>&gt;<i> &gt; justified by real functionality.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; So for the topic of glTexStorage I'm asking do we *really* need it,
+</I>&gt;<i> &gt; what things can't be done without it's usage.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; What is the killer feature that requires use of glTexSorage?  This is
+</I>&gt;<i> &gt; an honest question, I want to know.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Robert.
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt;  ------------------
+</I>&gt;<i> &gt; Post generated by Mail2Forum
+</I>&gt;<i> 
+</I>
+
+------------------------
+Twirling twirling twirling toward freedom
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic71d4.php?p=74536#74536">http://forum.openscenegraph.org/viewtopic.php?p=74536#74536</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008926.html">[osg-users] Minor change proposal : Blacklist usage of all unsized texture internat format
+</A></li>
+	<LI>Next message (by thread): <A HREF="008885.html">[osg-users] LookAt() function parameter meanings..
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8914">[ date ]</a>
+              <a href="thread.html#8914">[ thread ]</a>
+              <a href="subject.html#8914">[ subject ]</a>
+              <a href="author.html#8914">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

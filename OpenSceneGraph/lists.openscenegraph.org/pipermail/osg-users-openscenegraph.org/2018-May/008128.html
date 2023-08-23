@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Potential crash in ObjectCache::removeExpiredObjectsInCache
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Potential%20crash%20in%0A%20ObjectCache%3A%3AremoveExpiredObjectsInCache&In-Reply-To=%3CCAFN7Y%2BU_d%3DHLYtexREwRwZQu%2BgY5h_rS_A9Yp%3Di5XWF8G8pdBg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008124.html">
+   <LINK REL="Next"  HREF="008131.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Potential crash in ObjectCache::removeExpiredObjectsInCache</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Potential%20crash%20in%0A%20ObjectCache%3A%3AremoveExpiredObjectsInCache&In-Reply-To=%3CCAFN7Y%2BU_d%3DHLYtexREwRwZQu%2BgY5h_rS_A9Yp%3Di5XWF8G8pdBg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Potential crash in ObjectCache::removeExpiredObjectsInCache">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat May  5 04:49:40 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008124.html">[osg-users] Potential crash in ObjectCache::removeExpiredObjectsInCache
+</A></li>
+        <LI>Next message (by thread): <A HREF="008131.html">[osg-users] OpenSceneGraph-3.6.1 release candidate 3 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8128">[ date ]</a>
+              <a href="thread.html#8128">[ thread ]</a>
+              <a href="subject.html#8128">[ subject ]</a>
+              <a href="author.html#8128">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Guy,
+
+I have look into the build issue and your proposed change.  Your
+proposed changes requires C++11, while the original code uses the
+standard pre C++11 method to erasing an element of std::map&lt;&gt;.  I
+believe the original code should be fine, for it not to work then
+there must be an issue with the increment operation implementation
+order or operation or for all iterators to the map being invalidated
+by the erase. It sounds like your compiler is tripping up on this.
+
+The best solution I can come up with is:
+
+#if __cplusplus &gt; 199711L
+            oitr = _objectCache.erase(oitr);
+#else
+            _objectCache.erase(oitr++);
+#endif
+
+I've checked the into the 3.6 branch and master:
+
+
+<A HREF="https://github.com/openscenegraph/OpenSceneGraph/commit/d95993554e08d9d10b6f4a4f4d6e74bbd1a7f3be">https://github.com/openscenegraph/OpenSceneGraph/commit/d95993554e08d9d10b6f4a4f4d6e74bbd1a7f3be</A>
+
+Could you test this and let me know how you get on.
+
+Cheers,
+Robert.
+</PRE>
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008124.html">[osg-users] Potential crash in ObjectCache::removeExpiredObjectsInCache
+</A></li>
+	<LI>Next message (by thread): <A HREF="008131.html">[osg-users] OpenSceneGraph-3.6.1 release candidate 3 tagged
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8128">[ date ]</a>
+              <a href="thread.html#8128">[ thread ]</a>
+              <a href="subject.html#8128">[ subject ]</a>
+              <a href="author.html#8128">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

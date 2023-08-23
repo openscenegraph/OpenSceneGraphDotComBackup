@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Detecting if a node is within viewfrustum
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Detecting%20if%20a%20node%20is%20within%20viewfrustum&In-Reply-To=%3C1472334109.m2f.68467%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280189.html">
+   <LINK REL="Next"  HREF="003983.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Detecting if a node is within viewfrustum</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Detecting%20if%20a%20node%20is%20within%20viewfrustum&In-Reply-To=%3C1472334109.m2f.68467%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Detecting if a node is within viewfrustum">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Sat Aug 27 14:41:49 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280189.html">[osg-users] Detecting if a node is within viewfrustum
+</A></li>
+        <LI>Next message: <A HREF="003983.html">[osg-users] Detecting if a node is within viewfrustum
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3982">[ date ]</a>
+              <a href="thread.html#3982">[ thread ]</a>
+              <a href="subject.html#3982">[ subject ]</a>
+              <a href="author.html#3982">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Sura
+I may be wrong but I'm afraid you cannot do that in a cullcallback.
+You may use a statefull (caching last cull result/and last aabb of the node) update callback performing a custom culling with a PolytopeIntersector (with a polytope describing the view frustum).
+This can be really expensive as the test must be done for all the scenegraph even if node outside frustum..
+Further if you wanna know which plane is traversed (in the case lastcullresult!=currentcullresult) I think you'll have to perform a custom collision detection against each frustum plane and the extruded boundingbox of the node(lastbb extruded to currentbb)..
+
+Perhaps Robert will have a best/simplier way to go but personnally I only see this one.
+
+Cheers
+
+
+suraj wrote:
+&gt;<i> Hi evrybody,
+</I>&gt;<i> 
+</I>&gt;<i> I am new to Openscene graph and need a help/guidance.
+</I>&gt;<i> 
+</I>&gt;<i> I wish to find which of the sides of view frustum- left, right, top, bottom near or far- a moving node is crossing. How to find this in Openscene graph?
+</I>&gt;<i> 
+</I>&gt;<i> I used a class as follows:-
+</I>&gt;<i> 
+</I>&gt;<i> class MyCullCallback : public osg::NodeCallback
+</I>&gt;<i> {
+</I>&gt;<i> 
+</I>&gt;<i> void operator()(osg::Node* node, osg::NodeVisitor* nv)
+</I>&gt;<i>     {
+</I>&gt;<i> //      osgUtil::CullVisitor* cv = nv-&gt;asCullVisitor();
+</I>&gt;<i>         osgUtil::CullVisitor* cv = dynamic_cast&lt;osgUtil::CullVisitor*&gt;(nv);
+</I>&gt;<i>          if (!cv-&gt;isCulled(*node))
+</I>&gt;<i>          {
+</I>&gt;<i>                         std::cout &lt;&lt; &quot;Node is visible: &quot;&lt;&lt; endl;
+</I>&gt;<i>          }
+</I>&gt;<i> 
+</I>&gt;<i>         if ( cv-&gt;isCulled(*node))
+</I>&gt;<i>         {
+</I>&gt;<i> 
+</I>&gt;<i>              std::cout &lt;&lt; &quot;Node is NOT visible: &quot;&lt;&lt;endl;
+</I>&gt;<i> 
+</I>&gt;<i>             }
+</I>&gt;<i>        traverse(node,nv);
+</I>&gt;<i>     }
+</I>&gt;<i> };
+</I>&gt;<i> 
+</I>&gt;<i> The node is given some translation.
+</I>&gt;<i> 
+</I>&gt;<i> The above cull callback just detects is a node is culled or not...I observed that as long the node is within the viewport it prints, &quot;Node is Visible&quot;. 
+</I>&gt;<i>  
+</I>&gt;<i> However, it never prints &quot;Node is NOT visible&quot;, even when the node goes out of the scene. 
+</I>&gt;<i> 
+</I>&gt;<i> Any help would help me...
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> ... 
+</I>&gt;<i> 
+</I>&gt;<i> Thank you!
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Suraj
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic2f7f.php?p=68467#68467">http://forum.openscenegraph.org/viewtopic.php?p=68467#68467</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280189.html">[osg-users] Detecting if a node is within viewfrustum
+</A></li>
+	<LI>Next message: <A HREF="003983.html">[osg-users] Detecting if a node is within viewfrustum
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3982">[ date ]</a>
+              <a href="thread.html#3982">[ thread ]</a>
+              <a href="subject.html#3982">[ subject ]</a>
+              <a href="author.html#3982">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

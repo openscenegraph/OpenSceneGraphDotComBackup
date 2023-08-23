@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText 3.6.3 crash
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%203.6.3%20crash&In-Reply-To=%3CCAFN7Y%2BXxaG6y6eaOECgs3_ZD4StCaLJHbUhgGbLE%2Bwc6wpCcKg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009091.html">
+   <LINK REL="Next"  HREF="009097.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText 3.6.3 crash</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%203.6.3%20crash&In-Reply-To=%3CCAFN7Y%2BXxaG6y6eaOECgs3_ZD4StCaLJHbUhgGbLE%2Bwc6wpCcKg%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgText 3.6.3 crash">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Sep 12 07:09:02 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009091.html">[osg-users] osgText 3.6.3 crash
+</A></li>
+        <LI>Next message (by thread): <A HREF="009097.html">[osg-users] osgText 3.6.3 crash
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9093">[ date ]</a>
+              <a href="thread.html#9093">[ thread ]</a>
+              <a href="subject.html#9093">[ subject ]</a>
+              <a href="author.html#9093">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Nick,
+
+There are plenty of ways mutlti-thread setting of Text labels could
+cause problems if the threads reading from the Text are running in
+parallel to the ones setting it.  A mutex &quot;might&quot; help but it could
+easily be done in the wrong way.  If you are modifying text
+dynamically then you should set the DataVariance to DYNAMIC.  However,
+adding mutex and using DataVariance of DYNAMIC might protect things if
+you do it all right but performance issues can easily become dominant
+as it can easily stall the various threads.
+
+It may be that trying to dynamically update Text is simply the wrong
+solution for your application.  It might be that writing your own
+custom shader to implement text is the better thing to do.
+
+Robert.
+
+
+
+
+On Wed, 12 Sep 2018 at 13:24, Trajce Nikolov NICK
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">trajce.nikolov.nick at gmail.com</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi Robert,
+</I>&gt;<i>
+</I>&gt;<i> we are experiencing some crashes in our sim software. And I know you will not like this post since I can not produce minimal case exercising this issue - I tried to mimic the sim code into one simple app but in this minimal app all works just great. So I will try to explain and count on you with hints
+</I>&gt;<i>
+</I>&gt;<i> The environment is multithreaded:
+</I>&gt;<i> - high res thread updating labels guarded by mutex
+</I>&gt;<i> - the osg threads with update callbacks on osgText::Text that is setting the labels with setText(...) guarded  by mutex
+</I>&gt;<i>
+</I>&gt;<i> The env is XUbuntu 18, NVIDIA GTX 1080
+</I>&gt;<i>
+</I>&gt;<i> And the crash happens at
+</I>&gt;<i> Text::drawImplementationSinglePass ln: 1151 glyphquad._primitives-&gt;draw(state, usingVertexBufferObjects);
+</I>&gt;<i>
+</I>&gt;<i> which furthers
+</I>&gt;<i>
+</I>&gt;<i> DrawElementsUShort::draw ln: 266
+</I>&gt;<i>
+</I>&gt;<i> if (_numInstances&gt;=1) state.glDrawElementsInstanced(mode, size(), GL_UNSIGNED_SHORT, (const GLvoid *)(ebo-&gt;getOffset(getBufferIndex())), _numInstances);
+</I>&gt;<i>             else glDrawElements(mode, size(), GL_UNSIGNED_SHORT, (const GLvoid *)(ebo-&gt;getOffset(getBufferIndex())));
+</I>&gt;<i>
+</I>&gt;<i> _numInstances is 0 when the crash happens so the crash happens here:
+</I>&gt;<i>
+</I>&gt;<i> glDrawElements(mode, size(), GL_UNSIGNED_SHORT, (const GLvoid *)(ebo-&gt;getOffset(getBufferIndex())));
+</I>&gt;<i>
+</I>&gt;<i> Any clue or at least a thought when this can happen? Mean while I will continue testing and will really try again to make a small app reproducing this behavior
+</I>&gt;<i>
+</I>&gt;<i> Thanks a bunch as always!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Nick
+</I>&gt;<i>
+</I>&gt;<i> --
+</I>&gt;<i> trajce nikolov nick
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009091.html">[osg-users] osgText 3.6.3 crash
+</A></li>
+	<LI>Next message (by thread): <A HREF="009097.html">[osg-users] osgText 3.6.3 crash
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9093">[ date ]</a>
+              <a href="thread.html#9093">[ thread ]</a>
+              <a href="subject.html#9093">[ subject ]</a>
+              <a href="author.html#9093">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

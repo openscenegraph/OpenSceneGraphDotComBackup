@@ -1,0 +1,55 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;John,&lt;br&gt;&lt;br&gt;&lt;/div&gt;The&nbsp;GLBeginEndAdapter&nbsp;was&nbsp;an&nbsp;interim&nbsp;solution&nbsp;while&nbsp;older&nbsp;parts&nbsp;of&nbsp;the&nbsp;OSG&nbsp;were&nbsp;migrated&nbsp;over&nbsp;to&nbsp;using&nbsp;vertex&nbsp;arrays&nbsp;and&nbsp;DrawArrays/DrawElements,&nbsp;once&nbsp;this&nbsp;migration&nbsp;work&nbsp;was&nbsp;completed&nbsp;the&nbsp;core&nbsp;OSG&nbsp;no&nbsp;longer&nbsp;required&nbsp;it,&nbsp;so&nbsp;I&nbsp;removed&nbsp;it&nbsp;to&nbsp;avoid&nbsp;bloat. &nbsp;This&nbsp;migration&nbsp;work&nbsp;was&nbsp;required&nbsp;as&nbsp;OpenGL&nbsp;ES&nbsp;and&nbsp;recent&nbsp;versions&nbsp;of&nbsp;OpenGL&nbsp;either&nbsp;don&#39;t&nbsp;support&nbsp;or&nbsp;deprecate&nbsp;glBegin/glEnd,&nbsp;Further&nbsp;pressure&nbsp;to&nbsp;migrate&nbsp;was&nbsp;due&nbsp;to&nbsp;the&nbsp;need&nbsp;to&nbsp;support&nbsp;Vertex&nbsp;Array&nbsp;Objects&nbsp;under&nbsp;recent&nbsp;versions&nbsp;of&nbsp;OpenGL&nbsp;and&nbsp;due&nbsp;to&nbsp;peculiarities&nbsp;of&nbsp;OpenGL&nbsp;support&nbsp;under&nbsp;OSX.&lt;br&gt;&lt;br&gt;&lt;/div&gt;For&nbsp;yourself&nbsp;migrating&nbsp;to&nbsp;use&nbsp;osg::Geometry&nbsp;may&nbsp;well&nbsp;be&nbsp;the&nbsp;easiest. &nbsp;Sometimes&nbsp;this&nbsp;is&nbsp;straight&nbsp;forward,&nbsp;other&nbsp;times&nbsp;it&nbsp;can&nbsp;be&nbsp;a&nbsp;bit&nbsp;awkward&nbsp;as&nbsp;not&nbsp;all&nbsp;glBegin/glEnd(()&nbsp;style&nbsp;usage&nbsp;easily&nbsp;maps&nbsp;to&nbsp;using&nbsp;vertex&nbsp;arrays. &nbsp;It&#39;s&nbsp;worth&nbsp;the&nbsp;effort&nbsp;though&nbsp;as&nbsp;vertex&nbsp;arrays&nbsp;is&nbsp;how&nbsp;all&nbsp;modern&nbsp;graphics&nbsp;hardware&nbsp;work,&nbsp;the&nbsp;GLBeginEndAdapter&nbsp;hides&nbsp;lots&nbsp;of&nbsp;hacky&nbsp;dynamic&nbsp;setting&nbsp;up&nbsp;of&nbsp;vertex&nbsp;arrays&nbsp;internal&nbsp;to&nbsp;hide&nbsp;the&nbsp;difference&nbsp;between&nbsp;the&nbsp;old&nbsp;style&nbsp;and&nbsp;how&nbsp;modern&nbsp;hardware&nbsp;manage&nbsp;things. &nbsp;&lt;br&gt;&lt;br&gt;By&nbsp;moving&nbsp;away&nbsp;from&nbsp;GLBeginEndAdapter&nbsp;you&nbsp;have&nbsp;to&nbsp;confront&nbsp;just&nbsp;how&nbsp;best&nbsp;to&nbsp;represent&nbsp;your&nbsp;data&nbsp;with&nbsp;modern&nbsp;vertex&nbsp;arrays&nbsp;but&nbsp;it&#39;ll&nbsp;be&nbsp;worth&nbsp;it&nbsp;-&nbsp;your&nbsp;application&nbsp;should&nbsp;be&nbsp;faster&nbsp;for&nbsp;the&nbsp;improvement.&lt;br&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;div&gt;&lt;div&gt;&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;20&nbsp;July&nbsp;2017&nbsp;at&nbsp;21:11,&nbsp;John&nbsp;Farrier&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:john.farrier@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;john.farrier@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;am&nbsp;compiling&nbsp;some&nbsp;code&nbsp;with&nbsp;the&nbsp;current&nbsp;git&nbsp;repository&nbsp;version&nbsp;of&nbsp;OSG&nbsp;and&nbsp;found&nbsp;that&nbsp;State&#39;s&nbsp;&quot;getGLBeginEndAdapter&quot;&nbsp;has&nbsp;been&nbsp;removed. &nbsp;Looking&nbsp;through&nbsp;the&nbsp;history,&nbsp;I&nbsp;see&nbsp;this&nbsp;happened&nbsp;at:&nbsp;commit&nbsp;e11e45a2e36de91bbe956223c43e8c&lt;wbr&gt;5a50f9b72b.&lt;br&gt;<br>
+&lt;br&gt;<br>
+The&nbsp;comment&nbsp;is&nbsp;only&nbsp;&quot;Removed&nbsp;GLBeginEndAdapter&nbsp;as&nbsp;it&nbsp;is&nbsp;no&nbsp;longer&nbsp;needed&quot;. &nbsp;Well,&nbsp;my&nbsp;code&nbsp;seems&nbsp;to&nbsp;need&nbsp;it. &nbsp;What&nbsp;do&nbsp;I&nbsp;need&nbsp;to&nbsp;do&nbsp;to&nbsp;update&nbsp;my&nbsp;code&nbsp;to&nbsp;not&nbsp;need&nbsp;it? &nbsp;(I&nbsp;realize&nbsp;this&nbsp;is&nbsp;fixed&nbsp;pipeline&nbsp;code,&nbsp;but&nbsp;it&#39;s&nbsp;old&nbsp;code&nbsp;and&nbsp;it&nbsp;works. &nbsp;So&nbsp;a&nbsp;complete&nbsp;re-write&nbsp;is&nbsp;not&nbsp;desirable.)&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+osg::GLBeginEndAdapter&amp;&nbsp;gl&nbsp;=&nbsp;(state.getGLBeginEndAdapter())&lt;wbr&gt;;&lt;br&gt;<br>
+&lt;br&gt;<br>
+gl.Color4fv(_surfaceColor.ptr(&lt;wbr&gt;));&lt;br&gt;<br>
+&lt;br&gt;<br>
+bool&nbsp;drawBackSide&nbsp;=&nbsp;true;&lt;br&gt;<br>
+bool&nbsp;drawFrontSide&nbsp;=&nbsp;true;&lt;br&gt;<br>
+&lt;br&gt;<br>
+//&nbsp;draw&nbsp;back&nbsp;side.&lt;br&gt;<br>
+if(drawBackSide)&lt;br&gt;<br>
+{&lt;br&gt;<br>
+ &nbsp;for(int&nbsp;i&nbsp;=&nbsp;0;&nbsp;i&nbsp;+&nbsp;1&nbsp;&lt;=&nbsp;_density;&nbsp;i++)&lt;br&gt;<br>
+ &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp;const&nbsp;auto&nbsp;az1&nbsp;=&nbsp;_azMin&nbsp;+&nbsp;(i*azIncr);&lt;br&gt;<br>
+ &nbsp; &nbsp;const&nbsp;auto&nbsp;az2&nbsp;=&nbsp;_azMin&nbsp;+&nbsp;((i&nbsp;+&nbsp;1)*azIncr);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp;gl.Begin(GL_QUAD_STRIP);&lt;br&gt;<br>
+ &nbsp; &nbsp;for(int&nbsp;j&nbsp;=&nbsp;0;&nbsp;j&nbsp;&lt;=&nbsp;_density;&nbsp;j++)&lt;br&gt;<br>
+ &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp;...&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Thank&nbsp;you!&lt;br&gt;<br>
+&lt;br&gt;<br>
+Cheers,&lt;br&gt;<br>
+John&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=71289#71289&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.&lt;wbr&gt;org/viewtopic.php?p=71289#&lt;wbr&gt;71289&lt;/a&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

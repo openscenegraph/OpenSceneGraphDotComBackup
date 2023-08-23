@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Fwd: OSG performance measurement
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Fwd%3A%20OSG%20performance%20measurement&In-Reply-To=%3CCACUuSRT7RQVj6Sk8XLhS2tp70KJnU4TE9B4MEYALyGOYwkpWew%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280726.html">
+   <LINK REL="Next"  HREF="004509.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Fwd: OSG performance measurement</H1>
+<!--htdig_noindex-->
+    <B>Hannes Naude</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Fwd%3A%20OSG%20performance%20measurement&In-Reply-To=%3CCACUuSRT7RQVj6Sk8XLhS2tp70KJnU4TE9B4MEYALyGOYwkpWew%40mail.gmail.com%3E"
+       TITLE="[osg-users] Fwd: OSG performance measurement">naude.jj at gmail.com
+       </A><BR>
+    <I>Mon Oct 17 08:05:16 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280726.html">[osg-users] OSG performance measurement
+</A></li>
+        <LI>Next message: <A HREF="004509.html">[osg-users] Fwd: OSG performance measurement
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4508">[ date ]</a>
+              <a href="thread.html#4508">[ thread ]</a>
+              <a href="subject.html#4508">[ subject ]</a>
+              <a href="author.html#4508">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>OK. Scratch that, I no longer believe that this is a performance
+measurement issue, but rather a performance issue. I have replaced my
+measurement code with the built in StatsHandler class, so my code now looks
+as follows:
+
+int main() {
+ref_ptr&lt;osgViewer::CompositeViewer&gt; viewer=new osgViewer::CompositeViewer();
+ref_ptr&lt;osgViewer::View&gt; view1 = new osgViewer::View;
+viewer-&gt;addView(view1);
+view1-&gt;addEventHandler( new osgViewer::StatsHandler );
+return viewer-&gt;run();
+}
+
+When I press S statshandler reports 30-40fps. Obviously there is not a lot
+of room to have messed up in a 5-liner program, so I believe that that is
+the actual framerate that I am getting. Question is why. I am running on a
+NVIDIA Geforce 980Ti under Ubuntu 14.04 with nvidia driver version 352.63)
+. I have optimization on (-O3 under gcc)  and believe that I am linking
+against release libraries not debug ones.
+
+Any ideas where to look??
+
+Regards
+Hannes
+---------- Forwarded message ----------
+From: Hannes Naude &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">naude.jj at gmail.com</A>&gt;
+Date: Mon, Oct 17, 2016 at 1:46 PM
+Subject: OSG performance measurement
+To: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+
+
+Hi all
+
+New to OSG so apologies if this is a stupid question.
+
+I have written a visualization tool in OSG and as a last step, I wish to
+ensure that it runs at the screen refresh rate. My perception was that it
+mostly runs smoothly but stutters every few frames or so, so I wrote code
+to print the elapsed time between every two frames, rather than just the
+average framerate. The printout seemed to confirm this, so I gradually
+removed more and more of my scenegraph, trying to determine where the
+bottleneck lies. The weird thing is that I end up with a completely empty
+scenegraph (just rendering a blue screen) and execution time STILL seems to
+stutter. So, I strongly suspect that there is something fundamentally wrong
+with the way I am measuring. I realise that FPS is a bad performance
+metric, but right now I just want to get to the point where I am updating
+every frame on my hardware and I am not particularly concerned about
+performance on any other hardware. The remaining code looks like this:
+
+int main() {
+ref_ptr&lt;osgViewer::CompositeViewer&gt; viewer=new
+osgViewer::CompositeViewer(); ref_ptr&lt;osgViewer::View&gt;
+view1 = new osgViewer::View;
+viewer-&gt;addView(view1);
+float timeNow,timePrev=0;
+while (!viewer-&gt;done())
+{
+viewer-&gt;frame();
+timeNow=osg::Timer::instance()-&gt;time_s();
+std::cout &lt;&lt; timeNow-timePrev &lt;&lt; &quot; &quot;;
+timePrev=timeNow;
+}
+return(0);
+}
+
+and the resulting printout to the console looks like this:
+
+0.123003 0.00298501 0.000751987 0.016045 0.083418 0.038128 0.013075
+0.00068298 0.014678 0.019825 0.013804 0.016688 0.01651 0.066802 0.023197
+0.07995 0.013019 0.000387967 0.0331 0.000599027 0.03273 0.000575006
+0.088067 0.083023...
+
+As you can see, the loop occasionally takes as much as 88ms to complete,
+while at other time completing within 0.6ms. What could possibly be causing
+this massive variation?
+
+Regards
+Hannes Naude
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20161017/3ba34034/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20161017/3ba34034/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280726.html">[osg-users] OSG performance measurement
+</A></li>
+	<LI>Next message: <A HREF="004509.html">[osg-users] Fwd: OSG performance measurement
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4508">[ date ]</a>
+              <a href="thread.html#4508">[ thread ]</a>
+              <a href="subject.html#4508">[ subject ]</a>
+              <a href="author.html#4508">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

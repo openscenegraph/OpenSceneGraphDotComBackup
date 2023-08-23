@@ -1,0 +1,382 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Rendering double triangles as one quad
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Rendering%20double%20triangles%20as%20one%20quad&In-Reply-To=%3Cmailman.7899.1591259485.4143.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011128.html">
+   <LINK REL="Next"  HREF="011129.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Rendering double triangles as one quad</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Rendering%20double%20triangles%20as%20one%20quad&In-Reply-To=%3Cmailman.7899.1591259485.4143.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users] Rendering double triangles as one quad">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Thu Jun  4 01:31:22 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011128.html">[osg-users] Rendering double triangles as one quad
+</A></li>
+        <LI>Next message (by thread): <A HREF="011129.html">[osg-users] Best way to debug detected OpenGL error 'invalid value' at top of State::apply(StateSet*)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11134">[ date ]</a>
+              <a href="thread.html#11134">[ thread ]</a>
+              <a href="subject.html#11134">[ subject ]</a>
+              <a href="author.html#11134">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>
+&gt;<i>
+</I>&gt;<i> Hello!
+</I>&gt;<i>
+</I>
+I will post my solution to this in case someone is interested.
+
+I solved it by having two different geometries controlled by one switch 
+node, and depending on the rendermode i control which one is visible.
+
+
+void OsgSceneMesh::constructVertexAttribute(GI::SceneMesh* sceneMesh, osg::Geode* geode, osg::Geometry* geometry, bool constructSkeletonMesh)    
+{
+    osg::ref_ptr&lt;osg::Vec3Array&gt;    vertices = new osg::Vec3Array();
+
+    osg::ref_ptr&lt;osg::Vec3Array&gt;    normals = new osg::Vec3Array();
+
+    osg::ref_ptr&lt;osg::Vec2Array&gt;    texCoords  = new osg::Vec2Array();
+
+    osg::ref_ptr&lt;osg::Vec2Array&gt;    texCoords2  = new osg::Vec2Array();
+
+
+    osg::ref_ptr&lt;osg::DrawElements&gt; indices;
+
+
+    if(constructSkeletonMesh) indices = static_cast&lt;osg::DrawElements*&gt;(new osg::DrawElementsUShort(GL_LINE_LOOP));
+
+    else indices =  static_cast&lt;osg::DrawElements*&gt;(new osg::DrawElementsUShort(
+
+                                sceneMesh-&gt;getType() == GI::MeshType::LINE ?  GL_LINES : GL_TRIANGLES));
+
+
+    osg::ref_ptr&lt;osg::Vec4Array&gt;    vertexColor = new osg::Vec4Array;
+
+
+    std::vector&lt;long unsigned int&gt; sceneMeshIndices = sceneMesh-&gt;getIndices();
+
+    std::vector&lt;GI::Vertex&gt; sceneMeshVertices = sceneMesh-&gt;getVertices();
+
+
+    //push in vertices
+
+    for(const auto &amp; vertex : sceneMeshVertices)
+
+    {
+
+        vertices-&gt;push_back(osg::Vec3(vertex.x_, vertex.y_, vertex.z_));
+
+        normals-&gt;push_back(osg::Vec3(vertex.nx_, vertex.ny_, vertex.nz_));
+
+        texCoords-&gt;push_back(osg::Vec2(vertex.u_, vertex.v_));
+
+        texCoords2-&gt;push_back(osg::Vec2(vertex.u_, vertex.v_));
+
+        vertexColor-&gt;push_back(osg::Vec4(vertex.r_,vertex.g_,vertex.b_, 1.f));
+
+    }
+
+
+    //push in indices
+
+    for(const auto &amp; index : sceneMeshIndices)
+
+    {
+
+        indices-&gt;addElement(index);
+
+    }
+
+
+    //texture buffer and color values later
+
+    geometry-&gt;setVertexArray(vertices.get());
+
+    geometry-&gt;setNormalArray(normals.get(), osg::Array::BIND_PER_VERTEX);
+
+    geometry-&gt;setTexCoordArray(0, texCoords, osg::Array::BIND_PER_VERTEX);
+
+    geometry-&gt;setTexCoordArray(1, texCoords2, osg::Array::BIND_PER_VERTEX);
+
+    geometry-&gt;setColorArray(vertexColor.get(), osg::Array::BIND_PER_VERTEX);
+
+    geometry-&gt;addPrimitiveSet(indices.get());
+
+
+    geode-&gt;addDrawable(geometry);
+}
+
+
+
+the render mode is controlled through this function 
+
+void OsgSceneMesh::updateRenderMode(GI::PolygonMode polygonMode)
+
+{
+
+    if(this-&gt;getNumChildren() &lt; 2) return; //this means we havent initialized the mesh yet
+
+
+    //set enable/disable skeleton mesh only at wireframe quad polygonmode
+
+    // 0 == skeleton mesh, 1 == triangle mesh
+
+
+    osg::PolygonMode * osgPolygonMode = new osg::PolygonMode;
+
+
+    switch(polygonMode)
+
+    {
+
+        case GI::PolygonMode::SOLID :
+
+        {
+
+            this-&gt;setValue(0, true);
+
+            this-&gt;setValue(1, false);
+
+            osgPolygonMode-&gt;setMode( osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL);
+
+            triangleMeshVisible_ = true;
+
+            break;
+
+        }
+
+        case GI::PolygonMode::WIREFRAME_TRIANGLE :
+
+        {
+
+            this-&gt;setValue(0, true);
+
+            this-&gt;setValue(1, false);
+
+            osgPolygonMode-&gt;setMode( osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+
+            triangleMeshVisible_ = true;
+
+            break;
+
+        }
+
+        case GI::PolygonMode::WIREFRAME_QUAD :
+
+        {
+
+            this-&gt;setValue(0, false);
+
+            this-&gt;setValue(1, true);
+
+            osgPolygonMode-&gt;setMode( osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::FILL);
+
+            triangleMeshVisible_ = false;
+
+            break;
+
+        }
+
+    }
+
+
+    this-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes( osgPolygonMode,
+
+    osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON );
+
+}
+
+
+This works fine except for one thing, my intersection raycaster does not 
+handle the LINE LOOP mesh when the triangle node is switched off. 
+
+I solved it by creating a node visitor
+
+OsgGeodeMeshActivatorVisitor::OsgGeodeMeshActivatorVisitor(const bool&amp; isReset) :
+
+    isReset_(isReset)
+
+{
+
+    this-&gt;setTraversalMode(osg::NodeVisitor::TraversalMode::TRAVERSE_ALL_CHILDREN);
+
+}
+
+void OsgGeodeMeshActivatorVisitor::apply(osg::Node&amp; node)
+
+{
+
+    switchGeodeVisibility(node);
+
+}
+
+
+void OsgGeodeMeshActivatorVisitor::switchGeodeVisibility(osg::Node&amp; node)
+
+{
+
+    osg::Group* group = node.asGroup();
+
+    if ( !group ) return;
+
+
+    if(group-&gt;getNumChildren() == 0) return;
+
+    for ( unsigned int i=0; i&lt;group-&gt;getNumChildren(); ++i )
+
+    {
+
+        OsgSceneMesh* osgSceneMesh = dynamic_cast&lt;OsgSceneMesh*&gt;(group-&gt;getChild(0));
+
+        if(osgSceneMesh)
+
+        {
+
+            if(isReset_)  osgSceneMesh-&gt;resetTriangleMeshVisible();
+
+            else osgSceneMesh-&gt;forceTriangleMeshVisible();
+
+
+        }
+
+        switchGeodeVisibility(*group-&gt;getChild(i));
+
+    }
+
+}
+
+
+
+which can force triangle mesh visibility on and reset to original value.
+
+Now in my intersection algorithm i simply force visibility on by accepting 
+the visitor on the root node in my tree.
+
+osg::ref_ptr&lt;osgUtil::LineSegmentIntersector&gt; intersector
+
+            = new osgUtil::LineSegmentIntersector( osgUtil::Intersector::WINDOW, mousePosition.x(),  viewportModel_-&gt;getHeight() - mousePosition.y());
+
+
+
+
+    osgUtil::IntersectionVisitor intersectionVisitor ( intersector.get() );
+
+    intersectionVisitor.setTraversalMask( ~0x1 ); // mask, things that we dont want to be selected sets 0x1
+
+
+    osg::Camera* osgCamera = viewer_-&gt;getCamera();
+
+
+    OsgGeodeMeshActivatorVisitor geodeVisibilitySwitchOn(false);
+
+    OsgGeodeMeshActivatorVisitor geodeVisibiltyReset(true);
+
+
+    osg::Node* root = viewer_-&gt;getSceneData();
+
+
+    root-&gt;accept(geodeVisibilitySwitchOn);
+
+
+    if(osgCamera) osgCamera-&gt;accept( intersectionVisitor );
+
+    else
+
+    {
+
+        root-&gt;accept(geodeVisibiltyReset);
+
+        return rayTracedMeshPairVector;
+
+    }
+
+
+    root-&gt;accept(geodeVisibiltyReset);
+
+
+    if( !intersector-&gt;containsIntersections() )
+
+    {
+
+        return rayTracedMeshPairVector;
+
+    }
+
+    else
+
+    {
+
+      //work with result, not included in this demo
+
+       }
+
+
+
+ And thats it, now we have the possibility to render triangulated wireframe , quaded wireframe and solid structures while intersection with the meshes are possible. here is an image of the result..
+
+
+<A HREF="https://imgur.com/a/hFh6aGm">https://imgur.com/a/hFh6aGm</A>
+
+
+
+
+Have a good day
+
+
+//Dan
+
+
+
+ 
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/6d6b967e-b5e5-4efa-b9ef-bdd7403f4b06%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/6d6b967e-b5e5-4efa-b9ef-bdd7403f4b06%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200604/a5b19d4c/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200604/a5b19d4c/attachment-0001.html</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011128.html">[osg-users] Rendering double triangles as one quad
+</A></li>
+	<LI>Next message (by thread): <A HREF="011129.html">[osg-users] Best way to debug detected OpenGL error 'invalid value' at top of State::apply(StateSet*)
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11134">[ date ]</a>
+              <a href="thread.html#11134">[ thread ]</a>
+              <a href="subject.html#11134">[ subject ]</a>
+              <a href="author.html#11134">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

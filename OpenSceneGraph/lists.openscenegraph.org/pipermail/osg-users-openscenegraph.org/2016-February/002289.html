@@ -1,0 +1,92 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] FBO and Renderbuffer leak in OSG 3.5
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20FBO%20and%20Renderbuffer%20leak%20in%20OSG%203.5&In-Reply-To=%3C1454614668.m2f.66209%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002286.html">
+   <LINK REL="Next"  HREF="002290.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] FBO and Renderbuffer leak in OSG 3.5</H1>
+<!--htdig_noindex-->
+    <B>Jannik Heller</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20FBO%20and%20Renderbuffer%20leak%20in%20OSG%203.5&In-Reply-To=%3C1454614668.m2f.66209%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] FBO and Renderbuffer leak in OSG 3.5">scrawl at baseoftrash.de
+       </A><BR>
+    <I>Thu Feb  4 11:37:48 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002286.html">[osg-users] FBO and Renderbuffer leak in OSG 3.5
+</A></li>
+        <LI>Next message: <A HREF="002290.html">[osg-users] FBO and Renderbuffer leak in OSG 3.5
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2289">[ date ]</a>
+              <a href="thread.html#2289">[ thread ]</a>
+              <a href="subject.html#2289">[ subject ]</a>
+              <a href="author.html#2289">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+The leak is only noticable when you frequently remove and re-create cameras, something that osgprerender does not do.
+
+I've added an osg::Observer to test that the Camera is being deleted properly, and it is. It looks like CPU side everything is being deleted correctly, only on GPU side there is an issue because glDeleteFramebuffers is being called without a current context.
+
+Please check out the following minimal changes to osgprerender.cpp - recreating the Camera every frame. This leaks for me in OSG 3.5 but does not leak in 3.4. An easy way to see the increase in VRAM usage is with nvidia-smi if you are using an Nvidia card, not sure about tools for other graphics cards manifacturers.
+
+When I run this modified example, the VRAM usage instantly baloons to 4 GB, and the system memory usage starts growing very fast (presumably since the graphics card has to swap back and forth from system memory when it's full). 
+
+Hope that helps in solving the issue.
+
+Thanks,
+Jannik
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicbdac.php?p=66209#66209">http://forum.openscenegraph.org/viewtopic.php?p=66209#66209</A>
+
+
+
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: osgprerender.cpp
+Type: text/x-c++src
+Size: 18596 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20160204/301592b7/attachment-0003.cpp">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160204/301592b7/attachment-0003.cpp</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002286.html">[osg-users] FBO and Renderbuffer leak in OSG 3.5
+</A></li>
+	<LI>Next message: <A HREF="002290.html">[osg-users] FBO and Renderbuffer leak in OSG 3.5
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2289">[ date ]</a>
+              <a href="thread.html#2289">[ thread ]</a>
+              <a href="subject.html#2289">[ subject ]</a>
+              <a href="author.html#2289">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

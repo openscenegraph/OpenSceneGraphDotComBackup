@@ -1,0 +1,540 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Using Ortho2D projection camera under OpenSceneGraph	PRE_RENDER camera
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20Ortho2D%20projection%20camera%20under%20OpenSceneGraph%0A%09PRE_RENDER%20camera&In-Reply-To=%3C1484950331.m2f.70025%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005427.html">
+   <LINK REL="Next"  HREF="005410.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Using Ortho2D projection camera under OpenSceneGraph	PRE_RENDER camera</H1>
+<!--htdig_noindex-->
+    <B>Malcolm Pigott</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20Ortho2D%20projection%20camera%20under%20OpenSceneGraph%0A%09PRE_RENDER%20camera&In-Reply-To=%3C1484950331.m2f.70025%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Using Ortho2D projection camera under OpenSceneGraph	PRE_RENDER camera">osg.malcolm at hydrogenrocks.me.uk
+       </A><BR>
+    <I>Fri Jan 20 14:12:11 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005427.html">[osg-users] Replies with &quot;Incident ID&quot;'s returned for every post I sent to this list... Is that normal?
+</A></li>
+        <LI>Next message: <A HREF="005410.html">[osg-users] Using Ortho2D projection camera under OpenSceneGraph PRE_RENDER camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281630">[ date ]</a>
+              <a href="thread.html#281630">[ thread ]</a>
+              <a href="subject.html#281630">[ subject ]</a>
+              <a href="author.html#281630">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I have a scene in OpenSceneGraph which has a &quot;normal&quot; 3D content overlaid with content in an Ortho2D projection. This works OK.
+
+I am now trying to render this scene to a texture (via a Frame Buffer Object) and am working with the osgPreRender example. Below is some code derived from that example which has a 2D overlay which is shown when the scene is drawn normally, but not (seemingly) drawn when rendered to a texture using setRenderOrder(osg::Camera::PRE_RENDER).
+
+This is using OpenSceneGraph 3.4.0 and VS2015 Update 2.
+
+
+Code:
+
+/* OpenSceneGraph example, osgprerender.
+*
+*  Permission is hereby granted, free of charge, to any person obtaining a copy
+*  of this software and associated documentation files (the &quot;Software&quot;), to deal
+*  in the Software without restriction, including without limitation the rights
+*  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*  copies of the Software, and to permit persons to whom the Software is
+*  furnished to do so, subject to the following conditions:
+*
+*  THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*  THE SOFTWARE.
+*/
+
+#include &lt;osg/GLExtensions&gt;
+#include &lt;osg/Node&gt;
+#include &lt;osg/Geometry&gt;
+#include &lt;osg/Notify&gt;
+#include &lt;osg/MatrixTransform&gt;
+#include &lt;osg/Texture2D&gt;
+#include &lt;osg/TextureRectangle&gt;
+#include &lt;osg/Stencil&gt;
+#include &lt;osg/ColorMask&gt;
+#include &lt;osg/Depth&gt;
+#include &lt;osg/Billboard&gt;
+#include &lt;osg/Material&gt;
+#include &lt;osg/AnimationPath&gt;
+#include &lt;osg/LineWidth&gt;
+
+#include &lt;osgGA/TrackballManipulator&gt;
+#include &lt;osgGA/FlightManipulator&gt;
+#include &lt;osgGA/DriveManipulator&gt;
+
+#include &lt;osgUtil/SmoothingVisitor&gt;
+
+#include &lt;osgDB/Registry&gt;
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgDB/WriteFile&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+#include &lt;iostream&gt;
+
+// call back which creates a deformation field to oscillate the model.
+class MyGeometryCallback :
+    public osg::Drawable::UpdateCallback,
+    public osg::Drawable::AttributeFunctor
+{
+public:
+
+    MyGeometryCallback(const osg::Vec3&amp; o,
+        const osg::Vec3&amp; x, const osg::Vec3&amp; y, const osg::Vec3&amp; z,
+        double period, double xphase, double amplitude) :
+        _firstCall(true),
+        _startTime(0.0),
+        _time(0.0),
+        _period(period),
+        _xphase(xphase),
+        _amplitude(amplitude),
+        _origin(o),
+        _xAxis(x),
+        _yAxis(y),
+        _zAxis(z) {}
+
+    virtual void update(osg::NodeVisitor* nv, osg::Drawable* drawable)
+    {
+        // OpenThreads::Thread::microSleep( 1000 );
+
+        const osg::FrameStamp* fs = nv-&gt;getFrameStamp();
+        double simulationTime = fs-&gt;getSimulationTime();
+        if (_firstCall)
+        {
+            _firstCall = false;
+            _startTime = simulationTime;
+        }
+
+        _time = simulationTime - _startTime;
+
+        drawable-&gt;accept(*this);
+        drawable-&gt;dirtyBound();
+
+        osg::Geometry* geometry = dynamic_cast&lt;osg::Geometry*&gt;(drawable);
+        if (geometry)
+        {
+            osgUtil::SmoothingVisitor::smooth(*geometry);
+        }
+
+        }
+
+    virtual void apply(osg::Drawable::AttributeType type, unsigned int count, osg::Vec3* begin)
+    {
+        if (type == osg::Drawable::VERTICES)
+        {
+            const float TwoPI = 2.0f*osg::PI;
+            const float phase = -_time / _period;
+
+            osg::Vec3* end = begin + count;
+            for (osg::Vec3* itr = begin; itr&lt;end; ++itr)
+            {
+                osg::Vec3 dv(*itr - _origin);
+                osg::Vec3 local(dv*_xAxis, dv*_yAxis, dv*_zAxis);
+
+                local.z() = local.x()*_amplitude*
+                    sinf(TwoPI*(phase + local.x()*_xphase));
+
+                (*itr) = _origin +
+                    _xAxis*local.x() +
+                    _yAxis*local.y() +
+                    _zAxis*local.z();
+            }
+        }
+    }
+
+    bool    _firstCall;
+
+    double  _startTime;
+    double  _time;
+
+    double  _period;
+    double  _xphase;
+    float   _amplitude;
+
+    osg::Vec3   _origin;
+    osg::Vec3   _xAxis;
+    osg::Vec3   _yAxis;
+    osg::Vec3   _zAxis;
+
+};
+
+osg::Node* createPreRenderSubGraph(osg::Node* subgraph,
+    unsigned tex_width, unsigned tex_height,
+    osg::Camera::RenderTargetImplementation renderImplementation,
+    bool useTextureRectangle, 
+    unsigned int samples, unsigned int colorSamples)
+{
+    if (!subgraph) return 0;
+
+    // create a group to contain the flag and the pre rendering camera.
+    osg::Group* parent = new osg::Group;
+
+    // texture to render to and to use for rendering of flag.
+    osg::Texture* texture = 0;
+    {
+        osg::TextureRectangle* textureRect = new osg::TextureRectangle;
+        textureRect-&gt;setTextureSize(tex_width, tex_height);
+        textureRect-&gt;setInternalFormat(GL_RGBA);
+        textureRect-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+        textureRect-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+
+        texture = textureRect;
+    }
+
+    // first create the geometry of the flag of which to view.
+    {
+        // create the to visualize.
+        osg::Geometry* polyGeom = new osg::Geometry();
+
+        polyGeom-&gt;setName(&quot;PolyGeom&quot;);
+
+        polyGeom-&gt;setDataVariance(osg::Object::DYNAMIC);
+        polyGeom-&gt;setSupportsDisplayList(false);
+
+        osg::Vec3 origin(0.0f, 0.0f, 0.0f);
+        osg::Vec3 xAxis(1.0f, 0.0f, 0.0f);
+        osg::Vec3 yAxis(0.0f, 0.0f, 1.0f);
+        osg::Vec3 zAxis(0.0f, -1.0f, 0.0f);
+        float height = 100.0f;
+        float width = 200.0f;
+        int noSteps = 20;
+
+        osg::Vec3Array* vertices = new osg::Vec3Array;
+        osg::Vec3 bottom = origin;
+        osg::Vec3 top = origin; top.z() += height;
+        osg::Vec3 dv = xAxis*(width / ((float)(noSteps - 1)));
+
+        osg::Vec2Array* texcoords = new osg::Vec2Array;
+
+        // note, when we use TextureRectangle we have to scale the tex coords up to compensate.
+        osg::Vec2 bottom_texcoord(0.0f, 0.0f);
+        osg::Vec2 top_texcoord(0.0f, useTextureRectangle ? tex_height : 1.0f);
+        osg::Vec2 dv_texcoord((useTextureRectangle ? tex_width : 1.0f) / (float)(noSteps - 1), 0.0f);
+
+        for (int i = 0; i&lt;noSteps; ++i)
+        {
+            vertices-&gt;push_back(top);
+            vertices-&gt;push_back(bottom);
+            top += dv;
+            bottom += dv;
+
+            texcoords-&gt;push_back(top_texcoord);
+            texcoords-&gt;push_back(bottom_texcoord);
+            top_texcoord += dv_texcoord;
+            bottom_texcoord += dv_texcoord;
+        }
+
+
+        // pass the created vertex array to the points geometry object.
+        polyGeom-&gt;setVertexArray(vertices);
+
+        polyGeom-&gt;setTexCoordArray(0, texcoords);
+
+        osg::Vec4Array* colors = new osg::Vec4Array;
+        colors-&gt;push_back(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        polyGeom-&gt;setColorArray(colors, osg::Array::BIND_OVERALL);
+
+        polyGeom-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::QUAD_STRIP, 0, vertices-&gt;size()));
+
+        // new we need to add the texture to the Drawable, we do so by creating a
+        // StateSet to contain the Texture StateAttribute.
+        osg::StateSet* stateset = new osg::StateSet;
+
+        stateset-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+
+        polyGeom-&gt;setStateSet(stateset);
+
+        polyGeom-&gt;setUpdateCallback(new MyGeometryCallback(origin, xAxis, yAxis, zAxis, 1.0, 1.0 / width, 0.2f));
+
+        osg::Geode* geode = new osg::Geode();
+        geode-&gt;addDrawable(polyGeom);
+
+        parent-&gt;addChild(geode);
+
+    }
+
+
+    // then create the camera node to do the render to texture
+    {
+        osg::Camera* camera = new osg::Camera;
+
+        // set up the background color and clear mask.
+        camera-&gt;setClearColor(osg::Vec4(0.1f, 0.1f, 0.3f, 1.0f));
+        camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        const osg::BoundingSphere&amp; bs = subgraph-&gt;getBound();
+        if (!bs.valid())
+        {
+            return subgraph;
+        }
+
+        float znear = 1.0f*bs.radius();
+        float zfar = 3.0f*bs.radius();
+
+        // 2:1 aspect ratio as per flag geometry below.
+        float proj_top = 0.25f*znear;
+        float proj_right = 0.5f*znear;
+
+        znear *= 0.9f;
+        zfar *= 1.1f;
+
+        // set up projection.
+        camera-&gt;setProjectionMatrixAsFrustum(-proj_right, proj_right, -proj_top, proj_top, znear, zfar);
+
+        // set view
+        camera-&gt;setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+        camera-&gt;setViewMatrixAsLookAt(bs.center() - osg::Vec3(0.0f, 2.0f, 0.0f)*bs.radius(), bs.center(), osg::Vec3(0.0f, 0.0f, 1.0f));
+
+        // set viewport
+        camera-&gt;setViewport(0, 0, tex_width, tex_height);
+
+        // set the camera to render before the main camera.
+        camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+
+        // tell the camera to use OpenGL frame buffer object where supported.
+        camera-&gt;setRenderTargetImplementation(renderImplementation);
+
+        // attach the texture and use it as the color buffer.
+        camera-&gt;attach(osg::Camera::COLOR_BUFFER, texture, 0, 0, false, samples, colorSamples);
+
+        // add subgraph to render
+        camera-&gt;addChild(subgraph);
+
+        parent-&gt;addChild(camera);
+
+    }
+
+    return parent;
+}
+
+osg::Node *createNormalScene(osgViewer::Viewer &amp;Viewer)
+{
+    auto topNodeOfNormalScene = new osg::Group();
+    {
+        auto normal3DScene = new osg::Group();
+        {
+            normal3DScene-&gt;addChild(osgDB::readNodeFile(&quot;cessna.osgt&quot;)); // 3D example
+            topNodeOfNormalScene-&gt;addChild(normal3DScene);
+        }
+        auto overlayLikeA2DHUD = new osg::Group();
+        {
+            auto overlayCamera = new osg::Camera();
+            overlayCamera-&gt;getOrCreateStateSet()-&gt;setGlobalDefaults();
+            double _orthoLeft = 0.0;
+            double _orthoRight = 1280.0;
+            double _orthoBottom = 0.0;
+            double _orthoTop = 1024.0;
+            {
+                // Create the symbology camera
+
+                overlayCamera-&gt;setName(&quot;OverlayViewCamera&quot;);
+                overlayCamera-&gt;setProjectionMatrixAsOrtho2D(_orthoLeft, _orthoRight, _orthoBottom, _orthoTop);
+                overlayCamera-&gt;setDataVariance(osg::Object::DYNAMIC); // gets updated when the screen size changes.
+                //_symbologyCamera-&gt;setRenderOrder(osg::Camera::POST_RENDER);
+                overlayCamera-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+                overlayCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+                overlayCamera-&gt;setViewport(new osg::Viewport(0.0, 0.0, (_orthoRight - _orthoLeft), (_orthoTop - _orthoBottom)));
+            }
+            {
+                auto Geometry = new osg::Geometry();
+                {
+                    Geometry-&gt;setName(&quot;2DTie&quot;);
+                    double Left = 100.0;
+                    double Bottom = 100.0;
+                    double Right = 924.0;
+                    double Top = 1180.0;
+                    // tie
+                    osg::Vec3Array *vertexArray = new osg::Vec3Array();
+                    vertexArray-&gt;push_back(osg::Vec3d(Left, Bottom, 0.0));
+                    vertexArray-&gt;push_back(osg::Vec3d(Right, Bottom, 0.0));
+                    vertexArray-&gt;push_back(osg::Vec3d(Left, Top, 0.0));
+                    vertexArray-&gt;push_back(osg::Vec3d(Right, Top, 0.0));
+                    Geometry-&gt;setVertexArray(vertexArray);
+                    osg::Vec3 colors[] = { { 1.0f, 1.0f, 1.0f } };
+                    osg::Vec3Array *colorArray = new osg::Vec3Array(1, colors);
+                    Geometry-&gt;setColorArray(colorArray, osg::Array::BIND_OVERALL);
+                    Geometry-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINE_LOOP, 0, vertexArray-&gt;size()));
+                    Geometry-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(new osg::LineWidth(2.0f), osg::StateAttribute::ON);
+                }
+                auto Geode = new osg::Geode();
+                Geode-&gt;addDrawable(Geometry);
+                auto Group = new osg::Group();
+                Group-&gt;addChild(Geode);
+                overlayCamera-&gt;addChild(Group);
+            }
+            overlayLikeA2DHUD-&gt;addChild(overlayCamera);
+            //Viewer.addSlave(_symbologyCamera, false);
+            topNodeOfNormalScene-&gt;addChild(overlayLikeA2DHUD);
+        }
+    }
+    return topNodeOfNormalScene;
+}
+
+int main(int argc, char **argv)
+{
+    // use an ArgumentParser object to manage the program arguments.
+    osg::ArgumentParser arguments(&amp;argc, argv);
+
+    // set up the usage document, in case we need to print out how to use this program.
+    arguments.getApplicationUsage()-&gt;setDescription(arguments.getApplicationName() + &quot; is the example which demonstrates pre rendering of scene to a texture, and then apply this texture to geometry.&quot;);
+    arguments.getApplicationUsage()-&gt;setCommandLineUsage(arguments.getApplicationName() + &quot; [options] filename ...&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;-h or --help&quot;, &quot;Display this information&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--fbo&quot;, &quot;Use Frame Buffer Object for render to texture, where supported.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--fb&quot;, &quot;Use FrameBuffer for render to texture.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--pbuffer&quot;, &quot;Use Pixel Buffer for render to texture, where supported.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--window&quot;, &quot;Use a separate Window for render to texture.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--width&quot;, &quot;Set the width of the render to texture.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--height&quot;, &quot;Set the height of the render to texture.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--image&quot;, &quot;Render to an image, then apply a post draw callback to it, and use this image to update a texture.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--texture-rectangle&quot;, &quot;Use osg::TextureRectangle for doing the render to texture to.&quot;);
+
+    // construct the viewer.
+    osgViewer::Viewer viewer(arguments);
+
+    // add stats
+    viewer.addEventHandler(new osgViewer::StatsHandler());
+
+    // add the record camera path handler
+    viewer.addEventHandler(new osgViewer::RecordCameraPathHandler);
+
+    // add the threading handler
+    viewer.addEventHandler(new osgViewer::ThreadingHandler());
+
+    // if user request help write it out to cout.
+    if (arguments.read(&quot;-h&quot;) || arguments.read(&quot;--help&quot;))
+    {
+        arguments.getApplicationUsage()-&gt;write(std::cout);
+        return 1;
+    }
+
+    unsigned int tex_width = 1280;
+    unsigned int tex_height = 1024;
+    unsigned int samples = 0;
+    unsigned int colorSamples = 0;
+
+    while (arguments.read(&quot;--width&quot;, tex_width)) {}
+    while (arguments.read(&quot;--height&quot;, tex_height)) {}
+
+    osg::Camera::RenderTargetImplementation renderImplementation = osg::Camera::FRAME_BUFFER_OBJECT;
+
+    while (arguments.read(&quot;--fbo&quot;)) { renderImplementation = osg::Camera::FRAME_BUFFER_OBJECT; }
+    while (arguments.read(&quot;--pbuffer&quot;)) { renderImplementation = osg::Camera::PIXEL_BUFFER; }
+    while (arguments.read(&quot;--pbuffer-rtt&quot;)) { renderImplementation = osg::Camera::PIXEL_BUFFER_RTT; }
+    while (arguments.read(&quot;--fb&quot;)) { renderImplementation = osg::Camera::FRAME_BUFFER; }
+    while (arguments.read(&quot;--window&quot;)) { renderImplementation = osg::Camera::SEPARATE_WINDOW; }
+    while (arguments.read(&quot;--fbo-samples&quot;, samples)) {}
+    while (arguments.read(&quot;--color-samples&quot;, colorSamples)) {}
+
+    bool useTextureRectangle = true;
+    while (arguments.read(&quot;--texture-rectangle&quot;)) { useTextureRectangle = true; }
+
+    // load the nodes from the commandline arguments.
+    osg::Node* loadedModel = osgDB::readNodeFiles(arguments);
+
+    // if not loaded assume no arguments passed in, try use default mode instead.
+    if (!loadedModel) loadedModel = createNormalScene(viewer); // osgDB::readNodeFile(&quot;cessna.osgt&quot;);
+
+    if (!loadedModel)
+    {
+        return 1;
+    }
+
+    bool PreRender = true; // alter via debugger
+    if (PreRender)
+    {
+        // create a transform to spin the model.
+        osg::MatrixTransform* loadedModelTransform = new osg::MatrixTransform;
+        loadedModelTransform-&gt;addChild(loadedModel);
+
+        osg::NodeCallback* nc = new osg::AnimationPathCallback(loadedModelTransform-&gt;getBound().center(), osg::Vec3(0.0f, 0.0f, 1.0f), osg::inDegrees(45.0f));
+        loadedModelTransform-&gt;setUpdateCallback(nc);
+
+        osg::Group* rootNode = new osg::Group();
+        rootNode-&gt;addChild(createPreRenderSubGraph(loadedModelTransform, tex_width, tex_height, renderImplementation, useTextureRectangle, samples, colorSamples));
+
+        bool WriteOutNodeFile = false; // alter via debugger
+        if (WriteOutNodeFile)
+        {
+            osgDB::writeNodeFile(*rootNode, &quot;PreRenderExample.osgt&quot;); // view using Notepad++ and LUA language mode (for example).
+        }
+
+        // add model to the viewer.
+        viewer.setSceneData(rootNode);
+    }
+    else
+    {
+        auto camera = viewer.getCamera();
+        // set up the background color and clear mask.
+        camera-&gt;setClearColor(osg::Vec4(0.1f, 0.1f, 0.3f, 1.0f));
+        camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        viewer.setSceneData(loadedModel);
+    }
+
+    return viewer.run();
+}
+
+
+
+
+Many thanks for any guidance.
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic71cc.php?p=70025#70025">http://forum.openscenegraph.org/viewtopic.php?p=70025#70025</A>
+
+
+
+
+Attachments: 
+<A HREF="../../../../forum.openscenegraph.org/files/ortho2dinprerender_895.cpp">http://forum.openscenegraph.org//files/ortho2dinprerender_895.cpp</A>
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005427.html">[osg-users] Replies with &quot;Incident ID&quot;'s returned for every post I sent to this list... Is that normal?
+</A></li>
+	<LI>Next message: <A HREF="005410.html">[osg-users] Using Ortho2D projection camera under OpenSceneGraph PRE_RENDER camera
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281630">[ date ]</a>
+              <a href="thread.html#281630">[ thread ]</a>
+              <a href="subject.html#281630">[ subject ]</a>
+              <a href="author.html#281630">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users]  Explicitly requesting default state for attribute
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20Explicitly%20requesting%20default%20state%20for%20attribute&In-Reply-To=%3Cmailman.36427.1607715510.3538.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="011345.html">
+   <LINK REL="Next"  HREF="011351.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users]  Explicitly requesting default state for attribute</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20Explicitly%20requesting%20default%20state%20for%20attribute&In-Reply-To=%3Cmailman.36427.1607715510.3538.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users]  Explicitly requesting default state for attribute">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Fri Dec 11 11:38:26 PST 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="011345.html">[osg-users] How to properly transfer texture coordinates in geometric shaders in Shader #130 version?
+</A></li>
+        <LI>Next message (by thread): <A HREF="011351.html">[osg-users] Explicitly requesting default state for attribute
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11340">[ date ]</a>
+              <a href="thread.html#11340">[ thread ]</a>
+              <a href="subject.html#11340">[ subject ]</a>
+              <a href="author.html#11340">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I'm working on a node visitor that converts FFP state to shaders and am 
+extending it so it can handle more than it used to. To avoid unnecessary 
+state switches for things now handled by my shaders, I'm attempting to 
+remove fixed-function-related state from the nodes which have had shaders 
+set up.
+
+With modes, this works well - I can just set them off and protected, and 
+the glEnable/glDisable calls go away. However, it's proving difficult to 
+achieve the same behaviour with StateAttributes. The obvious solution would 
+be removing the attribute from the StateSet it's attached to, but it might 
+be higher in the scenegraph so also affect nodes which aren't having 
+shaders attached, so it's only really safe to modify the stateset the 
+shader program gets attached to.
+
+So far, the best thing I've got is default-constructing the particular 
+StateAttribute I'm interested in and attaching that to the stateset. This 
+means the default state is set when the draw call happens, but I can see a 
+lot of apply calls (resulting in a lot of GL calls) toggling between this 
+copy of the default attribute and the copy in the state's attribute stack 
+(via applyGlobalDefaultAttribute). I don't think it's wildly different from 
+the number of unnecessary GL calls I was getting before I tried this.
+
+A solution that I think would work would be 
+calling getGlobalDefaultAttribute on the State object as then the pointers 
+would compare equal and the apply call would get skipped, but I don't have 
+any clean way of getting the State instance to my visitor.
+
+Ideally, there'd be some neat trick I've missed that lets me say &quot;any 
+subgraph of this node doesn't care about this attribute type, so set the 
+default/leave whatever's there from the last draw call&quot; that would work 
+with the normal state composition mechanisms so I could override it from a 
+parent stateset or make it protected so it couldn't be overridden by parent 
+statesets. Maybe a custom StateAttribute could do that, but maybe someone 
+on this mailing list knows something I don't already.
+
+Cheers,
+
+Chris
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/5132cc44-84f8-4395-bd54-b2e88d02f67en%40googlegroups.com.">https://groups.google.com/d/msgid/osg-users/5132cc44-84f8-4395-bd54-b2e88d02f67en%40googlegroups.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20201211/fc65bffe/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20201211/fc65bffe/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="011345.html">[osg-users] How to properly transfer texture coordinates in geometric shaders in Shader #130 version?
+</A></li>
+	<LI>Next message (by thread): <A HREF="011351.html">[osg-users] Explicitly requesting default state for attribute
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#11340">[ date ]</a>
+              <a href="thread.html#11340">[ thread ]</a>
+              <a href="subject.html#11340">[ subject ]</a>
+              <a href="author.html#11340">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

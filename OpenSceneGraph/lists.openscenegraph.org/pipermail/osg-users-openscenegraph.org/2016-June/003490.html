@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Realtime Pointpicking
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Realtime%20Pointpicking&In-Reply-To=%3CCAFN7Y%2BWVrPz2SoaN6nTqsSYR97KH%2B%2B6w2p0vBfC%3DpX8tMry82Q%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="279705.html">
+   <LINK REL="Next"  HREF="003537.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Realtime Pointpicking</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Realtime%20Pointpicking&In-Reply-To=%3CCAFN7Y%2BWVrPz2SoaN6nTqsSYR97KH%2B%2B6w2p0vBfC%3DpX8tMry82Q%40mail.gmail.com%3E"
+       TITLE="[osg-users] Realtime Pointpicking">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Jun 24 11:39:00 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="279705.html">[osg-users] Realtime Pointpicking
+</A></li>
+        <LI>Next message: <A HREF="003537.html">[osg-users] Realtime Pointpicking
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3490">[ date ]</a>
+              <a href="thread.html#3490">[ thread ]</a>
+              <a href="subject.html#3490">[ subject ]</a>
+              <a href="author.html#3490">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Daniel,
+
+The PolytopeIntersector is the simplest route.  If you want to make
+things more efficient then you may well need to come up with a custom
+approach.
+
+The LineSegmentIntersector is able to take advantage of KdTree graphs
+if they have been built for your scene graph and enables O(logn)
+intersections instead of O(n), but unfortunately PolytopeIntersector
+doesn't support KdTrees yet.  You are welcome to add it :-)
+
+The other approach you could take is to break your dataset into
+smaller chunks, such as dividing it into an octree so that the
+internal nodes of the octree can be culled before only the bricks that
+intersect the Polytope need to be tested exhaustively.
+
+Robert.
+
+Robert.
+
+On 24 June 2016 at 16:06, Daniel Neos &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">daniel.rd at hotmail.de</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I have a Pickhandler and a dynamically changing scene which consists only of a geometry node. To be more specific, the geometry node represents a point cloud consisting over ~100000 vertices.
+</I>&gt;<i>
+</I>&gt;<i> Using a line intersector makes it nearly impossible to get an intersection, but the Intersector I am using, the polytopeintersector, needs ~200ms to get an intersection, which is too long for my application. I need a 'smooth' visualization of ~20-25fps and this would be definitley a bottleneck.
+</I>&gt;<i>
+</I>&gt;<i> Is there a more simple way to get intersections of a non-solid object fast?
+</I>&gt;<i>
+</I>&gt;<i> Here is my PickHandler. Input arguments in my application are the normalized (x,y)coordinates from the GUIEventAdapter, buffer is the tolerance with 0.005 and the viewer casted from the ActionAdapter.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> bool PickHandler::getPickedPoint(double x, double y, float buffer,
+</I>&gt;<i>     osgViewer::View* viewer)
+</I>&gt;<i> {
+</I>&gt;<i>  osg::ref_ptr&lt;osgUtil::PolytopeIntersector&gt; intersector(0);
+</I>&gt;<i>     try
+</I>&gt;<i>     {
+</I>&gt;<i>         intersector = new osgUtil::PolytopeIntersector(
+</I>&gt;<i>             osgUtil::Intersector::PROJECTION,
+</I>&gt;<i>             x - buffer, y - buffer, x + buffer, y + buffer);
+</I>&gt;<i>     }
+</I>&gt;<i>     catch (const std::bad_alloc&amp;)
+</I>&gt;<i>     {
+</I>&gt;<i>         return false;
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     // DimZero = check only for points
+</I>&gt;<i>     intersector-&gt;setDimensionMask(osgUtil::PolytopeIntersector::DimZero);
+</I>&gt;<i>
+</I>&gt;<i>     intersector-&gt;setIntersectionLimit(osgUtil::Intersector::LIMIT_NEAREST);
+</I>&gt;<i>     osgUtil::IntersectionVisitor iv(intersector);
+</I>&gt;<i>     viewer-&gt;getCamera()-&gt;accept(iv);
+</I>&gt;<i>
+</I>&gt;<i>     if (intersector-&gt;containsIntersections())
+</I>&gt;<i>     {
+</I>&gt;<i>         osgUtil::PolytopeIntersector::Intersection intersection
+</I>&gt;<i>             = *(intersector-&gt;getIntersections().begin());
+</I>&gt;<i>
+</I>&gt;<i>         const osg::Vec3f&amp; p = intersection.intersectionPoints[0];
+</I>&gt;<i>         m_point.set(p[0], p[1], p[2]);
+</I>&gt;<i>         return true;
+</I>&gt;<i>     }
+</I>&gt;<i>     return false;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Daniel[/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic2783.php?p=67797#67797">http://forum.openscenegraph.org/viewtopic.php?p=67797#67797</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="279705.html">[osg-users] Realtime Pointpicking
+</A></li>
+	<LI>Next message: <A HREF="003537.html">[osg-users] Realtime Pointpicking
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3490">[ date ]</a>
+              <a href="thread.html#3490">[ thread ]</a>
+              <a href="subject.html#3490">[ subject ]</a>
+              <a href="author.html#3490">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

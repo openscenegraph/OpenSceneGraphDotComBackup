@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Removing objects with shared GL state from scene graph
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3CCAFN7Y%2BWre2b1erPaSi3a8cgLZTmn6RX0PbJv1Js%2BL6WkGyV1WQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010167.html">
+   <LINK REL="Next"  HREF="010174.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Removing objects with shared GL state from scene graph</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Removing%20objects%20with%20shared%20GL%20state%20from%20scene%0A%20graph&In-Reply-To=%3CCAFN7Y%2BWre2b1erPaSi3a8cgLZTmn6RX0PbJv1Js%2BL6WkGyV1WQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] Removing objects with shared GL state from scene graph">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue Jul  2 03:17:39 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010167.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+        <LI>Next message (by thread): <A HREF="010174.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10170">[ date ]</a>
+              <a href="thread.html#10170">[ thread ]</a>
+              <a href="subject.html#10170">[ subject ]</a>
+              <a href="author.html#10170">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chris,
+
+I have begun reviewing the test program.  In the comments you suggest if
+relaseGLObects() isn't call text1 objects leak.  This confuses me, what
+&quot;objects&quot; do you think leak? At this point I need something concrete to
+investigate.
+
+FYI, delete texture and other GL objects are cached in set of GL objects
+that are queued for deletion (for textures it's the TextureObjectManager
+that does this), the deletion of GL obejcts has to happen in a thread that
+has the context current that owns those GL objects, so there is a call to
+osg::flushDeletedGLObjects(..) in the draw traversal by sceneView.  The
+containers that manage the list of GL objects to be deleted can also cache
+them for reuse - this is done for textures, so when you create a new
+texture and there is a texture object that has be queued for deletion then
+rather than delete and create the OSG is able to simple reuse the texture
+object avoiding the expensive delete and create texture object calls.
+
+This reuse feature is crucial for paged databases and defaults of how many
+texture objects to keep around are chosen for typically hardware and data
+so there shouldn't normally be any need to worry about, the OSG should
+mostly just do the right thing.  If you are concerned that texture objects
+etc. are getting cleaned up as soon as you'd expect then you can setting
+the TextureObjectManager properties (see the include/osg/Texture header for
+details), there is one TextureObjectManager per graphics context.
+
+--
+
+In your test program you have scene graph objects that you explicitly
+retain ref_ptr&lt;&gt;'s to, which will mean these objects won't get deleted
+until the exit of the main.  This makes me wonder if perhaps the perception
+of leak could be down to just the ordering of things are done.  For this
+particular usage case it seems to me like everything should just work out
+of the box without any need to explicitly call releaseGLobjects().
+
+I currently don't know what to investigate, there isn't anything too
+unusual in this example that makes me think there is some usage case where
+the usual OSG mechanisms might fail, it looks pretty straight forward to
+me.  I've already done a heap load of bug hunting and fixing in this area
+prior to 3.6, with much more challenging usage.  Since I don't know what
+specially you think is leaking and I don't have any hunches myself I'll
+just have to wait till you give more guidance.
+
+Robert.
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190702/9519cadd/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190702/9519cadd/attachment.html</A>&gt;
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010167.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+	<LI>Next message (by thread): <A HREF="010174.html">[osg-users] Removing objects with shared GL state from scene graph
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10170">[ date ]</a>
+              <a href="thread.html#10170">[ thread ]</a>
+              <a href="subject.html#10170">[ subject ]</a>
+              <a href="author.html#10170">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

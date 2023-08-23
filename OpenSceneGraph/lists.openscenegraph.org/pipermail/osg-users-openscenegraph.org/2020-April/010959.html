@@ -1,0 +1,587 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users]  osgUtil::Tessellator issues
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20osgUtil%3A%3ATessellator%20issues&In-Reply-To=%3Cmailman.84198.1587040621.7166.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010957.html">
+   <LINK REL="Next"  HREF="010961.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users]  osgUtil::Tessellator issues</H1>
+<!--htdig_noindex-->
+    <B>OpenSceneGraph Users</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%20osgUtil%3A%3ATessellator%20issues&In-Reply-To=%3Cmailman.84198.1587040621.7166.osg-users-openscenegraph.org%40lists.openscenegraph.org%3E"
+       TITLE="[osg-users]  osgUtil::Tessellator issues">osg-users at lists.openscenegraph.org
+       </A><BR>
+    <I>Thu Apr 16 05:36:45 PDT 2020</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010957.html">[osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+</A></li>
+        <LI>Next message (by thread): <A HREF="010961.html">[osg-users]  Proper way to call glClearTexImage?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10959">[ date ]</a>
+              <a href="thread.html#10959">[ thread ]</a>
+              <a href="subject.html#10959">[ subject ]</a>
+              <a href="author.html#10959">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Community,
+
+I am struggling with the Tessellator to make it work. I tried to consult
+the OpenGL spec for the winding types and I tried all of them without
+success :/. It is simple case where I have polygon with two wholes. The
+contour generation seams to be ok, like in the attached picture, just the
+tesselation is make it wrong, or I am using the Tessellator wrong. I am
+attaching the source too - it requires boost 69 or later - used for the
+union of the triangles.
+
+Any hint is highly appreciated as always!
+And thanks a bunch!
+
+-- 
+trajce nikolov nick
+
+-- 
+You received this message because you are subscribed to the Google Groups &quot;OpenSceneGraph Users&quot; group.
+To unsubscribe from this group and stop receiving emails from it, send an email to <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users+unsubscribe at googlegroups.com.</A>
+To view this discussion on the web visit <A HREF="https://groups.google.com/d/msgid/osg-users/CAO-+zi%3DbFEYKMhyLVO+kqKhMLZa8Yg33ohiW02p0MQf8Kqt3iw%40mail.gmail.com.">https://groups.google.com/d/msgid/osg-users/CAO-%2Bzi%3DbFEYKMhyLVO%2BkqKhMLZa8Yg33ohiW02p0MQf8Kqt3iw%40mail.gmail.com.</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20200416/470e92d1/attachment-0001.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200416/470e92d1/attachment-0001.html</A>&gt;
+-------------- next part --------------
+/* -*-c++-*- OpenSceneGraph - Copyright (C) 1998-2010 Robert Osfield
+ *
+ * This application is open source and may be redistributed and/or modified
+ * freely and without restriction, both in commercial and non commercial applications,
+ * as long as this copyright notice is maintained.
+ *
+ * This application is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+*/
+
+#include &lt;osgDB/ReadFile&gt;
+#include &lt;osgDB/WriteFile&gt;
+#include &lt;osgUtil/Optimizer&gt;
+#include &lt;osg/CoordinateSystemNode&gt;
+#include &lt;osg/CullFace&gt;
+#include &lt;osg/LineWidth&gt;
+
+#include &lt;osgUtil/DelaunayTriangulator&gt;
+#include &lt;osg/Switch&gt;
+#include &lt;osg/Types&gt;
+#include &lt;osgText/Text&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+#include &lt;osgGA/TrackballManipulator&gt;
+#include &lt;osgGA/FlightManipulator&gt;
+#include &lt;osgGA/DriveManipulator&gt;
+#include &lt;osgGA/KeySwitchMatrixManipulator&gt;
+#include &lt;osgGA/StateSetManipulator&gt;
+#include &lt;osgGA/AnimationPathManipulator&gt;
+#include &lt;osgGA/TerrainManipulator&gt;
+#include &lt;osgGA/SphericalManipulator&gt;
+#include &lt;osgUtil/Tessellator&gt;
+#include &lt;deque&gt;
+#include &lt;osg/io_utils&gt;
+
+#if 1
+#include &lt;boost/geometry.hpp&gt;
+#include &lt;boost/geometry/geometries/point_xy.hpp&gt;
+#include &lt;boost/geometry/geometries/polygon.hpp&gt;
+
+#include &lt;boost/foreach.hpp&gt;
+
+typedef boost::geometry::model::d2::point_xy&lt;double&gt; point;
+typedef boost::geometry::model::polygon&lt;point&gt; polygon;
+#endif
+
+#include &lt;osgGA/Device&gt;
+
+#include &lt;iostream&gt;
+
+
+
+void createPerfectConstraint(osg::Geometry* dc)
+{
+	typedef boost::geometry::model::multi_polygon&lt;polygon&gt; mpolygon;
+	mpolygon mp;
+	polygon p;
+
+	std::vector&lt; polygon &gt; polygons;
+
+	osg::ref_ptr&lt;osg::Vec3Array&gt; vertices = dynamic_cast&lt;osg::Vec3Array*&gt;(dc-&gt;getVertexArray());
+
+	for (size_t i = 0; i &lt; dc-&gt;getNumPrimitiveSets(); ++i)
+	{
+		osg::ref_ptr&lt;osg::DrawArrays&gt; da = dynamic_cast&lt;osg::DrawArrays*&gt;(dc-&gt;getPrimitiveSet(i));
+		if (!da.valid()) continue;
+
+		size_t start = da-&gt;getFirst();
+		size_t count = da-&gt;getCount();
+
+		size_t cnt = 0;
+		while (cnt &lt; count)
+		{
+			p.clear();
+
+			const osg::Vec3&amp; v1 = vertices-&gt;at(start + cnt++);
+			const osg::Vec3&amp; v3 = vertices-&gt;at(start + cnt++);
+			const osg::Vec3&amp; v2 = vertices-&gt;at(start + cnt++);
+
+			boost::geometry::append(p, point(v1.x(), v1.y()));
+			boost::geometry::append(p, point(v2.x(), v2.y()));
+			boost::geometry::append(p, point(v3.x(), v3.y()));
+			boost::geometry::append(p, point(v1.x(), v1.y()));
+
+			std::string reason;
+			if (!boost::geometry::is_valid(p, reason))
+			{
+				std::cout &lt;&lt; &quot;Correcting data: &quot; &lt;&lt; reason &lt;&lt; &quot;\n&quot;;
+				boost::geometry::correct(p);
+
+				std::cout &lt;&lt; v1 &lt;&lt; v2 &lt;&lt; v3 &lt;&lt; std::endl;
+			}
+
+			polygons.push_back(p);
+		}
+	}
+	mpolygon border;   // the unioned polygons
+
+	for (polygon p : polygons)
+	{
+		// add another polygon each iteration
+		mpolygon tmp_poly;
+		boost::geometry::union_(border, p, tmp_poly);
+		border = tmp_poly;
+	}
+
+	mp = border;
+
+	if (mp.size() &lt; 1) return;
+	
+	p = mp.at(mp.size() - 1);
+
+	std::string reason;
+	if (!boost::geometry::is_valid(p, reason))
+	{
+		std::cout &lt;&lt; &quot;Correcting data: &quot; &lt;&lt; reason &lt;&lt; &quot;\n&quot;;
+		boost::geometry::correct(p);
+	}
+
+	std::vector&lt; osg::ref_ptr&lt;osg::Vec3Array&gt; &gt; contours;
+
+	osg::Vec3Array* out = new osg::Vec3Array;
+	contours.push_back(out);
+
+	for (int i = 0; i &lt; p.outer().size(); ++i) 
+	{
+		double x = boost::geometry::get&lt;0&gt;(p.outer()[i]);
+		double y = boost::geometry::get&lt;1&gt;(p.outer()[i]);
+		std::cout &lt;&lt; &quot; &quot; &lt;&lt; x;
+		std::cout &lt;&lt; &quot; &quot; &lt;&lt; y;
+
+		out-&gt;push_back(osg::Vec3(x, y, 0));
+	}
+
+#if 1
+	dc-&gt;removePrimitiveSet(0, dc-&gt;getNumPrimitiveSets());
+	dc-&gt;setVertexArray(out);
+	dc-&gt;addPrimitiveSet(new osg::DrawArrays(GL_LINE_LOOP, 0, out-&gt;size()));
+#endif
+	for (unsigned i = 0; i &lt; p.inners().size(); ++i)
+	{
+		const boost::geometry::model::ring&lt;point&gt;&amp; inner = p.inners()[i];
+
+		size_t start = out-&gt;size();
+		osg::Vec3Array* contour = new osg::Vec3Array;
+		for (int j = 0; j &lt; inner.size(); ++j)
+		{
+			double x = boost::geometry::get&lt;0&gt;(inner[j]);
+			double y = boost::geometry::get&lt;1&gt;(inner[j]);
+			std::cout &lt;&lt; &quot; &quot; &lt;&lt; x;
+			std::cout &lt;&lt; &quot; &quot; &lt;&lt; y;
+
+			out-&gt;push_back(osg::Vec3(x, y, 0));
+			contour-&gt;push_back(osg::Vec3(x, y, 0));
+		}
+		contours.push_back(contour);
+		dc-&gt;addPrimitiveSet(new osg::DrawArrays(GL_LINE_LOOP, start, out-&gt;size()-start));
+	}
+	return;
+
+	osgUtil::Tessellator t;
+#if 1
+	
+	
+	t.beginTessellation();
+	
+	for (size_t i = 0; i &lt; contours.size(); ++i)
+	{
+		t.beginContour();
+		osg::Vec3Array* vxs = contours.at(i);
+		
+		for (size_t j = 0; j &lt; vxs-&gt;size(); ++j)
+		{
+			osg::Vec3* v = &amp;vxs-&gt;at(j);
+			t.addVertex(v);
+		}
+		t.endContour();
+	}
+	
+	t.endTessellation();
+#else
+	t.retessellatePolygons(*dc);
+#endif
+
+#if 1
+	dc-&gt;removePrimitiveSet(0, dc-&gt;getNumPrimitiveSets());
+
+	osg::ref_ptr&lt;osg::Vec3Array&gt; resultVertices = new osg::Vec3Array;
+	dc-&gt;setVertexArray(resultVertices);
+
+	osgUtil::Tessellator::PrimList&amp; primitives = t.getPrimList();
+	for (size_t i = 0; i &lt; primitives.size(); ++i)
+	{
+		osg::ref_ptr&lt;osgUtil::Tessellator::Prim&gt;&amp; primitive = primitives.at(i);
+
+		size_t start = resultVertices-&gt;size();
+		for (size_t k = 0; k &lt; primitive-&gt;_vertices.size(); ++k)
+		{
+			osg::Vec3* v = primitive-&gt;_vertices.at(k);
+			resultVertices-&gt;push_back(*v);
+		}
+
+		dc-&gt;addPrimitiveSet(new osg::DrawArrays(primitive-&gt;_mode, start, resultVertices-&gt;size() - start));
+	}
+#endif
+
+#if 0
+	osg::ref_ptr&lt;osg::Geode&gt; tempGeode = new osg::Geode;
+	tempGeode-&gt;addDrawable(dc);
+
+	UnrollGeometryVisitor nv;
+	tempGeode-&gt;accept(nv);
+	nv.finalize();
+
+	osg::ref_ptr&lt;osg::Vec3Array&gt; finalVertices = dynamic_cast&lt;osg::Vec3Array*&gt;(nv.geometryAsTriangles-&gt;getVertexArray());
+	dc-&gt;setVertexArray(finalVertices);
+	
+	dc-&gt;removePrimitiveSet(0, dc-&gt;getNumPrimitiveSets());
+
+	size_t cnt = 0;
+	while (cnt &lt; finalVertices-&gt;size())
+	{
+		polygon p;
+
+		const osg::Vec3&amp; v1 = finalVertices-&gt;at(cnt++);
+		const osg::Vec3&amp; v2 = finalVertices-&gt;at(cnt++);
+		const osg::Vec3&amp; v3 = finalVertices-&gt;at(cnt++);
+
+		dc-&gt;addPrimitiveSet(new osg::DrawArrays(GL_LINE_LOOP,cnt-3, 3));
+	}
+#endif
+}
+	
+
+osg::Node* createScene()
+{
+	osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+
+	osg::ref_ptr&lt;osg::Vec3Array&gt; points = new osg::Vec3Array;
+
+	
+	osg::ref_ptr&lt;osg::Geometry&gt; geometry = new osg::Geometry;
+	geometry-&gt;setVertexArray(points);
+	geode-&gt;addDrawable(geometry);
+
+	size_t start = 0;
+	points-&gt;push_back(osg::Vec3(3, -10, 0));
+	points-&gt;push_back(osg::Vec3(10, -10, 0));
+	points-&gt;push_back(osg::Vec3(10, 30, 0));
+	points-&gt;push_back(osg::Vec3(10, 30, 0));
+	points-&gt;push_back(osg::Vec3(3, 30, 0));
+	points-&gt;push_back(osg::Vec3(3, -10, 0));
+
+	//geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLES, start, points-&gt;size()-start));
+
+	start = points-&gt;size();
+	points-&gt;push_back(osg::Vec3(-10, -10, 0));
+	points-&gt;push_back(osg::Vec3(-3, -10, 0));
+	points-&gt;push_back(osg::Vec3(-3, 30, 0));
+	points-&gt;push_back(osg::Vec3(-3, 30, 0));
+	points-&gt;push_back(osg::Vec3(-10,30, 0));
+	points-&gt;push_back(osg::Vec3(-10, -10, 0));
+
+	//geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLES, start, points-&gt;size()-start));
+
+	start = points-&gt;size();
+	points-&gt;push_back(osg::Vec3(-15, 25, 0));
+	points-&gt;push_back(osg::Vec3(15, 25, 0));
+	points-&gt;push_back(osg::Vec3(15, 45, 0));
+	points-&gt;push_back(osg::Vec3(15, 45, 0));
+	points-&gt;push_back(osg::Vec3(-15, 45, 0));
+	points-&gt;push_back(osg::Vec3(-15, 25, 0));
+
+	points-&gt;push_back(osg::Vec3(-15, -5, 0));
+	points-&gt;push_back(osg::Vec3(15, -5, 0));
+	points-&gt;push_back(osg::Vec3(15, 15, 0));
+	points-&gt;push_back(osg::Vec3(15, 15, 0));
+	points-&gt;push_back(osg::Vec3(-15, 15, 0));
+	points-&gt;push_back(osg::Vec3(-15, -5, 0));
+
+	//geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLES, start, points-&gt;size() - start));
+
+	start = points-&gt;size();
+	points-&gt;push_back(osg::Vec3(-15, -7, 0));
+	points-&gt;push_back(osg::Vec3(15, -7, 0));
+	points-&gt;push_back(osg::Vec3(15, -15, 0));
+	points-&gt;push_back(osg::Vec3(15, -15, 0));
+	points-&gt;push_back(osg::Vec3(-15, -15, 0));
+	points-&gt;push_back(osg::Vec3(-15, -7, 0));
+
+	geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_TRIANGLES, 0, points-&gt;size()));
+
+	createPerfectConstraint(geometry);
+
+	return geode.release();
+}
+
+int main(int argc, char** argv)
+{
+    // use an ArgumentParser object to manage the program arguments.
+    osg::ArgumentParser arguments(&amp;argc,argv);
+
+    arguments.getApplicationUsage()-&gt;setApplicationName(arguments.getApplicationName());
+    arguments.getApplicationUsage()-&gt;setDescription(arguments.getApplicationName()+&quot; is the standard OpenSceneGraph example which loads and visualises 3d models.&quot;);
+    arguments.getApplicationUsage()-&gt;setCommandLineUsage(arguments.getApplicationName()+&quot; [options] filename ...&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--image &lt;filename&gt;&quot;,&quot;Load an image and render it on a quad&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--dem &lt;filename&gt;&quot;,&quot;Load an image/DEM and render it on a HeightField&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--login &lt;url&gt; &lt;username&gt; &lt;password&gt;&quot;,&quot;Provide authentication information for http file access.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;-p &lt;filename&gt;&quot;,&quot;Play specified camera path animation file, previously saved with 'z' key.&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--speed &lt;factor&gt;&quot;,&quot;Speed factor for animation playing (1 == normal speed).&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--device &lt;device-name&gt;&quot;,&quot;add named device to the viewer&quot;);
+    arguments.getApplicationUsage()-&gt;addCommandLineOption(&quot;--stats&quot;,&quot;print out load and compile timing stats&quot;);
+
+    osgViewer::Viewer viewer(arguments);
+
+    unsigned int helpType = 0;
+    if ((helpType = arguments.readHelpType()))
+    {
+        arguments.getApplicationUsage()-&gt;write(std::cout, helpType);
+        //return 1;
+    }
+
+    // report any errors if they have occurred when parsing the program arguments.
+    if (arguments.errors())
+    {
+        arguments.writeErrorMessages(std::cout);
+        //return 1;
+    }
+
+    if (arguments.argc()&lt;=1)
+    {
+        arguments.getApplicationUsage()-&gt;write(std::cout,osg::ApplicationUsage::COMMAND_LINE_OPTION);
+        //return 1;
+    }
+
+    bool printStats = arguments.read(&quot;--stats&quot;);
+
+    std::string url, username, password;
+    while(arguments.read(&quot;--login&quot;,url, username, password))
+    {
+        osgDB::Registry::instance()-&gt;getOrCreateAuthenticationMap()-&gt;addAuthenticationDetails(
+            url,
+            new osgDB::AuthenticationDetails(username, password)
+        );
+    }
+
+    std::string device;
+    while(arguments.read(&quot;--device&quot;, device))
+    {
+        osg::ref_ptr&lt;osgGA::Device&gt; dev = osgDB::readRefFile&lt;osgGA::Device&gt;(device);
+        if (dev.valid())
+        {
+            viewer.addDevice(dev);
+        }
+    }
+
+    // set up the camera manipulators.
+    {
+        osg::ref_ptr&lt;osgGA::KeySwitchMatrixManipulator&gt; keyswitchManipulator = new osgGA::KeySwitchMatrixManipulator;
+
+        keyswitchManipulator-&gt;addMatrixManipulator( '1', &quot;Trackball&quot;, new osgGA::TrackballManipulator() );
+        keyswitchManipulator-&gt;addMatrixManipulator( '2', &quot;Flight&quot;, new osgGA::FlightManipulator() );
+        keyswitchManipulator-&gt;addMatrixManipulator( '3', &quot;Drive&quot;, new osgGA::DriveManipulator() );
+        keyswitchManipulator-&gt;addMatrixManipulator( '4', &quot;Terrain&quot;, new osgGA::TerrainManipulator() );
+        keyswitchManipulator-&gt;addMatrixManipulator( '5', &quot;Orbit&quot;, new osgGA::OrbitManipulator() );
+        keyswitchManipulator-&gt;addMatrixManipulator( '6', &quot;FirstPerson&quot;, new osgGA::FirstPersonManipulator() );
+        keyswitchManipulator-&gt;addMatrixManipulator( '7', &quot;Spherical&quot;, new osgGA::SphericalManipulator() );
+
+        std::string pathfile;
+        double animationSpeed = 1.0;
+        while(arguments.read(&quot;--speed&quot;,animationSpeed) ) {}
+        char keyForAnimationPath = '8';
+        while (arguments.read(&quot;-p&quot;,pathfile))
+        {
+            osgGA::AnimationPathManipulator* apm = new osgGA::AnimationPathManipulator(pathfile);
+            if (apm &amp;&amp; !apm-&gt;getAnimationPath()-&gt;empty())
+            {
+                apm-&gt;setTimeScale(animationSpeed);
+
+                unsigned int num = keyswitchManipulator-&gt;getNumMatrixManipulators();
+                keyswitchManipulator-&gt;addMatrixManipulator( keyForAnimationPath, &quot;Path&quot;, apm );
+                keyswitchManipulator-&gt;selectMatrixManipulator(num);
+                ++keyForAnimationPath;
+            }
+        }
+
+        viewer.setCameraManipulator( keyswitchManipulator.get() );
+    }
+
+    // add the state manipulator
+    viewer.addEventHandler( new osgGA::StateSetManipulator(viewer.getCamera()-&gt;getOrCreateStateSet()) );
+
+    // add the thread model handler
+    viewer.addEventHandler(new osgViewer::ThreadingHandler);
+
+    // add the window size toggle handler
+    viewer.addEventHandler(new osgViewer::WindowSizeHandler);
+
+    // add the stats handler
+    viewer.addEventHandler(new osgViewer::StatsHandler);
+
+    // add the help handler
+    viewer.addEventHandler(new osgViewer::HelpHandler(arguments.getApplicationUsage()));
+
+    // add the record camera path handler
+    viewer.addEventHandler(new osgViewer::RecordCameraPathHandler);
+
+    // add the LOD Scale handler
+	osgViewer::LODScaleHandler* lsh;
+    viewer.addEventHandler(lsh = new osgViewer::LODScaleHandler);
+
+	lsh-&gt;setKeyEventIncreaseLODScale('+');
+	lsh-&gt;setKeyEventDecreaseLODScale('-');
+
+
+    // add the screen capture handler
+    viewer.addEventHandler(new osgViewer::ScreenCaptureHandler);
+
+
+    osg::ElapsedTime elapsedTime;
+
+    // load the data
+    osg::ref_ptr&lt;osg::Node&gt; loadedModel = osgDB::readRefNodeFiles(arguments);
+    if (!loadedModel)
+    {
+        std::cout &lt;&lt; arguments.getApplicationName() &lt;&lt;&quot;: No data loaded&quot; &lt;&lt; std::endl;
+        //return 1;
+    }
+
+    if (printStats)
+    {
+        double loadTime = elapsedTime.elapsedTime_m();
+        std::cout&lt;&lt;&quot;Load time &quot;&lt;&lt;loadTime&lt;&lt;&quot;ms&quot;&lt;&lt;std::endl;
+
+        viewer.getStats()-&gt;collectStats(&quot;compile&quot;, true);
+    }
+
+
+    // any option left unread are converted into errors to write out later.
+    arguments.reportRemainingOptionsAsUnrecognized();
+
+    // report any errors if they have occurred when parsing the program arguments.
+    if (arguments.errors())
+    {
+        //arguments.writeErrorMessages(std::cout);
+        return 1;
+    }
+
+
+    // optimize the scene graph, remove redundant nodes and state etc.
+    osgUtil::Optimizer optimizer;
+    //optimizer.optimize(loadedModel);
+
+	size_t numBlades = 2;
+
+	osg::ref_ptr&lt;osg::Group&gt; scene = new osg::Group;
+	scene-&gt;addChild(loadedModel);
+
+#if 1
+	scene-&gt;addChild(createScene());
+#endif
+
+	viewer.setSceneData(scene);
+
+	scene-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(new osg::CullFace(osg::CullFace::FRONT_AND_BACK), osg::StateAttribute::OFF);
+
+	std::cout &lt;&lt; &quot;Model radius: &quot; &lt;&lt; scene-&gt;getBound().radius() &lt;&lt; std::endl;
+
+    viewer.realize();
+
+    return viewer.run();
+
+}
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: contours.jpg
+Type: image/jpeg
+Size: 25172 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200416/470e92d1/attachment-0002.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200416/470e92d1/attachment-0002.jpg</A>&gt;
+-------------- next part --------------
+A non-text attachment was scrubbed...
+Name: tesselated.jpg
+Type: image/jpeg
+Size: 46768 bytes
+Desc: not available
+URL: &lt;<A HREF="../attachments/20200416/470e92d1/attachment-0003.jpg">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20200416/470e92d1/attachment-0003.jpg</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010957.html">[osg-users] Edit 3D (osgt) model to add DOFTransform and perform &quot;node&quot; rotation
+</A></li>
+	<LI>Next message (by thread): <A HREF="010961.html">[osg-users]  Proper way to call glClearTexImage?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10959">[ date ]</a>
+              <a href="thread.html#10959">[ thread ]</a>
+              <a href="subject.html#10959">[ subject ]</a>
+              <a href="author.html#10959">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

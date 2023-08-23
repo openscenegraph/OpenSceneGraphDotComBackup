@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Change picked points' color ---why can't work in the	pick function?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Change%20picked%20points%27%20color%20---why%20can%27t%20work%20in%20the%0A%09pick%20function%3F&In-Reply-To=%3C1441189651.m2f.64994%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277632.html">
+   <LINK REL="Next"  HREF="001483.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Change picked points' color ---why can't work in the	pick function?</H1>
+<!--htdig_noindex-->
+    <B>Yexin W</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Change%20picked%20points%27%20color%20---why%20can%27t%20work%20in%20the%0A%09pick%20function%3F&In-Reply-To=%3C1441189651.m2f.64994%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Change picked points' color ---why can't work in the	pick function?">xxtop716 at 163.com
+       </A><BR>
+    <I>Wed Sep  2 03:27:32 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277632.html">[osg-users] shadows in an GL 3.2 / glsl 1.5 environment
+</A></li>
+        <LI>Next message: <A HREF="001483.html">[osg-users] Change picked points' color ---why can't work in the pick function?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277691">[ date ]</a>
+              <a href="thread.html#277691">[ thread ]</a>
+              <a href="subject.html#277691">[ subject ]</a>
+              <a href="author.html#277691">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+Guys, I have a pick problem. What I want to do is loading 10 points with their loactions and colors. I want to use poly pick, and use another color to show the picked points.  
+The loading points process is as follows:
+
+
+Code:
+
+osg::ref_ptr&lt;osg::Geometry&gt; geom = new osg::Geometry();
+osg::ref_ptr&lt;osg::Vec3Array&gt; v = new osg::Vec3Array;
+osg::ref_ptr&lt;osg::Vec4Array&gt; clr = new osg::Vec4Array;
+v-&gt;push_back(osg::Vec3(0.0, 0.0, 0.0));
+... // 10 points in total
+clr-&gt;push_back(osg::Vec4(1.0, 0.0, 1.0, 1.0f));
+...// set the color 
+geom-&gt;addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::POINTS, 0, v-&gt;size()));
+// after set the color and normal, add the geometry to Geode node
+geode-&gt;addDrawable(geom.get());
+
+
+
+
+
+Then I want to use ploy pick, the problem is : when I put the following codes in the pick() function in Pickhandler class, I found out that the color of the picked premitiveset has been changed, however, nothing changed in the view window. The following codes are in pick function:
+
+
+Code:
+
+if (picker-&gt;containsIntersections())
+{
+osgUtil::PolytopeIntersector::Intersections intersections = picker-&gt;getIntersections();
+osgUtil::PolytopeIntersector::Intersections::iterator iter;
+for (iter = intersections.begin(); iter != intersections.end(); iter++)
+{
+osg::NodePath nodepath = (*iter).nodePath; 
+node = (nodepath.size() &gt;= 1) ? nodepath[nodepath.size() - 1] : 0; 
+int pointIndex = (*iter).primitiveIndex; 
+osg::Geode * geode = dynamic_cast&lt;osg::Geode*&gt; (node);
+osg::Geometry * geom = dynamic_cast&lt;osg::Geometry*&gt;(geode-&gt;getDrawable(0));
+osg::Vec4Array * clrary = dynamic_cast&lt;osg::Vec4Array*&gt;(geom-&gt;getColorArray());
+clrary-&gt;operator [] (pointIndex) = osg::Vec4(0.0, 1.0, 0.0, 1.0f);
+geom-&gt;setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+node-&gt;addUpdateCallback(new CessnaCallback()); // not helpful
+viewer-&gt;updateTraversal(); //not helpful
+//viewer-&gt;run();//not helpful
+}
+}
+
+
+
+
+
+First, I thought may be the colors have not been changed, so I tested changing several points' color in the main function, like this:
+
+
+Code:
+
+osg::Geode * geode1 = dynamic_cast&lt;osg::Geode*&gt; (nodePt.get());
+osg::Geometry * geom = dynamic_cast&lt;osg::Geometry*&gt;(geode1-&gt;getDrawable(0));
+osg::Vec4Array * clrary = dynamic_cast&lt;osg::Vec4Array*&gt;(geom-&gt;getColorArray());
+clrary-&gt;operator [] (10) = osg::Vec4(0.0, 1.0, 0.0, 1.0f);
+clrary-&gt;operator [] (6) = osg::Vec4(0.0, 1.0, 0.0, 1.0f);
+clrary-&gt;operator [] (2) = osg::Vec4(0.0, 1.0, 0.0, 1.0f);
+geom-&gt;setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+
+
+ 	
+It changed the colors! So it confuses me why it can't work in the pick function? Any body any idears?
+Any ideas and suggestions would be appreciated! 
+
+
+Thank you!
+
+Cheers,
+Yexin
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic7537.php?p=64994#64994">http://forum.openscenegraph.org/viewtopic.php?p=64994#64994</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277632.html">[osg-users] shadows in an GL 3.2 / glsl 1.5 environment
+</A></li>
+	<LI>Next message: <A HREF="001483.html">[osg-users] Change picked points' color ---why can't work in the pick function?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277691">[ date ]</a>
+              <a href="thread.html#277691">[ thread ]</a>
+              <a href="subject.html#277691">[ subject ]</a>
+              <a href="author.html#277691">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

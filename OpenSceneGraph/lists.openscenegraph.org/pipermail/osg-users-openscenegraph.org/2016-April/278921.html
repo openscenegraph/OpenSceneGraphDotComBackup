@@ -1,0 +1,156 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20using%203Ds%20Model%20in%20osgFX%3A%3ABumpMapping%20and%0A%09the%20Texture%20UV%20Coords%20for%20diffuse%20are%20not%20loaded&In-Reply-To=%3C1459786360.m2f.66724%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278912.html">
+   <LINK REL="Next"  HREF="002701.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded</H1>
+<!--htdig_noindex-->
+    <B>Tiago Trocoli</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20using%203Ds%20Model%20in%20osgFX%3A%3ABumpMapping%20and%0A%09the%20Texture%20UV%20Coords%20for%20diffuse%20are%20not%20loaded&In-Reply-To=%3C1459786360.m2f.66724%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and	the Texture UV Coords for diffuse are not loaded">trocolit2 at gmail.com
+       </A><BR>
+    <I>Mon Apr  4 09:12:40 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278912.html">[osg-users] Unsupported wrapper class warnings in OSG 3.2 branch
+</A></li>
+        <LI>Next message: <A HREF="002701.html">[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and the Texture UV Coords for diffuse are not loaded
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278921">[ date ]</a>
+              <a href="thread.html#278921">[ thread ]</a>
+              <a href="subject.html#278921">[ subject ]</a>
+              <a href="author.html#278921">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Tobias
+
+I implemented the OSG BumpMap with no need to use shaders, as follow:
+
+function source
+
+
+Code:
+ 
+void bumpMapOSG(osg::Geode *geode, osg::Group *group, osg::Image *normal_image, osg::Image *difuse_image, double scale_x,
+        double scale_y) {
+
+    if (!normal_image || !difuse_image) {
+        std::cout &lt;&lt; &quot;IMAGE FAIL&quot; &lt;&lt; std::endl;
+        exit(0);
+    }
+
+    osg::StateSet* bumpState = new osg::StateSet();
+
+    // Set textures
+    osg::ref_ptr&lt;osg::Texture2D&gt; normal_texture(new osg::Texture2D());
+    osg::ref_ptr&lt;osg::Texture2D&gt; difuse_texture(new osg::Texture2D());
+
+    normal_texture-&gt;setImage(normal_image);
+    normal_texture-&gt;setDataVariance(osg::Object::DYNAMIC);
+    normal_texture-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+    normal_texture-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+    normal_texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+    normal_texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    normal_texture-&gt;setResizeNonPowerOfTwoHint(false);
+    normal_texture-&gt;setMaxAnisotropy(8.0f);
+
+    difuse_texture-&gt;setImage(difuse_image);
+    difuse_texture-&gt;setDataVariance(osg::Object::DYNAMIC);
+    difuse_texture-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+    difuse_texture-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+    difuse_texture-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
+    difuse_texture-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
+    difuse_texture-&gt;setResizeNonPowerOfTwoHint(false);
+    difuse_texture-&gt;setMaxAnisotropy(8.0f);
+
+    const int TEXTURE_UNIT_NORMAL = 1;
+    const int TEXTURE_UNIT_DIFUSE = 2;
+
+    bumpState-&gt;setTextureAttributeAndModes(TEXTURE_UNIT_NORMAL, normal_texture, osg::StateAttribute::ON);
+    bumpState-&gt;setTextureAttributeAndModes(TEXTURE_UNIT_DIFUSE, difuse_texture, osg::StateAttribute::ON);
+
+    osg::ref_ptr&lt;osg::Geometry&gt; geometry = geode-&gt;asGeode()-&gt;getDrawable(0)-&gt;asGeometry();
+    osg::Vec2Array* tex_coord = dynamic_cast&lt;osg::Vec2Array*&gt;(geometry-&gt;getTexCoordArray(0));
+
+    for (unsigned int i = 0; i &lt; tex_coord-&gt;getNumElements(); ++i)
+        (*tex_coord)[i].set((*tex_coord)[i].x() * scale_x, (*tex_coord)[i].y() * scale_y);
+
+    geometry-&gt;setStateSet(bumpState);
+    if (tex_coord) {
+        geometry-&gt;setTexCoordArray(TEXTURE_UNIT_NORMAL, tex_coord);
+        geometry-&gt;setTexCoordArray(TEXTURE_UNIT_DIFUSE, tex_coord);
+    } else {
+        std::cout &lt;&lt; &quot;MISS TEXTURE COORDINATE &quot; &lt;&lt; std::endl;
+        exit(0);
+    }
+
+    osgFX::BumpMapping* bump_mapping = new osgFX::BumpMapping();
+    bump_mapping-&gt;setEnabled(true);
+    bump_mapping-&gt;setLightNumber(0);
+    bump_mapping-&gt;setNormalMapTextureUnit(TEXTURE_UNIT_NORMAL);
+    bump_mapping-&gt;setDiffuseTextureUnit(TEXTURE_UNIT_DIFUSE);
+    bump_mapping-&gt;addChild(geode);
+    bump_mapping-&gt;prepareChildren();
+    group-&gt;addChild(bump_mapping);
+
+}
+[\code]
+
+
+
+Thank you!
+
+Cheers,
+Tiago
+
+
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic0544.php?p=66724#66724">http://forum.openscenegraph.org/viewtopic.php?p=66724#66724</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278912.html">[osg-users] Unsupported wrapper class warnings in OSG 3.2 branch
+</A></li>
+	<LI>Next message: <A HREF="002701.html">[osg-users] [build] using 3Ds Model in osgFX::BumpMapping and the Texture UV Coords for diffuse are not loaded
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#278921">[ date ]</a>
+              <a href="thread.html#278921">[ thread ]</a>
+              <a href="subject.html#278921">[ subject ]</a>
+              <a href="author.html#278921">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

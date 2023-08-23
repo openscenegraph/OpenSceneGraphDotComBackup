@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] How do cameras handle the render target?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20do%20cameras%20handle%20the%20render%20target%3F&In-Reply-To=%3Ce7a9b914-d7a8-5121-eea4-2e6f75b8b48e%40texion.eu%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005863.html">
+   <LINK REL="Next"  HREF="005858.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] How do cameras handle the render target?</H1>
+<!--htdig_noindex-->
+    <B>Werner Modenbach</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20How%20do%20cameras%20handle%20the%20render%20target%3F&In-Reply-To=%3Ce7a9b914-d7a8-5121-eea4-2e6f75b8b48e%40texion.eu%3E"
+       TITLE="[osg-users] How do cameras handle the render target?">Werner.Modenbach at texion.eu
+       </A><BR>
+    <I>Wed Mar 15 02:56:35 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005863.html">[osg-users] How to get Center Parameter of CameraManipulator
+</A></li>
+        <LI>Next message: <A HREF="005858.html">[osg-users] How do cameras handle the render target?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282080">[ date ]</a>
+              <a href="thread.html#282080">[ thread ]</a>
+              <a href="subject.html#282080">[ subject ]</a>
+              <a href="author.html#282080">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi all.
+
+I have a problem understanding how cameras handle render targets.
+My special case:
+I have a standard camera on a view.
+The root node of the scene is a group with the following children:
+
+- my model
+- hud camera for wallpaper
+- hud camera for text
+- more cameras for special cases
+
+All the cameras are children of the group node and do POST_RENDER operation.
+
+I need snapshots of the complete scene from various camera positions.
+What I do:
+
+osg::ref_ptr&lt;osg::Camera&gt;camera=view-&gt;getCamera();
+
+osg::ref_ptr&lt;osg::Image&gt;fbImage=newosg::Image;
+
+fbImage-&gt;allocateImage(width,height,1,GL_RGBA,GL_UNSIGNED_BYTE,1);
+
+osg::Camera::RenderTargetImplementationrti=camera-&gt;getRenderTargetImplementation();
+camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+camera-&gt;attach(osg::Camera::COLOR_BUFFER,fbImage.get(),0,0);
+camera-&gt;dirtyAttachmentMap();
+
+Then I do snapshots with the modified projection matrix of the camera.
+After each snapshot I read the contents of the fbImage.
+
+I reset everything to the initial status by:
+
+camera-&gt;setRenderTargetImplementation(rti);
+
+camera-&gt;detach(osg::Camera::COLOR_BUFFER);
+
+camera-&gt;dirtyAttachmentMap();
+
+
+Unfortunately the fbImage always only contains my model but not the 
+child cameras renderings.
+Attaching the fbImage to the child cameras as well gives me just a black 
+fbImage.
+Of course the child cameras do not clear the color buffer.
+
+What is the proper way of receiving the complete rendering? I also tried 
+already
+installing a slave camera to the main camera but that also gives me only 
+the rendered model.
+And rendering to the fbImage by installing an additional child camera 
+with POST_RENDER instead
+of a slave camera leads to the same result.
+
+Rendering to screen is perfect, but to fbImage is not.
+It seems I'm blind on some basic functionality and all my research 
+doesn't open my eyes.
+
+I instantly hope for some help.
+
+Thanks
+
+- Werner -
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170315/aee880eb/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170315/aee880eb/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005863.html">[osg-users] How to get Center Parameter of CameraManipulator
+</A></li>
+	<LI>Next message: <A HREF="005858.html">[osg-users] How do cameras handle the render target?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#282080">[ date ]</a>
+              <a href="thread.html#282080">[ thread ]</a>
+              <a href="subject.html#282080">[ subject ]</a>
+              <a href="author.html#282080">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

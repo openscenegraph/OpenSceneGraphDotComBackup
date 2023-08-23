@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Problem reading back integer textures
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20reading%20back%20integer%20textures&In-Reply-To=%3CCAMu21QUapP_yE%3D8P%3D0S2U7UZOk_KXCCXBu0K3CCdWtftJCa59g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277105.html">
+   <LINK REL="Next"  HREF="277120.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Problem reading back integer textures</H1>
+<!--htdig_noindex-->
+    <B>Marianne Thieffry</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Problem%20reading%20back%20integer%20textures&In-Reply-To=%3CCAMu21QUapP_yE%3D8P%3D0S2U7UZOk_KXCCXBu0K3CCdWtftJCa59g%40mail.gmail.com%3E"
+       TITLE="[osg-users] Problem reading back integer textures">marianne.thieffry at gmail.com
+       </A><BR>
+    <I>Wed Jul 22 05:29:52 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277105.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+        <LI>Next message: <A HREF="277120.html">[osg-users] Best Way to Make a Toroid Geode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277111">[ date ]</a>
+              <a href="thread.html#277111">[ thread ]</a>
+              <a href="subject.html#277111">[ subject ]</a>
+              <a href="author.html#277111">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi everyone,
+
+I have a problem regardint integer textures. The setup is as follows:
+
+A rtt camera uses custom fragment shaders to push data into 3 textures:
+
+COLOR_BUFFER0: color buffer
+COLOR_BUFFER1: rgb uint id buffer
+DEPTH_BUFFER: depth buffer
+
+The data inside those buffers is correct. However, I need the id buffer on
+the cpu, and can't get it to work. I create the id buffer as follows:
+
+osg::ref_ptr&lt;osg::Texture2D&gt; TextureManager::create2DIdTexture()
+{
+osg::ref_ptr&lt;osg::Texture2D&gt; idTex = new osg::Texture2D();
+idTex-&gt;setTextureSize(1, 1);
+idTex-&gt;setInternalFormat(GL_RGB32UI_EXT);
+idTex-&gt;setSourceFormat(GL_RGBA_INTEGER_EXT);
+idTex-&gt;setSourceType(GL_UNSIGNED_INT);
+idTex-&gt;setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP);
+idTex-&gt;setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP);
+idTex-&gt;setBorderWidth(0);
+idTex-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::NEAREST);
+idTex-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::NEAREST);
+
+return idTex;
+}
+
+   - I have tried setting an image for the id buffer and attaching that one
+   to the camera instead of the texture as in the osgprerender example, which
+   results in opengl errors once I attach it to the camera. Image creation:
+
+m_idBuffer = TextureManager::get2DTexture(RttBufferType::Id);
+osg::Image *img = new osg::Image();
+img-&gt;allocateImage(m_idBuffer-&gt;getTextureWidth(),
+m_idBuffer-&gt;getTextureHeight(), 1, GL_RGB32UI_EXT, GL_UNSIGNED_INT);
+m_idBuffer-&gt;setImage(img);
+
+   - Using a camera callback to read the image data, I also get opengl
+   erros. To ensure that the correct texture is bound in the callback, I have
+   deactivated the other two during my tests.
+
+void ReadBufferCallback::operator() (osg::RenderInfo&amp; renderInfo) const
+{
+osg::Image *img = new osg::Image;
+img-&gt;readPixels(0, 0, 1000, 1000, GL_RGB_INTEGER_EXT, GL_UNSIGNED_INT);
+}
+
+When I have tested doing the same with the color buffer, reading it back to
+the cpu works just fine with the method of osgprerender (attaching the
+image to the rtt camera instead of the texture).
+
+Does someone know why I am getting these errors?
+
+Regards,
+Marianne
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150722/1afe3918/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150722/1afe3918/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277105.html">[osg-users] OSG 3.2.1 and Qt5 Widget integration
+</A></li>
+	<LI>Next message: <A HREF="277120.html">[osg-users] Best Way to Make a Toroid Geode
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#277111">[ date ]</a>
+              <a href="thread.html#277111">[ thread ]</a>
+              <a href="subject.html#277111">[ subject ]</a>
+              <a href="author.html#277111">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

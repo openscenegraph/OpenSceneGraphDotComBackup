@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] obj plugin does not support diffuse and specular texture maps
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20obj%20plugin%20does%20not%20support%20diffuse%20and%20specular%0A%20texture%20maps&In-Reply-To=%3Cb30fe060-c1dc-07c8-a4af-69c2dde19dfa%40freenet.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007040.html">
+   <LINK REL="Next"  HREF="007044.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] obj plugin does not support diffuse and specular texture maps</H1>
+<!--htdig_noindex-->
+    <B>Ralf Habacker</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20obj%20plugin%20does%20not%20support%20diffuse%20and%20specular%0A%20texture%20maps&In-Reply-To=%3Cb30fe060-c1dc-07c8-a4af-69c2dde19dfa%40freenet.de%3E"
+       TITLE="[osg-users] obj plugin does not support diffuse and specular texture maps">ralf.habacker at freenet.de
+       </A><BR>
+    <I>Tue Oct 17 04:03:40 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007040.html">[osg-users] [osgPlugins] BVH and model axis centering: a modeling and exporting problem...
+</A></li>
+        <LI>Next message (by thread): <A HREF="007044.html">[osg-users] obj plugin does not support diffuse and specular texture maps
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7043">[ date ]</a>
+              <a href="thread.html#7043">[ thread ]</a>
+              <a href="subject.html#7043">[ subject ]</a>
+              <a href="author.html#7043">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chris,
+
+thanks for this explanation.
+
+After looking into osg source I think this may be solvable by:
+
+1. extend ShaderGenCache and related classes to support additional
+texture maps.
+
+2. extend the obj plugin to provide a map holding recent texture type
+and unit index assignments. This map is required by the ShaderGenCache
+class to be able to setup the correct texture uniforms.
+
+3. In the obj plugin it is required to setup an event handler to support
+ the &quot;toogle lighting&quot; key 'l' which is provided by the state set
+handler. On each lighting state change the osgUtil::ShaderGenVisitor
+instance need to get the recent camera state set and the loaded nodes
+need to accept the shaderGen visitor, which recreates or removes shader
+from the related nodes.
+
+Can someone confirm or is there a better solution ?
+
+Ralf
+
+Am 18.09.2017 um 21:22 schrieb Chris Hanson:
+&gt;<i> I think all that what's going on is that the loader is simply assigning
+</I>&gt;<i> the image maps (diffuse and specular) to various texture unit numbers:
+</I>&gt;<i> <A HREF="../../../../trac.openscenegraph.org/projects/osg/browser/OpenSceneGraph/trunk/src/osgPlugins/obj/ReaderWriterOBJ7e5a.cpp?rev=13006#L67">http://trac.openscenegraph.org/projects/osg//browser/OpenSceneGraph/trunk/src/osgPlugins/obj/ReaderWriterOBJ.cpp?rev=13006#L67</A>
+</I>&gt;<i> <A HREF="../../../../trac.openscenegraph.org/projects/osg/browser/OpenSceneGraph/trunk/src/osgPlugins/obj/ReaderWriterOBJ7e5a.cpp?rev=13006#L835">http://trac.openscenegraph.org/projects/osg//browser/OpenSceneGraph/trunk/src/osgPlugins/obj/ReaderWriterOBJ.cpp?rev=13006#L835</A>
+</I>&gt;<i> 
+</I>&gt;<i> but it doesn't really set up a shader or anything special to utilize
+</I>&gt;<i> them, so the specular texture just clobbers the diffuse texture. You
+</I>&gt;<i> most likely need to write a small fragment shader to actually interpret
+</I>&gt;<i> the maps in whatever way you want.
+</I>&gt;<i> 
+</I>&gt;<i> On Mon, Sep 18, 2017 at 2:10 AM, Ralf Habacker &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ralf.habacker at freenet.de</A>
+</I>&gt;<i> &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">ralf.habacker at freenet.de</A>&gt;&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i>     Hi,
+</I>&gt;<i> 
+</I>&gt;<i>     we tried to use the obj plugin in an osg based vr application for the
+</I>&gt;<i>     HTC Vive to load the steamvr controller (which is provided as .obj file)
+</I>&gt;<i>     and recognized that it is displayed with black surfaces instead of
+</I>&gt;<i>     showing the provided textures (which works for example in blender).
+</I>&gt;<i> 
+</I>&gt;<i>     We found out that the osg plugin shows always black surfaces if a
+</I>&gt;<i>     material used by an obj file contains a diffuse *and* a specular texture
+</I>&gt;<i>     which could be verified with the appended test case.
+</I>&gt;<i> 
+</I>&gt;<i>     Are there any hints how to solve this issue ?
+</I>&gt;<i> 
+</I>&gt;<i>     Regards
+</I>&gt;<i>     Ralf
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i>     _______________________________________________
+</I>&gt;<i>     osg-users mailing list
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i>     &lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+</I>&gt;<i>     <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>     &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>&gt;
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> -- 
+</I>&gt;<i> Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>
+</I>&gt;<i> <A HREF="http://www.alphapixel.com/">http://www.alphapixel.com/</A>
+</I>&gt;<i> Training &#8226; Consulting &#8226; Contracting
+</I>&gt;<i> 3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL
+</I>&gt;<i> 4 &#8226; GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+</I>&gt;<i> Legal/IP &#8226;&#160;Forensics &#8226;&#160;Imaging&#160;&#8226;&#160;UAVs&#160;&#8226; GIS &#8226; GPS &#8226;
+</I>&gt;<i> osgEarth&#160;&#8226;&#160;Terrain&#160;&#8226;&#160;Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226;
+</I>&gt;<i> Mobile &#8226; iPhone/iPad/iOS &#8226; Android
+</I>&gt;<i> @alphapixel &lt;<A HREF="https://twitter.com/alphapixel">https://twitter.com/alphapixel</A>&gt; facebook.com/alphapixel
+</I>&gt;<i> &lt;<A HREF="http://facebook.com/alphapixel">http://facebook.com/alphapixel</A>&gt;&#160;(775) 623-PIXL [7495]
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I></PRE>
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007040.html">[osg-users] [osgPlugins] BVH and model axis centering: a modeling and exporting problem...
+</A></li>
+	<LI>Next message (by thread): <A HREF="007044.html">[osg-users] obj plugin does not support diffuse and specular texture maps
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7043">[ date ]</a>
+              <a href="thread.html#7043">[ thread ]</a>
+              <a href="subject.html#7043">[ subject ]</a>
+              <a href="author.html#7043">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

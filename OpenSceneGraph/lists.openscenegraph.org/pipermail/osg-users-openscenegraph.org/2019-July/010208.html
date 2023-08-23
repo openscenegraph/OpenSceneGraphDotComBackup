@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Android: Survive Context Loss without complete reinitialization
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%3A%20Survive%20Context%20Loss%20without%20complete%0A%20reinitialization&In-Reply-To=%3CCAA0Tzvmic%3D2A_BKjBA%3DLoGXZEreEN_uH4ZPkYgga28njvUyGrA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010202.html">
+   <LINK REL="Next"  HREF="010214.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Android: Survive Context Loss without complete reinitialization</H1>
+<!--htdig_noindex-->
+    <B>Martin Siggel</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Android%3A%20Survive%20Context%20Loss%20without%20complete%0A%20reinitialization&In-Reply-To=%3CCAA0Tzvmic%3D2A_BKjBA%3DLoGXZEreEN_uH4ZPkYgga28njvUyGrA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Android: Survive Context Loss without complete reinitialization">martinsiggel+osg at gmail.com
+       </A><BR>
+    <I>Mon Jul 22 11:32:55 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010202.html">[osg-users] Android: Survive Context Loss without complete reinitialization
+</A></li>
+        <LI>Next message (by thread): <A HREF="010214.html">[osg-users] Android: Survive Context Loss without complete reinitialization
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10208">[ date ]</a>
+              <a href="thread.html#10208">[ thread ]</a>
+              <a href="subject.html#10208">[ subject ]</a>
+              <a href="author.html#10208">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Dear Robert,
+
+I am using OSG 3.6.4-rc3.
+
+The only built-in shaders I am using right now are the osgText shaders:
+<A HREF="https://github.com/openscenegraph/OpenSceneGraph/tree/master/src/osgText/shaders">https://github.com/openscenegraph/OpenSceneGraph/tree/master/src/osgText/shaders</A>
+
+These are automatically bound, when no other shaders are added to a text
+node.
+
+When I don't add shaders to a geometry node, other built-in shaders seem to
+get active as well. I guess these are the ones from
+<A HREF="https://github.com/openscenegraph/OpenSceneGraph/tree/master/src/osg/shaders">https://github.com/openscenegraph/OpenSceneGraph/tree/master/src/osg/shaders</A>
+.
+
+When I e.g. use osgText, the text will appear after starting the
+application. When I go to the android main screen and then go back to the
+app, the text nodes will become black rectangles. Somehow, osg seems to
+reference still the &quot;old&quot; objects from the context before.
+
+Still, from the log I can verify, that shaders are compiled again after
+resuming to the app.
+
+I could provide a &quot;minimal&quot; example if anyone is interested.
+
+Martin.
+
+
+Am Mo., 22. Juli 2019 um 17:24 Uhr schrieb Robert Osfield &lt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;:
+
+&gt;<i> HI Martin,
+</I>&gt;<i>
+</I>&gt;<i> I don't have any Android experience so will defer to others on the
+</I>&gt;<i> specifics, but one question everyone will probably have is what version of
+</I>&gt;<i> the OSG are you using?  When you say the OSG's &quot;built in&quot; shaders, which
+</I>&gt;<i> ones do you actually mean as there isn't any single set of &quot;built in&quot;
+</I>&gt;<i> shaders - various NodeKits provide their own shaders, and there is a
+</I>&gt;<i> osgUtil::ShaderGenVisitor that can create shaders for basic fixed function
+</I>&gt;<i> scene graph, but it's written for desktop rather that GLES2.  For GLES2
+</I>&gt;<i> applications one normally has to write your own shaders.
+</I>&gt;<i>
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On Mon, 22 Jul 2019 at 13:17, Martin Siggel &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">martinsiggel+osg at gmail.com</A>&gt;
+</I>&gt;<i> wrote:
+</I>&gt;<i>
+</I>&gt;&gt;<i> Hi @all,
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I built a prototypical Android application based on your OSG GLES 2.0
+</I>&gt;&gt;<i> example. As also users in the OSG forum pointed out, the problem with
+</I>&gt;&gt;<i> this example application is, that is reinitialized everything, when
+</I>&gt;&gt;<i> e.g. leaving the app, changing the screen orientation and so on.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> I worked around this by just calling again
+</I>&gt;&gt;<i> 'setUpViewerAsEmbeddedInWindow' instead of creating everything from
+</I>&gt;&gt;<i> scratch.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> This seems to work pretty well, but sometimes - after a EGL context
+</I>&gt;&gt;<i> loss - the shader programs are somehow lost or invalid, resulting in a
+</I>&gt;&gt;<i> wrong rendering. This even happens, when using OSG's default shaders.
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> When debugging OSG, it seems to me, that OSG tries to clean up all GL
+</I>&gt;&gt;<i> objects - including the shaders and reinitialize everything (also
+</I>&gt;&gt;<i> compiling the shader objects).
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Still, it happens, that the shaders get invalid sometimes and I'll get
+</I>&gt;&gt;<i> the error:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>    s_glUseProgram:2041 GL error 0x501
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Which basically means invalid program. Are the shader handled somehow
+</I>&gt;&gt;<i> differently? What do I have to do, in order to properly cleanup
+</I>&gt;&gt;<i> everything?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Does anyone of you have any example surviving correctly a context loss
+</I>&gt;&gt;<i> e.g. due to application switch?
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Here are forum entries that describe a similar problem:
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopice507.php?t=11270">http://forum.openscenegraph.org/viewtopic.php?t=11270</A>
+</I>&gt;&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic923a.php?t=14549">http://forum.openscenegraph.org/viewtopic.php?t=14549</A> (see point number
+</I>&gt;&gt;<i> 4.)
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i>
+</I>&gt;&gt;<i> Best regards,
+</I>&gt;&gt;<i> Martin
+</I>&gt;&gt;<i> _______________________________________________
+</I>&gt;&gt;<i> osg-users mailing list
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+
+-- 
+Dr. Martin Siggel
+Neusser Stra&#223;e 257
+50733 K&#246;ln
+Phone: 0178 6729772
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">martinsiggel at googlemail.com</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20190722/e95dd604/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20190722/e95dd604/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010202.html">[osg-users] Android: Survive Context Loss without complete reinitialization
+</A></li>
+	<LI>Next message (by thread): <A HREF="010214.html">[osg-users] Android: Survive Context Loss without complete reinitialization
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10208">[ date ]</a>
+              <a href="thread.html#10208">[ thread ]</a>
+              <a href="subject.html#10208">[ subject ]</a>
+              <a href="author.html#10208">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

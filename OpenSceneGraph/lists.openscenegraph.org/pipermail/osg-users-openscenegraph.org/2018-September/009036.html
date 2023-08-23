@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Textured PointSprites broken when upgrading from 3.5.6 to 3.6.2
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Textured%20PointSprites%20broken%20when%20upgrading%20from%203.5.6%0A%20to%203.6.2&In-Reply-To=%3C1536164958.m2f.74665%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009034.html">
+   <LINK REL="Next"  HREF="009037.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Textured PointSprites broken when upgrading from 3.5.6 to 3.6.2</H1>
+<!--htdig_noindex-->
+    <B>Brian Hutchison</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Textured%20PointSprites%20broken%20when%20upgrading%20from%203.5.6%0A%20to%203.6.2&In-Reply-To=%3C1536164958.m2f.74665%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Textured PointSprites broken when upgrading from 3.5.6 to 3.6.2">bhutchison at systra.com
+       </A><BR>
+    <I>Wed Sep  5 09:29:18 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009034.html">[osg-users] axis / axes with color array doesn't work
+</A></li>
+        <LI>Next message (by thread): <A HREF="009037.html">[osg-users] Textured PointSprites broken when upgrading from 3.5.6 to 3.6.2
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9036">[ date ]</a>
+              <a href="thread.html#9036">[ thread ]</a>
+              <a href="subject.html#9036">[ subject ]</a>
+              <a href="author.html#9036">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+We recently upgraded OSG from 3.5.6 to 3.6.2 and our textured PointSprites stopped working.
+
+In a debug build they work fine but in a release build they do not display or, if they do, they display using a translucent version of the non-textured points which flash on and off as we navigate the scene.
+
+The code is based on the osgpointsprite example - which we cannot get to fail.
+
+The code is used by several features all of which have the bug.  If we strip it down to just one feature using this code then it still has the bug.  If we strip out the textures then default Points work fine on all features.
+
+Using hard-coded textures instead of loading them from files does not help.
+
+We have tried just about everything we can think of and are about to switch to a combination of non-textured points, billboards &amp; simple geometries as a workaround.
+
+
+Code:
+
+addPointSprite(mModel.base().dataPaths.resourcesPath(),
+                   PointSpriteShapes::Diamond,
+                   NodePointSizeLarge,
+                   NodePointSizeSmall,
+                   NodePointSizeLarge,
+                   mNodesGeometry);
+
+const std::map&lt;PointSpriteShapes, const std::string&gt; PointSpriteFileNames = {
+    {PointSpriteShapes::Circle, &quot;Circle.png&quot;},
+    {PointSpriteShapes::Diamond, &quot;Diamond.png&quot;},
+    {PointSpriteShapes::Square, &quot;Square.png&quot;},
+    {PointSpriteShapes::MarkerRouteStart, &quot;MarkerRouteStart.png&quot;},
+    {PointSpriteShapes::MarkerRouteBroken, &quot;MarkerRouteBroken.png&quot;},
+    {PointSpriteShapes::MarkerRouteEnd, &quot;MarkerRouteEnd.png&quot;},
+};
+
+void
+addPointSprite(const std::string &amp; aResourcesPath,
+               PointSpriteShapes   aSpriteShape,
+               float               aStartingSize,
+               float               aMinSize,
+               float               aMaxSize,
+               osg::Node *         aNode)
+{
+    Expects(PointSpriteFileNames.find(aSpriteShape) != PointSpriteFileNames.end());
+
+    auto stateset = aNode-&gt;getOrCreateStateSet();
+
+    osg::ref_ptr&lt;osg::PointSprite&gt; sprite = new osg::PointSprite();
+    sprite-&gt;setCoordOriginMode(osg::PointSprite::LOWER_LEFT);
+    stateset-&gt;setTextureAttributeAndModes(0, sprite, osg::StateAttribute::ON);
+
+    auto texture = createTexture(aResourcesPath, PointSpriteFileNames.at(aSpriteShape));
+    stateset-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+
+    osg::ref_ptr&lt;osg::Point&gt; point = new osg::Point();
+    point-&gt;setSize(aStartingSize);
+    point-&gt;setMinSize(aMinSize);
+    point-&gt;setMaxSize(aMaxSize);
+    if (aMaxSize &gt; aMinSize)
+    {
+        point-&gt;setDistanceAttenuation(osg::Vec3{1.0f, 0.001f, 0.0f});
+    }
+    stateset-&gt;setAttribute(point);
+}
+
+inline osg::ref_ptr&lt;osg::Texture2D&gt;
+createTexture(const std::string &amp; aResourcesPath, const std::string &amp; aImageName)
+{
+    const auto imagePath = aResourcesPath + &quot;/images/&quot; + aImageName;
+    return new osg::Texture2D(osgDB::readRefImageFile(imagePath));
+}
+
+
+
+
+Are you aware of any issues with textures point sprites in 3.5.6, or can you see what we are doing wrong?
+
+Thanks,
+
+Brian[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicbe98.php?p=74665#74665">http://forum.openscenegraph.org/viewtopic.php?p=74665#74665</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009034.html">[osg-users] axis / axes with color array doesn't work
+</A></li>
+	<LI>Next message (by thread): <A HREF="009037.html">[osg-users] Textured PointSprites broken when upgrading from 3.5.6 to 3.6.2
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9036">[ date ]</a>
+              <a href="thread.html#9036">[ thread ]</a>
+              <a href="subject.html#9036">[ subject ]</a>
+              <a href="author.html#9036">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Bug touch point in win32
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Bug%20touch%20point%20in%20win32&In-Reply-To=%3CCAFN7Y%2BVZ%2B2XQSX5y-D_qoJmhWVa-hL0MeAhjfza_kPWuXSSDEg%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003165.html">
+   
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Bug touch point in win32</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Bug%20touch%20point%20in%20win32&In-Reply-To=%3CCAFN7Y%2BVZ%2B2XQSX5y-D_qoJmhWVa-hL0MeAhjfza_kPWuXSSDEg%40mail.gmail.com%3E"
+       TITLE="[osg-users] Bug touch point in win32">robert.osfield at gmail.com
+       </A><BR>
+    <I>Tue May 31 03:05:52 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003165.html">[osg-users] osg::Switch node can't free memory
+</A></li>
+        
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279386">[ date ]</a>
+              <a href="thread.html#279386">[ thread ]</a>
+              <a href="subject.html#279386">[ subject ]</a>
+              <a href="author.html#279386">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thanks Nguyen, fix merged and submitted git master.
+
+On 25 April 2016 at 17:40, Nguyen Van Truong &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">truongnv.w2g at gmail.com</A>&gt; wrote:
+&gt;<i> I Use two touch screen in my App. I had a bug touch point in secondary
+</I>&gt;<i> screen ( the touch point not same mouse push point). My code repair
+</I>&gt;<i>
+</I>&gt;<i> case WM_TOUCH:
+</I>&gt;<i>         /////////////
+</I>&gt;<i>             {
+</I>&gt;<i>                 unsigned int numInputs = (unsigned int) wParam;
+</I>&gt;<i>                 TOUCHINPUT* ti = new TOUCHINPUT[numInputs];
+</I>&gt;<i> POINT pt;
+</I>&gt;<i>                 osg::ref_ptr&lt;osgGA::GUIEventAdapter&gt; osg_event(NULL);
+</I>&gt;<i>                 if(getTouchInputInfoFunc &amp;&amp;
+</I>&gt;<i> (*getTouchInputInfoFunc)((HTOUCHINPUT)lParam, numInputs, ti,
+</I>&gt;<i> sizeof(TOUCHINPUT)))
+</I>&gt;<i>                 {
+</I>&gt;<i>                     // For each contact, dispatch the message to the
+</I>&gt;<i> appropriate message handler.
+</I>&gt;<i>                     for(unsigned int i=0; i&lt; numInputs; ++i)
+</I>&gt;<i>                     {
+</I>&gt;<i> pt.x =TOUCH_COORD_TO_PIXEL(ti[i].x);
+</I>&gt;<i> pt.y =TOUCH_COORD_TO_PIXEL(ti[i].y);
+</I>&gt;<i> ScreenToClient(getHWND(), &amp;pt);
+</I>&gt;<i>                         if(ti[i].dwFlags &amp; TOUCHEVENTF_DOWN)
+</I>&gt;<i>                         {
+</I>&gt;<i>                             if (!osg_event) {
+</I>&gt;<i>                                 osg_event = getEventQueue()-&gt;touchBegan(
+</I>&gt;<i> ti[i].dwID, osgGA::GUIEventAdapter::TOUCH_BEGAN, pt.x, pt.y);
+</I>&gt;<i>                             } else {
+</I>&gt;<i>                                 osg_event-&gt;addTouchPoint( ti[i].dwID,
+</I>&gt;<i> osgGA::GUIEventAdapter::TOUCH_BEGAN, pt.x, pt.y);
+</I>&gt;<i>                             }
+</I>&gt;<i>                         }
+</I>&gt;<i>                         else if(ti[i].dwFlags &amp; TOUCHEVENTF_MOVE)
+</I>&gt;<i>                         {
+</I>&gt;<i>                             if (!osg_event) {
+</I>&gt;<i>                                 osg_event = getEventQueue()-&gt;touchMoved(
+</I>&gt;<i> ti[i].dwID, osgGA::GUIEventAdapter::TOUCH_MOVED, pt.x, pt.y);
+</I>&gt;<i>                             } else {
+</I>&gt;<i>                                 osg_event-&gt;addTouchPoint( ti[i].dwID,
+</I>&gt;<i> osgGA::GUIEventAdapter::TOUCH_MOVED, pt.x, pt.y);
+</I>&gt;<i>                             }
+</I>&gt;<i>                         }
+</I>&gt;<i>                         else if(ti[i].dwFlags &amp; TOUCHEVENTF_UP)
+</I>&gt;<i>                         {
+</I>&gt;<i>                             // No double tap detection with RAW TOUCH
+</I>&gt;<i> Events, sorry.
+</I>&gt;<i>                             if (!osg_event) {
+</I>&gt;<i>                                 osg_event = getEventQueue()-&gt;touchEnded(
+</I>&gt;<i> ti[i].dwID, osgGA::GUIEventAdapter::TOUCH_ENDED, pt.x, pt.y, 1);
+</I>&gt;<i>                             } else {
+</I>&gt;<i>                                 osg_event-&gt;addTouchPoint( ti[i].dwID,
+</I>&gt;<i> osgGA::GUIEventAdapter::TOUCH_ENDED, pt.x, pt.y);
+</I>&gt;<i>                             }
+</I>&gt;<i>                         }
+</I>&gt;<i>                     }
+</I>&gt;<i>                 }
+</I>&gt;<i>                 if (closeTouchInputHandleFunc)
+</I>&gt;<i>                     (*closeTouchInputHandleFunc)((HTOUCHINPUT)lParam);
+</I>&gt;<i>                 delete [] ti;
+</I>&gt;<i>             }
+</I>&gt;<i>             break;
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003165.html">[osg-users] osg::Switch node can't free memory
+</A></li>
+	
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279386">[ date ]</a>
+              <a href="thread.html#279386">[ thread ]</a>
+              <a href="subject.html#279386">[ subject ]</a>
+              <a href="author.html#279386">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

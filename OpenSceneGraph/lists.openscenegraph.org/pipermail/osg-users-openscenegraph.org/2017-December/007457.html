@@ -1,0 +1,198 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Serialization differences between ASCII and XML
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Serialization%20differences%20between%20ASCII%20and%20XML&In-Reply-To=%3CCAFN7Y%2BUbnBgHU4_18yjJkA4HNDMXTJQGtke_Bnn-FWJssfnyag%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007454.html">
+   <LINK REL="Next"  HREF="007469.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Serialization differences between ASCII and XML</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Serialization%20differences%20between%20ASCII%20and%20XML&In-Reply-To=%3CCAFN7Y%2BUbnBgHU4_18yjJkA4HNDMXTJQGtke_Bnn-FWJssfnyag%40mail.gmail.com%3E"
+       TITLE="[osg-users] Serialization differences between ASCII and XML">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Dec 30 07:24:24 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007454.html">[osg-users] Serialization differences between ASCII and XML
+</A></li>
+        <LI>Next message (by thread): <A HREF="007469.html">[osg-users] osg installation error
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7457">[ date ]</a>
+              <a href="thread.html#7457">[ thread ]</a>
+              <a href="subject.html#7457">[ subject ]</a>
+              <a href="author.html#7457">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Hartwig,
+
+I'm not yet back to work so just quick reply.  What you describe looks
+like a bug, when I return to work I'll look into it, albeit as part of
+queue of support issues that have accumulated this holiday...
+
+What would help me is a small example that illustrates the problem so
+I can reproduce it at my end.  If your project is open sourced then a
+link to the code that you are seeing a problem with would help as
+well.
+
+As a general comment, there are lots of helper macros for serializers
+that can often avoid the need for custom user serializers, for
+instance if your properties are a Vec4d you should be able to just use
+the macros to read/write them.  Have a look through the
+OpenSceneGraph/src/osgWrappers/serialzers/osg for examples of this in
+action.
+
+Robert.
+
+On 27 December 2017 at 17:49, Hartwig Wiesmann
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hartwig.wiesmann at skywind.eu</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> wrote a simple serialiser for the output of a range:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> namespace
+</I>&gt;<i> {
+</I>&gt;<i>         bool checkGeographicRange(osgPlanetCore::GeodeticData const&amp;)
+</I>&gt;<i>         {
+</I>&gt;<i>                 return true;
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         bool readGeographicRange(osgDB::InputStream&amp; inputStream, osgPlanetCore::GeodeticData&amp; geodeticData)
+</I>&gt;<i>         {
+</I>&gt;<i>                 osgPlanetCore::GeographicRange geographicRange;
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>                 if (osgPlanetWrappers::readRange(inputStream,geographicRange))
+</I>&gt;<i>                 {
+</I>&gt;<i>                         geodeticData.setGeographicRange(geographicRange);
+</I>&gt;<i>                         return true;
+</I>&gt;<i>                 } /* if */
+</I>&gt;<i>                 else
+</I>&gt;<i>                         return false;
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         bool writeGeographicRange(osgDB::OutputStream&amp; outputStream, osgPlanetCore::GeodeticData const&amp; geodeticData)
+</I>&gt;<i>         {
+</I>&gt;<i>                 outputStream &lt;&lt; std::endl;
+</I>&gt;<i>                 return osgPlanetWrappers::writeRange(outputStream,geodeticData.getGeographicRange());
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i> } /* namespace */
+</I>&gt;<i>
+</I>&gt;<i>         template &lt; typename Values &gt;
+</I>&gt;<i>         bool readRange(osgDB::InputStream&amp; inputStream, osgPlanetCore::Range&lt; Values &gt;&amp; range)
+</I>&gt;<i>         {
+</I>&gt;<i>                 inputStream &gt;&gt; inputStream.BEGIN_BRACKET;
+</I>&gt;<i>                 inputStream &gt;&gt; inputStream.PROPERTY(&quot;FromValues&quot;) &gt;&gt; range.getFromValues();
+</I>&gt;<i>                 inputStream &gt;&gt; inputStream.PROPERTY(&quot;TillValues&quot;) &gt;&gt; range.getTillValues();
+</I>&gt;<i>                 inputStream &gt;&gt; inputStream.END_BRACKET;
+</I>&gt;<i>                 return true;
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>         template &lt; typename Values &gt;
+</I>&gt;<i>         bool writeRange(osgDB::OutputStream&amp; outputStream, osgPlanetCore::Range&lt; Values &gt; const&amp; range)
+</I>&gt;<i>         {
+</I>&gt;<i>                 outputStream &lt;&lt; outputStream.BEGIN_BRACKET &lt;&lt; std::endl;
+</I>&gt;<i>                 outputStream &lt;&lt; outputStream.PROPERTY(&quot;FromValues&quot;) &lt;&lt; range.getFromValues() &lt;&lt; std::endl;
+</I>&gt;<i>                 outputStream &lt;&lt; outputStream.PROPERTY(&quot;TillValues&quot;) &lt;&lt; range.getTillValues() &lt;&lt; std::endl;
+</I>&gt;<i>                 outputStream &lt;&lt; outputStream.END_BRACKET &lt;&lt; std::endl;
+</I>&gt;<i>                 return true;
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> In a wrapper I call
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i>         ADD_USER_SERIALIZER(GeographicRange);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Basically serialisation should write / read two vectors indicating a lower and a higher limit of a geodetic range.
+</I>&gt;<i>
+</I>&gt;<i> The ASCII output looks like:
+</I>&gt;<i>
+</I>&gt;<i> GeographicRange
+</I>&gt;<i> {
+</I>&gt;<i> FromValues -135 40.9799 -10000
+</I>&gt;<i> TillValues -90 66.5133 10000
+</I>&gt;<i> }
+</I>&gt;<i>
+</I>&gt;<i> Which seems to be fine.
+</I>&gt;<i>
+</I>&gt;<i> The XML output looks like:
+</I>&gt;<i>
+</I>&gt;<i>           &lt; FromValues attribute=&quot;-135 40.9799 -10000&nl;&quot; &gt;
+</I>&gt;<i>             &lt; TillValues attribute=&quot;-90 66.5133 10000&nl;&nl;&quot; &gt;
+</I>&gt;<i>              &lt; /TillValues &gt;
+</I>&gt;<i>           &lt; /FromValues &gt;
+</I>&gt;<i>
+</I>&gt;<i> Which is not really the same. Besides the fact that &quot;GeographicRange&quot; is gone completely.
+</I>&gt;<i>
+</I>&gt;<i> How do I make the output of both versions the same?
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Hartwig
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicd5cd.php?p=72645#72645">http://forum.openscenegraph.org/viewtopic.php?p=72645#72645</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007454.html">[osg-users] Serialization differences between ASCII and XML
+</A></li>
+	<LI>Next message (by thread): <A HREF="007469.html">[osg-users] osg installation error
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7457">[ date ]</a>
+              <a href="thread.html#7457">[ thread ]</a>
+              <a href="subject.html#7457">[ subject ]</a>
+              <a href="author.html#7457">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

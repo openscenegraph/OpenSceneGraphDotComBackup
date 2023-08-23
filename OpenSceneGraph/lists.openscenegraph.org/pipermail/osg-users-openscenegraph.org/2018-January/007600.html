@@ -1,0 +1,194 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Straight lines are broken during rotation
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Straight%20lines%20are%20broken%20during%20rotation&In-Reply-To=%3CCAFN7Y%2BW%2BQEs9up%2Bub0EAgQdH_vr4rNQZVmFXr7oMZsHKK7uObA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007594.html">
+   <LINK REL="Next"  HREF="007643.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Straight lines are broken during rotation</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Straight%20lines%20are%20broken%20during%20rotation&In-Reply-To=%3CCAFN7Y%2BW%2BQEs9up%2Bub0EAgQdH_vr4rNQZVmFXr7oMZsHKK7uObA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Straight lines are broken during rotation">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Jan 20 03:34:53 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007594.html">[osg-users] Straight lines are broken during rotation
+</A></li>
+        <LI>Next message (by thread): <A HREF="007643.html">[osg-users] Straight lines are broken during rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7600">[ date ]</a>
+              <a href="thread.html#7600">[ thread ]</a>
+              <a href="subject.html#7600">[ subject ]</a>
+              <a href="author.html#7600">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Adrian,
+
+&gt;<i>From the info given it's not possible to know exactly what is wrong as
+</I>there are several possibilities depending upon what the rest of your
+application is doing, and the data itself, none of which we have
+knowledge of. The best I can do is back some general statements about
+handling this type of data.
+
+First up, OpenGL graphics hardware works mostly with floats so that
+when working with large vertex values precision can be a big issue,
+causing jitter.  The way to avoid precision issues when rendering with
+the OSG is to create your geometry with a local origin and decorate
+this with a Transform node that places this subgraph in it's final
+location.  The OSG uses doubles to accumulate the Camera View matrix
+and all the internal Transform nodes to maintain precision as long as
+possible before passing to OpenGL where it'll be cast down to floats.
+This technique has been discussed many times in the osg-users mailing
+list/forum so have a look through the archives.  The osgEarth and
+osgTerrain NodeKit's use these technique to handle whole earth
+databases with precision problems,
+
+The next possibility is z fighting.  You mix discussion of line and
+mesh in your post and the picture kinda looks like you might have a
+line and mesh together, if you do and the line is
+appearing/disappearing if could be due to z fighting.  This another
+topic discussed many times in the OSG community and out on the web so
+have a search.
+
+Robert.
+
+On 19 January 2018 at 01:57, Adrian Jelffs &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">adrian.jelffs at makai.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I am pretty new to OSG but have been working on it for the past few weeks. I have an application that is rendering a 2D terrain with a constant width. When I rotate my display the line sometime appears broken.
+</I>&gt;<i>
+</I>&gt;<i> There are no other layers present. I have attached an example. This terrain should be solid and sometimes is depending upon the viewing angle.
+</I>&gt;<i>
+</I>&gt;<i> Does anyone have any suggestions as to what is happening or what I might be able to do to fix it?
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Adrian
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>     osg::ref_ptr&lt;osg::Vec3Array&gt; vertexData = new osg::Vec3Array;
+</I>&gt;<i>
+</I>&gt;<i>     osg::Vec4Array* colors = new osg::Vec4Array;
+</I>&gt;<i>     colors-&gt;push_back(_settingPtr-&gt;int2osgColor(3394636));
+</I>&gt;<i>     _terrain2dGeom-&gt;setColorArray(colors, osg::Array::BIND_OVERALL);
+</I>&gt;<i>     _terrain2dGeom-&gt;setNormalBinding(osg::Geometry::BIND_OVERALL);
+</I>&gt;<i>     _terrain2dGeom-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+</I>&gt;<i>     _terrain2dGeom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUAD_STRIP, 0, 2 * TerrainData.size()));
+</I>&gt;<i>
+</I>&gt;<i>     osg::Vec3d _frontVec, _up, _sideVec , _prevPos;
+</I>&gt;<i>
+</I>&gt;<i>     for (int i = 0; i &lt; TerrainData.size(); i++)
+</I>&gt;<i>     {
+</I>&gt;<i>         VbTerrainData terrainItem = TerrainData.at(i);
+</I>&gt;<i>         osg::Vec3d longlat = osg::Vec3d(terrainItem.y, terrainItem.x, terrainItem.z);
+</I>&gt;<i>
+</I>&gt;<i>         _up = lonlat2Metric(osg::Vec3d(longlat.x(), longlat.y(), longlat.z()));
+</I>&gt;<i>
+</I>&gt;<i>         if (i == 0)
+</I>&gt;<i>         {
+</I>&gt;<i>             _prevPos = _up;
+</I>&gt;<i>             VbTerrainData terrainNextItem = TerrainData.at(1);
+</I>&gt;<i>             osg::Vec3d nextlonglat = osg::Vec3d(terrainNextItem.y, terrainNextItem.x, terrainNextItem.z);
+</I>&gt;<i>
+</I>&gt;<i>             _frontVec = lonlat2Metric(osg::Vec3d(nextlonglat.x(), nextlonglat.y(), nextlonglat.z())) - _prevPos;
+</I>&gt;<i>         }
+</I>&gt;<i>         else
+</I>&gt;<i>         {
+</I>&gt;<i>             _frontVec = _up - _prevPos;
+</I>&gt;<i>             _prevPos = _up;
+</I>&gt;<i>         }
+</I>&gt;<i>
+</I>&gt;<i>          _sideVec = _up ^ _frontVec;
+</I>&gt;<i>         _sideVec.normalize();
+</I>&gt;<i>
+</I>&gt;<i>         vertexData-&gt;push_back(_up + _sideVec*width/2);
+</I>&gt;<i>         vertexData-&gt;push_back(_up - _sideVec*width/2);
+</I>&gt;<i>     }
+</I>&gt;<i>
+</I>&gt;<i>     _terrain2dGeom-&gt;setVertexArray(vertexData.get());
+</I>&gt;<i>
+</I>&gt;<i>     _swTerrain-&gt;addChild(_terrain2dGeom);
+</I>&gt;<i>     _swTerrain-&gt;setValue(0, true);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicfe09.php?p=72783#72783">http://forum.openscenegraph.org/viewtopic.php?p=72783#72783</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Attachments:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/files/terrain_172.jpg">http://forum.openscenegraph.org//files/terrain_172.jpg</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007594.html">[osg-users] Straight lines are broken during rotation
+</A></li>
+	<LI>Next message (by thread): <A HREF="007643.html">[osg-users] Straight lines are broken during rotation
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7600">[ date ]</a>
+              <a href="thread.html#7600">[ thread ]</a>
+              <a href="subject.html#7600">[ subject ]</a>
+              <a href="author.html#7600">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

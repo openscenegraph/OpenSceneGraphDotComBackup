@@ -1,0 +1,46 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Clement,&lt;br&gt;&lt;br&gt;&lt;/div&gt;The&nbsp;numerical&nbsp;issue&nbsp;you&nbsp;have&nbsp;found&nbsp;causing&nbsp;a&nbsp;crash&nbsp;is&nbsp;a&nbsp;curious&nbsp;one.&nbsp;&lt;br&gt;&lt;br&gt;The&nbsp;gl_Vertex&nbsp;isn&#39;t&nbsp;a&nbsp;normalized&nbsp;on&nbsp;any&nbsp;system,&nbsp;osgVolume::RayTracedTechnique&nbsp;does&nbsp;use&nbsp;a&nbsp;unit&nbsp;cube&nbsp;for&nbsp;it&#39;s&nbsp;geometry&nbsp;though,&nbsp;so&nbsp;the&nbsp;vertex&nbsp;data&nbsp;should&nbsp;all&nbsp;be&nbsp;in&nbsp;the&nbsp;0.0f&nbsp;to&nbsp;1.0f&nbsp;range. &nbsp;Perhaps&nbsp;the&nbsp;intel&nbsp;driver/hardware&nbsp;combination&nbsp;is&nbsp;resulting&nbsp;in&nbsp;some&nbsp;numerical&nbsp;precision&nbsp;issue&nbsp;so&nbsp;that&nbsp;the&nbsp;values&nbsp;are&nbsp;going&nbsp;slightly&nbsp;outside&nbsp;the&nbsp;0&nbsp;to&nbsp;1.0f&nbsp;range,&nbsp;but&nbsp;even&nbsp;if&nbsp;it&nbsp;does&nbsp;I&nbsp;wouldn&#39;t&nbsp;expect&nbsp;the&nbsp;fragment&nbsp;shaders&nbsp;to&nbsp;suddenly&nbsp;have&nbsp;problems.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Is&nbsp;there&nbsp;are&nbsp;specific&nbsp;line&nbsp;in&nbsp;the&nbsp;shader&nbsp;that&nbsp;you&nbsp;think&nbsp;is&nbsp;cause&nbsp;the&nbsp;crash?&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;FYI,&nbsp;osgVolume&nbsp;checks&nbsp;for&nbsp;the&nbsp;shader/volume.vert&nbsp;and&nbsp;shader/volume.frag&nbsp;filenames&nbsp;first&nbsp;then&nbsp;fallsback&nbsp;to&nbsp;the&nbsp;built&nbsp;in&nbsp;shaders&nbsp;that&nbsp;are&nbsp;found&nbsp;in&nbsp;the&nbsp;src/osgVolume/Shaders/volume_frag.cpp. &nbsp;The&nbsp;shader/volume.frag&nbsp;can&nbsp;be&nbsp;found&nbsp;in&nbsp;OpenSceneGraph-Data/shader&nbsp;so&nbsp;if&nbsp;you&nbsp;have&nbsp;this&nbsp;available&nbsp;and&nbsp;it&#39;s&nbsp;on&nbsp;the&nbsp;OSG_FILE_PATH&nbsp;then&nbsp;you&nbsp;should&nbsp;be&nbsp;able&nbsp;to&nbsp;edit&nbsp;the&nbsp;shader&nbsp;files&nbsp;without&nbsp;recompiling&nbsp;the&nbsp;application.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;1&nbsp;September&nbsp;2017&nbsp;at&nbsp;08:11,&nbsp;&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:Clement.Chu@csiro.au&quot;&nbsp;target=&quot;_blank&quot;&gt;Clement.Chu@csiro.au&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; Finally&nbsp;I&nbsp;found&nbsp;where&nbsp;causes&nbsp;the&nbsp;problem. &nbsp;For&nbsp;some&nbsp;reasons,&nbsp;gl_Vertex&nbsp;is&nbsp;not&nbsp;normalized. &nbsp;I&nbsp;looked&nbsp;at&nbsp;osg&nbsp;shader&nbsp;source&nbsp;code&nbsp;(src\osgVolume\Shaders). &nbsp;For&nbsp;example,&nbsp;in&nbsp;file&nbsp;volume_frag.cpp,&lt;br&gt;<br>
+&lt;br&gt;<br>
+vec4&nbsp;t0&nbsp;=&nbsp;vertexPos;&lt;br&gt;<br>
+vec4&nbsp;te&nbsp;=&nbsp;cameraPos;&lt;br&gt;<br>
+&lt;br&gt;<br>
+//&nbsp;by&nbsp;default&nbsp;te&nbsp;did&nbsp;to&nbsp;check&nbsp;the&nbsp;range&nbsp;(0&nbsp;and&nbsp;1),&nbsp;but&nbsp;t0&nbsp;did&nbsp;not.&lt;br&gt;<br>
+//&nbsp;If&nbsp;I&nbsp;added &nbsp;some&nbsp;codes&nbsp;to&nbsp;check&nbsp;the&nbsp;range,&nbsp;then&nbsp;the&nbsp;problem&nbsp;is&nbsp;completed&nbsp;gone.&lt;br&gt;<br>
+&lt;br&gt;<br>
+if&nbsp;(t0.x&lt;0.0)&nbsp;t0.x&nbsp;=&nbsp;0.0;&nbsp;if&nbsp;(t0.x&gt;1.0)&nbsp;t0.x&nbsp;=&nbsp;1.0;&lt;br&gt;<br>
+if&nbsp;(t0.y&lt;0.0)&nbsp;t0.y&nbsp;=&nbsp;0.0;&nbsp;if&nbsp;(t0.y&gt;1.0)&nbsp;t0.y&nbsp;=&nbsp;1.0;&lt;br&gt;<br>
+f&nbsp;(t0.z&lt;0.0)&nbsp;t0.z&nbsp;=&nbsp;0.0;&nbsp;if&nbsp;(t0.z&gt;1.0)&nbsp;t0.z&nbsp;=&nbsp;1.0;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;believe&nbsp;the&nbsp;problem&nbsp;is&nbsp;related&nbsp;to&nbsp;GLSL&nbsp;version&nbsp;and&nbsp;latest&nbsp;Intel&nbsp;HD&nbsp;Graphics&nbsp;driver&nbsp;is&nbsp;using&nbsp;higher&nbsp;version&nbsp;of&nbsp;GLSL,&nbsp;but&nbsp;gl_Vertex&nbsp;does&nbsp;not&nbsp;normalize&nbsp;or&nbsp;the&nbsp;value&nbsp;is&nbsp;just&nbsp;over&nbsp;1&nbsp;or&nbsp;less&nbsp;then&nbsp;0&nbsp;(eg.&nbsp;1.00001). &nbsp;Then&nbsp;it&nbsp;causes&nbsp;the&nbsp;crash&nbsp;when&nbsp;running&nbsp;the&nbsp;sampling&nbsp;loop. &nbsp;I&nbsp;am&nbsp;not&nbsp;an&nbsp;expert&nbsp;on&nbsp;GLSL,&nbsp;so&nbsp;I&nbsp;would&nbsp;like&nbsp;to&nbsp;confirm&nbsp;the&nbsp;best&nbsp;solution&nbsp;to&nbsp;handle&nbsp;this&nbsp;problem.&nbsp;Thanks.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Regards,&lt;br&gt;<br>
+Clement&nbsp;Chu&lt;br&gt;<br>
+&lt;br&gt;<br>
+______________________________&lt;wbr&gt;__________&lt;br&gt;<br>
+From:&nbsp;osg-users&nbsp;&lt;&lt;a&nbsp;href=&quot;mailto:osg-users-bounces@lists.openscenegraph.org&quot;&gt;osg-users-bounces@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&gt;&nbsp;on&nbsp;behalf&nbsp;of&nbsp;Clement.Chu@csiro.au&nbsp;&lt;Clement.Chu@csiro.au&gt;&lt;br&gt;<br>
+Sent:&nbsp;Wednesday,&nbsp;30&nbsp;August&nbsp;2017&nbsp;17:31&lt;br&gt;<br>
+To:&nbsp;&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+Subject:&nbsp;[ExternalEmail]&nbsp;[osg-users]&nbsp;RayTracedTechnique&nbsp;hangs&nbsp;with&nbsp;Intel&nbsp;HD&nbsp;Graphics&lt;br&gt;<br>
+&lt;br&gt;<br>
+Hi,&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; My&nbsp;program&nbsp;uses&nbsp;RayTracedTechnique&nbsp;for&nbsp;volume&nbsp;rendering,&nbsp;but&nbsp;it&nbsp;hangs&nbsp;with&nbsp;Intel&nbsp;HD&nbsp;graphics&nbsp;520,&nbsp;530&nbsp;and&nbsp;620.&nbsp;My&nbsp;old&nbsp;laptop&nbsp;works&nbsp;fine&nbsp;which&nbsp;is&nbsp;using&nbsp;Intel&nbsp;HD&nbsp;Graphic&nbsp;3000. &nbsp;Other&nbsp;machines&nbsp;with&nbsp;Nvidia&nbsp;cards&nbsp;are&nbsp;working&nbsp;fine&nbsp;too. &nbsp;I&nbsp;believe&nbsp;the&nbsp;problem&nbsp;is&nbsp;on&nbsp;shaders&nbsp;in&nbsp;the&nbsp;sampling&nbsp;loop. &nbsp;My&nbsp;program&nbsp;is&nbsp;using&nbsp;osg&nbsp;3.2.3. &nbsp;I&nbsp;also&nbsp;tried&nbsp;to&nbsp;upgrade&nbsp;to&nbsp;osg&nbsp;3.4.1,&nbsp;but&nbsp;the&nbsp;same&nbsp;problem&nbsp;occurred&nbsp;with&nbsp;Intel&nbsp;HD&nbsp;Graphic&nbsp;520,&nbsp;530&nbsp;and&nbsp;620. &nbsp;Do&nbsp;anyone&nbsp;have&nbsp;similar&nbsp;problem&nbsp;and&nbsp;any&nbsp;solution&nbsp;to&nbsp;fix&nbsp;it? &nbsp;Many&nbsp;thanks.&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Regards,&lt;br&gt;<br>
+Clement&nbsp;Chu&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+______________________________&lt;wbr&gt;_________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.&lt;wbr&gt;org/listinfo.cgi/osg-users-&lt;wbr&gt;openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

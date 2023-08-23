@@ -1,0 +1,202 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [Any feedback welcome] possible lack of robustness of the VAO path
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAny%20feedback%20welcome%5D%20possible%20lack%20of%20robustness%0A%20of%20the%20VAO%20path&In-Reply-To=%3C1547569380.m2f.75497%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009599.html">
+   <LINK REL="Next"  HREF="009611.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [Any feedback welcome] possible lack of robustness of the VAO path</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BAny%20feedback%20welcome%5D%20possible%20lack%20of%20robustness%0A%20of%20the%20VAO%20path&In-Reply-To=%3C1547569380.m2f.75497%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [Any feedback welcome] possible lack of robustness of the VAO path">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Tue Jan 15 08:23:00 PST 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009599.html">[osg-users] [Any feedback welcome] possible lack of robustness of the VAO path
+</A></li>
+        <LI>Next message (by thread): <A HREF="009611.html">[osg-users] [Any feedback welcome] possible lack of robustness of the VAO path
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9600">[ date ]</a>
+              <a href="thread.html#9600">[ thread ]</a>
+              <a href="subject.html#9600">[ subject ]</a>
+              <a href="author.html#9600">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I mod a bit 3.6 branch so only 99% sure of this behavior
+Please confirm the bug (don't forget to set OSG_VERTEX_BUFFER_HINT=VAO)
+
+
+
+Code:
+#include &lt;osgUtil/MeshOptimizers&gt;
+#include &lt;osgGA/TrackballManipulator&gt;
+#include &lt;osgGA/FirstPersonManipulator&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerEventHandlers&gt;
+
+#include &lt;osgDB/ReadFile&gt;
+
+class GeomLoaderCB : public osg::Camera::DrawCallback//
+//  osg::NodeCallback
+{
+public:
+   int _thresremoval;int _nbaddedatatime;
+    GeomLoaderCB(int thresremoval=1,int nbaddedatatime=1):_nbaddedatatime(nbaddedatatime),_thresremoval(thresremoval) {}
+    
+    mutable std::list&lt;osg::ref_ptr&lt;osg::Geometry&gt; &gt; _geoms;
+    void setGeometryList(osgUtil::GeometryCollector::GeometryList c) {
+        for(auto f : c)
+            _geoms.push_back(f);
+    }
+    virtual void operator () (const osg::Camera&amp;  camera ) const {
+        osg::Node * node=const_cast&lt;osg::Camera*&gt;(&amp;camera)-&gt;getChild(0);
+
+        if(_geoms.empty())return;
+        osg::ref_ptr&lt;osg::Group&gt; gr =new osg::Group;
+        osg::ref_ptr&lt;osg::Group&gt;  gr2 = node-&gt;asGroup();
+        if(gr2-&gt;getNumChildren()&gt;_thresremoval)
+        {
+            OSG_WARN&lt;&lt;&quot;removal&quot;&lt;&lt;std::endl;
+            osg::ref_ptr&lt;osg::Geode &gt;  ge=gr2-&gt;getChild(0)-&gt;asGroup()-&gt;getChild(0)-&gt;asGeode();
+            for(int i=0; i&lt;ge-&gt;getNumChildren(); ++i) {
+                osg::ref_ptr &lt;osg::Geometry &gt;g=ge-&gt;getChild(i)-&gt;asGeometry();
+                ge-&gt;removeChild(g   );
+                OSG_WARN&lt;&lt;g-&gt;referenceCount()&lt;&lt;std::endl;
+            }
+            gr2-&gt;removeChildren(0,1);
+            return;
+        }
+
+        std::list&lt;osg::ref_ptr&lt;osg::Geometry&gt; &gt; ::iterator it= _geoms.begin();
+        int cpt=0;
+        while(it!=_geoms.end()&amp;&amp;cpt++&lt;_nbaddedatatime ) {
+            osg::Geode* ge=(new osg::Geode);
+            ge-&gt;addChild((*it));
+            gr-&gt;addChild((ge));
+            OSG_WARN&lt;&lt;&quot;addage&quot;&lt;&lt;  (*it ) -&gt;getVertexArray()-&gt;getNumElements()&lt;&lt;std::endl;
+            it=_geoms.erase(it);
+        }
+        gr2-&gt;addChild(gr);
+    }
+};
+
+
+/// This demo reproduce a bug
+/// it add drawables given in arg one by one and then remove them
+/// in theory only 3 geometries should be display at the same time (see GeomLoaderCB)
+int main(int argc, char **argv)
+{
+
+    osg::ArgumentParser args(&amp;argc,argv);
+    unsigned int  geomcountaddedatatime=1,geomcountabovewichweremove=2;//problem began with 2
+    while(args.read(&quot;--add&quot;,geomcountaddedatatime) ) { }
+    while(args.read(&quot;--remove&quot;,geomcountabovewichweremove) ) { }
+    osgUtil::GeometryCollector geomcollector(0,osgUtil::Optimizer::ALL_OPTIMIZATIONS);
+
+    osg::ref_ptr&lt;osg::Node &gt; loaded=osgDB::readNodeFiles(args);
+    if(loaded.valid())
+    {
+        loaded-&gt;accept(geomcollector);
+
+        osg::Group * root=new osg::Group;
+        GeomLoaderCB * loader=new GeomLoaderCB(geomcountabovewichweremove,geomcountaddedatatime);
+        loader-&gt;setGeometryList(   geomcollector.getGeometryList() );
+
+        osgViewer::Viewer viewer;
+        viewer.addEventHandler(new osgViewer::StatsHandler);
+        viewer.addEventHandler(new osgViewer::WindowSizeHandler);
+        viewer.addEventHandler(new osgViewer::ThreadingHandler);
+
+        viewer.realize();
+        viewer.setSceneData( root);
+
+        viewer.getCamera()-&gt;setFinalDrawCallback(loader);
+        loaded=0;
+
+        viewer.run();
+    }
+}
+
+
+
+
+
+mp3butcher wrote:
+&gt;<i> Hi all,
+</I>&gt;<i> I wrote a sample code exibiting crash with my scene
+</I>&gt;<i> <A HREF="https://github.com/openscenegraph/OpenSceneGraph/issues/692">https://github.com/openscenegraph/OpenSceneGraph/issues/692</A>
+</I>&gt;<i> 
+</I>&gt;<i> If you'd have 5 min to waste, i would be glad you confirm with your own scene...
+</I>&gt;<i> 
+</I>&gt;<i> Thank you!
+</I>&gt;<i> 
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Julien
+</I>
+
+------------------------
+Twirling twirling twirling toward freedom
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic823c.php?p=75497#75497">http://forum.openscenegraph.org/viewtopic.php?p=75497#75497</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009599.html">[osg-users] [Any feedback welcome] possible lack of robustness of the VAO path
+</A></li>
+	<LI>Next message (by thread): <A HREF="009611.html">[osg-users] [Any feedback welcome] possible lack of robustness of the VAO path
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9600">[ date ]</a>
+              <a href="thread.html#9600">[ thread ]</a>
+              <a href="subject.html#9600">[ subject ]</a>
+              <a href="author.html#9600">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

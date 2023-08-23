@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Visual flicker when using multi-pass technique, related to frustum?
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Visual%20flicker%20when%20using%20multi-pass%20technique%2C%0A%20related%20to%20frustum%3F&In-Reply-To=%3CCAFN7Y%2BU3tZbASirivsm4JbJ1ziD4H-xKwus7WEMzMyhBwQvHbA%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="281530.html">
+   <LINK REL="Next"  HREF="005356.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Visual flicker when using multi-pass technique, related to frustum?</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Visual%20flicker%20when%20using%20multi-pass%20technique%2C%0A%20related%20to%20frustum%3F&In-Reply-To=%3CCAFN7Y%2BU3tZbASirivsm4JbJ1ziD4H-xKwus7WEMzMyhBwQvHbA%40mail.gmail.com%3E"
+       TITLE="[osg-users] Visual flicker when using multi-pass technique, related to frustum?">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sun Jan  8 02:26:50 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="281530.html">[osg-users] Visual flicker when using multi-pass technique,	related to frustum?
+</A></li>
+        <LI>Next message: <A HREF="005356.html">[osg-users] Visual flicker when using multi-pass technique,	related to frustum?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5311">[ date ]</a>
+              <a href="thread.html#5311">[ thread ]</a>
+              <a href="subject.html#5311">[ subject ]</a>
+              <a href="author.html#5311">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Hartwig,
+
+In principle what you are doing should work, the project and modelview
+matrix by default should be inherited down correctly - there shouldn't
+be a frame delay.
+
+The only thing that looks like it could cause problem is that you
+switch off the compute near/far for the slave camera but not the
+master camera, try doing it for both.
+
+Robert.
+
+On 7 January 2017 at 18:21, Hartwig Wiesmann
+&lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">hartwig.wiesmann at skywind.eu</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I have two graphs that have completely different content. One is used for initialising the depth buffer, the other one for showing the scene.
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> visibleGraphPtr = ...
+</I>&gt;<i> depthGraphPtr = ...
+</I>&gt;<i> depthGraphPtr-&gt;getOrCreateStateSet()-&gt;setAttributeAndModes(new osg::ColorMask(false,false,false,false)); // does not use the color buffer
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I use two cameras, one for rendering to the depth buffer, the other one (viewer's main camera) for generating the scene.
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> osg::Camera* renderToDepthCamera(new osg::Camera());
+</I>&gt;<i>
+</I>&gt;<i> renderToDepthCamera-&gt;addChild(depthGraphPtr);
+</I>&gt;<i> renderToDepthCamera-&gt;setClearMask(GL_DEPTH_BUFFER_BIT);
+</I>&gt;<i> renderToDepthCamera-&gt;setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);
+</I>&gt;<i> renderToDepthCamera-&gt;setGraphicsContext(viewer-&gt;getCamera()-&gt;getGraphicsContext());
+</I>&gt;<i> renderToDepthCamera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+</I>&gt;<i> renderToDepthCamera-&gt;setViewport(viewer-&gt;getCamera()-&gt;getViewport());
+</I>&gt;<i> viewer-&gt;addSlave(renderToDepthCamera,false);
+</I>&gt;<i>
+</I>&gt;<i> viewer-&gt;getCamera()-&gt;setClearMask(GL_COLOR_BUFFER_BIT); // use also depth buffer from pre-rendering
+</I>&gt;<i> viewer-&gt;setSceneData(visibleGraphPtr);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Basically this setup works. The only problem is that flickering can be seen when zooming into and out of the scene or moving the scene.
+</I>&gt;<i>
+</I>&gt;<i> My explanation is that the camera rendering to the depth buffer is using a different frustum (namely the old one (one frame old) from the main camera) than the main camera rendering the visible graph.
+</I>&gt;<i>
+</I>&gt;<i> Is there a possibility to eliminate the flicker without using a third render path at the beginning just to calculate the final frustum?
+</I>&gt;<i>
+</I>&gt;<i> I could have implemented the same by using a RTT camera and some shader code afterwards but I think that this does not make any difference with respect to flicker, or?
+</I>&gt;<i>
+</I>&gt;<i> Any suggestions? Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i> Hartwig
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicf30b.php?p=69919#69919">http://forum.openscenegraph.org/viewtopic.php?p=69919#69919</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="281530.html">[osg-users] Visual flicker when using multi-pass technique,	related to frustum?
+</A></li>
+	<LI>Next message: <A HREF="005356.html">[osg-users] Visual flicker when using multi-pass technique,	related to frustum?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5311">[ date ]</a>
+              <a href="thread.html#5311">[ thread ]</a>
+              <a href="subject.html#5311">[ subject ]</a>
+              <a href="author.html#5311">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

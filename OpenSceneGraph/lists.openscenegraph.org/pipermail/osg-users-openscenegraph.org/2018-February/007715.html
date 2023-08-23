@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [Persistent buffer implementation in osg]
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BPersistent%20buffer%20implementation%20in%20osg%5D&In-Reply-To=%3CCAFN7Y%2BW02sSO7xBtJff-v52k4So3yQ2Gb3tR86Xb6S_mz3Y84g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007706.html">
+   <LINK REL="Next"  HREF="007708.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [Persistent buffer implementation in osg]</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BPersistent%20buffer%20implementation%20in%20osg%5D&In-Reply-To=%3CCAFN7Y%2BW02sSO7xBtJff-v52k4So3yQ2Gb3tR86Xb6S_mz3Y84g%40mail.gmail.com%3E"
+       TITLE="[osg-users] [Persistent buffer implementation in osg]">robert.osfield at gmail.com
+       </A><BR>
+    <I>Sat Feb 10 09:48:09 PST 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007706.html">[osg-users] [Persistent buffer implementation in osg]
+</A></li>
+        <LI>Next message (by thread): <A HREF="007708.html">[osg-users] [Toward BindImageTexture completness]
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7715">[ date ]</a>
+              <a href="thread.html#7715">[ thread ]</a>
+              <a href="subject.html#7715">[ subject ]</a>
+              <a href="author.html#7715">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Julien,
+
+My guess is that if you can just implement what you want for a single
+threading, single graphics context application then the thing to do is
+just create your graphics context make it current in the main thread
+and then just run your frame loop.  You can put all GL calls anywhere
+you want - in the update, event, cull or draw traversals.
+
+If you want want a general purpose solution for all OSG users then
+it's far tougher proposition.  Having memory that is associated with a
+graphics context means that you'll need to multi-buffer to handle an
+application that has multiple graphics contexts - this is the reason
+why the OSG has a BufferObject aggregates a vector of GLBufferObjects,
+with one GLBufferObject per graphics context.  The OSG works hard to
+hide all this complexity so that scene graph users mostly don't have
+to go through serious pain if there boss turns around and ask them to
+have two windows rather that than the one that they originally design
+it for.  The OSG makes this pretty trivial, but for many graphics
+applications it's a nightmare.
+
+However, if you want to blur the distinction between GL memory and
+application memory you will have to multi-buffer at the scene graph
+level, you won;'t be able to hide it as an implementation detail like
+is done by the OSG for normal OpenGL state.  If you wanted your
+application osg::Vec3Array to use GL memory then you'd need buffer the
+osg::Vec3Array for each context, so which in turns means that
+osg::Geometry that manages them would need to multi-buffered as well.
+If you then need map/unmap the data you'll also need to do this from
+threads that have the graphics context associated with that particular
+buffer, which then pushes the need to update your scene graph during
+the draw traversal.  Which is now starting to get pretty messy.
+
+I suspect the only way you could resolve this would then be push the
+update, event, cull and draw threads into the graphics threads, which
+pushes you toward needing a new threading model for osgViewer that
+supports this type of usage.  If there are non GL parts of the scene
+graph that are shared between graphics contexts then these might be
+able to be run from the main loop, but it could get a bit sticky.
+
+So... a general purpose solution is unlikely to be easy to implement
+or easy to use.  It's not a low level integration issue, it's both a
+high level and low level issue.
+
+Or... just keep things simple, if you want this particular usage case
+then just implement it client side, simplify your application usage so
+that everything is done single threaded for a single graphics context.
+
+Robert.
+</PRE>
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007706.html">[osg-users] [Persistent buffer implementation in osg]
+</A></li>
+	<LI>Next message (by thread): <A HREF="007708.html">[osg-users] [Toward BindImageTexture completness]
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7715">[ date ]</a>
+              <a href="thread.html#7715">[ thread ]</a>
+              <a href="subject.html#7715">[ subject ]</a>
+              <a href="author.html#7715">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

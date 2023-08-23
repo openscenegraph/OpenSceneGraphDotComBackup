@@ -1,0 +1,173 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-gb" lang="en-gb">
+
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
+<head>
+    <script type="text/javascript">
+var siteurl='../../../index.html';
+var tmplurl='../../../templates/ja_purity_ii/index.html';
+var isRTL = false;
+</script>
+
+<base  />
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content="scene graph
+OpenGL
+realtime graphics
+OpenGL ES" />
+	<meta name="author" content="openscenegraph" />
+	<meta name="robots" content="noindex, nofollow" />
+	<meta name="description" content="Project website for OpenSceneGraph" />
+	<meta name="generator" content="Joomla! - Open Source Content Management" />
+	<title>Analysing a Scenegraph</title>
+	<link href="../../../index4adc.css?jat3action=gzip&amp;jat3type=css&amp;jat3file=t3-assets%2Fcss_4ca7c.css" rel="stylesheet" type="text/css" />
+	<script type="application/json" class="joomla-script-options new">{"csrf.token":"8209e1c6468f316786935c5820a254ee","system.paths":{"root":"","base":""}}</script>
+	<script src="../../../indexa945.php?jat3action=gzip&amp;jat3type=js&amp;jat3file=t3-assets%2Fjs_a0ffa.js" type="text/javascript"></script>
+	<script type="text/javascript">
+jQuery(window).on('load',  function() {
+				new JCaption('img.caption');
+			});
+	</script>
+
+<!--[if ie]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/plugins/system/jat3/jat3/base-themes/default/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+<!--[if ie 7]><link href="/templates/ja_purity_ii/css/template-ie7.css" type="text/css" rel="stylesheet" /><![endif]--> 
+
+
+
+
+<link href="../../../plugins/system/jat3/jat3/base-themes/default/images/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+
+
+<!--[if IE 7.0]>
+<style>
+.clearfix { display: inline-block; } /* IE7xhtml*/
+</style>
+<![endif]-->
+
+<script language="javascript" type="text/javascript">
+var rightCollapseDefault='show';
+var excludeModules='38';
+</script>
+<script language="javascript" type="text/javascript" src="../../../templates/ja_purity_ii/js/ja.rightcol.js"></script>
+
+<style type="text/css">
+#ja-header .main {
+	background-image: url(../../../templates/ja_purity_ii/images/header/header1.jpg);
+}
+</style></head>
+
+<body id="bd" class="fs3 com_content contentpane">
+    <div id="system-message-container">
+	</div>
+
+    <div class="item-page clearfix">
+	<h1 class="componentheading">
+	Tutorials	</h1>
+	<h2 class="contentheading">
+			<a href="72-analysing-a-scenegraph.html">
+		Analysing a Scenegraph</a>
+		</h2>
+
+	
+<div class="article-tools clearfix">
+	<ul class="actions">
+			<li>
+		<a href="#" onclick="window.print();return false;">			<span class="icon-print" aria-hidden="true"></span>
+		Print	</a>		</li>
+		
+	</ul>
+
+
+
+	<dl class="article-info">
+	<dt class="article-info-term">Details</dt>
+	<dd class="category-name">
+				Category: <span><a href="../tutorials.html">Tutorials</a></span>		</dd>
+	<dd class="published">
+	Published: <span>02 October 2012</span>	</dd>
+	<dd class="createdby"> 
+				Written by <span>openscenegraph</span>	
+	</dd>
+	
+	<dd class="hits">
+	Hits: <span>73252</span>	</dd>
+	</dl>
+</div>
+
+
+	<div id="content" class="wiki">
+<div class="wikipage searchable">Once a scenegraph is loaded you may wish to analyse the in memory tree of nodes. Ideally you would use a nodevisitor, but here is a simple piece of C++ code that works:
+<pre class="wiki"> void analyseGeode(osg::Geode *geode);
+
+void analysePrimSet(osg::PrimitiveSet*prset, const osg::Vec3Array *verts);
+
+void analyse(osg::Node *nd) {
+	/// here you have found a group.
+    osg::Geode *geode = dynamic_cast&lt;osg::Geode *&gt; (nd);
+	if (geode) { // analyse the geode. If it isnt a geode the dynamic cast gives NULL.
+		analyseGeode(geode);
+	} else {
+		osg::Group *gp = dynamic_cast&lt;osg::Group *&gt; (nd);
+		if (gp) {
+			osg::notify(osg::WARN) &lt;&lt; "Group "&lt;&lt;  gp-&gt;getName() &lt;&lt;std::endl;
+			for (unsigned int ic=0; ic&lt;gp-&gt;getNumChildren(); ic++) {
+				analyse(gp-&gt;getChild(ic));
+			}
+		} else {
+			osg::notify(osg::WARN) &lt;&lt; "Unknown node "&lt;&lt;  nd &lt;&lt;std::endl;
+		}
+	}
+}
+// divide the geode into its drawables and primitivesets:
+
+void analyseGeode(osg::Geode *geode) {
+    for (unsigned int i=0; i&lt;geode-&gt;getNumDrawables(); i++) {
+		osg::Drawable *drawable=geode-&gt;getDrawable(i);
+		osg::Geometry *geom=dynamic_cast&lt;osg::Geometry *&gt; (drawable);
+		for (unsigned int ipr=0; ipr&lt;geom-&gt;getNumPrimitiveSets(); ipr++) {
+			osg::PrimitiveSet* prset=geom-&gt;getPrimitiveSet(ipr);
+			osg::notify(osg::WARN) &lt;&lt; "Primitive Set "&lt;&lt; ipr &lt;&lt; std::endl;
+			analysePrimSet(prset, dynamic_cast&lt;const osg::Vec3Array*&gt;(geom-&gt;getVertexArray()));
+		}
+    }
+}
+
+void analysePrimSet(osg::PrimitiveSet*prset, const osg::Vec3Array *verts) {
+	unsigned int ic;
+	unsigned int i2;
+	unsigned int nprim=0;
+	osg::notify(osg::WARN) &lt;&lt; "Prim set type "&lt;&lt; prset-&gt;getMode() &lt;&lt; std::endl;
+	for (ic=0; ic&lt;prset-&gt;getNumIndices(); ic++) { // NB the vertices are held in the drawable -
+		osg::notify(osg::WARN) &lt;&lt; "vertex "&lt;&lt; ic &lt;&lt; " is index "&lt;&lt;prset-&gt;index(ic) &lt;&lt; " at " &lt;&lt;
+			(* verts)[prset-&gt;index(ic)].x() &lt;&lt; "," &lt;&lt;
+			(* verts)[prset-&gt;index(ic)].y() &lt;&lt; "," &lt;&lt; 
+			(* verts)[prset-&gt;index(ic)].z() &lt;&lt; std::endl;
+    }
+	// you might want to handle each type of primset differently: such as:
+	switch (prset-&gt;getMode()) {
+	case osg::PrimitiveSet::TRIANGLES: // get vertices of triangle
+		osg::notify(osg::WARN) &lt;&lt; "Triangles "&lt;&lt; nprim &lt;&lt; " is index "&lt;&lt;prset-&gt;index(ic) &lt;&lt; std::endl;
+		for (i2=0; i2&lt;prset-&gt;getNumIndices()-2; i2+=3) {
+		}
+	break;
+	case osg::PrimitiveSet::TRIANGLE_STRIP: // look up how tristrips are coded
+	break;
+	// etc for all the primitive types you expect. EG quads, quadstrips lines line loops....
+	}
+}
+</pre>
+<p>This code can be inserted into (say) osgviewer.cpp, and called thus:</p>
+<pre class="wiki">analyse(loadedModel.get());
+</pre>
+</div>
+</div> 
+			
+				
+
+	</div>
+</body>
+
+</html>

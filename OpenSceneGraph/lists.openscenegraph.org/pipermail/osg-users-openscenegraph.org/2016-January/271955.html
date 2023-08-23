@@ -1,0 +1,238 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgText inconsistant size
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20inconsistant%20size&In-Reply-To=%3CCAJ8YToY7TdE8pxBbSi56RcG78Si-xi3LcbR33BMDVT8c83iOig%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271953.html">
+   <LINK REL="Next"  HREF="271957.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgText inconsistant size</H1>
+<!--htdig_noindex-->
+    <B>Romain Ouabdelkader</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgText%20inconsistant%20size&In-Reply-To=%3CCAJ8YToY7TdE8pxBbSi56RcG78Si-xi3LcbR33BMDVT8c83iOig%40mail.gmail.com%3E"
+       TITLE="[osg-users] osgText inconsistant size">romain.ouabdelkader at gmail.com
+       </A><BR>
+    <I>Wed Jan 13 01:28:29 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271953.html">[osg-users] osgText inconsistant size
+</A></li>
+        <LI>Next message: <A HREF="271957.html">[osg-users] osgText inconsistant size
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271955">[ date ]</a>
+              <a href="thread.html#271955">[ thread ]</a>
+              <a href="subject.html#271955">[ subject ]</a>
+              <a href="author.html#271955">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Thanks for the reply, modifying the Font*::getKerning() seems to be the
+best solution.
+
+I will cherry-pick your commit until we can upgrade to the lastest version.
+
+Regards,
+Romain Ouabdelkader.
+
+2016-01-12 18:36 GMT+01:00 Robert Osfield &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">robert.osfield at gmail.com</A>&gt;:
+
+&gt;<i> Hi Romain,
+</I>&gt;<i>
+</I>&gt;<i> Thanks for investigating and characterising this bug.  With your
+</I>&gt;<i> results in mind I've just done a code review of FreeTypeFont.cpp and
+</I>&gt;<i> Font.cpp and see that design/implementation both assume that kerning
+</I>&gt;<i> is invariant of font resolution, which you have found it isn't, so
+</I>&gt;<i> this is most definitely a flaw.
+</I>&gt;<i>
+</I>&gt;<i> From my current review the correct way to solve this would seem to be
+</I>&gt;<i> modify the Font::getKerning(..) and
+</I>&gt;<i> FontImplementation/FreeTypeFont::getKerning(..) methods to take a
+</I>&gt;<i> FontResolulution parameter in the same way that the getGlyph(..)
+</I>&gt;<i> method does, this would allow the kerning implementation to reset the
+</I>&gt;<i> font resolution if required as it does during the getGlyph().
+</I>&gt;<i>
+</I>&gt;<i> Unfortunately such a change would break the API so isn't something we
+</I>&gt;<i> can back port to OSG-3.2 or OSG-3.4, but is something we could merge
+</I>&gt;<i> with OSG-master/OSG-3.5.x dev series.
+</I>&gt;<i>
+</I>&gt;<i> Thoughts?
+</I>&gt;<i> Robert.
+</I>&gt;<i>
+</I>&gt;<i> On 12 January 2016 at 16:44, Romain Ouabdelkader
+</I>&gt;<i> &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">romain.ouabdelkader at gmail.com</A>&gt; wrote:
+</I>&gt;<i> &gt; Hi,
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; I have tracked down the issue, the difference in size come from the
+</I>&gt;<i> kerning
+</I>&gt;<i> &gt; being calculated in different font resolutions.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; If we trace the execution:
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;   osg::ref_ptr&lt;osgText::Text&gt; text0 = new osgText::Text;
+</I>&gt;<i> &gt;   text0-&gt;setFont(font_path);
+</I>&gt;<i> &gt;   text0-&gt;setFontResolution(128, 128);
+</I>&gt;<i> &gt;   text0-&gt;setText(&quot;V&quot;);
+</I>&gt;<i> &gt;   text0-&gt;setText(&quot;a&quot;);
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Here we generate the glyph for char 'V' and 'a' with the resolution (128,
+</I>&gt;<i> &gt; 128).
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;   osg::ref_ptr&lt;osgText::Text&gt; text1 = new osgText::Text;
+</I>&gt;<i> &gt;   text1-&gt;setFont(font_path);
+</I>&gt;<i> &gt;   text1-&gt;setText(&quot;p&quot;);
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; We generate a dummy glyph that set FreeType face resolution to (32, 32)
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;   text0-&gt;setText(&quot;Va&quot;);
+</I>&gt;<i> &gt;   float first_call = text0-&gt;getBoundingBox().xMax();
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; (1) Since the glyph for char 'V' and 'a' are already generated for
+</I>&gt;<i> &gt; resolution (128, 128), we use the glyph in the cache (see Font::GetGlyph)
+</I>&gt;<i> &gt; *without modifying FreeType face resolution*.
+</I>&gt;<i> &gt; We also get kerning from FreeType but we *don't* change the face
+</I>&gt;<i> resolution,
+</I>&gt;<i> &gt; thus the kerning is calculated in (32, 32) resolution.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;   text0-&gt;setText(&quot;c&quot;);
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; We generate a dummy glyph (that isn't in the cache) that set FreeType
+</I>&gt;<i> face
+</I>&gt;<i> &gt; resolution to (128, 128).
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;   text0-&gt;setText(&quot;Va&quot;);
+</I>&gt;<i> &gt;   float second_call = text0-&gt;getBoundingBox().xMax();
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Same as (1) but FreeType face resolution is (128, 128) while calculating
+</I>&gt;<i> the
+</I>&gt;<i> &gt; kerning.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; This isn't a big issue, but it breaks our tests depending of the order of
+</I>&gt;<i> &gt; execution...
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; The issue can be resolved if Font::getKerning ask for font resolution,
+</I>&gt;<i> or if
+</I>&gt;<i> &gt; we set font resolution at the start of Text::computeGlyphRepresentation
+</I>&gt;<i> (not
+</I>&gt;<i> &gt; exposed in Font).
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; What do you think ?
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; Regards,
+</I>&gt;<i> &gt; Romain Ouabdelkader.
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; 2016-01-06 19:16 GMT+01:00 Romain Ouabdelkader
+</I>&gt;<i> &gt; &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">romain.ouabdelkader at gmail.com</A>&gt;:
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Hi,
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; I have discovered an issue with osgText: under certain conditions,
+</I>&gt;<i> &gt;&gt; Text::getBoundingBox() returns different values with the same text,
+</I>&gt;<i> font,
+</I>&gt;<i> &gt;&gt; font resolution, etc.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; You can reproduce the issue with this example:
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; int main() {
+</I>&gt;<i> &gt;&gt;   const char *font_path = &quot;museo500.ttf&quot;;
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;   osg::ref_ptr&lt;osgText::Text&gt; text0 = new osgText::Text;
+</I>&gt;<i> &gt;&gt;   text0-&gt;setFont(font_path);
+</I>&gt;<i> &gt;&gt;   text0-&gt;setFontResolution(128, 128);
+</I>&gt;<i> &gt;&gt;   text0-&gt;setText(&quot;V&quot;);
+</I>&gt;<i> &gt;&gt;   text0-&gt;setText(&quot;a&quot;);
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;   osg::ref_ptr&lt;osgText::Text&gt; text1 = new osgText::Text;
+</I>&gt;<i> &gt;&gt;   text1-&gt;setFont(font_path);
+</I>&gt;<i> &gt;&gt;   text1-&gt;setText(&quot;p&quot;);
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;   text0-&gt;setText(&quot;Va&quot;);
+</I>&gt;<i> &gt;&gt;   float first_call = text0-&gt;getBoundingBox().xMax();
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;   text0-&gt;setText(&quot;c&quot;);
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;   text0-&gt;setText(&quot;Va&quot;);
+</I>&gt;<i> &gt;&gt;   float second_call = text0-&gt;getBoundingBox().xMax();
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;   std::cout &lt;&lt; first_call &lt;&lt; std::endl;
+</I>&gt;<i> &gt;&gt;   std::cout &lt;&lt; second_call &lt;&lt; std::endl;
+</I>&gt;<i> &gt;&gt;   if (first_call != second_call) {
+</I>&gt;<i> &gt;&gt;     std::cout &lt;&lt; &quot;Error!&quot; &lt;&lt; std::endl;
+</I>&gt;<i> &gt;&gt;     return 1;
+</I>&gt;<i> &gt;&gt;   }
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt;   return 0;
+</I>&gt;<i> &gt;&gt; }
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Output:
+</I>&gt;<i> &gt;&gt; 36.4961
+</I>&gt;<i> &gt;&gt; 35.9961
+</I>&gt;<i> &gt;&gt; Error!
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; The issue seems to be very specific, if I remove any of these lines the
+</I>&gt;<i> &gt;&gt; issue doesn't appear.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; I've attached the font if you want to reproduce it.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;&gt; Regards,
+</I>&gt;<i> &gt;&gt; Romain Ouabdelkader.
+</I>&gt;<i> &gt;&gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt;
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt;
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20160113/faf508fa/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20160113/faf508fa/attachment.htm</A>&gt;
+</PRE>
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271953.html">[osg-users] osgText inconsistant size
+</A></li>
+	<LI>Next message: <A HREF="271957.html">[osg-users] osgText inconsistant size
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271955">[ date ]</a>
+              <a href="thread.html#271955">[ thread ]</a>
+              <a href="subject.html#271955">[ subject ]</a>
+              <a href="author.html#271955">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

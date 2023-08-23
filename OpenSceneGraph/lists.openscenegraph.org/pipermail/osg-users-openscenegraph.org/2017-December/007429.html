@@ -1,0 +1,178 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [CubeMap with mipmaps] About loading IBL
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BCubeMap%20with%20mipmaps%5D%20About%20loading%20IBL&In-Reply-To=%3C1513875014.m2f.72620%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="007428.html">
+   <LINK REL="Next"  HREF="007430.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [CubeMap with mipmaps] About loading IBL</H1>
+<!--htdig_noindex-->
+    <B>Giuseppe Donvito</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5BCubeMap%20with%20mipmaps%5D%20About%20loading%20IBL&In-Reply-To=%3C1513875014.m2f.72620%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [CubeMap with mipmaps] About loading IBL">giuseppe.donvito at gmail.com
+       </A><BR>
+    <I>Thu Dec 21 08:50:14 PST 2017</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="007428.html">[osg-users] Specifying indices of triangle vertices when creating osg::geometry
+</A></li>
+        <LI>Next message (by thread): <A HREF="007430.html">[osg-users] [CubeMap with mipmaps] About loading IBL
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7429">[ date ]</a>
+              <a href="thread.html#7429">[ thread ]</a>
+              <a href="subject.html#7429">[ subject ]</a>
+              <a href="author.html#7429">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert and all,
+ I totally confirm the bug described by mp3butcher, also in my case I can't use an IBL cubemap with pre-generated mipmaps associated to a texture.
+I have to remove mipaps (and at least generate them in hardware) otherwise the IBL channel will result black.
+The cubemap is produced by a standard tool.
+
+ Giueppe
+
+
+
+robertosfield wrote:
+&gt;<i> HI Julien,
+</I>&gt;<i> 
+</I>&gt;<i> The code is osg/Texture.cpp has been written a long time ago so in
+</I>&gt;<i> theory should have been exposed to testing for many years so I am
+</I>&gt;<i> surprised the change you have found that works is required, and I'm
+</I>&gt;<i> not confident the change you suggest won't break things.  Given how
+</I>&gt;<i> long Texture.cpp has been around it sounds like you are using a usage
+</I>&gt;<i> case/hardware/driver combination that hasn't been tested out before.
+</I>&gt;<i> Given this it could be errant OSG code or a driver issue, if the later
+</I>&gt;<i> the workaround could well cause problems elsewhere.  The only way to
+</I>&gt;<i> tease this out would be to have a test case that can be tried on
+</I>&gt;<i> different systems.
+</I>&gt;<i> 
+</I>&gt;<i> Unfortunately I don't have any cubemap mipmapped test cases myself,
+</I>&gt;<i> could you provide one?
+</I>&gt;<i> 
+</I>&gt;<i> Robert.
+</I>&gt;<i> 
+</I>&gt;<i> On 4 November 2017 at 15:34, Julien Valentin &lt;&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i> &gt; Hi all
+</I>&gt;<i> &gt; So debugging all the night i notice the problem seams to ome from osg/Texture.cpp line 2303:
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Code:
+</I>&gt;<i> &gt; glTexSubImage2D( target, k,
+</I>&gt;<i> &gt; 0, 0,
+</I>&gt;<i> &gt; width, height,
+</I>&gt;<i> &gt; (GLenum)image-&gt;getPixelFormat(),
+</I>&gt;<i> &gt; (GLenum)image-&gt;getDataType(),
+</I>&gt;<i> &gt; dataPtr + image-&gt;getMipmapOffset(k));
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; This code seams not to do its job...Replacing It with
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Code:
+</I>&gt;<i> &gt; glTexImage2D( target, k, _internalFormat,
+</I>&gt;<i> &gt; width, height, _borderWidth,
+</I>&gt;<i> &gt; (GLenum)image-&gt;getPixelFormat(),
+</I>&gt;<i> &gt; (GLenum)image-&gt;getDataType(),
+</I>&gt;<i> &gt; dataPtr + image-&gt;getMipmapOffset(k));
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; seams to make it works.
+</I>&gt;<i> &gt; @Robert
+</I>&gt;<i> &gt; Is this fix valid enought to make a pr?
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Cheers
+</I>&gt;<i> &gt; Good WE
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; mp3butcher wrote:
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; &gt; Hi all
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; I'm trying to load an IBL cubemap with lod but once I'm trying to set mipmapdata for log2(pow2size)+1 levels (and so override hardware mipmap generation) the cubemap appears black (even the first level that i actually validated with the autoHWMipMapGeneration(minfilter=miplinear) /: ?! )..
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; Any leads?
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; Thank you!
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; Cheers,
+</I>&gt;<i> &gt; &gt; Julien
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; [/code]
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; ------------------
+</I>&gt;<i> &gt; Read this topic online here:
+</I>&gt;<i> &gt; <A HREF="../../../../forum.openscenegraph.org/viewtopica67a.php?p=72305#72305">http://forum.openscenegraph.org/viewtopic.php?p=72305#72305</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> 
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I>&gt;<i>  ------------------
+</I>&gt;<i> Post generated by Mail2Forum
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic7cdf.php?p=72620#72620">http://forum.openscenegraph.org/viewtopic.php?p=72620#72620</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="007428.html">[osg-users] Specifying indices of triangle vertices when creating osg::geometry
+</A></li>
+	<LI>Next message (by thread): <A HREF="007430.html">[osg-users] [CubeMap with mipmaps] About loading IBL
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#7429">[ date ]</a>
+              <a href="thread.html#7429">[ thread ]</a>
+              <a href="subject.html#7429">[ subject ]</a>
+              <a href="author.html#7429">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

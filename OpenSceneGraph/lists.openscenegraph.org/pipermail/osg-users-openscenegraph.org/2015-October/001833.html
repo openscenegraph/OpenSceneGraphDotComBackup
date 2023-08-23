@@ -1,0 +1,212 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [build] Xocde 7.1 with osgDB compiler error
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20Xocde%207.1%20with%20osgDB%20compiler%20error&In-Reply-To=%3CCAFN7Y%2BUwKY_vC1ejgnukOeHrkcekxTXsJA%3D1N2QwSCcWBty_cQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="278055.html">
+   <LINK REL="Next"  HREF="001836.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [build] Xocde 7.1 with osgDB compiler error</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20Xocde%207.1%20with%20osgDB%20compiler%20error&In-Reply-To=%3CCAFN7Y%2BUwKY_vC1ejgnukOeHrkcekxTXsJA%3D1N2QwSCcWBty_cQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] [build] Xocde 7.1 with osgDB compiler error">robert.osfield at gmail.com
+       </A><BR>
+    <I>Wed Oct 28 05:17:15 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="278055.html">[osg-users] [build] Xocde 7.1 with osgDB compiler error
+</A></li>
+        <LI>Next message: <A HREF="001836.html">[osg-users] [build] Xocde 7.1 with osgDB compiler error
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1833">[ date ]</a>
+              <a href="thread.html#1833">[ thread ]</a>
+              <a href="subject.html#1833">[ subject ]</a>
+              <a href="author.html#1833">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Daniel,
+
+I don't have an OSX system to test against so have to defer to OSX users
+for maintaining the build, I can only provide general guidance.
+
+&gt;<i>From the look of the error line:
+</I>
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include/sys/cdefs.h:707:2:
+error: Unsupported architecture
+#error Unsupported architecture
+
+It looks to me like part of the 10.11 SDK doesn't support build under all
+architectures.  You'll need to go into Cmake and select change the
+architecture this is built against. Have a look at the
+CMAKE_OSX_ARCHITECTURES value.
+
+Just look at the OpenSceneGraph/CMakeLists.txt lines where it sets
+CMAKE_OSX_ARCHITECTURES It has the following:
+
+        # Set defaults for Universal Binaries. We want 32-bit Intel/PPC on
+10.4
+        # and 32/64-bit Intel/PPC on &gt;= 10.5. Anything &lt;= 10.3 doesn't
+support.
+
+        # These are just defaults/recommendations, but how we want to build
+        # out of the box. But the user needs to be able to change these
+options.
+        # So we must only set the values the first time CMake is run, or we
+        # will overwrite any changes the user sets.
+        # FORCE is used because the options are not reflected in the UI
+otherwise.
+        # Seems like a good place to add version specific compiler flags
+too.
+        IF(NOT OSG_CONFIG_HAS_BEEN_RUN_BEFORE)
+            IF(${OSG_OSX_SDK_NAME} STREQUAL &quot;macosx10.8&quot; OR
+${OSG_OSX_SDK_NAME} STREQUAL &quot;macosx10.9&quot; OR ${OSG_OSX_SDK_NAME} STREQUAL
+&quot;macosx10.10&quot;)
+                SET(OSG_DEFAULT_IMAGE_PLUGIN_FOR_OSX &quot;imageio&quot; CACHE STRING
+&quot;Forced imageio default image plugin for OSX&quot; FORCE)
+                # 64 Bit Works, i386,ppc is not supported any more
+                SET(CMAKE_OSX_ARCHITECTURES &quot;x86_64&quot; CACHE STRING &quot;Build
+architectures for OSX&quot; FORCE)
+                SET(CMAKE_CXX_FLAGS &quot;${CMAKE_CXX_FLAGS}
+-mmacosx-version-min=10.8 -fvisibility-inlines-hidden&quot; CACHE STRING &quot;Flags
+used by the compiler during all build types.&quot; FORCE)
+            ELSEIF(${OSG_OSX_SDK_NAME} STREQUAL &quot;macosx10.7&quot;)
+                SET(OSG_DEFAULT_IMAGE_PLUGIN_FOR_OSX &quot;imageio&quot; CACHE STRING
+&quot;Forced imageio default image plugin for OSX&quot; FORCE)
+                # 64 Bit Works, PPC is not supported any more
+                SET(CMAKE_OSX_ARCHITECTURES &quot;i386;x86_64&quot; CACHE STRING
+&quot;Build architectures for OSX&quot; FORCE)
+                SET(CMAKE_CXX_FLAGS &quot;${CMAKE_CXX_FLAGS}
+-mmacosx-version-min=10.7 -fvisibility-inlines-hidden&quot; CACHE STRING &quot;Flags
+used by the compiler during all build types.&quot; FORCE)
+            ELSEIF(${OSG_OSX_SDK_NAME} STREQUAL &quot;macosx10.6&quot; OR
+${OSG_OSX_SDK_NAME} STREQUAL &quot;macosx10.5&quot;)
+                SET(OSG_DEFAULT_IMAGE_PLUGIN_FOR_OSX &quot;imageio&quot; CACHE STRING
+&quot;Forced imageio default image plugin for OSX&quot; FORCE)
+                # 64-bit compiles are not supported with Carbon.
+                SET(CMAKE_OSX_ARCHITECTURES &quot;ppc;i386&quot; CACHE STRING &quot;Build
+architectures for OSX&quot; FORCE)
+                SET(CMAKE_CXX_FLAGS &quot;${CMAKE_CXX_FLAGS}
+-mmacosx-version-min=10.5 -ftree-vectorize -fvisibility-inlines-hidden&quot;
+CACHE STRING &quot;Flags used by the compiler during all build types.&quot; FORCE)
+            ELSEIF(${OSG_OSX_SDK_NAME} STREQUAL &quot;macosx10.4&quot;)
+                SET(OSG_DEFAULT_IMAGE_PLUGIN_FOR_OSX &quot;quicktime&quot; CACHE
+STRING &quot;Forced imageio default image plugin for OSX&quot; FORCE)
+                SET(CMAKE_OSX_ARCHITECTURES &quot;ppc;i386&quot; CACHE STRING &quot;Build
+architectures for OSX&quot; FORCE)
+                SET(CMAKE_CXX_FLAGS &quot;${CMAKE_CXX_FLAGS}
+-mmacosx-version-min=10.4 -ftree-vectorize -fvisibility-inlines-hidden&quot;
+CACHE STRING &quot;Flags used by the compiler during all build types.&quot; FORCE)
+            ELSE()
+                # No Universal Binary support
+                # Should break down further to set the -mmacosx-version-min,
+                # but the SDK detection is too unreliable here.
+            ENDIF()
+        ENDIF()
+
+Note, the line :
+
+   IF(${OSG_OSX_SDK_NAME} STREQUAL &quot;macosx10.8&quot; OR ${OSG_OSX_SDK_NAME}
+STREQUAL &quot;macosx10.9&quot; OR ${OSG_OSX_SDK_NAME} STREQUAL &quot;macosx10.10&quot;)
+
+Doesn't include the 10.11, so try adding this into the list.
+
+Robert.
+
+
+
+Robert.
+
+
+On 28 October 2015 at 08:42, Daniel Lee &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">daniel.lee at datangle.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> During the compilation of &quot;ALL_BUILD&quot; process, Xcode 7.1 generated a error
+</I>&gt;<i> as below:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> In file included from
+</I>&gt;<i> /Users/daniellee/Documents/ARToolkit/OpenSceneGraph/OpenSceneGraph-3.4.0/src/osgDB/AuthenticationMap.cpp:14:
+</I>&gt;<i> In file included from
+</I>&gt;<i> /Users/daniellee/Documents/ARToolkit/OpenSceneGraph/OpenSceneGraph-3.4.0/include/osgDB/AuthenticationMap:17:
+</I>&gt;<i> In file included from
+</I>&gt;<i> /Users/daniellee/Documents/ARToolkit/OpenSceneGraph/OpenSceneGraph-3.4.0/include/osg/Referenced:21:
+</I>&gt;<i> In file included from
+</I>&gt;<i> /Users/daniellee/Documents/ARToolkit/OpenSceneGraph/OpenSceneGraph-3.4.0/include/OpenThreads/Atomic:21:
+</I>&gt;<i> In file included from
+</I>&gt;<i> /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include/libkern/OSAtomic.h:27:
+</I>&gt;<i> In file included from
+</I>&gt;<i> /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include/stddef.h:64:
+</I>&gt;<i> In file included from
+</I>&gt;<i> /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include/_types.h:27:
+</I>&gt;<i> In file included from
+</I>&gt;<i> /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include/sys/_types.h:32:
+</I>&gt;<i> /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include/sys/cdefs.h:707:2:
+</I>&gt;<i> error: Unsupported architecture
+</I>&gt;<i> #error Unsupported architecture
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I have no issue to build libosg.a or libosgUtil.a. However, when to
+</I>&gt;<i> compile the osgDB project, the error as showed.
+</I>&gt;<i>
+</I>&gt;<i> Need your help to resolve above macro issue. Is it an bug with Xcode 7.1
+</I>&gt;<i> only?
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicb5bc-3.php?p=65472#65472">http://forum.openscenegraph.org/viewtopic.php?p=65472#65472</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151028/29546126/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151028/29546126/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="278055.html">[osg-users] [build] Xocde 7.1 with osgDB compiler error
+</A></li>
+	<LI>Next message: <A HREF="001836.html">[osg-users] [build] Xocde 7.1 with osgDB compiler error
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1833">[ date ]</a>
+              <a href="thread.html#1833">[ thread ]</a>
+              <a href="subject.html#1833">[ subject ]</a>
+              <a href="author.html#1833">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

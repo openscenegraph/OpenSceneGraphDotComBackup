@@ -1,0 +1,211 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] problems with osg-3.4.0 port to osg-3.6.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20problems%20with%20osg-3.4.0%20port%20to%20osg-3.6.0&In-Reply-To=%3C1536802288.m2f.74733%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="009100.html">
+   <LINK REL="Next"  HREF="009116.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] problems with osg-3.4.0 port to osg-3.6.0</H1>
+<!--htdig_noindex-->
+    <B>Herman Varma</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20problems%20with%20osg-3.4.0%20port%20to%20osg-3.6.0&In-Reply-To=%3C1536802288.m2f.74733%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] problems with osg-3.4.0 port to osg-3.6.0">hermanvarma at eastlink.ca
+       </A><BR>
+    <I>Wed Sep 12 18:31:28 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="009100.html">[osg-users] problems with osg-3.4.0 port to osg-3.6.0
+</A></li>
+        <LI>Next message (by thread): <A HREF="009116.html">[osg-users] problems with osg-3.4.0 port to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9102">[ date ]</a>
+              <a href="thread.html#9102">[ thread ]</a>
+              <a href="subject.html#9102">[ subject ]</a>
+              <a href="author.html#9102">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello I am having trouble porting  Ben Discoe&#8217;s VTP software from openSceneGraph-3.4.0 to osg-3.6.2
+
+The problem lies in replacing the META_object with a macro in shadowTechnique.h as depicted below.
+
+Can someone point out where the problem is.
+
+/** CSimpleInterimShadowTechnique provides an implementation of a depth map shadow tuned to the needs of VTP.*/
+
+class CSimpleInterimShadowTechnique : public osgShadow::ShadowTechnique
+{
+public:
+
+//  working **********************  in opemSceneGraph-3.4.0
+//     CSimpleInterimShadowTechnique();
+//     CSimpleInterimShadowTechnique(const  
+//     CSimpleInterimShadowTechnique&amp; es, const osg::CopyOp&amp; 
+//      copyop=osg::CopyOp::SHALLOW_COPY);
+//     META_Object(osgShadow, CSimpleInterimShadowTechnique);
+//***********************************************************
+
+// not working *********************in opemSceneGraph-3.6.2
+       CSimpleInterimShadowTechnique();
+       CSimpleInterimShadowTechnique(const CSimpleInterimShadowTechnique&amp; es, const osg::CopyOp&amp; copyop = osg::CopyOp::SHALLOW_COPY);
+
+       virtual bool isSameKindAs(const osg::Object* obj) const { return dynamic_cast&lt;const CSimpleInterimShadowTechnique*&gt;(obj) != NULL; } \
+       virtual const char* libraryName() const { return &quot;osgShadow&quot;; }\
+       virtual const char* className() const { return &quot;CSimpleInterimShadowTechnique&quot;; }
+
+
+//**************************************************************
+
+
+In the new implementation I am getting a C2259 error
+
+2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): error C2259: 'CSimpleInterimShadowTechnique': cannot instantiate abstract class
+
+2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: due to following members:
+
+2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: 'osg::Object *osg::Object::cloneType(void) const': is abstract
+
+2&gt;c:\apis\openscenegraph-3.6.2\build\include\osg\object(80): note: see declaration of 'osg::Object::cloneType'
+
+2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: 'osg::Object *osg::Object::clone(const osg::CopyOp &amp;) const': is abstract
+
+2&gt;c:\apis\openscenegraph-3.6.2\build\include\osg\object(84): note: see declaration of 'osg::Object::clone'
+
+2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: 'void osgShadow::ShadowTechnique::resizeGLObjectBuffers(unsigned int)': is abstract
+
+2&gt;c:\apis\openscenegraph-3.6.2\build\include\osgshadow\shadowtechnique(66): note: see declaration of 'osgShadow::ShadowTechnique::resizeGLObjectBuffers'
+2&gt;c:\vtp_vsc\terrainsdk\vtlib\vtosg\nodeosg.cpp(1026): note: 'void osgShadow::ShadowTechnique::releaseGLObjects(osg::State *) const': is abstract
+2&gt;c:\apis\openscenegraph-3.6.2\build\include\osgshadow\shadowtechnique(71): note: see declaration of 'osgShadow::ShadowTechnique::releaseGLObjects'
+
+The  error manifests is in the vtShadow section of nodeOSG.cpp
+
+//////////////////////////////////////////////////////////////////////
+// vtShadow
+//
+
+vtShadow::vtShadow(const int ShadowTextureUnit, int LightNumber) :
+       m_ShadowTextureUnit(ShadowTextureUnit), m_LightNumber(LightNumber)
+{
+       setReceivesShadowTraversalMask(ReceivesShadowTraversalMask);
+       setCastsShadowTraversalMask(CastsShadowTraversalMask);
+
+#if VTLISPSM
+       osg::ref_ptr&lt;CLightSpacePerspectiveShadowTechnique&gt; pShadowTechnique = new CLightSpacePerspectiveShadowTechnique;
+       // No need to set the BaseTextureUnit as the default of zero is OK for us
+       // But the ShadowTextureUnit might be different (default 1)
+       pShadowTechnique-&gt;setShadowTextureUnit(m_ShadowTextureUnit);
+       pShadowTechnique-&gt;setLightNumber(m_LightNumber);
+#else
+
+//errorC2259 cannot instantiate abstract class in openSceneGraph-3.6.2 
+//working in osg-3.4.0
+
+  osg::ref_ptr&lt;CSimpleInterimShadowTechnique&gt; pShadowTechnique = new 
+
+#endif
+
+#if !VTLISPSM
+#if VTDEBUGSHADOWS
+       // add some instrumentation
+       pShadowTechnique-&gt;m_pParent = this;
+#endif
+
+       pShadowTechnique-&gt;SetLightNumber(LightNumber);
+       pShadowTechnique-&gt;SetShadowTextureUnit(m_ShadowTextureUnit);
+       pShadowTechnique-&gt;SetShadowSphereRadius(50.0);
+#endif
+       setShadowTechnique(pShadowTechnique.get());
+
+       SetOsgNode(this);
+}
+
+Help would be appreciated
+
+
+Thank you!
+
+Cheers,
+
+Herman Varma
+Head of Cartographic Research
+Bedford Institute of Oceanography
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic8c09.php?p=74733#74733">http://forum.openscenegraph.org/viewtopic.php?p=74733#74733</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="009100.html">[osg-users] problems with osg-3.4.0 port to osg-3.6.0
+</A></li>
+	<LI>Next message (by thread): <A HREF="009116.html">[osg-users] problems with osg-3.4.0 port to osg-3.6.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#9102">[ date ]</a>
+              <a href="thread.html#9102">[ thread ]</a>
+              <a href="subject.html#9102">[ subject ]</a>
+              <a href="author.html#9102">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

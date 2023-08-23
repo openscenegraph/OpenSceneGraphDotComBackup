@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osgUtil::PlaneIntersector and Invalid Pointer and	Tesselation Error
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgUtil%3A%3APlaneIntersector%20and%20Invalid%20Pointer%20and%0A%09Tesselation%20Error&In-Reply-To=%3C1466682528.m2f.67752%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="003536.html">
+   <LINK REL="Next"  HREF="279684.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osgUtil::PlaneIntersector and Invalid Pointer and	Tesselation Error</H1>
+<!--htdig_noindex-->
+    <B>Th&#195;&#169;o NASSOUR</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osgUtil%3A%3APlaneIntersector%20and%20Invalid%20Pointer%20and%0A%09Tesselation%20Error&In-Reply-To=%3C1466682528.m2f.67752%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osgUtil::PlaneIntersector and Invalid Pointer and	Tesselation Error">osgforum at tevs.eu
+       </A><BR>
+    <I>Thu Jun 23 04:48:48 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="003536.html">[osg-users] Best way to cull object hidden by a mountain
+</A></li>
+        <LI>Next message: <A HREF="279684.html">[osg-users] Protection against NaNs and Inf in display geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279677">[ date ]</a>
+              <a href="thread.html#279677">[ thread ]</a>
+              <a href="subject.html#279677">[ subject ]</a>
+              <a href="author.html#279677">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+
+I am using plane intersection to get the intersection of all meshes in my scene with a plane.  :
+
+Code:
+
+osg::ref_ptr&lt;osgUtil::PlaneIntersector&gt; intersector = new osgUtil::PlaneIntersector(mIntersectionPlane);
+
+intersector-&gt;setRecordHeightsAsAttributes(true);
+intersector-&gt;setPrecisionHint(osgUtil::PlaneIntersector::PrecisionHint::USE_DOUBLE_CALCULATIONS);
+
+osgUtil::IntersectionVisitor mIntersectionVisitor; // Defined as a member usually
+
+mIntersectionVisitor.reset();
+mIntersectionVisitor.setTraversalMask(utils::MASK_SCENE_DATA);
+mIntersectionVisitor.setIntersector(intersector.get());
+
+view-&gt;getSceneData()-&gt;accept(mIntersectionVisitor);
+
+osgUtil::PlaneIntersector::Intersections&amp; intersections = intersector-&gt;getIntersections();
+
+
+
+
+and in another function : i am computing the corresponding geode to the intersections:
+
+
+Code:
+
+inline osg::ref_ptr&lt;osg::Geode&gt; getSlice(const osgUtil::PlaneIntersector::Intersections &amp; intersections)
+{
+osg::ref_ptr&lt;osg::Geode&gt; geode = new osg::Geode;
+osg::ref_ptr&lt;osg::Geometry&gt; geometry = new osg::Geometry;
+osgUtil::Tessellator tessellator;
+
+// set the normal in the same way color.
+osg::ref_ptr&lt;osg::Vec3Array&gt; normals = new osg::Vec3Array;
+// Compute Vertices
+osg::ref_ptr&lt;osg::Vec3Array&gt; vertices = new osg::Vec3Array;
+
+for (const auto&amp; intersection : intersections)
+{
+  for (const auto&amp; vertex : intersection.polyline)
+  {
+      vertices-&gt;push_back(vertex);
+      normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+  }
+  vertices-&gt;push_back(*intersection.polyline.begin());
+  normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+  vertices-&gt;push_back(*intersections.begin()-&gt;polyline.begin());
+  normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+}
+
+geometry-&gt;setVertexArray(vertices);
+geometry-&gt;setNormalArray(normals, osg::Array::BIND_OVERALL);
+geometry-&gt;addPrimitiveSet(new osg::DrawArrays(GL_POLYGON, 0, vertices-&gt;size()));
+
+tessellator.setWindingType(osgUtil::Tessellator::WindingType::TESS_WINDING_NONZERO);
+tessellator.setTessellationType(osgUtil::Tessellator::TESS_TYPE_GEOMETRY);
+tessellator.retessellatePolygons(*geometry);
+
+geode-&gt;addDrawable(geometry.get());
+geode-&gt;getOrCreateStateSet()-&gt;setMode(GL_LIGHTING, osg::StateAttribute::ON);
+
+return geode.get();
+}
+
+
+
+
+Now : 
+My first Problem is : Somtimes thee last element in the NodePath of Intersections in the intersection is an invalid pointer, I don't Know why.
+
+My Secend Problem is : Somtimes when i have meshes with Holes, the Holes are not Computed, all the mesh is filled.
+
+Thank you!
+
+Cheers,
+Th&#233;o
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic6aff.php?p=67752#67752">http://forum.openscenegraph.org/viewtopic.php?p=67752#67752</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="003536.html">[osg-users] Best way to cull object hidden by a mountain
+</A></li>
+	<LI>Next message: <A HREF="279684.html">[osg-users] Protection against NaNs and Inf in display geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#279677">[ date ]</a>
+              <a href="thread.html#279677">[ thread ]</a>
+              <a href="subject.html#279677">[ subject ]</a>
+              <a href="author.html#279677">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

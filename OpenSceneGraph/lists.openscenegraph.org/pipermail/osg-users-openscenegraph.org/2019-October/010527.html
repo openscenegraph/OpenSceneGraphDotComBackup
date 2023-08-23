@@ -1,0 +1,156 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] R: R: multiple matrix transfromations cause severe slowness in performance
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20R%3A%20R%3A%20multiple%20matrix%20transfromations%20cause%20severe%0A%20slowness%20in%20performance&In-Reply-To=%3CMN2PR03MB488047D0D7EC2CCE74CB295693950%40MN2PR03MB4880.namprd03.prod.outlook.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="010522.html">
+   <LINK REL="Next"  HREF="010528.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] R: R: multiple matrix transfromations cause severe slowness in performance</H1>
+<!--htdig_noindex-->
+    <B>Gianluca Natale</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20R%3A%20R%3A%20multiple%20matrix%20transfromations%20cause%20severe%0A%20slowness%20in%20performance&In-Reply-To=%3CMN2PR03MB488047D0D7EC2CCE74CB295693950%40MN2PR03MB4880.namprd03.prod.outlook.com%3E"
+       TITLE="[osg-users] R: R: multiple matrix transfromations cause severe slowness in performance">natale at europe.altair.com
+       </A><BR>
+    <I>Wed Oct  9 00:26:39 PDT 2019</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="010522.html">[osg-users] R: multiple matrix transfromations cause severe slowness in performance
+</A></li>
+        <LI>Next message (by thread): <A HREF="010528.html">[osg-users] R: R: multiple matrix transfromations cause severe slowness in performance
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10527">[ date ]</a>
+              <a href="thread.html#10527">[ thread ]</a>
+              <a href="subject.html#10527">[ subject ]</a>
+              <a href="author.html#10527">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chris,
+first of all, thanks for helping.
+
+Each of those 200 objects is simply the shape of an arrow (basically a cone and a cylinder), whose geometry takes no more than 100 vertices.
+The drawable that renders each arrow is a custom drawable that I derived from osg::drawable, where I&#8217;ve overridden the drawImplementation.
+Internally my drawable allocates a VBO for the geometry, and sends it directly to OpenGL for rendering in drawImplementation.
+My drawable provides a consistent bounding box that OSG uses to cull the drawable when outside of the viewing volume.
+Each drawable is inserted in a geode, that in its turn is attached to an autotransform matrix, because I need those shapes to be rendered at constant size on screen (70 pixels).
+So, it is OSG that during rendering traversal computes the scale factors of that autotransform, to keep the constant size.
+Note that I&#8217;m not using shaders at the moment, but still the ffp.
+
+At the beginning I had thought that my drawImplementation was the bottleneck in redrawing, but even if I comment its code completely
+(making drawImplementation an empty function), still the redraw takes a considerable time.
+It looks like most of the time was taken to traverse the scenegraph, apply the transformation and culling the drawables.
+
+I&#8217;m still investigating, and trying to isolate the issue.
+
+Thanks,
+Gianluca
+
+Da: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt; Per conto di Chris Hanson
+Inviato: marted&#236; 8 ottobre 2019 15:51
+A: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+Oggetto: Re: [osg-users] R: multiple matrix transfromations cause severe slowness in performance
+
+I believe most computations you could imagine doing could be performed in the vertex shader during draw rather than by the CPU during cull.
+
+To describe more we'd need a better idea of what those 200 objects are, how they behave, what they represent, and how auto transform is being used.
+
+On Tue, Oct 8, 2019 at 7:36 AM Gianluca Natale &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">natale at europe.altair.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">natale at europe.altair.com</A>&gt;&gt; wrote:
+As I said, I&#8217;d like to use auto-transformations for those 200 objects, so I need 200 transformations for sure, and those transformations are updated by OSG at rendering time.
+So, the transformation has to be computed by OSG out of my vertex shader. Am I wrong?
+
+Da: osg-users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users-bounces at lists.openscenegraph.org</A>&gt;&gt; Per conto di Chris Hanson
+Inviato: marted&#236; 8 ottobre 2019 14:42
+A: OpenSceneGraph Users &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;&gt;
+Oggetto: Re: [osg-users] multiple matrix transfromations cause severe slowness in performance
+
+Can you find a way to perform the transform on each object in a vertex shader and not have a unique state have to be calculated for each of the 200 objects?
+
+On Tue, Oct 8, 2019 at 6:20 AM Gianluca Natale &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">natale at europe.altair.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">natale at europe.altair.com</A>&gt;&gt; wrote:
+Hi all,
+I have a performance issue in my scenegraph that I cannot completely understand.
+My scenegraph is made by a main matrix transform, with these 2 children:
+
+  *   One geode that renders a big object on screen (the geometry in the drawable can take up to several thousands vertices);
+  *   One group node that in its turn has 200 children, each made by a matrix transform and a geode. The drawable in each of those geodes is very simple (no more than 100 vertices)
+It seems that this configuration allows me to have at most 50 fps.
+I feel that this should be rendered much faster.
+
+So I made some experiment. If I remove the 200 matrix transform attached to the group node I mentioned above,
+and directly apply the transformations to the vertices of the geometries in the 200 drawables of the small objects, performance improves a lot, till 100 fps.
+I investigatd a bit inside OSG code (I&#8217;m using OG ver.3.4.1), and apparently the only overhead due to the additional matrix transformations is a call to glLoadMatrix (I&#8217;m using the old ffp).
+How can you explain such an improvement?
+
+My real problem is that I would like to replace the 200 matrix transfromations with 200 auto-transform matrices, since I&#8217;d like those small objects to keep constant size on screen.
+But if I do that, I cannot remove the 200 transformations at all, and I&#8217;ll end up with a bad performance.
+Any idea about what I can try to make rendering of my scenegraph faster?
+
+Thanks,
+Gianluca
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.org_https_/nam02.safelinks.protection.outlook.com/index0826.html?url=http%3A%2F%2Flists.openscenegraph.org%2Flistinfo.cgi%2Fosg-users-openscenegraph.org&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638653731&amp;sdata=Ucr17caFSHVZXJ58aCuCaXtIqEPR55rEX68o8iGCX04%3D&amp;reserved=0">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Flists.openscenegraph.org%2Flistinfo.cgi%2Fosg-users-openscenegraph.org&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638653731&amp;sdata=Ucr17caFSHVZXJ58aCuCaXtIqEPR55rEX68o8iGCX04%3D&amp;reserved=0</A>&gt;
+
+
+--
+Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>&gt; <A HREF="http://www.alphapixel.com/<https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Fwww.alphapixel.com%2F&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638653731&amp;sdata=Or0JG2UC9n2xnuF5%2FIoTDL8lvVxF1Hzad1YyHH%2FvZH4%3D&amp;reserved=0">http://www.alphapixel.com/&lt;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Fwww.alphapixel.com%2F&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638653731&amp;sdata=Or0JG2UC9n2xnuF5%2FIoTDL8lvVxF1Hzad1YyHH%2FvZH4%3D&amp;reserved=0</A>&gt;
+Training &#8226; Consulting &#8226; Contracting
+3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226; GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+Legal/IP &#8226; Forensics &#8226; Imaging &#8226; UAVs &#8226; GIS &#8226; GPS &#8226; osgEarth &#8226; Terrain &#8226; Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226; iPhone/iPad/iOS &#8226; Android
+@alphapixel&lt;<A HREF="https://nam02.safelinks.protection.outlook.com/?url=https%3A%2F%2Ftwitter.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638663725&amp;sdata=0W9mzPAV8ei6k%2F1%2FdPe4gp%2BQ9p7QC6AgWq19EG%2FGAxE%3D&amp;reserved=0">https://nam02.safelinks.protection.outlook.com/?url=https%3A%2F%2Ftwitter.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638663725&amp;sdata=0W9mzPAV8ei6k%2F1%2FdPe4gp%2BQ9p7QC6AgWq19EG%2FGAxE%3D&amp;reserved=0</A>&gt; facebook.com/alphapixel&lt;<A HREF="https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Ffacebook.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638663725&amp;sdata=ahAuQDQ6LMv3NuwNRoj%2BDIti7KG%2BtziyVOaoE7JppU4%3D&amp;reserved=0">https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Ffacebook.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638663725&amp;sdata=ahAuQDQ6LMv3NuwNRoj%2BDIti7KG%2BtziyVOaoE7JppU4%3D&amp;reserved=0</A>&gt; (775) 623-PIXL [7495]
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>&gt;
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.org_https_/nam02.safelinks.protection.outlook.com/indexadeb.html?url=http%3A%2F%2Flists.openscenegraph.org%2Flistinfo.cgi%2Fosg-users-openscenegraph.org&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638673719&amp;sdata=8LPvhljWGQjqrssrZHE%2BGwnG7ET3Z2qEQG1vOh%2BoRF0%3D&amp;reserved=0">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Flists.openscenegraph.org%2Flistinfo.cgi%2Fosg-users-openscenegraph.org&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638673719&amp;sdata=8LPvhljWGQjqrssrZHE%2BGwnG7ET3Z2qEQG1vOh%2BoRF0%3D&amp;reserved=0</A>&gt;
+
+
+--
+Chris 'Xenon' Hanson, omo sanza lettere. <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>&lt;mailto:<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">Xenon at AlphaPixel.com</A>&gt; <A HREF="http://www.alphapixel.com/<https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Fwww.alphapixel.com%2F&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638673719&amp;sdata=ANBohUXLHJTI5xhBVgvpg9dwbhaB6k9V3KAWQizoHm4%3D&amp;reserved=0">http://www.alphapixel.com/&lt;https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Fwww.alphapixel.com%2F&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638673719&amp;sdata=ANBohUXLHJTI5xhBVgvpg9dwbhaB6k9V3KAWQizoHm4%3D&amp;reserved=0</A>&gt;
+Training &#8226; Consulting &#8226; Contracting
+3D &#8226; Scene Graphs (Open Scene Graph/OSG) &#8226; OpenGL 2 &#8226; OpenGL 3 &#8226; OpenGL 4 &#8226; GLSL &#8226; OpenGL ES 1 &#8226; OpenGL ES 2 &#8226; OpenCL
+Legal/IP &#8226; Forensics &#8226; Imaging &#8226; UAVs &#8226; GIS &#8226; GPS &#8226; osgEarth &#8226; Terrain &#8226; Telemetry &#8226; Cryptography &#8226; LIDAR &#8226; Embedded &#8226; Mobile &#8226; iPhone/iPad/iOS &#8226; Android
+@alphapixel&lt;<A HREF="https://nam02.safelinks.protection.outlook.com/?url=https%3A%2F%2Ftwitter.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638683714&amp;sdata=RpsWNoSX3Hs96xvhybs3Q%2BZcAbGvfFaTNgxJk1r7mZY%3D&amp;reserved=0">https://nam02.safelinks.protection.outlook.com/?url=https%3A%2F%2Ftwitter.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638683714&amp;sdata=RpsWNoSX3Hs96xvhybs3Q%2BZcAbGvfFaTNgxJk1r7mZY%3D&amp;reserved=0</A>&gt; facebook.com/alphapixel&lt;<A HREF="https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Ffacebook.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638683714&amp;sdata=hnABSO6gLf%2FdBDNeX06qQ9NlnHUg1D13Fxf%2F4yBuRcY%3D&amp;reserved=0">https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Ffacebook.com%2Falphapixel&amp;data=02%7C01%7Cnatale%40europe.altair.com%7Ce5a56a1a983b485f984b08d74bf68ed2%7C2bae5b570eb848fbba47990259da89d2%7C0%7C0%7C637061394638683714&amp;sdata=hnABSO6gLf%2FdBDNeX06qQ9NlnHUg1D13Fxf%2F4yBuRcY%3D&amp;reserved=0</A>&gt; (775) 623-PIXL [7495]
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20191009/e79e1250/attachment.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20191009/e79e1250/attachment.html</A>&gt;
+</PRE>
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="010522.html">[osg-users] R: multiple matrix transfromations cause severe slowness in performance
+</A></li>
+	<LI>Next message (by thread): <A HREF="010528.html">[osg-users] R: R: multiple matrix transfromations cause severe slowness in performance
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#10527">[ date ]</a>
+              <a href="thread.html#10527">[ thread ]</a>
+              <a href="subject.html#10527">[ subject ]</a>
+              <a href="author.html#10527">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,166 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] found memory leak in OSG 3.0.1
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20found%20memory%20leak%20in%20OSG%203.0.1&In-Reply-To=%3CCAFN7Y%2BX3xNJtPV2GfzfYsY-_9qOZB2KTXdsr8-Fb0HtKMCAgiQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="281615.html">
+   <LINK REL="Next"  HREF="005400.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] found memory leak in OSG 3.0.1</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20found%20memory%20leak%20in%20OSG%203.0.1&In-Reply-To=%3CCAFN7Y%2BX3xNJtPV2GfzfYsY-_9qOZB2KTXdsr8-Fb0HtKMCAgiQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] found memory leak in OSG 3.0.1">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Jan 19 09:52:36 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="281615.html">[osg-users] found memory leak in OSG 3.0.1
+</A></li>
+        <LI>Next message: <A HREF="005400.html">[osg-users] found memory leak in OSG 3.0.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5394">[ date ]</a>
+              <a href="thread.html#5394">[ thread ]</a>
+              <a href="subject.html#5394">[ subject ]</a>
+              <a href="author.html#5394">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Gianluca,
+
+How you are measuring the memory usage?  It could simply be that the
+memory tracking isn't properly handling deallocations.
+
+As a general note, close will just close the graphics context, it
+won't delete the osg::GraphicsWindowWin32.  Try testing the creation
+of a viewer within a well defined scope and then see what memory has
+been deallocated or not on leaving the scope where all the viewer
+related objects should be cleaned up.
+
+Robert.
+
+On 19 January 2017 at 17:02, Gianluca Natale &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">natale at europe.altair.com</A>&gt; wrote:
+&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> In my application I&#8217;m using OSG 3.0.1 (I do know it is old, but I do not
+</I>&gt;<i> have the time now to move to a newer version).
+</I>&gt;<i>
+</I>&gt;<i> I think I have a memory leak, and I don&#8217;t know if it&#8217;s my fault or a bug in
+</I>&gt;<i> OSG.
+</I>&gt;<i>
+</I>&gt;<i> Using the task manager (on Win 8.1 Pro), I see this.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> When I call:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> GraphicsContext* GraphicsContext::createGraphicsContext(Traits* traits);
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> memory allocated in my application increases of about 2.5 MB.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Then, when I call:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> GraphicsContext::close(bool callCloseImplementation); // I pass true to this
+</I>&gt;<i> function
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> memory allocated in my application decreases of about 1.5 MB.
+</I>&gt;<i>
+</I>&gt;<i> So, there is always  about 1 MB that is not deallocated.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I tried to investigate a bit, and noticed that the problem seems to happen
+</I>&gt;<i> inside this function:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> bool GraphicsWindowWin32::setWindow( HWND handle ).
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Specifically, there are 2 calls in that function where memory is allocated:
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> 1)      bool GraphicsWindowWin32::setPixelFormat(); // increases about 1 MB
+</I>&gt;<i>
+</I>&gt;<i> 2)      HGLRC GraphicsWindowWin32::createContextImplementation(); //
+</I>&gt;<i> increases about 1.5 MB
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> So, it looks like the memory allocated at point 1 is never released.
+</I>&gt;<i>
+</I>&gt;<i> Is there anything I have to call, when I want to destroy a graphic context,
+</I>&gt;<i> other than close()?
+</I>&gt;<i>
+</I>&gt;<i> Or, if you do know that it is a memory leak, has it been fixed in a newer
+</I>&gt;<i> version of OSG?
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thanks,
+</I>&gt;<i>
+</I>&gt;<i> Gianluca Natale
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="281615.html">[osg-users] found memory leak in OSG 3.0.1
+</A></li>
+	<LI>Next message: <A HREF="005400.html">[osg-users] found memory leak in OSG 3.0.1
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5394">[ date ]</a>
+              <a href="thread.html#5394">[ thread ]</a>
+              <a href="subject.html#5394">[ subject ]</a>
+              <a href="author.html#5394">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

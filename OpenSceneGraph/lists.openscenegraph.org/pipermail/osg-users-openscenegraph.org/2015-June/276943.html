@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [build] Building OpenSceneGraph-3.3.4 with GDAL 2.0
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20Building%20OpenSceneGraph-3.3.4%20with%20GDAL%202.0&In-Reply-To=%3C1435215687.m2f.64188%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="000721.html">
+   <LINK REL="Next"  HREF="000722.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [build] Building OpenSceneGraph-3.3.4 with GDAL 2.0</H1>
+<!--htdig_noindex-->
+    <B>Tony Vasile</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20Building%20OpenSceneGraph-3.3.4%20with%20GDAL%202.0&In-Reply-To=%3C1435215687.m2f.64188%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] [build] Building OpenSceneGraph-3.3.4 with GDAL 2.0">minghia at gmail.com
+       </A><BR>
+    <I>Thu Jun 25 00:01:27 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="000721.html">[osg-users] [build] Compile on Release error: LNK2001	OpenThreads::Atomic::operator++
+</A></li>
+        <LI>Next message: <A HREF="000722.html">[osg-users] [build] Building OpenSceneGraph-3.3.4 with GDAL 2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276943">[ date ]</a>
+              <a href="thread.html#276943">[ thread ]</a>
+              <a href="subject.html#276943">[ subject ]</a>
+              <a href="author.html#276943">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi,
+I get a similar problem with GDAL 2.0 and the OpenSceneGraph 3.2.1
+
+Code:
+
+home/avasile/src/OpenSceneGraph-3.2.1/src/osgPlugins/ogr/ReaderWriterOGR.cpp: In member function &#8216;virtual osgDB::ReaderWriter::ReadResult ReaderWriterOGR::readFile(const std::string&amp;, const osgDB::ReaderWriter::Options*) const&#8217;:
+/home/avasile/src/OpenSceneGraph-3.2.1/src/osgPlugins/ogr/ReaderWriterOGR.cpp:137: warning: &#8216;static OGRSFDriverRegistrar* OGRSFDriverRegistrar::GetRegistrar()&#8217; is deprecated (declared at /usr/local/include/ogrsf_frmts.h:320)
+/home/avasile/src/OpenSceneGraph-3.2.1/src/osgPlugins/ogr/ReaderWriterOGR.cpp:137: warning: &#8216;int OGRSFDriverRegistrar::GetDriverCount()&#8217; is deprecated (declared at /usr/local/include/ogrsf_frmts.h:324)
+/home/avasile/src/OpenSceneGraph-3.2.1/src/osgPlugins/ogr/ReaderWriterOGR.cpp:141: error: &#8216;Open&#8217; is not a member of &#8216;OGRSFDriverRegistrar&#8217;
+/home/avasile/src/OpenSceneGraph-3.2.1/src/osgPlugins/ogr/ReaderWriterOGR.cpp:161: warning: &#8216;virtual const char* OGRDataSource::GetName()&#8217; is deprecated (declared at /usr/local/include/ogrsf_frmts.h:243)
+/home/avasile/src/OpenSceneGraph-3.2.1/src/osgPlugins/ogr/ReaderWriterOGR.cpp:165: warning: &#8216;static void OGRDataSource::DestroyDataSource(OGRDataSource*)&#8217; is deprecated (declared at /usr/local/include/ogrsf_frmts.h:245)
+
+
+
+
+
+It seems that the GDAL API In 2.0 has changed so the code no longer compiles. If one looks at the appropriate OGR header file there is a comment to indicate that OGRSFDriverRegistrar is also deprecated and should be replace by 
+
+
+Code:
+
+/************************************************************************/
+/*                         OGRSFDriverRegistrar                         */
+/************************************************************************/
+
+/**
+ * LEGACY class. Use GDALDriverManager in your new code ! This class may be
+ * removed in a later release.
+ *
+ * Singleton manager for OGRSFDriver instances that will be used to try
+ * and open datasources.  Normally the registrar is populated with 
+ * standard drivers using the OGRRegisterAll() function and does not need
+ * to be directly accessed.  The driver registrar and all registered drivers
+ * may be cleaned up on shutdown using OGRCleanupAll().
+ *
+ * @deprecated 
+ */
+
+
+
+
+The only open calls in 
+Code:
+ogr_api.h
+
+ have  extra parameters 
+Code:
+OGRDataSourceH CPL_DLL OGROpen( const char *, int, OGRSFDriverH * ) CPL_WARN_UNUSED_RESULT;
+
+
+
+
+to what is called from ReaderWriterOGR.cpp.
+... 
+
+
+Thank you!
+
+Cheers,
+Tony
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic9b62.php?p=64188#64188">http://forum.openscenegraph.org/viewtopic.php?p=64188#64188</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="000721.html">[osg-users] [build] Compile on Release error: LNK2001	OpenThreads::Atomic::operator++
+</A></li>
+	<LI>Next message: <A HREF="000722.html">[osg-users] [build] Building OpenSceneGraph-3.3.4 with GDAL 2.0
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#276943">[ date ]</a>
+              <a href="thread.html#276943">[ thread ]</a>
+              <a href="subject.html#276943">[ subject ]</a>
+              <a href="author.html#276943">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

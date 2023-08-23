@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [build] Xocde 7.1 with osgDB compiler error
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20Xocde%207.1%20with%20osgDB%20compiler%20error&In-Reply-To=%3CCAFN7Y%2BXLOEpop9PxUj51GDSUwpkMGdLCnzL7D6w%3Diqr5H4JD-g%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="001836.html">
+   <LINK REL="Next"  HREF="001845.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [build] Xocde 7.1 with osgDB compiler error</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20Xocde%207.1%20with%20osgDB%20compiler%20error&In-Reply-To=%3CCAFN7Y%2BXLOEpop9PxUj51GDSUwpkMGdLCnzL7D6w%3Diqr5H4JD-g%40mail.gmail.com%3E"
+       TITLE="[osg-users] [build] Xocde 7.1 with osgDB compiler error">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Oct 29 02:38:45 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="001836.html">[osg-users] [build] Xocde 7.1 with osgDB compiler error
+</A></li>
+        <LI>Next message: <A HREF="001845.html">[osg-users] [build] Xocde 7.1 with osgDB compiler error
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1844">[ date ]</a>
+              <a href="thread.html#1844">[ thread ]</a>
+              <a href="subject.html#1844">[ subject ]</a>
+              <a href="author.html#1844">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Radu,
+
+What errors do you see with your build when you don't include the
+IF(MACOS_VERSION_LIST_LENGTH EQUAL &quot;3&quot;) block to avoid querying the
+MACOS_VERSION_PATCH?
+
+With this block I'd be inclined to use GREATER 2, rather than EQUAL 3 just
+in case the MACOS implementation adds a forth element to the list.
+
+Robert.
+
+On 28 October 2015 at 14:07, Radu Popescu &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">radu.popescu at pix4d.com</A>&gt; wrote:
+
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> We are using OSG for a cross-platform application that runs on Windows,
+</I>&gt;<i> Linux and Mac OS X (10.10 and 10.11).
+</I>&gt;<i>
+</I>&gt;<i> The application uses OSG 3.4 and Qt 4.8 and we had to apply some patches
+</I>&gt;<i> to get this setup working. We maintain a public Git clone, based on the
+</I>&gt;<i> GitHub mirror of OpenSceneGraph.
+</I>&gt;<i>
+</I>&gt;<i> I don't have enough posts on this forum to include a link to the repo. I
+</I>&gt;<i> can share it by private messages or some other way, if anybody is
+</I>&gt;<i> interested.
+</I>&gt;<i>
+</I>&gt;<i> We are using this Git clone internally and we haven't had the time to
+</I>&gt;<i> clean it up and submit these changes back upstream (we're not even sure all
+</I>&gt;<i> the changes we've made are general enough to be integrated upstream).
+</I>&gt;<i>
+</I>&gt;<i> Here is a patch that could help with the compilation:
+</I>&gt;<i>
+</I>&gt;<i> diff --git a/CMakeLists.txt b/CMakeLists.txt
+</I>&gt;<i> index ce2815b..3e496c1 100644
+</I>&gt;<i> --- a/CMakeLists.txt
+</I>&gt;<i> +++ b/CMakeLists.txt
+</I>&gt;<i> @@ -180,7 +180,13 @@ IF(APPLE)
+</I>&gt;<i>      STRING(REPLACE &quot;.&quot; &quot;;&quot; MACOS_VERSION_LIST ${OSG_OSX_SDK_NAME})
+</I>&gt;<i>      LIST(GET MACOS_VERSION_LIST 0 MACOS_VERSION_MAJOR)
+</I>&gt;<i>      LIST(GET MACOS_VERSION_LIST 1 MACOS_VERSION_MINOR)
+</I>&gt;<i> -    LIST(GET MACOS_VERSION_LIST 2 MACOS_VERSION_PATCH)
+</I>&gt;<i> +
+</I>&gt;<i> +    LIST(LENGTH MACOS_VERSION_LIST MACOS_VERSION_LIST_LENGTH)
+</I>&gt;<i> +    IF(MACOS_VERSION_LIST_LENGTH EQUAL &quot;3&quot;)
+</I>&gt;<i> +        LIST(GET MACOS_VERSION_LIST 2 MACOS_VERSION_PATCH)
+</I>&gt;<i> +    ELSE()
+</I>&gt;<i> +        SET(MACOS_VERSION_PATCH &quot;0&quot;)
+</I>&gt;<i> +    ENDIF()
+</I>&gt;<i>
+</I>&gt;<i>      SET(OSG_OSX_SDK_NAME
+</I>&gt;<i> &quot;macosx${MACOS_VERSION_MAJOR}.${MACOS_VERSION_MINOR}&quot;)
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Additionally, here are the CMake configuration flags we are using to
+</I>&gt;<i> compile OSG:
+</I>&gt;<i>
+</I>&gt;<i> cmake \
+</I>&gt;<i> -DCMAKE_BUILD_TYPE=Release \
+</I>&gt;<i> -DOPENGL_PROFILE=&quot;GLCORE&quot; \
+</I>&gt;<i> -DCMAKE_EXE_LINKER_FLAGS=&quot;-stdlib=libc++&quot; \
+</I>&gt;<i> -DCMAKE_MODULE_LINKER_FLAGS=&quot;-stdlib=libc++&quot; \
+</I>&gt;<i> -DCMAKE_SHARED_LINKER_FLAGS=&quot;-stdlib=libc++&quot; \
+</I>&gt;<i> -DCMAKE_OSX_ARCHITECTURES=&quot;x86_64&quot; \
+</I>&gt;<i> -DOSG_DEFAULT_IMAGE_PLUGIN_FOR_OSX=&quot;imageio&quot; \
+</I>&gt;<i> -DOSG_WINDOWING_SYSTEM=&quot;Cocoa&quot; \
+</I>&gt;<i> -DDESIRED_QT_VERSION=4 \
+</I>&gt;<i> -DQT_QMAKE_EXECUTABLE=/usr/bin/qmake \
+</I>&gt;<i> -DDYNAMIC_OPENSCENEGRAPH=OFF \
+</I>&gt;<i> -DDYNAMIC_OPENTHREADS=OFF
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> I hope this helps!
+</I>&gt;<i>
+</I>&gt;<i> Best regards,
+</I>&gt;<i> Radu
+</I>&gt;<i>
+</I>&gt;<i> ----------------------
+</I>&gt;<i> Radu Popescu
+</I>&gt;<i> Software Engineer
+</I>&gt;<i> Pix4D SA
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic6c9c.php?p=65477#65477">http://forum.openscenegraph.org/viewtopic.php?p=65477#65477</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20151029/40ae746d/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20151029/40ae746d/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="001836.html">[osg-users] [build] Xocde 7.1 with osgDB compiler error
+</A></li>
+	<LI>Next message: <A HREF="001845.html">[osg-users] [build] Xocde 7.1 with osgDB compiler error
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1844">[ date ]</a>
+              <a href="thread.html#1844">[ thread ]</a>
+              <a href="subject.html#1844">[ subject ]</a>
+              <a href="author.html#1844">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

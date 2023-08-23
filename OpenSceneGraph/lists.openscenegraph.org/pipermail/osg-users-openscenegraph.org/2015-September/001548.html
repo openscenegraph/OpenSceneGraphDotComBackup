@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] performance mystery with an osg::TerrainTile on	nVidia. Intel wins.
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20performance%20mystery%20with%20an%20osg%3A%3ATerrainTile%20on%0A%09nVidia.%20Intel%20wins.&In-Reply-To=%3CCALm6U%2Br71QYbdLT1RwahFC1Le3N3ebaFpJhW%3D8Br%3D41bAFW2RQ%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="277770.html">
+   <LINK REL="Next"  HREF="001549.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] performance mystery with an osg::TerrainTile on	nVidia. Intel wins.</H1>
+<!--htdig_noindex-->
+    <B>Christian Buchner</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20performance%20mystery%20with%20an%20osg%3A%3ATerrainTile%20on%0A%09nVidia.%20Intel%20wins.&In-Reply-To=%3CCALm6U%2Br71QYbdLT1RwahFC1Le3N3ebaFpJhW%3D8Br%3D41bAFW2RQ%40mail.gmail.com%3E"
+       TITLE="[osg-users] performance mystery with an osg::TerrainTile on	nVidia. Intel wins.">christian.buchner at gmail.com
+       </A><BR>
+    <I>Thu Sep 17 08:03:14 PDT 2015</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="277770.html">[osg-users] performance mystery with an osg::TerrainTile on nVidia.	Intel wins.
+</A></li>
+        <LI>Next message: <A HREF="001549.html">[osg-users] performance mystery with an osg::TerrainTile on nVidia. Intel wins.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1548">[ date ]</a>
+              <a href="thread.html#1548">[ thread ]</a>
+              <a href="subject.html#1548">[ subject ]</a>
+              <a href="author.html#1548">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Found the culprit for my performance woes. The nvidia driver's GLX module
+for Xorg was likely overwritten by an update to xorg. This caused the GLX
+module initialisation to fail and the following lines to appear in the log
+file.
+
+[   873.392] (EE) NVIDIA(0): Failed to initialize the GLX module; please
+check in your X
+[   873.392] (EE) NVIDIA(0):     log file that the GLX module has been
+loaded in your X
+[   873.392] (EE) NVIDIA(0):     server, and that the module is the NVIDIA
+GLX module.  If
+[   873.392] (EE) NVIDIA(0):     you continue to encounter problems, Please
+try
+[   873.392] (EE) NVIDIA(0):     reinstalling the NVIDIA driver.
+
+[   874.171] (II) AIGLX: Screen 0 is not DRI2 capable
+[   874.171] (EE) AIGLX: reverting to software rendering
+[   874.177] (II) AIGLX: Loaded and initialized swrast
+[   874.177] (II) GLX: Initialized DRISWRAST GL provider for screen 0
+
+The OpenGL system therefore reverted to software rasterization.
+
+What I do not understand is why the command &quot;glxinfo&quot; kept showing NVIDIA
+Corporation as vendor for OpenGL in this case.
+
+After reinstalling the nVidia driver, my draw times for the terrain tile
+are in the range of 0.2 ms. Yay. In your face, Intel.
+
+Christian
+
+
+
+2015-09-17 16:05 GMT+02:00 Christian Buchner &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">christian.buchner at gmail.com</A>&gt;:
+
+&gt;<i> Hi all,
+</I>&gt;<i>
+</I>&gt;<i> I am loading a single osg::TerrainTile into my scenegraph, as a child of
+</I>&gt;<i> an osg::Terrain. Into this tile goes a height field and one image layer.
+</I>&gt;<i>
+</I>&gt;<i> I have got around 80k vertices and 157k triangles in a single drawable
+</I>&gt;<i> that is marked as a &quot;fast&quot; drawable in the OSG stats handler (shown by
+</I>&gt;<i> using the s hotkey)
+</I>&gt;<i>
+</I>&gt;<i> While this application runs butter smooth on Intel integrated graphics (60
+</I>&gt;<i> FPS), I am experiencing somewhat of a mystery slowdown on nVidia GTX 970
+</I>&gt;<i> and an nVidia GT 750M.
+</I>&gt;<i>
+</I>&gt;<i> 5 FPS and draw times of 170ms upwards on the 750M for example.
+</I>&gt;<i> This is on Ubuntu 12.4 with nVidia driver 331.113
+</I>&gt;<i>
+</I>&gt;<i> 10 FPS and draw times of 78ms upwards on the GTX 970M.
+</I>&gt;<i> This is on Ubuntu 12.4 with nVidia driver 346.46
+</I>&gt;<i>
+</I>&gt;<i> The geometry created by src/osgTerrain/GeometryTechnique disables display
+</I>&gt;<i> lists and uses vertex buffer objects. It's referencing a vertex buffer
+</I>&gt;<i> using a single osg::DrawElementsUInt(GL_TRIANGLES).
+</I>&gt;<i>
+</I>&gt;<i> The slowdown is a mystery. Any ideas what might be going on here? Why
+</I>&gt;<i> would the nVidia driver be hitting such a slow code path? In terms of
+</I>&gt;<i> geometry complexity, 80k vertices and 157k triangles is a joke even for
+</I>&gt;<i> today's entry level GPUs.
+</I>&gt;<i>
+</I>&gt;<i> Let me know if you need some code for repro'ing.
+</I>&gt;<i>
+</I>&gt;<i> Christian
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20150917/d7c44dc5/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20150917/d7c44dc5/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="277770.html">[osg-users] performance mystery with an osg::TerrainTile on nVidia.	Intel wins.
+</A></li>
+	<LI>Next message: <A HREF="001549.html">[osg-users] performance mystery with an osg::TerrainTile on nVidia. Intel wins.
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#1548">[ date ]</a>
+              <a href="thread.html#1548">[ thread ]</a>
+              <a href="subject.html#1548">[ subject ]</a>
+              <a href="author.html#1548">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

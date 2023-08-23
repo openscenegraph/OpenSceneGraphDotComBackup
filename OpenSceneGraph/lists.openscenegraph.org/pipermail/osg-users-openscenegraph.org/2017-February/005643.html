@@ -1,0 +1,204 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osg::Image::setImage problem
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%3A%3AImage%3A%3AsetImage%20problem&In-Reply-To=%3C1487455040.m2f.70274%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005625.html">
+   <LINK REL="Next"  HREF="005648.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osg::Image::setImage problem</H1>
+<!--htdig_noindex-->
+    <B>Evan Tsai</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%3A%3AImage%3A%3AsetImage%20problem&In-Reply-To=%3C1487455040.m2f.70274%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] osg::Image::setImage problem">evanyftsai at gmail.com
+       </A><BR>
+    <I>Sat Feb 18 13:57:20 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005625.html">[osg-users] osg::Image::setImage problem
+</A></li>
+        <LI>Next message: <A HREF="005648.html">[osg-users] osg::Image::setImage problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5643">[ date ]</a>
+              <a href="thread.html#5643">[ thread ]</a>
+              <a href="subject.html#5643">[ subject ]</a>
+              <a href="author.html#5643">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Thank you Robert.
+
+Can you point me to more detailed documentation about the definition of these two parameters, packing and rowLength?
+
+Thanks,
+Evan
+
+
+
+robertosfield wrote:
+&gt;<i> HI Evan,
+</I>&gt;<i> 
+</I>&gt;<i> My best guess is that the packing of the data in each row is out, as
+</I>&gt;<i> your Image::setData(..) call doesn't supply all the parameters
+</I>&gt;<i> explicitly it will default to a packing of 1 byte.
+</I>&gt;<i> 
+</I>&gt;<i> For instance if the packing for your source data is 4 bytes, and all
+</I>&gt;<i> you previous image data has a width with multiple of 4 then there
+</I>&gt;<i> won't be any mismatch when using a 1 byte packing as it will select
+</I>&gt;<i> the same width.  However, if you use a width such as 3 then the source
+</I>&gt;<i> data with a 4 byte packing would round up to 4 bytes width, but the
+</I>&gt;<i> osg::Image::setImage() call you are using says just use 1 byte packing
+</I>&gt;<i> so selects a width of 3.  This will result in a each successive row
+</I>&gt;<i> starting 1 byte off and leading to the &quot;twist&quot; you see.
+</I>&gt;<i> 
+</I>&gt;<i> Check the spec of your image reading code/file format to see what the
+</I>&gt;<i> row packing is.  Also have a look at the docs for
+</I>&gt;<i> osg::Image::setImage(..), note the optional packing and rowLength
+</I>&gt;<i> parameters.
+</I>&gt;<i> 
+</I>&gt;<i> Robert
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> On 18 February 2017 at 16:38, Evan Tsai &lt;&gt; wrote:
+</I>&gt;<i> 
+</I>&gt;<i> &gt; Thank you very much for helping.  Below is how we make the call.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; This has been working fine until very recently we received scan data from some CBCT scanners that we haven't encountered before.  However those scans could be viewed correctly in all popular DICOM viewers in the market.  As mentioned, I also took the pixel data and dumped it into a .bmp file, which looks correct.  So the only possibility seems to be that we are missing some setting here......
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; I did try changing the texture coordinates around but that doesn't change the twisted nature of the display.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; I also tried changing `packing' from 1 to 0 but that crashes the software.
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; Is there anything in particular that one needs to set for `rowLength'?
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; osg::Geode* pGeode = new osg::Geode;
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; osg::Vec3 v1(pBottomLeft[0], pBottomLeft[1], pBottomLeft[2]);
+</I>&gt;<i> &gt; osg::Vec3 v2(pBottomRight[0], pBottomRight[1], pBottomRight[2]);
+</I>&gt;<i> &gt; osg::Vec3 v3(pTopRight[0], pTopRight[1], pTopRight[2]);
+</I>&gt;<i> &gt; osg::Vec3 v4(pTopLeft[0], pTopLeft[1], pTopLeft[2]);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; osg::Geometry* geom = new osg::Geometry;
+</I>&gt;<i> &gt; geom-&gt;setDataVariance(osg::Object::DYNAMIC);
+</I>&gt;<i> &gt; osg::Vec3Array* vertices = new osg::Vec3Array(4);
+</I>&gt;<i> &gt; (*vertices)[0] = v1;
+</I>&gt;<i> &gt; (*vertices)[1] = v2;
+</I>&gt;<i> &gt; (*vertices)[2] = v3;
+</I>&gt;<i> &gt; (*vertices)[3] = v4;
+</I>&gt;<i> &gt; geom-&gt;setVertexArray(vertices);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; osg::Vec2Array* texcoords = new osg::Vec2Array(4);
+</I>&gt;<i> &gt; (*texcoords)[0].set(0.0f, 0.0f);
+</I>&gt;<i> &gt; (*texcoords)[1].set(1, 0.0f);
+</I>&gt;<i> &gt; (*texcoords)[2].set(1, 1);
+</I>&gt;<i> &gt; (*texcoords)[3].set(0.0f, 1);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; geom-&gt;setTexCoordArray(0, texcoords);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; osg::ref_ptr&lt;osg::Vec3Array&gt; normals = new osg::Vec3Array(1);
+</I>&gt;<i> &gt; (*normals)[0].set(0.0f, -1.0f, 0.0f);
+</I>&gt;<i> &gt; geom-&gt;setNormalArray(normals, osg::Array::BIND_OVERALL);
+</I>&gt;<i> &gt; osg::Vec4Array* colors = new osg::Vec4Array(1);
+</I>&gt;<i> &gt; (*colors)[0].set(1.0f, 1.0f, 1.0f, 1.0f);
+</I>&gt;<i> &gt; geom-&gt;setColorArray(colors, osg::Array::BIND_OVERALL);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4));
+</I>&gt;<i> &gt; geom-&gt;setUseDisplayList(false);
+</I>&gt;<i> &gt; osg::ref_ptr&lt;osg::Image&gt; img = new osg::Image;
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; img-&gt;setImage(image.GetWidth(), image.GetHeight(), 1,
+</I>&gt;<i> &gt; GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, image.GetPixelData(),
+</I>&gt;<i> &gt; osg::Image::USE_NEW_DELETE);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; //osg::ref_ptr&lt;osg::Image&gt; img = osgDB::readRefImageFile(&quot;C:\\Users\\rupeshb\\Pictures\\error.bmp&quot;);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; //osg::ref_ptr&lt;osg::Image&gt; img = osgDB::readRefImageFile(filename);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; osg::ref_ptr&lt;osg::Texture2D&gt; texture = new osg::Texture2D(img);
+</I>&gt;<i> &gt; texture-&gt;setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+</I>&gt;<i> &gt; texture-&gt;setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+</I>&gt;<i> &gt; osg::ref_ptr&lt;osg::TexMat&gt; texmat = new osg::TexMat;
+</I>&gt;<i> &gt; texmat-&gt;setScaleByTextureRectangleSize(true);
+</I>&gt;<i> &gt; // setup state
+</I>&gt;<i> &gt; osg::ref_ptr&lt;osg::StateSet&gt; state = geom-&gt;getOrCreateStateSet();
+</I>&gt;<i> &gt; state-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+</I>&gt;<i> &gt; state-&gt;setTextureAttributeAndModes(0, texmat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; state-&gt;setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; pGeode-&gt;addDrawable(geom);
+</I>&gt;<i> &gt; addChild(pGeode);
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; ------------------
+</I>&gt;<i> &gt; Read this topic online here:
+</I>&gt;<i> &gt; <A HREF="../../../../forum.openscenegraph.org/viewtopiccec8.php?p=70254#70254">http://forum.openscenegraph.org/viewtopic.php?p=70254#70254</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; _______________________________________________
+</I>&gt;<i> &gt; osg-users mailing list
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt; 
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> 
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> 
+</I>&gt;<i>  ------------------
+</I>&gt;<i> Post generated by Mail2Forum
+</I>
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic772b.php?p=70274#70274">http://forum.openscenegraph.org/viewtopic.php?p=70274#70274</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005625.html">[osg-users] osg::Image::setImage problem
+</A></li>
+	<LI>Next message: <A HREF="005648.html">[osg-users] osg::Image::setImage problem
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5643">[ date ]</a>
+              <a href="thread.html#5643">[ thread ]</a>
+              <a href="subject.html#5643">[ subject ]</a>
+              <a href="author.html#5643">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

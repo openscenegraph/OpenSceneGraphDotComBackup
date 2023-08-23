@@ -1,0 +1,230 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Volume rendering issues...
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20rendering%20issues...&In-Reply-To=%3CCAFN7Y%2BVpS4eqz4sOjSdELLUpJA8_XEf5_doQG-cpOwOgdWZnnw%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008770.html">
+   <LINK REL="Next"  HREF="008793.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Volume rendering issues...</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Volume%20rendering%20issues...&In-Reply-To=%3CCAFN7Y%2BVpS4eqz4sOjSdELLUpJA8_XEf5_doQG-cpOwOgdWZnnw%40mail.gmail.com%3E"
+       TITLE="[osg-users] Volume rendering issues...">robert.osfield at gmail.com
+       </A><BR>
+    <I>Thu Jul 26 06:29:46 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008770.html">[osg-users] Volume rendering issues...
+</A></li>
+        <LI>Next message (by thread): <A HREF="008793.html">[osg-users] Volume rendering issues...
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8772">[ date ]</a>
+              <a href="thread.html#8772">[ thread ]</a>
+              <a href="subject.html#8772">[ subject ]</a>
+              <a href="author.html#8772">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Tom.
+
+My best guess would be that the ITK image data is being deleted prior
+to the graphics thread gets a chance copy the data into OpenGL.  Try
+either copying the data into the osg::Image and let osg::Image then
+manage the lifetime of it's own data, or prevent the ITK image data
+from getting deleted prior to the osg::Texture3D being used in the
+graphics thread - for instance keeping the ITK image object around for
+the lifetime of the app, or perhaps more elegantly assigning the ITK
+image data via a adapter class that you write to assign it to the
+osg:Image as user data.
+
+Robert.
+On Thu, 26 Jul 2018 at 14:04, Tom Williamson &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">tom.williamson at rmit.edu.au</A>&gt; wrote:
+&gt;<i>
+</I>&gt;<i> Hi gang,
+</I>&gt;<i>
+</I>&gt;<i> Thanks for all the work on OSG, is rad. I'm currently having a problem with the rendering of a volume, here's what I'm trying to do:
+</I>&gt;<i> - I'm using ITK to read a NIFTI file, (segmentation of a bone). The file contains zeros (background) and ones (object), format is unsigned short.
+</I>&gt;<i> - I am then normalizing/scaling this and converting it to an osg::Image.
+</I>&gt;<i> - I am then attempting to convert this to an osgVolume and display an iso-surface, or at this stage any kind of volume rendering.
+</I>&gt;<i> - All the reading, conversion etc. seems to work okay, but I'm getting a read access violation on line 408 of Texture3d.cpp (specifically:Exception thrown at 0x00007FFE64D576B0 (ig9icd64.dll) in RobotSimulation.exe: 0xC0000005: Access violation reading location 0x000002F5732EE070.)
+</I>&gt;<i>
+</I>&gt;<i> I'm pretty sure I'm just forgetting something very obvious, but if anyone could point out what it is that I'm doing wrong that would be much appreciated. I've put a cut down example of the code below (pretty rough).
+</I>&gt;<i> I know that the data is definitely in the osg::image object (wrote it to file, calculated min and max), so I don't necessarily think the conversion is the problem (though could very well be wrong). I'm on a Windows 10 laptop, with a built in Intel graphics card (Intel HD Graphics 620, drivers are up to date), opengl is version 4.5.
+</I>&gt;<i> Thanks very much for the help, let me know if you need any other info. Cheers,
+</I>&gt;<i> Tom
+</I>&gt;<i>
+</I>&gt;<i> PS: I'm happy to provide some example data if needed, but I guess this would be more or less the same for any data loaded through ITK and converted to OSG.
+</I>&gt;<i> PPS: I've left the code as normal text, it looked somewhat unreadable in the preview, so sorry about that.
+</I>&gt;<i>
+</I>&gt;<i> [code]
+</I>&gt;<i> osg::ref_ptr&lt;osgVolume::Volume&gt; getOsgVolume(std::string filename)
+</I>&gt;<i> {
+</I>&gt;<i>         osg::ref_ptr&lt;osg::Image&gt; osgImage = new osg::Image();
+</I>&gt;<i>         itk::NiftiImageIOFactory::RegisterOneFactory();
+</I>&gt;<i>         itk::ImageIOBase::Pointer imageIO = itk::ImageIOFactory::CreateImageIO(filename.c_str(), itk::ImageIOFactory::ReadMode);
+</I>&gt;<i>         imageIO-&gt;SetFileName(filename);
+</I>&gt;<i>         imageIO-&gt;ReadImageInformation();
+</I>&gt;<i>         osg::ref_ptr&lt;osgVolume::Volume&gt; volume = new osgVolume::Volume;
+</I>&gt;<i>
+</I>&gt;<i>         std::cout &lt;&lt; &quot;numDimensions: &quot; &lt;&lt; imageIO-&gt;GetNumberOfDimensions() &lt;&lt; std::endl;
+</I>&gt;<i>         std::cout &lt;&lt; &quot;component type: &quot; &lt;&lt; imageIO-&gt;GetComponentTypeAsString(imageIO-&gt;GetComponentType()) &lt;&lt; std::endl;
+</I>&gt;<i>         std::cout &lt;&lt; &quot;pixel type: &quot; &lt;&lt; imageIO-&gt;GetPixelTypeAsString(imageIO-&gt;GetPixelType()) &lt;&lt; std::endl;
+</I>&gt;<i>
+</I>&gt;<i>         if (imageIO-&gt;GetNumberOfDimensions() == 3) {
+</I>&gt;<i>                 typedef itk::Image&lt;unsigned short, 3&gt;  imType;
+</I>&gt;<i>                 typedef itk::ImageFileReader&lt;imType&gt; imTypeReader;
+</I>&gt;<i>
+</I>&gt;<i>                 imTypeReader::Pointer imageReader = imTypeReader::New();
+</I>&gt;<i>                 imageReader-&gt;SetFileName(imageIO-&gt;GetFileName());
+</I>&gt;<i>                 imageReader-&gt;Update();
+</I>&gt;<i>
+</I>&gt;<i>                 imType::RegionType region;
+</I>&gt;<i>                 imType::IndexType start;
+</I>&gt;<i>                 imType::SizeType size;
+</I>&gt;<i>
+</I>&gt;<i>                 for (int i = 0; i &lt; imageIO-&gt;GetNumberOfDimensions(); ++i) {
+</I>&gt;<i>                         start[i] = 0;
+</I>&gt;<i>                         size[i] = imageIO-&gt;GetDimensions(i);
+</I>&gt;<i>                 }
+</I>&gt;<i>
+</I>&gt;<i>                 region.SetSize(size);
+</I>&gt;<i>                 region.SetIndex(start);
+</I>&gt;<i>                 typedef itk::MultiplyImageFilter&lt; imType&gt; miType;
+</I>&gt;<i>                 miType::Pointer mif = miType::New();
+</I>&gt;<i>                 mif-&gt;SetInput(imageReader-&gt;GetOutput());
+</I>&gt;<i>                 mif-&gt;SetConstant(pow(2, 16) - 1);
+</I>&gt;<i>                 mif-&gt;Update();
+</I>&gt;<i>                 imType::Pointer itkImage = mif-&gt;GetOutput();
+</I>&gt;<i>                 region = itkImage-&gt;GetBufferedRegion();
+</I>&gt;<i>                 size = region.GetSize();
+</I>&gt;<i>                 start = region.GetIndex();
+</I>&gt;<i>
+</I>&gt;<i>                 unsigned int width = size[0];
+</I>&gt;<i>                 unsigned int height = size[1];
+</I>&gt;<i>                 unsigned int depth = size[2];
+</I>&gt;<i>
+</I>&gt;<i>                 osg::RefMatrix* matrix = new osg::RefMatrix;
+</I>&gt;<i>
+</I>&gt;<i>                 std::cout &lt;&lt; &quot;width = &quot; &lt;&lt; width &lt;&lt; &quot; height = &quot; &lt;&lt; height &lt;&lt; &quot; depth = &quot; &lt;&lt; depth &lt;&lt; std::endl;
+</I>&gt;<i>                 for (unsigned int i = 0; i&lt;3; ++i)
+</I>&gt;<i>                 {
+</I>&gt;<i>                         (*matrix)(i, i) = itkImage-&gt;GetSpacing()[i];
+</I>&gt;<i>                 }
+</I>&gt;<i>
+</I>&gt;<i>                 osgImage-&gt;setImage(width, height, depth, GL_LUMINANCE16, GL_LUMINANCE, GL_UNSIGNED_SHORT, (BYTE*)itkImage-&gt;GetBufferPointer(), osg::Image::NO_DELETE, 1, width);
+</I>&gt;<i>
+</I>&gt;<i>                 // Setup the transfer function
+</I>&gt;<i>                 osg::ref_ptr&lt;osg::TransferFunction1D&gt; transferFunction = new osg::TransferFunction1D;
+</I>&gt;<i>                 transferFunction-&gt;setColor(0.0, osg::Vec4(1.0, 0.0, 0.0, 0.0));
+</I>&gt;<i>                 transferFunction-&gt;setColor(0.5, osg::Vec4(1.0, 1.0, 0.0, 0.5));
+</I>&gt;<i>                 transferFunction-&gt;setColor(1.0, osg::Vec4(0.0, 0.0, 1.0, 1.0));
+</I>&gt;<i>
+</I>&gt;<i>                 // Setup the volume
+</I>&gt;<i>                 osgVolume::ImageDetails* details = new osgVolume::ImageDetails;
+</I>&gt;<i>                 details-&gt;setMatrix(matrix);
+</I>&gt;<i>                 osgImage-&gt;setUserData(details);
+</I>&gt;<i>                 matrix-&gt;preMult(osg::Matrix::scale(double(osgImage-&gt;s()), double(osgImage-&gt;t()), double(osgImage-&gt;r())));
+</I>&gt;<i>                 osg::ref_ptr&lt;osgVolume::VolumeTile&gt; tile = new osgVolume::VolumeTile;
+</I>&gt;<i>                 volume-&gt;addChild(tile.get());
+</I>&gt;<i>                 osg::ref_ptr&lt;osgVolume::ImageLayer&gt; layer = new osgVolume::ImageLayer(osgImage.get());
+</I>&gt;<i>                 layer-&gt;setLocator(new osgVolume::Locator(*matrix));
+</I>&gt;<i>                 tile-&gt;setLocator(new osgVolume::Locator(*matrix));
+</I>&gt;<i>                 tile-&gt;setLayer(layer.get());
+</I>&gt;<i>
+</I>&gt;<i>                 // Rest of this is setting up the volume rendering...
+</I>&gt;<i>                 float alphaFunc = 0.02f;
+</I>&gt;<i>
+</I>&gt;<i>                 osgVolume::AlphaFuncProperty* ap = new osgVolume::AlphaFuncProperty(alphaFunc);
+</I>&gt;<i>                 osgVolume::IsoSurfaceProperty* isop = new osgVolume::IsoSurfaceProperty(alphaFunc);
+</I>&gt;<i>                 osgVolume::SampleDensityProperty* sd = new osgVolume::SampleDensityProperty(0.5f);
+</I>&gt;<i>                 osgVolume::SampleDensityWhenMovingProperty* sdwm = new osgVolume::SampleDensityWhenMovingProperty(0.1);
+</I>&gt;<i>                 osgVolume::SampleRatioProperty* sr = new osgVolume::SampleRatioProperty(1.0f);
+</I>&gt;<i>                 osgVolume::SampleRatioWhenMovingProperty* srwm = new osgVolume::SampleRatioWhenMovingProperty(0.1);
+</I>&gt;<i>                 osgVolume::TransparencyProperty* tp = new osgVolume::TransparencyProperty(1.0);
+</I>&gt;<i>                 osgVolume::TransferFunctionProperty* tfp = new osgVolume::TransferFunctionProperty(transferFunction.get());
+</I>&gt;<i>                 osgVolume::CompositeProperty* cp = new osgVolume::CompositeProperty;
+</I>&gt;<i>                 cp-&gt;addProperty(sr);
+</I>&gt;<i>                 cp-&gt;addProperty(tp);
+</I>&gt;<i>                 cp-&gt;addProperty(isop);
+</I>&gt;<i>                 cp-&gt;addProperty(sdwm);
+</I>&gt;<i>                 cp-&gt;addProperty(tfp);
+</I>&gt;<i>
+</I>&gt;<i>                 layer-&gt;addProperty(cp);
+</I>&gt;<i>                 tile-&gt;setVolumeTechnique(new osgVolume::MultipassTechnique);
+</I>&gt;<i>
+</I>&gt;<i>         }
+</I>&gt;<i>         std::cout &lt;&lt; &quot;Valid: &quot; &lt;&lt; volume.valid() &lt;&lt; std::endl;
+</I>&gt;<i>         return volume;
+</I>&gt;<i>
+</I>&gt;<i> }
+</I>&gt;<i> [/code]
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopice867.php?p=74384#74384">http://forum.openscenegraph.org/viewtopic.php?p=74384#74384</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I></PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008770.html">[osg-users] Volume rendering issues...
+</A></li>
+	<LI>Next message (by thread): <A HREF="008793.html">[osg-users] Volume rendering issues...
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8772">[ date ]</a>
+              <a href="thread.html#8772">[ thread ]</a>
+              <a href="subject.html#8772">[ subject ]</a>
+              <a href="author.html#8772">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

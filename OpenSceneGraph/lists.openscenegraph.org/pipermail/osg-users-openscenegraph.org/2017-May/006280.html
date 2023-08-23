@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] osg plugin couldn't load an osgb or ive file on Android	system
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%20plugin%20couldn%27t%20load%20an%20osgb%20or%20ive%20file%20on%20Android%0A%09system&In-Reply-To=%3C2017052713122287665714%40qq.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="006279.html">
+   <LINK REL="Next"  HREF="006281.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] osg plugin couldn't load an osgb or ive file on Android	system</H1>
+<!--htdig_noindex-->
+    <B>&#40858;&#26469;&#24681;</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20osg%20plugin%20couldn%27t%20load%20an%20osgb%20or%20ive%20file%20on%20Android%0A%09system&In-Reply-To=%3C2017052713122287665714%40qq.com%3E"
+       TITLE="[osg-users] osg plugin couldn't load an osgb or ive file on Android	system">8802661 at qq.com
+       </A><BR>
+    <I>Fri May 26 22:12:23 PDT 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="006279.html">[osg-users] osg plugin couldn't load an osgb or ive file on Android	system
+</A></li>
+        <LI>Next message: <A HREF="006281.html">[osg-users] osg plugin couldn't load an osgb or ive file on Android	system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6280">[ date ]</a>
+              <a href="thread.html#6280">[ thread ]</a>
+              <a href="subject.html#6280">[ subject ]</a>
+              <a href="author.html#6280">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello,
+    I googled the reason why the osg plugin couldn't load an osgb or ive file on Android system. Because std::istream &gt;&gt; operate skips spaces which was used widely by osg plugins to read binary stream. It works on windows. But this doesn't work on Andoid.
+    The osg file can't be loaded successfully, so &gt;&gt; operate can normally work if reading stream with text format. It's time consuming to convert all data format from osgb to osg. Can anybody give me a better choice?
+
+Thank you in advance!
+Glen 
+
+
+
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">8802661 at qq.com</A>
+ 
+From: &#40858;&#26469;&#24681;
+Date: 2017-05-26 14:06
+To: OpenSceneGraph Users
+Subject: [osg-users] A problem with regard to std:istream on Android
+Hi All,
+    I'm trying to make osgEarth run on Android (OSG 3.2 &amp; osgEarth 2.3). Now the earth can display on Android system. But I run into a problem with regard to std:istream. I tried to load an osgb file by the following code
+osg::ref_ptr&lt;osg::Node&gt; node = osgDB::readNodeFile(&quot;/sdcard/WV/Models/tk.osgb&quot;);
+the variable node's value is always be NULL.  I step into this line and traced down to file ReaderWriterOSG2.cpp
+virtual ReadResult readNode( const std::string&amp; file, const Options* options ) const
+    {
+        ReadResult result = ReadResult::FILE_LOADED;
+        std::string fileName = file;
+        std::ios::openmode mode = std::ios::in;
+        Options* local_opt = prepareReading( result, fileName, mode, options );
+        if ( !result.success() ) return result;
+
+        osgDB::ifstream istream( fileName.c_str(), mode );
+        return readNode( istream, local_opt );
+    }
+
+virtual ReadResult readNode( std::istream&amp; fin, const Options* options ) const
+    {
+        osg::ref_ptr&lt;InputIterator&gt; ii = readInputIterator(fin, options);
+        if ( !ii ) return ReadResult::FILE_NOT_HANDLED;
+
+        InputStream is( options );
+        if ( is.start(ii.get())!=InputStream::READ_SCENE )
+        {
+            CATCH_EXCEPTION(is);
+            return ReadResult::FILE_NOT_HANDLED;
+        }
+
+        is.decompress(); CATCH_EXCEPTION(is);
+        osg::Node* node = dynamic_cast&lt;osg::Node*&gt;(is.readObject()); CATCH_EXCEPTION(is);
+        return node;
+    }
+
+the debugger couldn't step into the function readNode( std::istream&amp; fin, const Options* options ). But on windows it works.
+
+Can anybody tell me how to solve this problem?
+
+Dev Environment:
+    Visual Studio 2017
+    Android 7.0
+    Android NDK64 r13b
+    Arch arm64-v8a
+
+Best regards.
+
+Glen
+
+
+_______________________________________________
+osg-users mailing list
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170527/086f6f18/attachment-0003.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170527/086f6f18/attachment-0003.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="006279.html">[osg-users] osg plugin couldn't load an osgb or ive file on Android	system
+</A></li>
+	<LI>Next message: <A HREF="006281.html">[osg-users] osg plugin couldn't load an osgb or ive file on Android	system
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#6280">[ date ]</a>
+              <a href="thread.html#6280">[ thread ]</a>
+              <a href="subject.html#6280">[ subject ]</a>
+              <a href="author.html#6280">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

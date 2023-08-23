@@ -1,0 +1,285 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Using multiples texture for a geometry
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20multiples%20texture%20for%20a%20geometry&In-Reply-To=%3C1462219708.m2f.67041%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="002986.html">
+   <LINK REL="Next"  HREF="002988.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Using multiples texture for a geometry</H1>
+<!--htdig_noindex-->
+    <B>Florian GOLESTIN</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Using%20multiples%20texture%20for%20a%20geometry&In-Reply-To=%3C1462219708.m2f.67041%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Using multiples texture for a geometry">florian.golestin at gmail.com
+       </A><BR>
+    <I>Mon May  2 13:08:28 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="002986.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+        <LI>Next message: <A HREF="002988.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2987">[ date ]</a>
+              <a href="thread.html#2987">[ thread ]</a>
+              <a href="subject.html#2987">[ subject ]</a>
+              <a href="author.html#2987">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Robert,
+
+Thanks for your response!
+
+I might have the two vectors for the textures coordinate.
+Basically my idea is to have cubes to draw Labyrinth.
+I read a file such as:
+
+Code:
+
+xxxxx
+x.....x
+xxxxx
+
+
+
+Where 'x' represents a wall.
+
+I've a class named Level that hold two Vec2Array for the two textures, it also hold vertices and normals.
+What I do is
+ - Even: the first vector is filled with texture coordinates while the second is filled with 0
+ - Odd: then the second time the first vector is filled with 0 and the second with texture coordinates.
+
+Here is the code:
+
+Code:
+
+float	x = 0;
+float	y = 0;
+int wallCount = 0;
+
+while(std::getline(stream, line))
+      {
+	std::stringstream linestream(line);
+
+	while (linestream &gt;&gt; block)
+	  {
+	    float posx = 1.0 * x; 
+	    float posy = 1.0 * y;	      
+	    float endx = posx + 1.0;
+	    float endy = posy + 1.0;
+	    switch (block)
+	      {
+	      case 'x':
+		if (wallCount % 2) // Odd or Even?
+		    createCube(level.get(), *level-&gt;texcoords, *level-&gt;texcoords2, posx, posy, endx, endy);
+		else
+		    createCube(level.get(), *level-&gt;texcoords2, *level-&gt;texcoords, posx, posy, endx, endy);
+		wallCount++;
+		break;
+	    x += 1.0;
+	  }
+	x  = 0;
+	y -= 1.0; /* We decrements y To keep the labyrinth as on the file */
+      }
+
+
+    osg::ref_ptr&lt;osg::Geometry&gt; geom = new osg::Geometry;
+    geom-&gt;setVertexArray(level-&gt;vertices);
+    geom-&gt;setNormalArray(level-&gt;normals, osg::Array::Binding::BIND_PER_VERTEX);
+    geom-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 24*wallCount));
+    osgUtil::SmoothingVisitor::smooth(*geom);
+
+
+
+  /*
+   * @param Level	the container of the vertices, normals and textures for the walls of our labyrinth
+   * @param tex		the Vector that should receive the coordinate for the textures
+   * @param skip	the second vector for texture filled with '0' to 'skip' this wall
+   */
+  void LevelReader::createCube(Soleil::Level *level, osg::Vec2Array &amp;tex, osg::Vec2Array &amp;skip,
+		  float posx, float posy, float endx, float endy) const
+{    
+    // ------ Front
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 1.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 1.0f));
+
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f,-1.0f, 0.0f));
+
+    tex.push_back( osg::Vec2(0.0f, 0.0f)); 
+    tex.push_back( osg::Vec2(0.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 0.0f)); 
+    //
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+  
+  
+    // ------ top
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 1.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 1.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 1.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 1.0f));
+
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+
+    tex.push_back( osg::Vec2(0.0f, 0.0f)); 
+    tex.push_back( osg::Vec2(0.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 0.0f)); 
+    //
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+  
+  
+    // ------ back
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 1.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 1.0f));
+
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 1.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 1.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 1.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 1.0f, 0.0f));
+
+    tex.push_back( osg::Vec2(0.0f, 0.0f)); 
+    tex.push_back( osg::Vec2(0.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 0.0f)); 
+      //
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+
+  
+    // ------ Bottom
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 0.0f));
+
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, -1.0f));
+
+    tex.push_back( osg::Vec2(0.0f, 0.0f)); 
+    tex.push_back( osg::Vec2(0.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 0.0f)); 
+    //
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+
+
+    // ------ Left
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, endy, 1.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(posx, posy, 1.0f));
+
+    level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f, 0.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f, 0.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f, 0.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(-1.0f, 0.0f, 0.0f));
+
+    tex.push_back( osg::Vec2(0.0f, 0.0f)); 
+    tex.push_back( osg::Vec2(0.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 0.0f)); 
+      //
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+
+  
+    // ------ Right
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 0.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, endy, 1.0f));
+    level-&gt;vertices-&gt;push_back(osg::Vec3(endx, posy, 1.0f));
+
+    level-&gt;normals-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    level-&gt;normals-&gt;push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+
+    tex.push_back( osg::Vec2(0.0f, 0.0f)); 
+    tex.push_back( osg::Vec2(0.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 1.0f)); 
+    tex.push_back( osg::Vec2(1.0f, 0.0f)); 
+    //
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+    skip.push_back( osg::Vec2(0.0f, 0.0f)); 
+
+  }
+
+
+
+
+Thanks,
+Florian
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic5ab9.php?p=67041#67041">http://forum.openscenegraph.org/viewtopic.php?p=67041#67041</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="002986.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+	<LI>Next message: <A HREF="002988.html">[osg-users] Using multiples texture for a geometry
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#2987">[ date ]</a>
+              <a href="thread.html#2987">[ thread ]</a>
+              <a href="subject.html#2987">[ subject ]</a>
+              <a href="author.html#2987">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

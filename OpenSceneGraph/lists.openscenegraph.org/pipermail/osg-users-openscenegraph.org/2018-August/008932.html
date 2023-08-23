@@ -1,0 +1,244 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] minor change: move assumeSizedInternallFormat from Texture to Image
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20minor%20change%3A%20move%20assumeSizedInternallFormat%20from%0A%20Texture%20to%20Image&In-Reply-To=%3C1534442883.m2f.74554%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="008939.html">
+   <LINK REL="Next"  HREF="008940.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image</H1>
+<!--htdig_noindex-->
+    <B>Julien Valentin</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20minor%20change%3A%20move%20assumeSizedInternallFormat%20from%0A%20Texture%20to%20Image&In-Reply-To=%3C1534442883.m2f.74554%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image">julienvalentin51 at gmail.com
+       </A><BR>
+    <I>Thu Aug 16 11:08:03 PDT 2018</I>
+    <P><UL>
+        <LI>Previous message (by thread): <A HREF="008939.html">[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image
+</A></li>
+        <LI>Next message (by thread): <A HREF="008940.html">[osg-users] Can't share Texture among several texture unit?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8932">[ date ]</a>
+              <a href="thread.html#8932">[ thread ]</a>
+              <a href="subject.html#8932">[ subject ]</a>
+              <a href="author.html#8932">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Forgot to mention:
+The code posing problem with ImageLess Texture is not in Texture.cpp but it's in derivated TextureXXX.cpp
+
+
+mp3butcher wrote:
+&gt;<i> ..But my question was
+</I>&gt;<i> If I'd make a pr with this fix for all Textures
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i>   if( useTexStorrage)
+</I>&gt;<i>         {
+</I>&gt;<i>             //ensure _internalFormat is sized
+</I>&gt;<i>             GLenum sized_internalFormat = _internalFormat;
+</I>&gt;<i>             if(!isSizedInternalFormat( sized_internalFormat))
+</I>&gt;<i>                     sized_internalFormat =  assumeSizedInternalFormat( sized_internalFormat, _sourceType==0 ? _sourceType : GL_UNSIGNED_BYTE);
+</I>&gt;<i>             if(!sized_internalFormat)
+</I>&gt;<i>                 OSG_WARN&lt;&lt;&quot;Texture2D : can't generate TextureStorage for  internalFormat: &quot;&lt;&lt;_internalFormat&lt;&lt;&quot; and  SourceType: &quot;&lt;&lt;_sourceType==0 ? _sourceType : GL_UNSIGNED_BYTE&lt;&lt;std::endl;
+</I>&gt;<i>             extensions-&gt;glTexStorage2D( GL_TEXTURE_2D, (_numMipmapLevels &gt;0)?_numMipmapLevels:1, sized_internalFormat, _textureWidth, _textureHeight);
+</I>&gt;<i>         }; 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> Would you accept it?
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> mp3butcher wrote:
+</I>&gt;<i> &gt; testing enum as bool is sure bad practice but the first error was to set 0 as default for _sourceFormat...
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; 
+</I>&gt;<i> &gt; robertosfield wrote:
+</I>&gt;<i> &gt; &gt; Hi julien,
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; On Thu, 16 Aug 2018 at 17:45, Julien Valentin
+</I>&gt;<i> &gt; &gt; &lt;&gt; wrote:
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; &gt; Ho I haven't realized the root of existence of this function was the previous contribution to the implementation of glTexStorage.
+</I>&gt;<i> &gt; &gt; &gt; So Now I can see where the contributor (sure it's Pawel Ksiezopolski) wanted to do.
+</I>&gt;<i> &gt; &gt; &gt; 
+</I>&gt;<i> &gt; &gt; &gt; I don't know why there's so many comments and misses in sizedInternalFormats but it's same to add them at the end
+</I>&gt;<i> &gt; &gt; &gt; 
+</I>&gt;<i> &gt; &gt; &gt; So my proposal is a 2 way process:
+</I>&gt;<i> &gt; &gt; &gt; -add missing  sizedInternalFormats (ex:I found internalformat GL_RGBA16 never mentionned)
+</I>&gt;<i> &gt; &gt; &gt; -Fix the image less glTexStorage use case with
+</I>&gt;<i> &gt; &gt; &gt; 
+</I>&gt;<i> &gt; &gt; &gt; 
+</I>&gt;<i> &gt; &gt; &gt; Code:
+</I>&gt;<i> &gt; &gt; &gt; if( useTexStorrage)
+</I>&gt;<i> &gt; &gt; &gt; {
+</I>&gt;<i> &gt; &gt; &gt; //ensure _internalFormat is sized
+</I>&gt;<i> &gt; &gt; &gt; GLenum sized_internalFormat = _internalFormat;
+</I>&gt;<i> &gt; &gt; &gt; if(!isSizedInternalFormat( sized_internalFormat))
+</I>&gt;<i> &gt; &gt; &gt; sized_internalFormat =  assumeSizedInternalFormat( sized_internalFormat, _sourceType ? _sourceType : GL_UNSIGNED_BYTE);
+</I>&gt;<i> &gt; &gt; &gt; if(!sized_internalFormat)
+</I>&gt;<i> &gt; &gt; &gt; OSG_FATAL&lt;&lt;&quot;Texture2D : can't generate TextureStorage setup fails: &quot;&lt;&lt;std::endl;
+</I>&gt;<i> &gt; &gt; &gt; extensions-&gt;glTexStorage2D( GL_TEXTURE_2D, (_numMipmapLevels &gt;0)?_numMipmapLevels:1, sized_internalFormat, _textureWidth, _textureHeight);
+</I>&gt;<i> &gt; &gt; &gt; };
+</I>&gt;<i> &gt; &gt; &gt; 
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; I did a quick look through Texture.cpp, and there is this entry:
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; if(useTexStorrage)
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; if(extensions-&gt;isTexStorage2DSupported() &amp;&amp; _borderWidth == 0)
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; //calculate sized internal format
+</I>&gt;<i> &gt; &gt; if(!compressed_image)
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; if(isSizedInternalFormat(_internalFormat))
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; sizedInternalFormat = _internalFormat;
+</I>&gt;<i> &gt; &gt; }
+</I>&gt;<i> &gt; &gt; else
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; sizedInternalFormat =
+</I>&gt;<i> &gt; &gt; assumeSizedInternalFormat((GLenum)image-&gt;getInternalTextureFormat(),
+</I>&gt;<i> &gt; &gt; (GLenum)image-&gt;getDataType());
+</I>&gt;<i> &gt; &gt; }
+</I>&gt;<i> &gt; &gt; }
+</I>&gt;<i> &gt; &gt; else
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; if(isCompressedInternalFormatSupportedByTexStorrage(_internalFormat))
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; sizedInternalFormat = _internalFormat;
+</I>&gt;<i> &gt; &gt; }
+</I>&gt;<i> &gt; &gt; }
+</I>&gt;<i> &gt; &gt; }
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; useTexStorrage &amp;= sizedInternalFormat != 0;
+</I>&gt;<i> &gt; &gt; }
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; if(useTexStorrage)
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; It's handling the case of having an osg::Image but does illustrate
+</I>&gt;<i> &gt; &gt; some of previous PR's introduced (I'm not the author of this
+</I>&gt;<i> &gt; &gt; particular set of code so I'm learning by reading...)   What it does
+</I>&gt;<i> &gt; &gt; have is attempt to select an appropriate sizeInternalFormat, but if
+</I>&gt;<i> &gt; &gt; this fails then switch off use of glTexSorage.
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; It would be good to avoid having different code paths having different
+</I>&gt;<i> &gt; &gt; combinations of ways of setting up the sizeInternalFormat and
+</I>&gt;<i> &gt; &gt; different ways of falling back when it's not supported,  My
+</I>&gt;<i> &gt; &gt; inclination would be to have a selectSizeInernalFormat(Image*) method
+</I>&gt;<i> &gt; &gt; that can take an optional image pointer, then have this have it's own
+</I>&gt;<i> &gt; &gt; with Image and witout image internal logical to do the mapping, and
+</I>&gt;<i> &gt; &gt; then have the code be something like:
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; GLenum useTexStorageWithWithSizedInternalFormat =
+</I>&gt;<i> &gt; &gt; extensions-&gt;isTextureStorageEnabled ?
+</I>&gt;<i> &gt; &gt; selectSizedInternalFormat(optional_image) : 0;
+</I>&gt;<i> &gt; &gt; if (useTexStorageWithWithSizedInternalFormat)
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; // glTexStorage code path
+</I>&gt;<i> &gt; &gt; }
+</I>&gt;<i> &gt; &gt; else
+</I>&gt;<i> &gt; &gt; {
+</I>&gt;<i> &gt; &gt; // glTexImage code path
+</I>&gt;<i> &gt; &gt; }
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; I'm not 100% sure conflating the bool and internal format in this way
+</I>&gt;<i> &gt; &gt; is perfect coding practice but suggest it as just having lots of code
+</I>&gt;<i> &gt; &gt; and different variables in play just complicates the code.  The code
+</I>&gt;<i> &gt; &gt; we are talking about is already overloaded with different code paths
+</I>&gt;<i> &gt; &gt; so it's really important to avoid this code becoming even more
+</I>&gt;<i> &gt; &gt; spaghetti like, opportunities to untangle the existing spaghetti is
+</I>&gt;<i> &gt; &gt; worth a few compromises like reusing an enum as the bool and the size.
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; Robert.
+</I>&gt;<i> &gt; &gt; _______________________________________________
+</I>&gt;<i> &gt; &gt; osg-users mailing list
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt; <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i> &gt; &gt; 
+</I>&gt;<i> &gt; &gt;  ------------------
+</I>&gt;<i> &gt; &gt; Post generated by Mail2Forum
+</I>&gt;<i> &gt; 
+</I>&gt;<i> 
+</I>&gt;<i> Code:
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>&gt;<i> 
+</I>
+
+------------------------
+Twirling twirling twirling toward freedom
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicd1f8.php?p=74554#74554">http://forum.openscenegraph.org/viewtopic.php?p=74554#74554</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message (by thread): <A HREF="008939.html">[osg-users] minor change: move assumeSizedInternallFormat from Texture to Image
+</A></li>
+	<LI>Next message (by thread): <A HREF="008940.html">[osg-users] Can't share Texture among several texture unit?
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#8932">[ date ]</a>
+              <a href="thread.html#8932">[ thread ]</a>
+              <a href="subject.html#8932">[ subject ]</a>
+              <a href="author.html#8932">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Executing code before gl context is closed when	viewer is shutdown
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Executing%20code%20before%20gl%20context%20is%20closed%20when%0A%09viewer%20is%20shutdown&In-Reply-To=%3C1452188518.m2f.65967%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="271984.html">
+   <LINK REL="Next"  HREF="271946.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Executing code before gl context is closed when	viewer is shutdown</H1>
+<!--htdig_noindex-->
+    <B>Chris Denham</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Executing%20code%20before%20gl%20context%20is%20closed%20when%0A%09viewer%20is%20shutdown&In-Reply-To=%3C1452188518.m2f.65967%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Executing code before gl context is closed when	viewer is shutdown">c.m.denham at gmail.com
+       </A><BR>
+    <I>Thu Jan  7 09:41:58 PST 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="271984.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+        <LI>Next message: <A HREF="271946.html">[osg-users] Hide mouse cursor from CameraManipulator
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271944">[ date ]</a>
+              <a href="thread.html#271944">[ thread ]</a>
+              <a href="subject.html#271944">[ subject ]</a>
+              <a href="author.html#271944">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Bjorn &amp; Robert,
+
+I've been pondering a related problem with shutting down openvr in an integration I've been working on (Bjorn: which is partly based on some of your great work on Oculus integration!)
+
+I think I came to same conclusion as Robert suggests, which was to perform cleanup immediately after the viewer run loop is terminated. The only &quot;gotcha&quot; I found in doing that was if I terminate the application by closing the viewer window rather than pressing &lt;Esc&gt;. If I quit the app by clicking on the window close button, OSG disposes of the contexts BEFORE the termination of the run loop. My fix for this problem was to intercept the CLOSE_WINDOW event an replace it with a quit application event. It's a bit of an ugly thing to have to do, so I wondered if there was a better way than this:
+
+Code:
+
+class GraphicsWindowViewer : public osgViewer::Viewer
+{
+public:
+	GraphicsWindowViewer(osg::ArgumentParser&amp; arguments, osgViewer::GraphicsWindow* graphicsWindow)
+		: osgViewer::Viewer(arguments), _graphicsWindow(graphicsWindow) { }
+
+	virtual void eventTraversal()
+	{
+		if (_graphicsWindow.valid() &amp;&amp; _graphicsWindow-&gt;checkEvents())
+		{
+			osgGA::EventQueue::Events events;
+			_graphicsWindow-&gt;getEventQueue()-&gt;copyEvents(events);
+			osgGA::EventQueue::Events::iterator itr;
+			for (itr = events.begin(); itr != events.end(); ++itr)
+			{
+				osgGA::GUIEventAdapter* event = itr-&gt;get();
+				if (event-&gt;getEventType() == osgGA::GUIEventAdapter::CLOSE_WINDOW)
+				{
+					// We have &quot;peeked&quot; at the event queue for the GraphicsWindow and 
+					// found a CLOSE_WINDOW event. This would normally mean that OSG 
+					// is about to release OpenGL contexts attached to the window.
+					// For some applications it is better to make the application
+					// terminate in a more &quot;normal&quot; way e.g. as it does when &lt;Esc&gt;
+					// key had been pressed.
+					// In this way we can safely perform any cleanup required after
+					// termination of the Viewer::run() loop, i.e. cleanup that would 
+					// otherwise malfunction if the earlier processing of the CLOSE_WINDOW
+					// event had already released required OpenGL contexts.
+					// So, here we &quot;get in early&quot; and remove the close event and append
+					// a quit application event.
+					events.erase(itr);
+					_graphicsWindow-&gt;getEventQueue()-&gt;setEvents(events);
+					_graphicsWindow-&gt;getEventQueue()-&gt;quitApplication();
+					break;
+				}
+			}
+		}
+		osgViewer::Viewer::eventTraversal();
+	}
+private:
+	osg::ref_ptr&lt;osgViewer::GraphicsWindow&gt; _graphicsWindow;
+};
+
+
+
+
+
+
+Chris[/code]
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopicddc6.php?p=65967#65967">http://forum.openscenegraph.org/viewtopic.php?p=65967#65967</A>
+
+
+
+
+
+</PRE>
+
+
+
+
+
+
+
+
+
+
+
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="271984.html">[osg-users] Anyone Experimenting with OSVR
+</A></li>
+	<LI>Next message: <A HREF="271946.html">[osg-users] Hide mouse cursor from CameraManipulator
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#271944">[ date ]</a>
+              <a href="thread.html#271944">[ thread ]</a>
+              <a href="subject.html#271944">[ subject ]</a>
+              <a href="author.html#271944">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

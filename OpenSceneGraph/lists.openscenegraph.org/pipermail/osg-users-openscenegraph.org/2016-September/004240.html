@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] SingleThreaded leading to whole application just running on one core
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3C765193d4-3b12-809d-cf37-adf15602b602%40wsoptics.de%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="004237.html">
+   <LINK REL="Next"  HREF="004243.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] SingleThreaded leading to whole application just running on one core</H1>
+<!--htdig_noindex-->
+    <B>Christoph Weiss</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20SingleThreaded%20leading%20to%20whole%20application%20just%0A%20running%20on%20one%20core&In-Reply-To=%3C765193d4-3b12-809d-cf37-adf15602b602%40wsoptics.de%3E"
+       TITLE="[osg-users] SingleThreaded leading to whole application just running on one core">weiss at wsoptics.de
+       </A><BR>
+    <I>Sun Sep 25 02:44:54 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="004237.html">[osg-users] SingleThreaded leading to whole application just	running on one core
+</A></li>
+        <LI>Next message: <A HREF="004243.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4240">[ date ]</a>
+              <a href="thread.html#4240">[ thread ]</a>
+              <a href="subject.html#4240">[ subject ]</a>
+              <a href="author.html#4240">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>I wrote a simple sample program that produces the following output:
+
+% g++ -std=c++14 -losgViewer -pthread a.cpp &amp;&amp; time ./a.out
+Thread 5 done
+Thread 9 done
+Thread 4 done
+Thread 0 done
+Thread 6 done
+Thread 15 done
+Thread 12 done
+Thread 13 done
+Thread 11 done
+Thread 7 done
+Thread 8 done
+Thread 1 done
+Thread 3 done
+Thread 10 done
+Thread 14 done
+Thread 2 done
+./a.out  161.06s user 0.02s system 392% cpu 41.036 total
+
+% g++ -std=c++14 -losgViewer -pthread -DSINGLETHREADED a.cpp &amp;&amp; time ./a.out
+Thread 6 done
+Thread 13 done
+Thread 9 done
+Thread 8 done
+Thread 15 done
+Thread 10 done
+Thread 11 done
+Thread 14 done
+Thread 5 done
+Thread 4 done
+Thread 1 done
+Thread 3 done
+Thread 7 done
+Thread 12 done
+Thread 2 done
+Thread 0 done
+./a.out  121.23s user 0.02s system 99% cpu 2:01.92 total
+
+The program looks like this:
+
+--------
+#include &lt;future&gt;
+#include &lt;iostream&gt;
+#include &lt;vector&gt;
+
+#include &lt;osgViewer/Viewer&gt;
+#include &lt;osgViewer/ViewerBase&gt;
+
+int main() {
+	constexpr int numThreads = 16;
+	osgViewer::Viewer viewer;
+#ifdef SINGLETHREADED
+	viewer.setThreadingModel(osgViewer::ViewerBase::ThreadingModel::SingleThreaded);
+#endif
+	viewer.realize();
+
+	const auto compute = [] (const int i) {
+		for(volatile int n = 0; n != 1'000'000'000; ++n) {
+			++n;
+			--n;
+		}
+		std::cout &lt;&lt; &quot;Thread &quot; &lt;&lt; i &lt;&lt; &quot; done\n&quot;;
+	};
+
+	std::vector&lt;std::future&lt;void&gt;&gt; futures;
+	for(int i = 0; i != numThreads; ++i) {
+		futures.push_back(std::async(std::launch::async, compute, i));
+	}
+	for(auto &amp; future: futures) {
+		future.wait();
+	}
+
+	return 0;
+}
+--------
+
+Christoph
+
+On 09/25/2016 01:42 AM, Fabian Wiesel wrote:
+&gt;<i>   int main(int argc, char **argv) {
+</I>&gt;<i>     std::vector&lt;int&gt; myvector(1024);
+</I>&gt;<i>     osgViewer::Viewer viewer;
+</I>&gt;<i>     viewer.setSceneData( node );
+</I>&gt;<i>     viewer.setThreadingModel(SingleThreaded);
+</I>&gt;<i>     viewer.realize(); // calling ViewerBase::setUpThreading() -&gt; OpenThreads::SetProcessorAffinityOfCurrentThread(0); -&gt; pthread_setaffinity_np(...)
+</I>&gt;<i>
+</I>&gt;<i>     // Create Threads
+</I>&gt;<i>     for (int i = 0; i &lt; 100; ++i) pthread_create(...)
+</I>&gt;<i>
+</I>&gt;<i>     viewer.run()
+</I>&gt;<i>     pthread_join(...);
+</I>&gt;<i>   }
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="004237.html">[osg-users] SingleThreaded leading to whole application just	running on one core
+</A></li>
+	<LI>Next message: <A HREF="004243.html">[osg-users] SingleThreaded leading to whole application just running on one core
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#4240">[ date ]</a>
+              <a href="thread.html#4240">[ thread ]</a>
+              <a href="subject.html#4240">[ subject ]</a>
+              <a href="author.html#4240">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

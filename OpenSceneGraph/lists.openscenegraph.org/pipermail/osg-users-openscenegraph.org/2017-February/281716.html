@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] Multitexture: projection a texture on another texture
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Multitexture%3A%20projection%20a%20texture%20on%20another%20texture&In-Reply-To=%3C1486388947.m2f.70116%40forum.openscenegraph.org%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005490.html">
+   <LINK REL="Next"  HREF="005495.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] Multitexture: projection a texture on another texture</H1>
+<!--htdig_noindex-->
+    <B>Ekaterina Fokina</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20Multitexture%3A%20projection%20a%20texture%20on%20another%20texture&In-Reply-To=%3C1486388947.m2f.70116%40forum.openscenegraph.org%3E"
+       TITLE="[osg-users] Multitexture: projection a texture on another texture">ekaterina.fokina at tum.de
+       </A><BR>
+    <I>Mon Feb  6 05:49:07 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005490.html">[osg-users] [vpb] Error building terrain with shapefile in VPB
+</A></li>
+        <LI>Next message: <A HREF="005495.html">[osg-users] Multitexture: projection a texture on another texture
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281716">[ date ]</a>
+              <a href="thread.html#281716">[ thread ]</a>
+              <a href="subject.html#281716">[ subject ]</a>
+              <a href="author.html#281716">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hello dear osg masters,
+
+I am not very expirienced yet with osg and trying to do a simple example of projection a texture on another texture, but somehow it is not working, seems that some settings are wrong. Could you please have a look at the code:
+	osg::Geode* geode = new osg::Geode;
+
+	// set up the texture of the base.
+	osg::StateSet* stateset = new osg::StateSet();
+	osg::Image* image = osgDB::readImageFile(&quot;Images/lz.rgb&quot;);
+	if (image)
+	{
+		osg::Texture2D* texture = new osg::Texture2D;
+		texture-&gt;setImage(image);
+		stateset-&gt;setTextureAttributeAndModes(0, texture, osg::StateAttribute::ON);
+	}
+
+	geode-&gt;setStateSet(stateset);
+
+
+	osg::HeightField* grid = new osg::HeightField;
+        ...
+	geode-&gt;addDrawable(new osg::ShapeDrawable(grid));
+        
+        osg::TexEnv *texenv = new osg::TexEnv;
+	texenv-&gt;setMode(osg::TexEnv::DECAL);
+
+	int tex_width = 1024;
+	int tex_height = 1024;
+
+        //Geometry which has to be projected
+	osg::Geode* geode2 = new osg::Geode;
+	osg::ref_ptr&lt;osg::Vec3Array&gt; vertices = new osg::Vec3Array;
+	vertices-&gt;push_back(center);
+	vertices-&gt;push_back(osg::Vec3(center.x(), center.y() + 10, center.z()));
+	vertices-&gt;push_back(osg::Vec3(center.x() + 10, center.y() + 10, center.z()));
+	vertices-&gt;push_back(osg::Vec3(center.x() + 10, center.y(), center.z()));
+	osg::ref_ptr&lt;osg::Vec3Array&gt; normals = new osg::Vec3Array;
+	normals-&gt;push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+
+	osg::ref_ptr&lt;osg::Vec4Array&gt; colors = new osg::Vec4Array;
+	colors-&gt;push_back(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));//red
+        
+	osg::ref_ptr&lt;osg::Geometry&gt; quad = new osg::Geometry;
+	quad-&gt;setVertexArray(vertices.get());
+	quad-&gt;setNormalArray(normals.get());
+	quad-&gt;setNormalBinding(osg::Geometry::BIND_OVERALL);
+	quad-&gt;setColorArray(colors.get());
+	quad-&gt;setColorBinding(osg::Geometry::BIND_OVERALL);
+	quad-&gt;addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4));
+	geode2-&gt;addDrawable(quad.get());
+
+
+	osg::Texture2D* texture2 = new osg::Texture2D;
+	texture2-&gt;setTextureSize(tex_width, tex_height);
+	texture2-&gt;setInternalFormat(GL_RGBA);
+	texture2-&gt;setFilter(osg::Texture2D::MIN_FILTER, osg::Texture2D::LINEAR);
+	texture2-&gt;setFilter(osg::Texture2D::MAG_FILTER, osg::Texture2D::LINEAR);
+
+	stateset-&gt;setTextureAttributeAndModes(1, texture2, osg::StateAttribute::ON);
+	stateset-&gt;setTextureAttribute(0, texenv);
+	stateset-&gt;setTextureAttribute(1, texenv);
+
+
+
+	osg::Camera* camera = new osg::Camera;
+
+	float znear = 10;
+	float zfar = 30;
+	float proj_top = 0.25f*znear;
+	float proj_right = 0.5f*znear;
+	camera-&gt;setProjectionMatrixAsFrustum(-proj_right, proj_right, -proj_top, proj_top, znear, zfar);
+
+	camera-&gt;setViewMatrixAsLookAt(osg::Vec3(0.0f, 0.0f, 0.0f) - osg::Vec3(0.0f, 2.0f, 0.0f) * 10, osg::Vec3(0.0f, 0.0f, 0.0f), osg::Vec3(0.0f, 0.0f, 1.0f));
+	camera-&gt;setViewport(0, 0, tex_width, tex_height);
+	//camera-&gt;setClearColor(osg::Vec4(1.0f, 1.0f, 1.0f, 0.0f)); 
+	camera-&gt;setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	camera-&gt;setRenderOrder(osg::Camera::PRE_RENDER);
+
+	camera-&gt;setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+	camera-&gt;attach(osg::Camera::COLOR_BUFFER, texture2);
+	camera-&gt;setReferenceFrame(osg::Camera::ABSOLUTE_RF);
+	camera-&gt;addChild(geode2);
+
+	osg::Group* group = new osg::Group;
+	group-&gt;addChild(geode);
+	group-&gt;addChild(camera);
+
+
+
+
+Thank you!
+
+Cheers,
+Ekaterina
+
+------------------
+Read this topic online here:
+<A HREF="../../../../forum.openscenegraph.org/viewtopic1429.php?p=70116#70116">http://forum.openscenegraph.org/viewtopic.php?p=70116#70116</A>
+
+
+
+
+
+
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005490.html">[osg-users] [vpb] Error building terrain with shapefile in VPB
+</A></li>
+	<LI>Next message: <A HREF="005495.html">[osg-users] Multitexture: projection a texture on another texture
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#281716">[ date ]</a>
+              <a href="thread.html#281716">[ thread ]</a>
+              <a href="subject.html#281716">[ subject ]</a>
+              <a href="author.html#281716">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

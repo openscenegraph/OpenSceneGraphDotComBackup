@@ -1,0 +1,61 @@
+<tt>
+&lt;div&nbsp;dir=&quot;ltr&quot;&gt;&lt;div&gt;&lt;div&gt;Hi&nbsp;Gianni,&lt;br&gt;&lt;br&gt;&lt;/div&gt;I&#39;m&nbsp;looking&nbsp;at&nbsp;OSG-3.4&nbsp;and&nbsp;the&nbsp;setting&nbsp;of&nbsp;the&nbsp;master&nbsp;Camera&nbsp;from&nbsp;the&nbsp;CameraManipulator&nbsp;that&nbsp;happens&nbsp;after&nbsp;running&nbsp;the&nbsp;update&nbsp;traversals&nbsp;of&nbsp;the&nbsp;scene&nbsp;and&nbsp;slave&nbsp;Camera&#39;s,&nbsp;so&nbsp;I&nbsp;presume&nbsp;you&nbsp;are&nbsp;looking&nbsp;at&nbsp;an&nbsp;older&nbsp;rev&nbsp;of&nbsp;the&nbsp;OSG.&lt;br&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;This&nbsp;doesn&#39;t&nbsp;change&nbsp;my&nbsp;suggestion&nbsp;though.&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;Robert.&lt;br&gt;&lt;/div&gt;&lt;div&nbsp;class=&quot;gmail_extra&quot;&gt;&lt;br&gt;&lt;div&nbsp;class=&quot;gmail_quote&quot;&gt;On&nbsp;5&nbsp;August&nbsp;2015&nbsp;at&nbsp;15:25,&nbsp;Gianni&nbsp;Ambrosio&nbsp;&lt;span&nbsp;dir=&quot;ltr&quot;&gt;&lt;&lt;a&nbsp;href=&quot;mailto:g.ambrosio+osg@gmail.com&quot;&nbsp;target=&quot;_blank&quot;&gt;g.ambrosio+osg@gmail.com&lt;/a&gt;&gt;&lt;/span&gt;&nbsp;wrote:&lt;br&gt;&lt;blockquote&nbsp;class=&quot;gmail_quote&quot;&nbsp;style=&quot;margin:0&nbsp;0&nbsp;0&nbsp;.8ex;border-left:1px&nbsp;#ccc&nbsp;solid;padding-left:1ex&quot;&gt;Thank&nbsp;you&nbsp;Robert&nbsp;for&nbsp;the&nbsp;explanation.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Please&nbsp;don&#39;t&nbsp;blame&nbsp;me&nbsp;if&nbsp;I&nbsp;have&nbsp;a&nbsp;couple&nbsp;of&nbsp;questions.&lt;br&gt;<br>
+&lt;br&gt;<br>
+First&nbsp;of&nbsp;all,&nbsp;debugging&nbsp;the&nbsp;updateTraversal()&nbsp;implementation&nbsp;it&nbsp;seems&nbsp;the&nbsp;AxesCameraUpdateCallback&nbsp;is&nbsp;called&nbsp;twice:&nbsp;one&nbsp;in&lt;br&gt;<br>
+&lt;br&gt;<br>
+scene-&gt;updateSceneGraph(*_updateVisitor);&lt;br&gt;<br>
+&lt;br&gt;<br>
+and&nbsp;the&nbsp;second&nbsp;time&nbsp;in&lt;br&gt;<br>
+&lt;br&gt;<br>
+camera-&gt;accept(*_updateVisitor);&lt;br&gt;<br>
+&lt;br&gt;<br>
+I&nbsp;guess&nbsp;this&nbsp;is&nbsp;an&nbsp;expected&nbsp;behavior.&lt;br&gt;<br>
+&lt;br&gt;<br>
+Second,&nbsp;you&nbsp;say&nbsp;&quot;The&nbsp;master&nbsp;Camera&#39;s&nbsp;value&nbsp;can&nbsp;depend&nbsp;upon&nbsp;values&nbsp;in&nbsp;the&nbsp;scene&nbsp;graph&quot;.&nbsp;But&nbsp;isn&#39;t&nbsp;the&nbsp;scene&nbsp;updated&nbsp;in&nbsp;updateSceneGraph&nbsp;call?&nbsp;While&nbsp;the&nbsp;slave&nbsp;cameras&nbsp;are&nbsp;updated&nbsp;in&nbsp;a&nbsp;couple&nbsp;of&nbsp;following&nbsp;for&nbsp;loops?&nbsp;I&nbsp;mean,&nbsp;couldn&#39;t&nbsp;the&nbsp;main&nbsp;camera&nbsp;view&nbsp;matrix&nbsp;be&nbsp;updated,&nbsp;I&nbsp;agree&nbsp;after&nbsp;the&nbsp;updateSceneGraph()&nbsp;call,&nbsp;but&nbsp;before&nbsp;the&nbsp;slave&nbsp;cameras?&nbsp;Or&nbsp;at&nbsp;least&nbsp;move&nbsp;the&nbsp;slave&nbsp;cameras&nbsp;with&nbsp;&quot;_useMastersSceneData=false&quot;&nbsp;after&nbsp;the&nbsp;main&nbsp;camera?&nbsp;Something&nbsp;like:&lt;br&gt;<br>
+&lt;br&gt;<br>
+Code:&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;if&nbsp;(view-&gt;getCameraManipulator())&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;{&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;view-&gt;setFusionDistance(&nbsp;view-&gt;getCameraManipulator()-&gt;getFusionDistanceMode(),&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;view-&gt;getCameraManipulator()-&gt;getFusionDistanceValue()&nbsp;);&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;view-&gt;getCamera()-&gt;setViewMatrix(&nbsp;view-&gt;getCameraManipulator()-&gt;getInverseMatrix());&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;}&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; //&nbsp;Do&nbsp;UpdateTraversal&nbsp;for&nbsp;slaves&nbsp;with&nbsp;their&nbsp;own&nbsp;subgraph&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; for(unsigned&nbsp;int&nbsp;i=0;&nbsp;i&lt;view-&gt;getNumSlaves();&nbsp;++i)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; {&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; osg::View::Slave&amp;&nbsp;slave&nbsp;=&nbsp;view-&gt;getSlave(i);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; osg::Camera*&nbsp;camera&nbsp;=&nbsp;slave._camera.get();&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; if(camera&nbsp;&amp;&amp;&nbsp;!slave._useMastersSceneData)&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; {&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;camera-&gt;accept(*_updateVisitor);&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp; }&lt;br&gt;<br>
+&lt;br&gt;<br>
+ &nbsp; &nbsp; &nbsp; &nbsp;view-&gt;updateSlaves();&lt;br&gt;<br>
+&lt;span&nbsp;class=&quot;&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+Regards,&lt;br&gt;<br>
+Gianni&lt;br&gt;<br>
+&lt;br&gt;<br>
+------------------&lt;br&gt;<br>
+Read&nbsp;this&nbsp;topic&nbsp;online&nbsp;here:&lt;br&gt;<br>
+&lt;/span&gt;&lt;a&nbsp;href=&quot;http://forum.openscenegraph.org/viewtopic.php?p=64631#64631&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://forum.openscenegraph.org/viewtopic.php?p=64631#64631&lt;/a&gt;&lt;br&gt;<br>
+&lt;div&nbsp;class=&quot;HOEnZb&quot;&gt;&lt;div&nbsp;class=&quot;h5&quot;&gt;&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+&lt;br&gt;<br>
+_______________________________________________&lt;br&gt;<br>
+osg-users&nbsp;mailing&nbsp;list&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;mailto:osg-users@lists.openscenegraph.org&quot;&gt;osg-users@lists.openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;a&nbsp;href=&quot;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&quot;&nbsp;rel=&quot;noreferrer&quot;&nbsp;target=&quot;_blank&quot;&gt;http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org&lt;/a&gt;&lt;br&gt;<br>
+&lt;/div&gt;&lt;/div&gt;&lt;/blockquote&gt;&lt;/div&gt;&lt;br&gt;&lt;/div&gt;<br>
+
+</tt>

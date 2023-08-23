@@ -1,0 +1,275 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] [build] GStreamer linker error on OSX El Capitan
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20GStreamer%20linker%20error%20on%20OSX%20El%20Capitan&In-Reply-To=%3CCAFN7Y%2BU5NhG%3DMK6YF_kEYgAUbjoOrpYU9VqKOVOhiQsUUd0O6w%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="280103.html">
+   <LINK REL="Next"  HREF="003886.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] [build] GStreamer linker error on OSX El Capitan</H1>
+<!--htdig_noindex-->
+    <B>Robert Osfield</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20%5Bbuild%5D%20GStreamer%20linker%20error%20on%20OSX%20El%20Capitan&In-Reply-To=%3CCAFN7Y%2BU5NhG%3DMK6YF_kEYgAUbjoOrpYU9VqKOVOhiQsUUd0O6w%40mail.gmail.com%3E"
+       TITLE="[osg-users] [build] GStreamer linker error on OSX El Capitan">robert.osfield at gmail.com
+       </A><BR>
+    <I>Fri Aug 12 02:13:38 PDT 2016</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="280103.html">[osg-users] [build] GStreamer linker error on OSX El Capitan
+</A></li>
+        <LI>Next message: <A HREF="003886.html">[osg-users] [build] GStreamer linker error on OSX El Capitan
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3883">[ date ]</a>
+              <a href="thread.html#3883">[ thread ]</a>
+              <a href="subject.html#3883">[ subject ]</a>
+              <a href="author.html#3883">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Chris,
+
+In general I would say that GStreamer shouldn't be required for OSG
+usage under OSX as there are native video plugins already.  Do you
+specifically need the GStreamer plugin?  If not you should be able to
+disable the build of the plugin by setting the paths that CMake sets
+up for GStreamer headers etc. back to empty strings, this will tell
+CMake GStreamer isn't there and the plugin won't be built.
+
+If you want the plugin to be built then you'll need to track down
+exactly what is going wrong.  From the output you posted the only
+error I've spotted so far was:
+
+    ld: library not found for -lgstreamer-1.0
+
+Which suggests to me that the CMake find script is partially setting
+up the paths and libs but not completely, or the OSG's plugin isn't
+setting up the path to the library as required.  One way to get more
+information from the build is to run make thus:
+
+  make VERBOSE=1
+
+Also have a look at the GSTREAMER_* variables that CMake sets up,
+you'll find these in CMakeCache.txt.
+
+Robert.
+
+
+On 11 August 2016 at 20:05, Chris Thomas &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">cthomas at soasta.com</A>&gt; wrote:
+&gt;<i> Hi,
+</I>&gt;<i>
+</I>&gt;<i> I am pulling OSG 3.4.0 from GIT and attempting to build on OSX El Capitan.
+</I>&gt;<i>
+</I>&gt;<i> I'm writing a BASH script to do this, as I need to repeat this compile on a number of machines.
+</I>&gt;<i> I test this install script on a VMWare OSX El-Capitan machine. Doing so allows me to run the install script over and over, from as clean an install state as I need, until it the OSG compile works.
+</I>&gt;<i>
+</I>&gt;<i> To complicate matters slightly I already have an existing media platform that my OSG HAS to work with, without disrupting it. That platform already installs gstreamer 1.6.3.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> So, calling cmake, I get this output...
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i> cthomass-Mac:osg cthomas$ cmake -DBUILD_OSG_EXAMPLES=1 -DCMAKE_OSX_ARCHITECTURES=x86_64 ../OpenSceneGraph/
+</I>&gt;<i> -- The C compiler identification is AppleClang 7.3.0.7030031
+</I>&gt;<i> -- The CXX compiler identification is AppleClang 7.3.0.7030031
+</I>&gt;<i> -- Check for working C compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc
+</I>&gt;<i> -- Check for working C compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc -- works
+</I>&gt;<i> -- Detecting C compiler ABI info
+</I>&gt;<i> -- Detecting C compiler ABI info - done
+</I>&gt;<i> -- Detecting C compile features
+</I>&gt;<i> -- Detecting C compile features - done
+</I>&gt;<i> -- Check for working CXX compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++
+</I>&gt;<i> -- Check for working CXX compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ -- works
+</I>&gt;<i> -- Detecting CXX compiler ABI info
+</I>&gt;<i> -- Detecting CXX compiler ABI info - done
+</I>&gt;<i> -- Detecting CXX compile features
+</I>&gt;<i> -- Detecting CXX compile features - done
+</I>&gt;<i> -- Looking for pthread.h
+</I>&gt;<i> -- Looking for pthread.h - found
+</I>&gt;<i> -- Looking for pthread_create
+</I>&gt;<i> -- Looking for pthread_create - found
+</I>&gt;<i> -- Found Threads: TRUE
+</I>&gt;<i> -- Found OpenGL: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/System/Library/Frameworks/OpenGL.framework
+</I>&gt;<i> -- Performing Test GL_HEADER_HAS_GLINT64
+</I>&gt;<i> -- Performing Test GL_HEADER_HAS_GLINT64 - Success
+</I>&gt;<i> -- Performing Test GL_HEADER_HAS_GLUINT64
+</I>&gt;<i> -- Performing Test GL_HEADER_HAS_GLUINT64 - Success
+</I>&gt;<i> -- Found Freetype: /usr/local/lib/libfreetype.dylib (found version &quot;2.6.5&quot;)
+</I>&gt;<i> -- Found JPEG: /usr/local/lib/libjpeg.dylib
+</I>&gt;<i> -- Found Jasper: /usr/local/lib/libjasper.dylib (found version &quot;1.900.1&quot;)
+</I>&gt;<i> -- Found LibXml2: /opt/oblong/deps-64-11/lib64/libxml2.dylib (found version &quot;2.7.8&quot;)
+</I>&gt;<i> -- Found ZLIB: /usr/lib/libz.dylib (found version &quot;1.2.5&quot;)
+</I>&gt;<i> -- Found GDAL: /usr/local/Cellar/gdal/1.11.3_1/lib/libgdal.dylib
+</I>&gt;<i> -- Found PkgConfig: /usr/local/bin/pkg-config (found version &quot;0.29.1&quot;)
+</I>&gt;<i> -- Checking for module 'gta'
+</I>&gt;<i> --   No package 'gta' found
+</I>&gt;<i> -- Found CURL: /usr/lib/libcurl.dylib (found version &quot;7.43.0&quot;)
+</I>&gt;<i> -- Found GStreamer: /opt/oblong/deps-64-11/include/gstreamer-1.0;/opt/oblong/deps-64-11/lib/gstreamer-1.0/include;/opt/oblong/deps-64-11/include/glib-2.0;/opt/oblong/deps-64-11/lib/glib-2.0/include (found version &quot;1.6.3&quot;)
+</I>&gt;<i> -- Found GLIB: /opt/oblong/deps-64-11/include/glib-2.0;/opt/oblong/deps-64-11/lib64/glib-2.0/include (found version &quot;2.46.2&quot;)
+</I>&gt;<i> -- Found SDL2: /usr/local/lib/libSDL2main.a;/usr/local/lib/libSDL2.dylib;-framework Cocoa
+</I>&gt;<i> -- Found SDL: /usr/local/lib/libSDLmain.a;/usr/local/lib/libSDL.dylib;-framework Cocoa (found version &quot;1.2.15&quot;)
+</I>&gt;<i> -- Checking for module 'cairo'
+</I>&gt;<i> --   Found cairo, version 1.14.6
+</I>&gt;<i> -- Checking for module 'poppler-glib'
+</I>&gt;<i> --   Found poppler-glib, version 0.45.0
+</I>&gt;<i> -- Performing Test POPPLER_HAS_CAIRO
+</I>&gt;<i> -- Performing Test POPPLER_HAS_CAIRO - Success
+</I>&gt;<i> -- Checking for module 'librsvg-2.0&gt;=2.35'
+</I>&gt;<i> --
+</I>&gt;<i> -- Checking for module 'gtk+-2.0'
+</I>&gt;<i> --   Found gtk+-2.0, version 2.24.30
+</I>&gt;<i> -- Checking for module 'gtkglext-x11-1.0'
+</I>&gt;<i> --   No package 'gtkglext-x11-1.0' found
+</I>&gt;<i> -- Looking for Q_WS_X11
+</I>&gt;<i> -- Looking for Q_WS_X11 - not found
+</I>&gt;<i> -- Looking for Q_WS_WIN
+</I>&gt;<i> -- Looking for Q_WS_WIN - not found
+</I>&gt;<i> -- Looking for Q_WS_QWS
+</I>&gt;<i> -- Looking for Q_WS_QWS - not found
+</I>&gt;<i> -- Looking for Q_WS_MAC
+</I>&gt;<i> -- Looking for Q_WS_MAC - found
+</I>&gt;<i> -- Looking for QT_MAC_USE_COCOA
+</I>&gt;<i> -- Looking for QT_MAC_USE_COCOA - found
+</I>&gt;<i> -- Found Qt4: /usr/local/bin/qmake (found version &quot;4.8.7&quot;)
+</I>&gt;<i> -- Found FLTK: /usr/local/lib/libfltk_images.dylib;/usr/local/lib/libfltk_forms.dylib;/usr/local/lib/libfltk_gl.dylib;/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/System/Library/Frameworks/OpenGL.framework;/usr/local/lib/libfltk.dylib
+</I>&gt;<i> -- Found wxWidgets: -L/usr/local/lib;;;-framework IOKit;-framework Carbon;-framework Cocoa;-framework AudioToolbox;-framework System;-framework OpenGL;-lwx_baseu-3.0;-lwx_osx_cocoau_core-3.0;-lwx_osx_cocoau_gl-3.0;-lwx_baseu_net-3.0 (found version &quot;3.0.2&quot;)
+</I>&gt;<i> -- Found TIFF: /usr/local/lib/libtiff.dylib (found version &quot;4.0.6&quot;)
+</I>&gt;<i> Disabling QuickTime because it's not supported by the selected SDK 10.11
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_GCC_BUILTINS
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_GCC_BUILTINS - Success
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_MIPOSPRO_BUILTINS
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_MIPOSPRO_BUILTINS - Failed
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_SUN
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_SUN - Failed
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_WIN32_INTERLOCKED
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_WIN32_INTERLOCKED - Failed
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_BSD_ATOMIC
+</I>&gt;<i> -- Performing Test _OPENTHREADS_ATOMIC_USE_BSD_ATOMIC - Success
+</I>&gt;<i> -- Looking for pthread_yield
+</I>&gt;<i> -- Looking for pthread_yield - not found
+</I>&gt;<i> -- Looking for sched_yield
+</I>&gt;<i> -- Looking for sched_yield - found
+</I>&gt;<i> -- Looking for pthread_setconcurrency
+</I>&gt;<i> -- Looking for pthread_setconcurrency - found
+</I>&gt;<i> -- Looking for pthread_getconcurrency
+</I>&gt;<i> -- Looking for pthread_getconcurrency - found
+</I>&gt;<i> -- Looking for pthread_setaffinity_np
+</I>&gt;<i> -- Looking for pthread_setaffinity_np - not found
+</I>&gt;<i> -- Performing Test HAVE_THREE_PARAM_SCHED_SETAFFINITY
+</I>&gt;<i> -- Performing Test HAVE_THREE_PARAM_SCHED_SETAFFINITY - Failed
+</I>&gt;<i> -- Performing Test HAVE_TWO_PARAM_SCHED_SETAFFINITY
+</I>&gt;<i> -- Performing Test HAVE_TWO_PARAM_SCHED_SETAFFINITY - Failed
+</I>&gt;<i> -- Looking for gethostbyname in nsl
+</I>&gt;<i> -- Looking for gethostbyname in nsl - not found
+</I>&gt;<i> -- Looking for socket in socket
+</I>&gt;<i> -- Looking for socket in socket - not found
+</I>&gt;<i>
+</I>&gt;<i> The build system is configured to install libraries to /usr/local/lib
+</I>&gt;<i> Your applications may not be able to find your installed libraries unless you:
+</I>&gt;<i>     set your LD_LIBRARY_PATH (user specific) or
+</I>&gt;<i>     update your ld.so configuration (system wide)
+</I>&gt;<i> -- Configuring done
+</I>&gt;<i> CMake Warning (dev):
+</I>&gt;<i>   Policy CMP0042 is not set: MACOSX_RPATH is enabled by default.  Run &quot;cmake
+</I>&gt;<i>   --help-policy CMP0042&quot; for policy details.  Use the cmake_policy command to
+</I>&gt;<i>   set the policy and suppress this warning.
+</I>&gt;<i>
+</I>&gt;<i>   MACOSX_RPATH is not specified for the following targets:
+</I>&gt;<i>
+</I>&gt;<i>    OpenThreads
+</I>&gt;<i>    osg
+</I>&gt;<i>    osgAnimation
+</I>&gt;<i>    osgDB
+</I>&gt;<i>    osgFX
+</I>&gt;<i>    osgGA
+</I>&gt;<i>    osgManipulator
+</I>&gt;<i>    osgParticle
+</I>&gt;<i>    osgPresentation
+</I>&gt;<i>    osgQt
+</I>&gt;<i>    osgShadow
+</I>&gt;<i>    osgSim
+</I>&gt;<i>    osgTerrain
+</I>&gt;<i>    osgText
+</I>&gt;<i>    osgUI
+</I>&gt;<i>    osgUtil
+</I>&gt;<i>    osgViewer
+</I>&gt;<i>    osgVolume
+</I>&gt;<i>    osgWidget
+</I>&gt;<i>
+</I>&gt;<i> This warning is for project developers.  Use -Wno-dev to suppress it.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Anyway, this mostly seems to be positive. So doing a make -j8, the build proceeds as expected, until it hits this wall....
+</I>&gt;<i>
+</I>&gt;<i> Code:
+</I>&gt;<i>
+</I>&gt;<i> [ 33%] Linking CXX shared module ../../../lib/osgPlugins-3.4.0/osgdb_gstreamer.so
+</I>&gt;<i> ld: library not found for -lgstreamer-1.0
+</I>&gt;<i> clang: error: linker command failed with exit code 1 (use -v to see invocation)
+</I>&gt;<i> make[2]: *** [lib/osgPlugins-3.4.0/osgdb_gstreamer.so] Error 1
+</I>&gt;<i> make[1]: *** [src/osgPlugins/gstreamer/CMakeFiles/osgdb_gstreamer.dir/all] Error 2
+</I>&gt;<i> make[1]: *** Waiting for unfinished jobs....
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> And thats it, the build will fail shortly after, once the other 7 threads complete.
+</I>&gt;<i>
+</I>&gt;<i> I have also tried the same process using master/head, with the same error. CMake seems to find the gstreamer lib/headers etc, but the make always fails to link it.
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> Thank you!
+</I>&gt;<i>
+</I>&gt;<i> Cheers,
+</I>&gt;<i>
+</I>&gt;<i> Chris
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopic5a4b.php?p=68351#68351">http://forum.openscenegraph.org/viewtopic.php?p=68351#68351</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="280103.html">[osg-users] [build] GStreamer linker error on OSX El Capitan
+</A></li>
+	<LI>Next message: <A HREF="003886.html">[osg-users] [build] GStreamer linker error on OSX El Capitan
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#3883">[ date ]</a>
+              <a href="thread.html#3883">[ thread ]</a>
+              <a href="subject.html#3883">[ subject ]</a>
+              <a href="author.html#3883">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>

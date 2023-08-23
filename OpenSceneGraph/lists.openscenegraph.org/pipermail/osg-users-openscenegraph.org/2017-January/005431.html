@@ -1,0 +1,161 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+ <HEAD>
+   <TITLE> [osg-users] first attempts with PagedLODs
+   </TITLE>
+   <LINK REL="Index" HREF="index.html" >
+   <LINK REL="made" HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20first%20attempts%20with%20PagedLODs&In-Reply-To=%3CCAG7xrZeMi3WTWD4%2BGJBWCsn5sf3tGkDk-2v4K3XfmyAPTmvAng%40mail.gmail.com%3E">
+   <META NAME="robots" CONTENT="index,nofollow">
+   <style type="text/css">
+       pre {
+           white-space: pre-wrap;       /* css-2.1, curent FF, Opera, Safari */
+           }
+   </style>
+   <META http-equiv="Content-Type" content="text/html; charset=us-ascii">
+   <LINK REL="Previous"  HREF="005429.html">
+   <LINK REL="Next"  HREF="005432.html">
+ </HEAD>
+ <BODY BGCOLOR="#ffffff">
+   <H1>[osg-users] first attempts with PagedLODs</H1>
+<!--htdig_noindex-->
+    <B>Voerman, L.</B> 
+    <A HREF="mailto:osg-users%40lists.openscenegraph.org?Subject=Re%3A%20%5Bosg-users%5D%20first%20attempts%20with%20PagedLODs&In-Reply-To=%3CCAG7xrZeMi3WTWD4%2BGJBWCsn5sf3tGkDk-2v4K3XfmyAPTmvAng%40mail.gmail.com%3E"
+       TITLE="[osg-users] first attempts with PagedLODs">l.voerman at rug.nl
+       </A><BR>
+    <I>Wed Jan 25 00:51:39 PST 2017</I>
+    <P><UL>
+        <LI>Previous message: <A HREF="005429.html">[osg-users] first attempts with PagedLODs
+</A></li>
+        <LI>Next message: <A HREF="005432.html">[osg-users] first attempts with PagedLODs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5431">[ date ]</a>
+              <a href="thread.html#5431">[ thread ]</a>
+              <a href="subject.html#5431">[ subject ]</a>
+              <a href="author.html#5431">[ author ]</a>
+         </LI>
+       </UL>
+    <HR>  
+<!--/htdig_noindex-->
+<!--beginarticle-->
+<PRE>Hi Daniel,
+The pagedLOD displays the lower lod level until the requested level is
+loaded, I think wat you see is caused by the lowest LOD level being empty.
+We use almost all our pagedLODs with a permanent base level:
+in .osg format this looks like this:
+PagedLOD {
+  RangeMode DISTANCE_FROM_EYE_POINT
+  RangeList 2 {
+    120 10000
+    0 120
+  }
+  NumChildrenThatCannotBeExpired 1
+  FileNameList 2 {
+    &quot;&quot;
+    stationwagon_gray_HQ.ive
+  }
+  num_children 1
+  ProxyNode {
+    FileNameList 1 {
+      stationwagon_gray_LQ.ive
+    }
+    num_children 0
+  }
+}
+or using a lower resolution texture (my mip pseudoloader skips the top
+level mipmaps from textures)
+  PagedLOD {
+    DataVariance STATIC
+    nodeMask 0xffffffff
+    cullingActive TRUE
+    Center -37000 -48000 0
+    Radius 11313.7
+    RangeMode PIXEL_SIZE_ON_SCREEN
+    RangeList 2 {
+      0 1448
+      1448 1e+037
+    }
+    NumChildrenThatCannotBeExpired 1
+    DisableExternalChildrenPaging 0
+    FileNameList 2 {
+      &quot;&quot;
+      560205_16km_L11.osg
+    }
+    num_children 1
+    ProxyNode {
+      nodeMask 0xffffffff
+      cullingActive TRUE
+      ExtRefMode       DEFER_LOADING_TO_DATABASE_PAGER
+      Radius -1
+      FileNameList 1 {
+        560205_16km_L11.osg.1.mip
+      }
+      num_children 0
+    }
+  }
+Regards, Laurens.
+
+On Tue, Jan 24, 2017 at 8:29 PM, Daniel Lazaroff &lt;<A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">lazaroff_daniel at yahoo.ca</A>&gt;
+wrote:
+
+&gt;<i> greetings all,
+</I>&gt;<i>
+</I>&gt;<i> I've started trying out the DatabasePager with a test model of a small
+</I>&gt;<i> city landscape (openflight file) that has been converted into pagedLODs
+</I>&gt;<i> (I'm experimenting with load balancing of VRAM usage).
+</I>&gt;<i> I used the &quot;osgpagedlod.cpp&quot; example to convert and write out the
+</I>&gt;<i> individual files (.ive). I'm using OSG 3.2
+</I>&gt;<i> The individual buildings have discrete LODs and do not have overlapping
+</I>&gt;<i> ranges. As I move around the scene using the osgGA::TerrainManipulator,
+</I>&gt;<i> they pop in and out of the rendered scene, for a few frames no LOD is
+</I>&gt;<i> displayed. (due to the load time from disk of the files most probably)
+</I>&gt;<i>
+</I>&gt;<i> Is there something that I can do to alleviate this (tricks or tips)? I
+</I>&gt;<i> could try to overlap the ranges, but I read somewhere that this is not
+</I>&gt;<i> suggested.
+</I>&gt;<i>
+</I>&gt;<i> Thanks for any info.
+</I>&gt;<i> Cheers
+</I>&gt;<i>
+</I>&gt;<i> Daniel
+</I>&gt;<i>
+</I>&gt;<i> ------------------
+</I>&gt;<i> Read this topic online here:
+</I>&gt;<i> <A HREF="../../../../forum.openscenegraph.org/viewtopicc5e3.php?p=70046#70046">http://forum.openscenegraph.org/viewtopic.php?p=70046#70046</A>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i>
+</I>&gt;<i> _______________________________________________
+</I>&gt;<i> osg-users mailing list
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">osg-users at lists.openscenegraph.org</A>
+</I>&gt;<i> <A HREF="../../../listinfo.cgi/osg-users-openscenegraph.html">http://lists.openscenegraph.org/listinfo.cgi/osg-users-openscenegraph.org</A>
+</I>&gt;<i>
+</I>-------------- next part --------------
+An HTML attachment was scrubbed...
+URL: &lt;<A HREF="../attachments/20170125/8f8c9859/attachment-0002.html">http://lists.openscenegraph.org/pipermail/osg-users-openscenegraph.org/attachments/20170125/8f8c9859/attachment-0002.htm</A>&gt;
+</PRE>
+
+<!--endarticle-->
+<!--htdig_noindex-->
+    <HR>
+    <P><UL>
+        <!--threads-->
+	<LI>Previous message: <A HREF="005429.html">[osg-users] first attempts with PagedLODs
+</A></li>
+	<LI>Next message: <A HREF="005432.html">[osg-users] first attempts with PagedLODs
+</A></li>
+         <LI> <B>Messages sorted by:</B> 
+              <a href="date.html#5431">[ date ]</a>
+              <a href="thread.html#5431">[ thread ]</a>
+              <a href="subject.html#5431">[ subject ]</a>
+              <a href="author.html#5431">[ author ]</a>
+         </LI>
+       </UL>
+
+<hr>
+<a href="../../../listinfo.cgi/osg-users-openscenegraph.html">More information about the osg-users
+mailing list</a><br>
+<!--/htdig_noindex-->
+</body></html>
