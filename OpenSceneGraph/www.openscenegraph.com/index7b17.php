@@ -5,7 +5,7 @@
 	<subtitle type="text">Project website for OpenSceneGraph</subtitle>
 	<link rel="alternate" type="text/html" href="https://www.openscenegraph.com"/>
 	<id>https://www.openscenegraph.com/index.php</id>
-	<updated>2023-08-23T00:41:35+00:00</updated>
+	<updated>2023-11-30T12:18:11+00:00</updated>
 	<generator uri="https://www.joomla.org">Joomla! - Open Source Content Management</generator>
 	<link rel="self" type="application/atom+xml" href="https://www.openscenegraph.com/index.php?format=feed&amp;type=atom"/>
 	<entry>
