@@ -1,0 +1,80 @@
+diff --git a/src/htscore.c b/src/htscore.c
+index 534e770..9611c3e 100644
+--- a/src/htscore.c
++++ b/src/htscore.c
+@@ -414,7 +414,7 @@ if (makeindex_fp) { \
+   if (makeindex_links == 1) { \
+     char BIGSTK link_escaped[HTS_URLMAXSIZE*2]; \
+     escape_uri_utf(makeindex_firstlink, link_escaped, sizeof(link_escaped)); \
+-    sprintf(tempo,"<meta HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\">"CRLF, link_escaped); \
++    sprintf(tempo,"<meta HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\"/>"CRLF, link_escaped); \
+   } else \
+     tempo[0]='\0'; \
+     hts_template_format(makeindex_fp,template_footer, \
+diff --git a/src/htslib.c b/src/htslib.c
+index e900a3c..a17c1af 100644
+--- a/src/htslib.c
++++ b/src/htslib.c
+@@ -3424,7 +3424,7 @@ HTSEXT_API const char* jump_normalized_const(const char* source) {
+ 	if (strcmp(source, "file://") == 0)
+ 		return source;
+ 	source = jump_identification_const(source);
+-	if (strfield(source, "www") && source[3] != '\0') {
++	/*if (strfield(source, "www") && source[3] != '\0') {
+ 		if (source[3] == '.') {     // www.foo.com -> foo.com
+ 			source += 4;
+ 		} else {                    // www-4.foo.com -> foo.com
+@@ -3436,7 +3436,7 @@ HTSEXT_API const char* jump_normalized_const(const char* source) {
+ 				source = a + 1;
+ 			}
+ 		}
+-	}
++	}*/
+ 	return source;
+ }
+ 
+@@ -3914,8 +3914,10 @@ HTSEXT_API size_t x_escape_flags(const char* const s, char* const dest, const si
+ 		} else {
+ 			if (flags & ENCODE_PARAMS_AS_HTML_ENTITIES) {
+ 				ADD_CHAR('&');
+-				ADD_CHAR('#');
+-				ADD_CHAR('x');
++				if (c != '&') {
++					ADD_CHAR('#');
++					ADD_CHAR('x');
++				}
+ 			} else
+ 				ADD_CHAR('%');
+ 			if (c != '&' || (flags & ENCODE_PARAMS_AS_HTML_ENTITIES) == FALSE) {
+diff --git a/src/htsparse.c b/src/htsparse.c
+index bab8b12..7570e18 100644
+--- a/src/htsparse.c
++++ b/src/htsparse.c
+@@ -176,7 +176,7 @@ Please visit our Website: http://www.httrack.com
+   if (makeindex_links == 1) { \
+   char BIGSTK link_escaped[HTS_URLMAXSIZE*2]; \
+   escape_uri_utf(makeindex_firstlink, link_escaped, sizeof(link_escaped)); \
+-  sprintf(tempo,"<meta HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\">"CRLF,link_escaped); \
++  sprintf(tempo,"<meta HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\"/>"CRLF,link_escaped); \
+   } else \
+   tempo[0]='\0'; \
+   hts_template_format(makeindex_fp,template_footer, \
+@@ -713,6 +713,7 @@ int htsparse(htsmoduleStruct * str, htsmoduleStructExtended * stre) {
+                 }
+               }
+               lastsaved = html;
++              continue;
+             }
+           }
+ 
+@@ -3603,8 +3604,8 @@ int hts_mirror_check_moved(htsmoduleStruct * str,
+               "<HTML>" CRLF
+               "<!-- Created by HTTrack Website Copier/" HTTRACK_VERSION " " HTTRACK_AFF_AUTHORS " -->" CRLF
+               "<HEAD>" CRLF 
+-              "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html;charset=UTF-8\">"
+-              "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\">"
++              "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html;charset=UTF-8\"/>" CRLF
++              "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\"/>"
+               "<TITLE>Page has moved</TITLE>" CRLF 
+               "</HEAD>" CRLF
+               "<BODY>" CRLF
