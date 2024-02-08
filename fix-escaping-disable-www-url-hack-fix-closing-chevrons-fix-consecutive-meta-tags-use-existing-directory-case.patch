@@ -1,0 +1,252 @@
+diff --git a/src/htscore.c b/src/htscore.c
+index 534e770..09fbfaa 100644
+--- a/src/htscore.c
++++ b/src/htscore.c
+@@ -414,7 +414,7 @@ if (makeindex_fp) { \
+   if (makeindex_links == 1) { \
+     char BIGSTK link_escaped[HTS_URLMAXSIZE*2]; \
+     escape_uri_utf(makeindex_firstlink, link_escaped, sizeof(link_escaped)); \
+-    sprintf(tempo,"<meta HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\">"CRLF, link_escaped); \
++    sprintf(tempo,"<meta HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\"/>"CRLF, link_escaped); \
+   } else \
+     tempo[0]='\0'; \
+     hts_template_format(makeindex_fp,template_footer, \
+@@ -2840,6 +2840,143 @@ HTSEXT_API int structcheck_utf8(const char* path) {
+ 	return 0;
+ }
+ 
++/* path must end with "/" or with the finename (/tmp/bar/ or /tmp/bar/foo.zip) */
++/* Note: UTF-8 */
++HTSEXT_API int useexistingcase_utf8(char* path) {
++#ifndef _WIN32
++	return 0
++#else
++	STRUCT_STAT st;
++	char BIGSTK tmpbuf[HTS_URLMAXSIZE * 2];
++	char BIGSTK file[HTS_URLMAXSIZE * 2];
++	int i = 0;
++	int npaths;
++
++	if (strnotempty(path) == 0)
++		return 0;
++	if (strlen(path) > HTS_URLMAXSIZE) {
++		errno = EINVAL;
++		return -1;
++	}
++
++	/* Get a copy */
++	strcpybuff(file, path);
++#ifdef _WIN32
++	/* To system name */
++	for (i = 0; file[i] != 0; i++) {
++		if (file[i] == '/') {
++			file[i] = PATH_SEPARATOR;
++		}
++	}
++#endif
++	/* Get prefix (note: file can not be empty here) */
++	/*for (i = (int)strlen(file) - 1; i > 0 && file[i] != PATH_SEPARATOR; i--);
++	for (; i > 0 && file[i] == PATH_SEPARATOR; i--);
++	file[i + 1] = '\0';*/
++
++	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
++
++	/* Start from the beginning */
++	i = 0;
++
++	/* Skip irrelevant part (the root slash, or the drive path) */
++#ifdef _WIN32
++	if (file[0] != 0 && file[1] == ':') { /* f:\ */
++		i += 2;
++		if (file[i] == PATH_SEPARATOR) {    /* f:\ */
++			i++;
++		}
++	} else if (file[0] == PATH_SEPARATOR && file[1] == PATH_SEPARATOR) {  /* \\mch */
++		int j;
++
++		i += 2;
++		// skip machine and first dir (share) or we'll have troubles (TomZ)
++		for (j = 0; j < 2; j++) {
++			// skip segment
++			for (; file[i] != '\0' && file[i] != PATH_SEPARATOR; i++);
++			// skip final separator
++			if (file[i] == PATH_SEPARATOR) {  /* f:\ */
++				i++;
++			}
++		}
++	}
++#endif
++
++	/* Check paths */
++	for (npaths = 1;; npaths++) {
++		char end_char;
++
++		/* Go to next path */
++
++		/* Skip separator(s) */
++		for (; file[i] == PATH_SEPARATOR; i++);
++		memcpybuff(tmpbuf, file, i);
++		tmpbuf[i] = '\0';
++		int oldPos = i;
++		/* Next separator */
++		for (; file[i] != 0 && file[i] != PATH_SEPARATOR; i++);
++
++		/* Check */
++		end_char = file[i];
++		if (end_char != 0) {
++			file[i] = '\0';
++		}
++		if (STAT(file, &st) == 0) { /* Something exists */
++			tmpbuf[oldPos] = '\\';
++			tmpbuf[oldPos + 1] = '*';
++			tmpbuf[oldPos + 2] = '\0';
++			LPWSTR wpath = hts_convertUTF8StringToUCS2(tmpbuf, (int)strlen(tmpbuf), NULL);
++			LPWSTR wname = hts_convertUTF8StringToUCS2(&file[oldPos], i - oldPos, NULL);
++
++			if (wpath != NULL && wname != NULL) {
++				WIN32_FIND_DATAW FindFileData;
++				HANDLE hFind;
++				hFind = FindFirstFileW(wpath, &FindFileData);
++				if (INVALID_HANDLE_VALUE == hFind) {
++					return -1;
++				}
++				int found = FALSE;
++				do
++				{
++					if (CompareStringOrdinal(FindFileData.cFileName, -1, wname, -1, TRUE) == CSTR_EQUAL) {
++						char* utf8Name = hts_convertUCS2StringToUTF8(FindFileData.cFileName, lstrlenW(FindFileData.cFileName));
++						if (strlen(utf8Name) != i - oldPos) {
++							return -1;
++						}
++						strcpy(&file[oldPos], utf8Name);
++						memcpy(&path[oldPos], utf8Name, strlen(utf8Name));
++						free(utf8Name);
++						found = TRUE;
++						break;
++					}
++				} while (FindNextFileW(hFind, &FindFileData) != 0);
++
++				FindClose(hFind);
++
++				free(wpath);
++
++				if (!found) {
++					return -1;
++				}
++			} else {
++				return -1;
++			}
++		} else {                    /* Nothing exists ; nothing to convert */
++		}
++		if (end_char == 0) {        /* End */
++			break;
++		} else {
++			file[i] = end_char;       /* Restore / */
++		}
++	}
++	if (strlen(path) != strlen(file)) {
++		return -1;
++	}
++	//strcpybuff(path, file);
++	return 0;
++#endif
++}
++
+ // sauver un fichier
+ int filesave(httrackp* opt, const char* adr, int len, const char* s,
+ 	const char* url_adr, const char* url_fil) {
+diff --git a/src/htslib.c b/src/htslib.c
+index e900a3c..a17c1af 100644
+--- a/src/htslib.c
++++ b/src/htslib.c
+@@ -3424,7 +3424,7 @@ HTSEXT_API const char* jump_normalized_const(const char* source) {
+ 	if (strcmp(source, "file://") == 0)
+ 		return source;
+ 	source = jump_identification_const(source);
+-	if (strfield(source, "www") && source[3] != '\0') {
++	/*if (strfield(source, "www") && source[3] != '\0') {
+ 		if (source[3] == '.') {     // www.foo.com -> foo.com
+ 			source += 4;
+ 		} else {                    // www-4.foo.com -> foo.com
+@@ -3436,7 +3436,7 @@ HTSEXT_API const char* jump_normalized_const(const char* source) {
+ 				source = a + 1;
+ 			}
+ 		}
+-	}
++	}*/
+ 	return source;
+ }
+ 
+@@ -3914,8 +3914,10 @@ HTSEXT_API size_t x_escape_flags(const char* const s, char* const dest, const si
+ 		} else {
+ 			if (flags & ENCODE_PARAMS_AS_HTML_ENTITIES) {
+ 				ADD_CHAR('&');
+-				ADD_CHAR('#');
+-				ADD_CHAR('x');
++				if (c != '&') {
++					ADD_CHAR('#');
++					ADD_CHAR('x');
++				}
+ 			} else
+ 				ADD_CHAR('%');
+ 			if (c != '&' || (flags & ENCODE_PARAMS_AS_HTML_ENTITIES) == FALSE) {
+diff --git a/src/htsname.c b/src/htsname.c
+index 2945292..3721518 100644
+--- a/src/htsname.c
++++ b/src/htsname.c
+@@ -1516,6 +1516,11 @@ int url_savename(lien_adrfilsave* const afs,
+ 		strcatbuff(tempo, afs->save);
+ 		strcpybuff(afs->save, tempo);
+ 	}
++
++	if (useexistingcase_utf8(afs->save) != 0) {
++		hts_log_print(opt, LOG_ERROR, "Could not convert path case to match filesystem: %s", afs->save);
++	}
++
+ 	// vérifier que le nom n'est pas déja pris...
+ 	if (opt->liens != NULL) {
+ 		int nom_ok;
+diff --git a/src/htsparse.c b/src/htsparse.c
+index bab8b12..7570e18 100644
+--- a/src/htsparse.c
++++ b/src/htsparse.c
+@@ -176,7 +176,7 @@ Please visit our Website: http://www.httrack.com
+   if (makeindex_links == 1) { \
+   char BIGSTK link_escaped[HTS_URLMAXSIZE*2]; \
+   escape_uri_utf(makeindex_firstlink, link_escaped, sizeof(link_escaped)); \
+-  sprintf(tempo,"<meta HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\">"CRLF,link_escaped); \
++  sprintf(tempo,"<meta HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\"/>"CRLF,link_escaped); \
+   } else \
+   tempo[0]='\0'; \
+   hts_template_format(makeindex_fp,template_footer, \
+@@ -713,6 +713,7 @@ int htsparse(htsmoduleStruct * str, htsmoduleStructExtended * stre) {
+                 }
+               }
+               lastsaved = html;
++              continue;
+             }
+           }
+ 
+@@ -3603,8 +3604,8 @@ int hts_mirror_check_moved(htsmoduleStruct * str,
+               "<HTML>" CRLF
+               "<!-- Created by HTTrack Website Copier/" HTTRACK_VERSION " " HTTRACK_AFF_AUTHORS " -->" CRLF
+               "<HEAD>" CRLF 
+-              "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html;charset=UTF-8\">"
+-              "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\">"
++              "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html;charset=UTF-8\"/>" CRLF
++              "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"0; URL=%s\"/>"
+               "<TITLE>Page has moved</TITLE>" CRLF 
+               "</HEAD>" CRLF
+               "<BODY>" CRLF
+diff --git a/src/httrack-library.h b/src/httrack-library.h
+index ca94fe2..293670f 100644
+--- a/src/httrack-library.h
++++ b/src/httrack-library.h
+@@ -191,6 +191,7 @@ extern "C" {
+ 	/* Tools */
+ 	HTSEXT_API int structcheck(const char* path);
+ 	HTSEXT_API int structcheck_utf8(const char* path);
++	HTSEXT_API int useexistingcase_utf8(char* path);
+ 	HTSEXT_API int dir_exists(const char* path);
+ 	HTSEXT_API void infostatuscode(char* msg, int statuscode);
+ 	HTSEXT_API TStamp mtime_local(void);
